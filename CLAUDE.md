@@ -221,6 +221,10 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       enthalten keine abweichenden Punktangaben).
 - [x] Spaltenreihenfolge im Prüfungsschema editierbar (▲▼); Punkte mit
       Nachkommastellen (0,5) und deutschem Dezimalkomma.
+- [x] Prüfungen nach Prüfungsdatum speichern (»Prüfungen«-Panel): gezogene Liste
+      als Snapshot samt Schema in `localStorage` (Key `pflanzenkenntnis.exams`),
+      Laden/Drucken/JSON-Download/Löschen. `buildSheet(mode, ctx)` druckt aus dem
+      Snapshot. Backup-`.json` pro Prüfung.
 - [x] Puppeteer-Smoke-Test (`tests/smoke.mjs`) und CI-Integration (`build.yml`).
 - [x] `localStorage`-Ausfall-Fallback (In-Memory) für Kiosk-/Sandbox-Profile.
 - [x] Konverter-Ladefehler behoben (SheetJS-Standalone via require lieferte unter

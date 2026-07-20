@@ -69,6 +69,21 @@ input,select{font-family:inherit; color:inherit}
 .scname{font-family:var(--serif); font-size:14.5px; flex:1; min-width:110px}
 .scpts{width:56px; border:1px solid var(--rule-strong); border-radius:3px; padding:5px 7px; font-size:14px; font-family:var(--mono); text-align:right; background:#fff}
 .scp{font-family:var(--mono); font-size:12px; color:var(--sepia)}
+/* Gespeicherte Prüfungen */
+.exsave{display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end; margin-bottom:4px}
+.gfld.exd{max-width:170px} .gfld.exl{flex:1; min-width:200px}
+.gfld.exd input,.gfld.exl input{border:1px solid var(--rule-strong); border-radius:3px; padding:8px 10px; font-size:14px; background:#fff; width:100%}
+.exsave .btn.small,.exsave .btn.primary{height:36px}
+.exlist{display:flex; flex-direction:column; gap:8px; margin-top:12px}
+.exempty{font-size:13.5px; color:var(--ink-faint); font-style:italic; padding:8px 0}
+.exrow{display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center; justify-content:space-between; background:var(--surface-2); border:1px solid var(--rule); border-radius:4px; padding:9px 12px}
+.exmeta{display:flex; flex-wrap:wrap; gap:5px 12px; align-items:baseline; min-width:0}
+.exdate{font-family:var(--serif); font-size:15.5px; font-weight:600; color:var(--green-deep)}
+.exprof{font-size:13px; color:var(--ink)}
+.excount{font-family:var(--mono); font-size:11px; color:var(--sepia)}
+.exlabel{font-size:12.5px; color:var(--ink-soft); font-style:italic}
+.exacts{display:flex; gap:6px; flex-wrap:wrap}
+.exacts .del:hover{border-color:var(--madder); color:var(--madder)}
 .masthead .tools{display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 0 8px; align-items:center}
 .spacer{flex:1 1 auto}
 .dbstatus{font-family:var(--mono); font-size:12px; color:var(--ink-soft); display:flex; align-items:center; gap:7px}
@@ -321,6 +336,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       <button class="btn" id="btnAdd"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>Art hinzufügen</button>
       <button class="btn" id="btnGrade"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h14a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 7h8M8 11h3M14 11h2M8 15h3M14 15h2"/></svg>Notenrechner</button>
       <button class="btn" id="btnSchema"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 12h16M4 19h16M8 3v4M14 10v4M10 17v4"/></svg>Prüfungsschema</button>
+      <button class="btn" id="btnExams"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Prüfungen</button>
       <span class="spacer"></span>
       <button class="btn ghost" id="btnOpen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Sicherung laden</button>
       <button class="btn ghost" id="btnSave"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>Sichern</button>
@@ -387,6 +403,21 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
         </div>
         <p class="gnote" id="scSum"></p>
         <p class="gnote">Mit&nbsp;▲▼ die Reihenfolge ändern – sie bestimmt die Spaltenfolge auf dem Bogen. Punkte dürfen Nachkommastellen haben (z.&nbsp;B. 0,5); 0&nbsp;Punkte bedeutet: Spalte wird nicht bewertet und erscheint nicht auf dem Bogen. Änderungen gelten für das gewählte Profil und bleiben im Browser gespeichert.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="grader" id="examsPanel" hidden>
+    <div class="gcard onecol">
+      <div class="left noborder">
+        <p class="gtitle">Gespeicherte Prüfungen · nach Prüfungsdatum</p>
+        <div class="exsave">
+          <div class="gfld exd"><label for="exDate">Prüfungsdatum</label><input id="exDate" type="date"></div>
+          <div class="gfld exl"><label for="exLabel">Bezeichnung (optional)</label><input id="exLabel" type="text" placeholder="z. B. Ausschuss 2, Vormittag"></div>
+          <button class="btn primary" id="exSave"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h11l3 3v15a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 3v5h7M8 13h8M8 17h5"/></svg>Aktuelle Auswahl speichern</button>
+        </div>
+        <p class="gnote">Die gezogene Liste wird als Momentaufnahme (samt Schema) gespeichert – so bleibt die Prüfung exakt reproduzierbar, auch wenn die Profil-Liste später geändert wird. »Laden« stellt die Auswahl wieder her, »Drucken« erzeugt Bogen oder Musterlösung, »JSON« lädt die Prüfung als Datei herunter.</p>
+        <div class="exlist" id="examList"></div>
       </div>
     </div>
   </section>

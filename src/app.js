@@ -136,6 +136,7 @@ let cache=[];                 // alle Arten (Array von Objekten)
 let nextId=1;                 // laufende ID-Vergabe
 let selection=[];             // ids in Reihenfolge
 let editId=null, pendingImport=null;
+let exams=[];                 // gespeicherte Prüfungen (nach Prüfungsdatum), snapshot-basiert
 
 /* ---------- Toast ---------- */
 let toastT=null;
@@ -561,13 +562,17 @@ function delPlant(id,p){
    ============================================================ */
 function selectedPlants(){ return selection.map(id=>cache.find(p=>p.id===id)).filter(Boolean); }
 
-function buildSheet(mode){ // mode: 'blank' | 'solution'
-  const plants=selectedPlants();
-  const cols=activeCols();
-  const def=PROFILE_DEFS[profileId];
-  const today=new Date().toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"});
+function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gespeicherte Prüfung)
+  ctx=ctx||{};
+  const plants=ctx.plants||selectedPlants();
+  const sch=ctx.schema||schema;
+  const scale=sch.scale||scaleCfg;
+  const def=ctx.def||PROFILE_DEFS[profileId];
+  const cols=(sch.cols||[]).filter(c=>c.pts>0);
+  const dateStr=ctx.date?new Date(ctx.date+"T00:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"}):null;
+  const today=dateStr||new Date().toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"});
   const sol = mode==="solution";
-  const per=ptsPer(), maxP=plants.length*per;
+  const per=cols.reduce((s,c)=>s+(c.pts||0),0), maxP=plants.length*per;
 
   const rows=plants.map((p,i)=>{
     const num=`<td class="num">${i+1}</td>`;
@@ -579,11 +584,11 @@ function buildSheet(mode){ // mode: 'blank' | 'solution'
   }).join("");
 
   let key, keyLabel;
-  if(scaleCfg.mode==="ihk"){
+  if(scale.mode==="ihk"){
     key=GRADE.map(g=>g.stufe===6?`6 unter ${thresholdPts(GRADE[4].min,maxP)}`:`${g.stufe} ab ${thresholdPts(g.min,maxP)}`).join(" · ");
     keyLabel="100-Punkte-Schlüssel";
   }else{
-    const B=linBands(scaleCfg.lin);
+    const B=linBands(scale.lin);
     key=B.map(b=>b.stufe===6?`6 unter ${thresholdPts(B[4].lo,maxP)}`:`${b.stufe} ab ${thresholdPts(b.lo,maxP)}`).join(" · ");
     keyLabel="linear, Baden-Württemberg";
   }
@@ -608,7 +613,7 @@ function buildSheet(mode){ // mode: 'blank' | 'solution'
     <div class="sheet-meta">
       <div class="mrow"><span class="k">Prüfling</span><span class="val"></span></div>
       <div class="mrow"><span class="k">Prüflings-Nr.</span><span class="val"></span></div>
-      <div class="mrow"><span class="k">Datum</span><span class="val">${sol?"":today}</span></div>
+      <div class="mrow"><span class="k">Datum</span><span class="val">${(ctx.date||!sol)?today:""}</span></div>
       <div class="mrow"><span class="k">Prüfungsort</span><span class="val"></span></div>
       <div class="mrow"><span class="k">Ausschuss</span><span class="val"></span></div>
       <div class="mrow"><span class="k">Bearbeitungszeit</span><span class="val"></span></div>
@@ -632,6 +637,98 @@ function printSheet(mode){
   if(!selection.length){ toast("Erst Arten auswählen",true); return; }
   buildSheet(mode);
   window.print();
+}
+
+/* ============================================================
+   Gespeicherte Prüfungen (nach Prüfungsdatum)
+   Eine Prüfung ist ein Snapshot der gezogenen Liste samt Schema – so bleibt sie
+   auch dann exakt reproduzierbar, wenn die Profil-Liste später geändert wird.
+   ============================================================ */
+const EXAMS_KEY = LS_PREFIX+"exams";
+function loadExams(){
+  try{ const raw=store.get(EXAMS_KEY); exams=raw?JSON.parse(raw):[]; if(!Array.isArray(exams)) exams=[]; }
+  catch(e){ exams=[]; }
+}
+function saveExams(){ store.set(EXAMS_KEY, JSON.stringify(exams)); }
+function todayISO(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function fmtDate(iso){ if(!iso) return ""; const d=new Date(iso+"T00:00:00"); return isNaN(d)?iso:d.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"}); }
+
+function saveExam(){
+  if(!selection.length){ toast("Erst Arten auswählen oder ziehen",true); return; }
+  const date=$("#exDate").value || todayISO();
+  const label=norm($("#exLabel").value);
+  const def=PROFILE_DEFS[profileId];
+  const plants=selectedPlants().map(p=>({gattung:p.gattung,art:p.art,familie:p.familie,
+    deutscher_name:p.deutscher_name,kategorie:p.kategorie,zp:p.zp?1:0}));
+  const exam={ id:"ex"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),
+    savedAt:new Date().toISOString(), date, profileId, fr:def.fr, niveau:def.niveau,
+    label, plants, schema:cloneSchema(schema) };
+  exams.unshift(exam); saveExams(); renderExams();
+  $("#exLabel").value="";
+  toast(`Prüfung gespeichert (${plants.length} Pflanzen · ${fmtDate(date)})`);
+}
+function examCtx(ex){ return { plants:ex.plants, schema:ex.schema, def:{fr:ex.fr,niveau:ex.niveau}, date:ex.date }; }
+function printExam(id){
+  const ex=exams.find(e=>e.id===id); if(!ex) return;
+  const choice=window.prompt("Gespeicherte Prüfung drucken:\n\n[1] Prüfungsbogen (leer)\n[2] Musterlösung (mit Antworten)\n\nBitte 1 oder 2 eingeben:","1");
+  if(choice==null) return;
+  buildSheet(choice.trim()==="2"?"solution":"blank", examCtx(ex));
+  window.print();
+}
+function loadExam(id){
+  const ex=exams.find(e=>e.id===id); if(!ex) return;
+  if(ex.profileId && ex.profileId!==profileId && PROFILE_DEFS[ex.profileId]){
+    switchProfile(ex.profileId);
+    $("#frSelect").value=slug(PROFILE_DEFS[ex.profileId].fr); $("#nivSelect").value=PROFILE_DEFS[ex.profileId].niveauKey;
+  }
+  // Snapshot-Pflanzen den aktuellen Arten zuordnen (nach Gattung+Art+dt. Name)
+  const key=p=>(p.gattung+"|"+p.art+"|"+p.deutscher_name).toLowerCase();
+  const byKey=new Map(cache.map(p=>[key(p),p.id]));
+  const ids=[], fehlend=[];
+  ex.plants.forEach(p=>{ const id=byKey.get(key(p)); if(id!=null) ids.push(id); else fehlend.push(p.gattung+" "+p.art); });
+  selection=ids; renderList(); syncSelUI();
+  if(fehlend.length) toast(`${ids.length} übernommen, ${fehlend.length} nicht in der aktuellen Liste`,true);
+  else toast(`${ids.length} Arten der Prüfung geladen`);
+}
+function downloadExam(id){
+  const ex=exams.find(e=>e.id===id); if(!ex) return;
+  downloadText(JSON.stringify(ex,null,2), `pruefung_${ex.profileId}_${ex.date}.json`);
+  toast("Prüfung als JSON gesichert");
+}
+function delExam(id){
+  const ex=exams.find(e=>e.id===id); if(!ex) return;
+  if(!confirm(`Gespeicherte Prüfung „${ex.fr} · ${fmtDate(ex.date)}“ löschen?`)) return;
+  exams=exams.filter(e=>e.id!==id); saveExams(); renderExams();
+  toast("Prüfung gelöscht");
+}
+function toggleExams(){
+  const s=$("#examsPanel");
+  if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); if(!$("#exDate").value) $("#exDate").value=todayISO(); renderExams(); }
+  else s.setAttribute("hidden","");
+}
+function renderExams(){
+  const host=$("#examList"); host.innerHTML="";
+  if(!exams.length){ host.innerHTML='<div class="exempty">Noch keine Prüfung gespeichert. Ziehe eine Liste, wähle das Prüfungsdatum und speichere sie hier.</div>'; return; }
+  exams.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.savedAt||"").localeCompare(a.savedAt||"")).forEach(ex=>{
+    const row=el("div","exrow");
+    row.innerHTML=`<div class="exmeta">
+        <span class="exdate">${esc(fmtDate(ex.date))}</span>
+        <span class="exprof">${esc(ex.fr)} · ${esc(ex.niveau)}</span>
+        <span class="excount">${ex.plants.length} Pflanzen</span>
+        ${ex.label?`<span class="exlabel">${esc(ex.label)}</span>`:""}
+      </div>
+      <div class="exacts">
+        <button class="btn small" data-act="load">Laden</button>
+        <button class="btn small" data-act="print">Drucken</button>
+        <button class="btn small ghost" data-act="dl" title="Als JSON herunterladen">JSON</button>
+        <button class="btn small ghost del" data-act="del" title="Löschen">Löschen</button>
+      </div>`;
+    row.querySelector('[data-act="load"]').onclick=()=>loadExam(ex.id);
+    row.querySelector('[data-act="print"]').onclick=()=>printExam(ex.id);
+    row.querySelector('[data-act="dl"]').onclick=()=>downloadExam(ex.id);
+    row.querySelector('[data-act="del"]').onclick=()=>delExam(ex.id);
+    host.appendChild(row);
+  });
 }
 
 /* ============================================================
@@ -730,6 +827,9 @@ function wire(){
   $("#btnShuffle").onclick=shuffleSel;
   $("#btnClear").onclick=clearSel;
   $("#btnPrint").onclick=()=>askPrintMode();
+  // Gespeicherte Prüfungen
+  $("#btnExams").onclick=toggleExams;
+  $("#exSave").onclick=saveExam;
   // Profil-Auswahl
   $("#frSelect").addEventListener("change",()=>applyProfileSelect());
   $("#nivSelect").addEventListener("change",()=>applyProfileSelect());
@@ -761,6 +861,7 @@ function renderAll(){
   syncProfileUI(); refreshKatList(); renderList(); syncSelUI();
   if(!$("#grader").hasAttribute("hidden")) renderGrader();
   if(!$("#schemaPanel").hasAttribute("hidden")) renderSchema();
+  if(!$("#examsPanel").hasAttribute("hidden")) renderExams();
 }
 
 /* ---------- Fachrichtungs-/Profil-Auswahl ---------- */
@@ -840,6 +941,7 @@ function updateSchema(){
 (function boot(){
   try{
     populateSelectors();
+    loadExams();
     const pid=store.get(LS_PREFIX+"profile");
     loadProfile(pid&&PROFILE_DEFS[pid]?pid:"gemuesebau_gaertner");
     applyDrawDefault();

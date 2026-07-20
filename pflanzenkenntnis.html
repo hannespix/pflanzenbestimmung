@@ -69,6 +69,21 @@ input,select{font-family:inherit; color:inherit}
 .scname{font-family:var(--serif); font-size:14.5px; flex:1; min-width:110px}
 .scpts{width:56px; border:1px solid var(--rule-strong); border-radius:3px; padding:5px 7px; font-size:14px; font-family:var(--mono); text-align:right; background:#fff}
 .scp{font-family:var(--mono); font-size:12px; color:var(--sepia)}
+/* Gespeicherte Prüfungen */
+.exsave{display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end; margin-bottom:4px}
+.gfld.exd{max-width:170px} .gfld.exl{flex:1; min-width:200px}
+.gfld.exd input,.gfld.exl input{border:1px solid var(--rule-strong); border-radius:3px; padding:8px 10px; font-size:14px; background:#fff; width:100%}
+.exsave .btn.small,.exsave .btn.primary{height:36px}
+.exlist{display:flex; flex-direction:column; gap:8px; margin-top:12px}
+.exempty{font-size:13.5px; color:var(--ink-faint); font-style:italic; padding:8px 0}
+.exrow{display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center; justify-content:space-between; background:var(--surface-2); border:1px solid var(--rule); border-radius:4px; padding:9px 12px}
+.exmeta{display:flex; flex-wrap:wrap; gap:5px 12px; align-items:baseline; min-width:0}
+.exdate{font-family:var(--serif); font-size:15.5px; font-weight:600; color:var(--green-deep)}
+.exprof{font-size:13px; color:var(--ink)}
+.excount{font-family:var(--mono); font-size:11px; color:var(--sepia)}
+.exlabel{font-size:12.5px; color:var(--ink-soft); font-style:italic}
+.exacts{display:flex; gap:6px; flex-wrap:wrap}
+.exacts .del:hover{border-color:var(--madder); color:var(--madder)}
 .masthead .tools{display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 0 8px; align-items:center}
 .spacer{flex:1 1 auto}
 .dbstatus{font-family:var(--mono); font-size:12px; color:var(--ink-soft); display:flex; align-items:center; gap:7px}
@@ -321,6 +336,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       <button class="btn" id="btnAdd"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>Art hinzufügen</button>
       <button class="btn" id="btnGrade"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h14a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 7h8M8 11h3M14 11h2M8 15h3M14 15h2"/></svg>Notenrechner</button>
       <button class="btn" id="btnSchema"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 12h16M4 19h16M8 3v4M14 10v4M10 17v4"/></svg>Prüfungsschema</button>
+      <button class="btn" id="btnExams"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Prüfungen</button>
       <span class="spacer"></span>
       <button class="btn ghost" id="btnOpen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Sicherung laden</button>
       <button class="btn ghost" id="btnSave"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>Sichern</button>
@@ -387,6 +403,21 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
         </div>
         <p class="gnote" id="scSum"></p>
         <p class="gnote">Mit&nbsp;▲▼ die Reihenfolge ändern – sie bestimmt die Spaltenfolge auf dem Bogen. Punkte dürfen Nachkommastellen haben (z.&nbsp;B. 0,5); 0&nbsp;Punkte bedeutet: Spalte wird nicht bewertet und erscheint nicht auf dem Bogen. Änderungen gelten für das gewählte Profil und bleiben im Browser gespeichert.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="grader" id="examsPanel" hidden>
+    <div class="gcard onecol">
+      <div class="left noborder">
+        <p class="gtitle">Gespeicherte Prüfungen · nach Prüfungsdatum</p>
+        <div class="exsave">
+          <div class="gfld exd"><label for="exDate">Prüfungsdatum</label><input id="exDate" type="date"></div>
+          <div class="gfld exl"><label for="exLabel">Bezeichnung (optional)</label><input id="exLabel" type="text" placeholder="z. B. Ausschuss 2, Vormittag"></div>
+          <button class="btn primary" id="exSave"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h11l3 3v15a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 3v5h7M8 13h8M8 17h5"/></svg>Aktuelle Auswahl speichern</button>
+        </div>
+        <p class="gnote">Die gezogene Liste wird als Momentaufnahme (samt Schema) gespeichert – so bleibt die Prüfung exakt reproduzierbar, auch wenn die Profil-Liste später geändert wird. »Laden« stellt die Auswahl wieder her, »Drucken« erzeugt Bogen oder Musterlösung, »JSON« lädt die Prüfung als Datei herunter.</p>
+        <div class="exlist" id="examList"></div>
       </div>
     </div>
   </section>
@@ -607,6 +638,7 @@ let cache=[];                 // alle Arten (Array von Objekten)
 let nextId=1;                 // laufende ID-Vergabe
 let selection=[];             // ids in Reihenfolge
 let editId=null, pendingImport=null;
+let exams=[];                 // gespeicherte Prüfungen (nach Prüfungsdatum), snapshot-basiert
 
 /* ---------- Toast ---------- */
 let toastT=null;
@@ -1032,13 +1064,17 @@ function delPlant(id,p){
    ============================================================ */
 function selectedPlants(){ return selection.map(id=>cache.find(p=>p.id===id)).filter(Boolean); }
 
-function buildSheet(mode){ // mode: 'blank' | 'solution'
-  const plants=selectedPlants();
-  const cols=activeCols();
-  const def=PROFILE_DEFS[profileId];
-  const today=new Date().toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"});
+function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gespeicherte Prüfung)
+  ctx=ctx||{};
+  const plants=ctx.plants||selectedPlants();
+  const sch=ctx.schema||schema;
+  const scale=sch.scale||scaleCfg;
+  const def=ctx.def||PROFILE_DEFS[profileId];
+  const cols=(sch.cols||[]).filter(c=>c.pts>0);
+  const dateStr=ctx.date?new Date(ctx.date+"T00:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"}):null;
+  const today=dateStr||new Date().toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"});
   const sol = mode==="solution";
-  const per=ptsPer(), maxP=plants.length*per;
+  const per=cols.reduce((s,c)=>s+(c.pts||0),0), maxP=plants.length*per;
 
   const rows=plants.map((p,i)=>{
     const num=`<td class="num">${i+1}</td>`;
@@ -1050,11 +1086,11 @@ function buildSheet(mode){ // mode: 'blank' | 'solution'
   }).join("");
 
   let key, keyLabel;
-  if(scaleCfg.mode==="ihk"){
+  if(scale.mode==="ihk"){
     key=GRADE.map(g=>g.stufe===6?`6 unter ${thresholdPts(GRADE[4].min,maxP)}`:`${g.stufe} ab ${thresholdPts(g.min,maxP)}`).join(" · ");
     keyLabel="100-Punkte-Schlüssel";
   }else{
-    const B=linBands(scaleCfg.lin);
+    const B=linBands(scale.lin);
     key=B.map(b=>b.stufe===6?`6 unter ${thresholdPts(B[4].lo,maxP)}`:`${b.stufe} ab ${thresholdPts(b.lo,maxP)}`).join(" · ");
     keyLabel="linear, Baden-Württemberg";
   }
@@ -1079,7 +1115,7 @@ function buildSheet(mode){ // mode: 'blank' | 'solution'
     <div class="sheet-meta">
       <div class="mrow"><span class="k">Prüfling</span><span class="val"></span></div>
       <div class="mrow"><span class="k">Prüflings-Nr.</span><span class="val"></span></div>
-      <div class="mrow"><span class="k">Datum</span><span class="val">${sol?"":today}</span></div>
+      <div class="mrow"><span class="k">Datum</span><span class="val">${(ctx.date||!sol)?today:""}</span></div>
       <div class="mrow"><span class="k">Prüfungsort</span><span class="val"></span></div>
       <div class="mrow"><span class="k">Ausschuss</span><span class="val"></span></div>
       <div class="mrow"><span class="k">Bearbeitungszeit</span><span class="val"></span></div>
@@ -1103,6 +1139,98 @@ function printSheet(mode){
   if(!selection.length){ toast("Erst Arten auswählen",true); return; }
   buildSheet(mode);
   window.print();
+}
+
+/* ============================================================
+   Gespeicherte Prüfungen (nach Prüfungsdatum)
+   Eine Prüfung ist ein Snapshot der gezogenen Liste samt Schema – so bleibt sie
+   auch dann exakt reproduzierbar, wenn die Profil-Liste später geändert wird.
+   ============================================================ */
+const EXAMS_KEY = LS_PREFIX+"exams";
+function loadExams(){
+  try{ const raw=store.get(EXAMS_KEY); exams=raw?JSON.parse(raw):[]; if(!Array.isArray(exams)) exams=[]; }
+  catch(e){ exams=[]; }
+}
+function saveExams(){ store.set(EXAMS_KEY, JSON.stringify(exams)); }
+function todayISO(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function fmtDate(iso){ if(!iso) return ""; const d=new Date(iso+"T00:00:00"); return isNaN(d)?iso:d.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"}); }
+
+function saveExam(){
+  if(!selection.length){ toast("Erst Arten auswählen oder ziehen",true); return; }
+  const date=$("#exDate").value || todayISO();
+  const label=norm($("#exLabel").value);
+  const def=PROFILE_DEFS[profileId];
+  const plants=selectedPlants().map(p=>({gattung:p.gattung,art:p.art,familie:p.familie,
+    deutscher_name:p.deutscher_name,kategorie:p.kategorie,zp:p.zp?1:0}));
+  const exam={ id:"ex"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),
+    savedAt:new Date().toISOString(), date, profileId, fr:def.fr, niveau:def.niveau,
+    label, plants, schema:cloneSchema(schema) };
+  exams.unshift(exam); saveExams(); renderExams();
+  $("#exLabel").value="";
+  toast(`Prüfung gespeichert (${plants.length} Pflanzen · ${fmtDate(date)})`);
+}
+function examCtx(ex){ return { plants:ex.plants, schema:ex.schema, def:{fr:ex.fr,niveau:ex.niveau}, date:ex.date }; }
+function printExam(id){
+  const ex=exams.find(e=>e.id===id); if(!ex) return;
+  const choice=window.prompt("Gespeicherte Prüfung drucken:\n\n[1] Prüfungsbogen (leer)\n[2] Musterlösung (mit Antworten)\n\nBitte 1 oder 2 eingeben:","1");
+  if(choice==null) return;
+  buildSheet(choice.trim()==="2"?"solution":"blank", examCtx(ex));
+  window.print();
+}
+function loadExam(id){
+  const ex=exams.find(e=>e.id===id); if(!ex) return;
+  if(ex.profileId && ex.profileId!==profileId && PROFILE_DEFS[ex.profileId]){
+    switchProfile(ex.profileId);
+    $("#frSelect").value=slug(PROFILE_DEFS[ex.profileId].fr); $("#nivSelect").value=PROFILE_DEFS[ex.profileId].niveauKey;
+  }
+  // Snapshot-Pflanzen den aktuellen Arten zuordnen (nach Gattung+Art+dt. Name)
+  const key=p=>(p.gattung+"|"+p.art+"|"+p.deutscher_name).toLowerCase();
+  const byKey=new Map(cache.map(p=>[key(p),p.id]));
+  const ids=[], fehlend=[];
+  ex.plants.forEach(p=>{ const id=byKey.get(key(p)); if(id!=null) ids.push(id); else fehlend.push(p.gattung+" "+p.art); });
+  selection=ids; renderList(); syncSelUI();
+  if(fehlend.length) toast(`${ids.length} übernommen, ${fehlend.length} nicht in der aktuellen Liste`,true);
+  else toast(`${ids.length} Arten der Prüfung geladen`);
+}
+function downloadExam(id){
+  const ex=exams.find(e=>e.id===id); if(!ex) return;
+  downloadText(JSON.stringify(ex,null,2), `pruefung_${ex.profileId}_${ex.date}.json`);
+  toast("Prüfung als JSON gesichert");
+}
+function delExam(id){
+  const ex=exams.find(e=>e.id===id); if(!ex) return;
+  if(!confirm(`Gespeicherte Prüfung „${ex.fr} · ${fmtDate(ex.date)}“ löschen?`)) return;
+  exams=exams.filter(e=>e.id!==id); saveExams(); renderExams();
+  toast("Prüfung gelöscht");
+}
+function toggleExams(){
+  const s=$("#examsPanel");
+  if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); if(!$("#exDate").value) $("#exDate").value=todayISO(); renderExams(); }
+  else s.setAttribute("hidden","");
+}
+function renderExams(){
+  const host=$("#examList"); host.innerHTML="";
+  if(!exams.length){ host.innerHTML='<div class="exempty">Noch keine Prüfung gespeichert. Ziehe eine Liste, wähle das Prüfungsdatum und speichere sie hier.</div>'; return; }
+  exams.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.savedAt||"").localeCompare(a.savedAt||"")).forEach(ex=>{
+    const row=el("div","exrow");
+    row.innerHTML=`<div class="exmeta">
+        <span class="exdate">${esc(fmtDate(ex.date))}</span>
+        <span class="exprof">${esc(ex.fr)} · ${esc(ex.niveau)}</span>
+        <span class="excount">${ex.plants.length} Pflanzen</span>
+        ${ex.label?`<span class="exlabel">${esc(ex.label)}</span>`:""}
+      </div>
+      <div class="exacts">
+        <button class="btn small" data-act="load">Laden</button>
+        <button class="btn small" data-act="print">Drucken</button>
+        <button class="btn small ghost" data-act="dl" title="Als JSON herunterladen">JSON</button>
+        <button class="btn small ghost del" data-act="del" title="Löschen">Löschen</button>
+      </div>`;
+    row.querySelector('[data-act="load"]').onclick=()=>loadExam(ex.id);
+    row.querySelector('[data-act="print"]').onclick=()=>printExam(ex.id);
+    row.querySelector('[data-act="dl"]').onclick=()=>downloadExam(ex.id);
+    row.querySelector('[data-act="del"]').onclick=()=>delExam(ex.id);
+    host.appendChild(row);
+  });
 }
 
 /* ============================================================
@@ -1201,6 +1329,9 @@ function wire(){
   $("#btnShuffle").onclick=shuffleSel;
   $("#btnClear").onclick=clearSel;
   $("#btnPrint").onclick=()=>askPrintMode();
+  // Gespeicherte Prüfungen
+  $("#btnExams").onclick=toggleExams;
+  $("#exSave").onclick=saveExam;
   // Profil-Auswahl
   $("#frSelect").addEventListener("change",()=>applyProfileSelect());
   $("#nivSelect").addEventListener("change",()=>applyProfileSelect());
@@ -1232,6 +1363,7 @@ function renderAll(){
   syncProfileUI(); refreshKatList(); renderList(); syncSelUI();
   if(!$("#grader").hasAttribute("hidden")) renderGrader();
   if(!$("#schemaPanel").hasAttribute("hidden")) renderSchema();
+  if(!$("#examsPanel").hasAttribute("hidden")) renderExams();
 }
 
 /* ---------- Fachrichtungs-/Profil-Auswahl ---------- */
@@ -1311,6 +1443,7 @@ function updateSchema(){
 (function boot(){
   try{
     populateSelectors();
+    loadExams();
     const pid=store.get(LS_PREFIX+"profile");
     loadProfile(pid&&PROFILE_DEFS[pid]?pid:"gemuesebau_gaertner");
     applyDrawDefault();

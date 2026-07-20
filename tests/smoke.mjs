@@ -154,15 +154,49 @@ async function main() {
     cache.some((p) => p.gattung === "Smoketestia" && p.art === "verificata"));
   assert(persisted, "Hinzugefügte Art überlebte den Reload nicht (localStorage)");
 
+  // 7b) Prüfung nach Datum speichern, laden, aus Snapshot drucken, JSON serialisieren
+  const exam = await page.evaluate(() => {
+    drawRandom();
+    const drawn = selection.length;
+    if ($("#examsPanel").hasAttribute("hidden")) toggleExams();
+    $("#exDate").value = "2026-06-15";
+    $("#exLabel").value = "Smoke";
+    saveExam();
+    const saved = exams.length;
+    // Laden stellt die Auswahl wieder her
+    selection = [];
+    loadExam(exams[0].id);
+    const loaded = selection.length;
+    // Druck aus Snapshot
+    const ex = exams[0];
+    buildSheet("solution", { plants: ex.plants, schema: ex.schema, def: { fr: ex.fr, niveau: ex.niveau }, date: ex.date });
+    const rows = document.querySelectorAll("#sheet table.exam tbody tr").length;
+    const dateShown = /15\.06\.2026/.test(document.querySelector("#sheet .sheet-meta").textContent);
+    const json = JSON.stringify(ex);
+    return { drawn, saved, loaded, rows, dateShown, jsonOk: json.includes("2026-06-15") && json.includes("\"plants\"") };
+  });
+  assert(exam.saved === 1, "Prüfung speichern schlug fehl (exams=" + exam.saved + ")");
+  assert(exam.loaded === exam.drawn && exam.loaded > 0, "Prüfung laden stellte die Auswahl nicht her: " + exam.loaded + "/" + exam.drawn);
+  assert(exam.rows === exam.drawn, "Snapshot-Druck: Zeilenzahl " + exam.rows + " != " + exam.drawn);
+  assert(exam.dateShown, "Snapshot-Druck zeigt das Prüfungsdatum nicht");
+  assert(exam.jsonOk, "Prüfungs-JSON unvollständig");
+  // Persistenz der Prüfungen über einen Reload
+  await page.waitForFunction("localStorage.getItem('pflanzenkenntnis.exams')!=null", { timeout: 5000 });
+  await page.reload({ waitUntil: "load" });
+  await page.waitForFunction("window.pickExcel!=null", { timeout: 10000 });
+  const examsAfter = await page.evaluate(() => exams.length);
+  assert(examsAfter === 1, "Gespeicherte Prüfung überlebte den Reload nicht: " + examsAfter);
+
   // 8) Testreste im Browser-Speicher aufräumen
   await page.evaluate(() => {
     localStorage.removeItem("pflanzenkenntnis.data.baumschule_gaertner");
     localStorage.removeItem("pflanzenkenntnis.data.garten_und_landschaftsbau_fachwerker");
+    localStorage.removeItem("pflanzenkenntnis.exams");
   });
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Smoke-Test OK – Boot, Profilwechsel (148/248), GaLaBau-Schema (60 P., Dt. Name zuerst), Reorder, Ziehen, Bogen, Persistenz.");
+  console.log("Smoke-Test OK – Boot, Profilwechsel (148/248), GaLaBau-Schema (60 P., Dt. Name zuerst), Reorder, Ziehen, Bogen, Prüfung speichern/laden/drucken, Persistenz.");
 }
 
 main().catch((e) => { console.error("Smoke-Test FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
