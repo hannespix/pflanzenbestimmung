@@ -1,0 +1,12 @@
+{
+  "name": "pflanzenkenntnis-pruefungslisten",
+  "version": "1.0.0",
+  "description": "Offline-Prüfungslisten-Werkzeug für die Pflanzenkenntnis-Prüfung der grünen Berufe",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "python3 build.py",
+    "check": "python3 tools/check_offline.py",
+    "seed": "node tools/xlsx_to_seed.mjs"
+  }
+}
