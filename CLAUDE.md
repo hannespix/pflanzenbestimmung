@@ -62,16 +62,21 @@ python3 build.py                       # -> dist/pflanzenkenntnis.html
 python3 tools/check_offline.py         # Offline-Check (muss grün sein)
 ```
 
-Node (nur für den Konverter):
+Node (Konverter und Tests):
 
 ```bash
 node tools/xlsx_to_seed.mjs <excel> <profil-id> [--sheet "Blattname"]
+bash tools/rebuild_seeds.sh            # alle Seeds aus data/<id>.<ext> neu erzeugen
+node tests/smoke.mjs                    # Puppeteer-Smoke gegen dist/ (npm test)
 ```
 
-**Funktionstests** laufen mit Puppeteer gegen die gebaute Datei (`file://`).
-Ein neuer Test soll mindestens prüfen: Boot ohne Konsolenfehler, korrekte
-Zeilenzahl, Profilwechsel, `localStorage`-Persistenz über einen Reload, Ziehen
-und Aufbau des Druckbogens. Beispielmuster:
+Der Smoke-Test nutzt `puppeteer` oder `puppeteer-core` und findet Chromium über
+`PUPPETEER_EXECUTABLE_PATH` bzw. ein vorinstalliertes Playwright-Chromium.
+
+**Funktionstests** laufen mit Puppeteer gegen die gebaute Datei (`file://`) –
+siehe `tests/smoke.mjs`. Ein neuer Test soll mindestens prüfen: Boot ohne
+Konsolenfehler, korrekte Zeilenzahl, Profilwechsel, `localStorage`-Persistenz
+über einen Reload, Ziehen und Aufbau des Druckbogens. Beispielmuster:
 
 ```js
 import puppeteer from 'puppeteer';
@@ -205,12 +210,28 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
 
 ---
 
+## Erledigt
+
+- [x] Seeds für **alle 14 Profile** aus den Excel-Listen erzeugt (2114 Arten).
+      Quellen liegen als `data/<profil-id>.<ext>`; `tools/rebuild_seeds.sh`
+      erzeugt alle Seeds reproduzierbar neu.
+- [x] Schema-Overrides für Garten- und Landschaftsbau hinterlegt (Gärtner 1/1/2
+      = 80 P.; Fachwerker Dt. Name 3 / Gattung 0,5 / Art 0,5 = 60 P., Dt. Name
+      zuerst). Übrige Fachrichtungen: Standard 3/3/1/3 bestätigt (Quellen
+      enthalten keine abweichenden Punktangaben).
+- [x] Spaltenreihenfolge im Prüfungsschema editierbar (▲▼); Punkte mit
+      Nachkommastellen (0,5) und deutschem Dezimalkomma.
+- [x] Puppeteer-Smoke-Test (`tests/smoke.mjs`) und CI-Integration (`build.yml`).
+- [x] `localStorage`-Ausfall-Fallback (In-Memory) für Kiosk-/Sandbox-Profile.
+- [x] Konverter-Ladefehler behoben (SheetJS-Standalone via require lieferte unter
+      aktuellem Node ein leeres Objekt) und Import robuster gemacht (Sorte-Spalte,
+      unbeschriftete/AP-ZP-Markerspalten, Verwendungs-Kategorie, Hybrid-Gattungen).
+
 ## Offene Aufgaben (TODO)
 
-- [ ] Seeds für die restlichen 13 Profile ergänzen, sobald die Excel-Listen
-      vorliegen (Konverter → `seeds/<id>.json` → Build).
-- [ ] Je Fachrichtung prüfen, ob Bewertungsspalten/Punkte/Anzahl vom Gemüsebau-
-      Standard abweichen; ggf. Schema-Override hinterlegen.
-- [ ] Optional: automatischer Puppeteer-Smoke-Test in CI (`.github/workflows`).
-- [ ] Optional: kleines `localStorage`-Ausfall-Fallback (Kiosk-/Sandbox-Profile),
-      damit Änderungen zumindest pro Sitzung erhalten bleiben.
+- [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei
+      `garten_und_landschaftsbau_gaertner` die Familie zu *Chimonanthus praecox* –
+      so in der Excel; im Tool nachtragbar).
+- [ ] Bei künftigen Listen-Updates: Excel nach `data/<profil-id>.<ext>` legen,
+      `tools/rebuild_seeds.sh` (oder Konverter je Datei) laufen lassen, bauen,
+      Offline-Check + Smoke-Test.
