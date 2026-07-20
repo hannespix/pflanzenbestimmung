@@ -259,7 +259,10 @@ const HEAD = {
 // Titel-/Fuß-/Quellzeilen, die weder Datenzeile noch Kategorie sind
 const isNoise = s => /^(https?:|stand[:\s]|quelle|pflanzenliste)/i.test(norm(s));
 function tidyName(s){ s=norm(s); s=s.replace(/\b(var|subsp|ssp|f|cv|convar)\.(?=\S)/g,"$1. "); return norm(s); }
-function splitBinomial(bot){ bot=tidyName(bot); if(!bot) return {gattung:"",art:""}; const p=bot.split(" "); return {gattung:p.shift(), art:p.join(" ")}; }
+function splitBinomial(bot){ bot=tidyName(bot); if(!bot) return {gattung:"",art:""}; const p=bot.split(" ");
+  // Nothogattung (Hybrid-Gattung): führendes ×/x an die Gattung binden
+  if(p.length>=2 && /^[x×]$/i.test(p[0])) return {gattung:"×"+p[1], art:p.slice(2).join(" ")};
+  return {gattung:p.shift(), art:p.join(" ")}; }
 function findHeaderRow(rows){
   for(let i=0;i<Math.min(rows.length,15);i++){
     const c=rows[i].map(norm);
@@ -281,6 +284,20 @@ function parseWorkbook(buf){
     const m=mapCols(rows[hr]);
     const hasBot=m.botanisch!=null, hasGA=(m.gattung!=null&&m.art!=null);
     if((!hasBot&&!hasGA)||m.familie==null) continue;
+    // Fallback: unbeschriftete Marker-Spalte (überwiegend Werte AP/ZP) als ZP-Spalte
+    // erkennen (manche Listen lassen die Kopfzelle der ZP-Spalte leer).
+    if(m.zp==null){
+      const used=new Set(Object.values(m));
+      let ncols=0; for(let i=hr+1;i<rows.length;i++) ncols=Math.max(ncols,rows[i].length);
+      let best=-1,bestHits=0;
+      for(let ci=0;ci<ncols;ci++){
+        if(used.has(ci)) continue;
+        let hits=0,nonEmpty=0;
+        for(let i=hr+1;i<rows.length;i++){ const v=norm(rows[i][ci]); if(!v) continue; nonEmpty++; if(/^(zp|ap)$/i.test(v)) hits++; }
+        if(nonEmpty>=5 && hits>=nonEmpty*0.6 && hits>bestHits){ best=ci; bestHits=hits; }
+      }
+      if(best>=0) m.zp=best;
+    }
     const maxIdx=Math.max(...Object.values(m));
     let kat="";
     // Anfangs-Kategorie: eine allein stehende Rubrik knapp oberhalb der Kopfzeile
