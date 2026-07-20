@@ -16,8 +16,18 @@ jobs:
           python-version: "3.12"
       - name: Build (Single-File HTML)
         run: python3 build.py
+      - name: Verteilkopie im Repo-Root ist aktuell
+        run: git diff --exit-code pflanzenkenntnis.html
       - name: Offline-Check (kein CDN, keine externen Ressourcen)
         run: python3 tools/check_offline.py
+      - name: Node einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Puppeteer (inkl. Chromium) installieren
+        run: npm install --no-save puppeteer@23
+      - name: Puppeteer-Smoke-Test (gegen dist/)
+        run: node tests/smoke.mjs
       - name: Artefakt hochladen
         uses: actions/upload-artifact@v4
         with:

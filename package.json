@@ -7,6 +7,11 @@
   "scripts": {
     "build": "python3 build.py",
     "check": "python3 tools/check_offline.py",
-    "seed": "node tools/xlsx_to_seed.mjs"
+    "seed": "node tools/xlsx_to_seed.mjs",
+    "seeds": "bash tools/rebuild_seeds.sh",
+    "test": "node tests/smoke.mjs"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^23.11.1"
   }
 }
