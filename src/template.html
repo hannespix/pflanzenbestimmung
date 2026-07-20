@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pflanzenkenntnis · Prüfungslisten (grüne Berufe)</title>
+<style>
+:root{
+  --paper:#eceee6; --surface:#f6f7f1; --surface-2:#f1f2ea;
+  --ink:#22352b; --ink-soft:#56604f; --ink-faint:#8a9182;
+  --green:#3d6b4d; --green-deep:#2b4f38; --green-tint:#e2ebe1;
+  --sepia:#7a6a4f; --madder:#9c3b2e; --madder-soft:#c96a5a; --madder-tint:#f3e2dd;
+  --gold:#a9842b;
+  --rule:#cdd0c0; --rule-strong:#a9ad98; --shadow:rgba(34,53,43,.10);
+  --serif:'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua','URW Palladio L',Georgia,'Times New Roman',serif;
+  --sans:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --mono:'SFMono-Regular','Cascadia Code',Menlo,Consolas,'Liberation Mono',monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  font-family:var(--sans); color:var(--ink); background:var(--paper);
+  background-image:radial-gradient(var(--rule) .5px,transparent .5px);
+  background-size:22px 22px;
+  -webkit-font-smoothing:antialiased; line-height:1.45;
+}
+button{font-family:inherit; cursor:pointer}
+input,select{font-family:inherit; color:inherit}
+.wrap{max-width:1080px; margin:0 auto; padding:28px 20px 80px}
+
+/* ---------- Kopf ---------- */
+.masthead{
+  background:var(--surface); border:1px solid var(--rule-strong);
+  border-radius:4px; padding:22px 24px 20px; box-shadow:0 1px 0 var(--shadow);
+  position:relative; overflow:hidden;
+}
+.masthead::before{
+  content:""; position:absolute; left:0; top:0; bottom:0; width:6px;
+  background:repeating-linear-gradient(180deg,var(--green) 0 10px,var(--green-deep) 10px 20px);
+}
+.eyebrow{
+  font-family:var(--mono); font-size:11px; letter-spacing:.22em; text-transform:uppercase;
+  color:var(--sepia); margin:0 0 6px 8px;
+}
+.masthead h1{
+  font-family:var(--serif); font-weight:600; font-size:clamp(24px,4vw,34px);
+  margin:0 0 2px 8px; letter-spacing:-.01em; line-height:1.05;
+}
+.masthead .sub{font-family:var(--serif); font-style:italic; color:var(--ink-soft); margin:0 0 0 8px; font-size:16px}
+/* Fachrichtungs-/Profil-Auswahl */
+.profilerow{display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px; margin:14px 0 2px 8px}
+.pfield{display:flex; flex-direction:column; gap:4px}
+.pfield label{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia)}
+.pfield select{border:1.4px solid var(--green); background:#fff; border-radius:4px; padding:9px 30px 9px 12px; font-size:15px; font-family:var(--serif); font-weight:600; color:var(--green-deep);
+  appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%232b4f38' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 11px center}
+.profsub{font-family:var(--mono); font-size:12px; color:var(--ink-soft); padding-bottom:9px}
+/* Schema-Editor */
+.gcard.onecol{grid-template-columns:1fr}
+.gcard .left.noborder{border-right:none}
+.scwrap{display:flex; flex-wrap:wrap; gap:22px; align-items:flex-start}
+.gfld.scanz{max-width:170px}
+.gfld.scanz input{border:1px solid var(--rule-strong); border-radius:3px; padding:9px 11px; font-size:17px; font-family:var(--mono); background:#fff; width:100%}
+.scgrid{display:flex; flex-direction:column; gap:8px; flex:1; padding-top:2px; max-width:440px}
+.scrow{display:flex; align-items:center; gap:10px; background:var(--surface-2); border:1px solid var(--rule); border-radius:4px; padding:6px 11px}
+.scorder{display:inline-flex; flex-direction:column; gap:2px; flex:none}
+.scmove{border:1px solid var(--rule-strong); background:#fff; color:var(--ink-soft); width:22px; height:16px; line-height:1; padding:0; border-radius:3px; font-size:9px; display:inline-flex; align-items:center; justify-content:center}
+.scmove:hover:not(:disabled){border-color:var(--green); color:var(--green-deep)}
+.scmove:disabled{opacity:.3; cursor:not-allowed}
+.scname{font-family:var(--serif); font-size:14.5px; flex:1; min-width:110px}
+.scpts{width:56px; border:1px solid var(--rule-strong); border-radius:3px; padding:5px 7px; font-size:14px; font-family:var(--mono); text-align:right; background:#fff}
+.scp{font-family:var(--mono); font-size:12px; color:var(--sepia)}
+.masthead .tools{display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 0 8px; align-items:center}
+.spacer{flex:1 1 auto}
+.dbstatus{font-family:var(--mono); font-size:12px; color:var(--ink-soft); display:flex; align-items:center; gap:7px}
+.dot{width:8px; height:8px; border-radius:50%; background:var(--rule-strong)}
+.dot.saved{background:var(--green)} .dot.dirty{background:var(--madder)}
+
+/* ---------- Buttons ---------- */
+.btn{
+  border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink);
+  padding:8px 13px; border-radius:3px; font-size:13.5px; font-weight:500;
+  display:inline-flex; align-items:center; gap:7px; transition:background .12s,border-color .12s,transform .04s;
+}
+.btn:hover{background:#fff; border-color:var(--green)}
+.btn:active{transform:translateY(1px)}
+.btn .ic{width:15px; height:15px; flex:none}
+.btn.primary{background:var(--green); border-color:var(--green-deep); color:#f4f7f1}
+.btn.primary:hover{background:var(--green-deep)}
+.btn.madder{background:var(--madder); border-color:#7e2e23; color:#fbeee9}
+.btn.madder:hover{background:#7e2e23}
+.btn.ghost{background:transparent; border-color:transparent}
+.btn.ghost:hover{background:var(--surface-2); border-color:var(--rule)}
+.btn:disabled{opacity:.4; cursor:not-allowed}
+.btn:focus-visible,input:focus-visible,select:focus-visible,.chk:focus-visible{outline:2px solid var(--madder); outline-offset:2px}
+
+/* ---------- Steuerleiste ---------- */
+.controls{
+  display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center;
+  background:var(--surface); border:1px solid var(--rule-strong); border-top:none;
+  border-radius:0 0 4px 4px; padding:14px 18px; margin-top:-1px;
+}
+.field{display:flex; align-items:center; gap:7px}
+.field label{font-size:12px; color:var(--sepia); font-family:var(--mono); letter-spacing:.04em}
+.search{position:relative}
+.search input{
+  border:1px solid var(--rule-strong); background:var(--surface-2); border-radius:3px;
+  padding:8px 10px 8px 30px; font-size:14px; width:210px;
+}
+.search .si{position:absolute; left:9px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--ink-faint)}
+select{border:1px solid var(--rule-strong); background:var(--surface-2); border-radius:3px; padding:8px 26px 8px 10px; font-size:14px;
+  appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2356604f' stroke-width='1.4'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center}
+.switch{display:inline-flex; align-items:center; gap:8px; font-size:13.5px; color:var(--ink); cursor:pointer; user-select:none}
+.switch input{position:absolute; opacity:0; width:0; height:0}
+.switch .track{width:34px; height:19px; border-radius:19px; background:var(--rule-strong); position:relative; transition:background .15s; flex:none}
+.switch .track::after{content:""; position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%; background:#fff; transition:transform .15s}
+.switch input:checked + .track{background:var(--green)}
+.switch input:checked + .track::after{transform:translateX(15px)}
+
+/* ---------- Auswahl-Bar ---------- */
+.selbar{
+  display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:18px 0 12px;
+  padding:12px 16px; border:1px solid var(--rule-strong); border-radius:4px;
+  background:linear-gradient(180deg,var(--surface),var(--surface-2));
+}
+.count{font-family:var(--serif); display:flex; align-items:baseline; gap:8px}
+.count .n{font-size:30px; font-weight:600; color:var(--green-deep); line-height:1; font-variant-numeric:tabular-nums}
+.count .of{font-size:14px; color:var(--ink-soft)}
+.count .lab{font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--sepia); margin-left:2px}
+.drawn{display:flex; align-items:center; gap:6px}
+.drawn input{width:52px; border:1px solid var(--rule-strong); border-radius:3px; padding:6px 8px; font-size:14px; text-align:center; font-family:var(--mono)}
+.pts-pill{font-family:var(--mono); font-size:11px; color:var(--madder); background:var(--madder-tint); border:1px solid var(--madder-soft); border-radius:20px; padding:3px 9px; letter-spacing:.03em}
+
+/* ---------- Liste (Herbarium-Register) ---------- */
+.cathead{
+  font-family:var(--mono); font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--sepia); margin:22px 0 6px; padding-bottom:5px; border-bottom:1.5px solid var(--rule-strong);
+  display:flex; justify-content:space-between; align-items:end;
+}
+.cathead .cnt{color:var(--ink-faint); letter-spacing:.06em}
+.ledger{display:flex; flex-direction:column}
+.row{
+  display:grid; grid-template-columns:26px 1fr auto; gap:14px; align-items:center;
+  padding:9px 12px 9px 10px; border-bottom:1px solid var(--rule);
+  transition:background .1s;
+}
+.row:hover{background:var(--surface)}
+.row.on{background:var(--green-tint)}
+.row.on:hover{background:#d7e4d6}
+.chk{
+  appearance:none; width:19px; height:19px; border:1.6px solid var(--rule-strong); border-radius:3px;
+  background:var(--surface-2); position:relative; flex:none; transition:.12s;
+}
+.chk:hover{border-color:var(--green)}
+.chk:checked{background:var(--green); border-color:var(--green-deep)}
+.chk:checked::after{content:""; position:absolute; left:5px; top:1px; width:5px; height:10px; border:solid #fff; border-width:0 2px 2px 0; transform:rotate(42deg)}
+.namecell{min-width:0}
+.binom{font-family:var(--serif); font-size:16.5px; line-height:1.25}
+.binom .g{font-style:italic; color:var(--ink)}
+.binom .a{font-style:italic; color:var(--ink-soft)}
+.meta{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:2px; font-size:12.5px; color:var(--ink-soft)}
+.fam{font-family:var(--serif); color:var(--green-deep)}
+.de{color:var(--ink)}
+.tag{font-family:var(--mono); font-size:10px; letter-spacing:.05em; padding:1px 6px; border-radius:3px; text-transform:uppercase}
+.tag.zp{color:var(--gold); border:1px solid var(--gold); background:#f6efdc}
+.tag.bem{color:var(--sepia); border:1px dashed var(--rule-strong)}
+.rowacts{display:flex; gap:2px; opacity:0; transition:opacity .1s}
+.row:hover .rowacts,.row:focus-within .rowacts{opacity:1}
+.iconbtn{border:none; background:transparent; padding:6px; border-radius:3px; color:var(--ink-faint); display:inline-flex}
+.iconbtn:hover{background:var(--surface-2); color:var(--green-deep)}
+.iconbtn.del:hover{color:var(--madder)}
+.iconbtn .ic{width:16px; height:16px}
+
+/* ---------- Leerzustand ---------- */
+.empty{
+  text-align:center; padding:60px 24px; border:1.5px dashed var(--rule-strong); border-radius:6px;
+  background:var(--surface); margin-top:20px;
+}
+.empty svg{width:52px; height:52px; color:var(--green); opacity:.7}
+.empty h2{font-family:var(--serif); font-weight:600; font-size:22px; margin:14px 0 6px}
+.empty p{color:var(--ink-soft); max-width:440px; margin:0 auto 18px; font-size:14.5px}
+.empty .fmt{font-family:var(--mono); font-size:12px; color:var(--sepia); background:var(--surface-2); border:1px solid var(--rule); border-radius:4px; padding:10px 14px; display:inline-block; margin-top:6px}
+
+/* ---------- Modal ---------- */
+.scrim{position:fixed; inset:0; background:rgba(28,42,34,.42); backdrop-filter:blur(2px); display:none; align-items:center; justify-content:center; padding:20px; z-index:50}
+.scrim.open{display:flex}
+.modal{background:var(--surface); border:1px solid var(--rule-strong); border-radius:6px; max-width:520px; width:100%; box-shadow:0 18px 50px rgba(28,42,34,.28); overflow:hidden}
+.modal header{padding:18px 22px 14px; border-bottom:1px solid var(--rule); background:var(--surface-2)}
+.modal header h3{font-family:var(--serif); font-size:19px; margin:0; font-weight:600}
+.modal header p{margin:3px 0 0; font-size:13px; color:var(--ink-soft)}
+.modal .body{padding:18px 22px; display:grid; gap:13px}
+.modal .grid2{display:grid; grid-template-columns:1fr 1fr; gap:13px}
+.fld{display:flex; flex-direction:column; gap:4px}
+.fld label{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia)}
+.fld input,.fld select,.fld textarea{border:1px solid var(--rule-strong); border-radius:3px; padding:8px 10px; font-size:14px; background:#fff; width:100%}
+.fld textarea{resize:vertical; min-height:52px; font-family:inherit}
+.modal footer{padding:14px 22px 18px; display:flex; gap:10px; justify-content:flex-end; border-top:1px solid var(--rule)}
+.hint{font-size:12.5px; color:var(--ink-soft); background:var(--madder-tint); border-left:3px solid var(--madder-soft); padding:9px 12px; border-radius:0 4px 4px 0}
+.radio-cards{display:grid; gap:10px}
+.rcard{border:1px solid var(--rule-strong); border-radius:5px; padding:12px 14px; cursor:pointer; display:flex; gap:11px; align-items:flex-start}
+.rcard:hover{border-color:var(--green)}
+.rcard.sel{border-color:var(--green); background:var(--green-tint)}
+.rcard input{margin-top:3px}
+.rcard b{font-size:14px} .rcard span{font-size:12.5px; color:var(--ink-soft); display:block; margin-top:2px}
+
+/* ---------- Toast ---------- */
+.toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px); opacity:0;
+  background:var(--green-deep); color:#eef4ea; padding:11px 18px; border-radius:5px; font-size:13.5px;
+  box-shadow:0 8px 24px rgba(28,42,34,.3); transition:.25s; z-index:60; pointer-events:none; max-width:90vw}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--madder)}
+
+/* ---------- Notenrechner ---------- */
+.grader{margin:0 0 6px}
+.gcard{background:var(--surface); border:1px solid var(--rule-strong); border-radius:5px; overflow:hidden; display:grid; grid-template-columns:minmax(270px,.85fr) 1.15fr; box-shadow:0 1px 0 var(--shadow)}
+.gcard .left{padding:18px 20px; border-right:1px solid var(--rule); background:linear-gradient(180deg,var(--surface),var(--surface-2))}
+.gcard .right{padding:16px 20px; min-width:0}
+.gtitle{font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--sepia); margin:0 0 13px}
+.gtitle span{color:var(--ink-faint); letter-spacing:.06em}
+.modeswitch{display:flex; gap:0; margin:0 0 15px; border:1px solid var(--rule-strong); border-radius:4px; overflow:hidden; width:fit-content}
+.segbtn{border:none; background:var(--surface-2); color:var(--ink-soft); padding:7px 13px; font-size:12.5px; font-family:var(--sans); border-right:1px solid var(--rule-strong)}
+.segbtn:last-child{border-right:none}
+.segbtn:hover{background:#fff}
+.segbtn.on{background:var(--green); color:#f4f7f1; font-weight:600}
+.gedge{width:44px; border:1px solid var(--rule-strong); border-radius:3px; padding:2px 4px; font-size:12px; font-family:var(--mono); text-align:right; background:#fff}
+.gedge:focus{outline:2px solid var(--madder); outline-offset:1px}
+.gnote{font-size:11px; color:var(--ink-faint); margin:11px 0 0; line-height:1.4; font-style:italic}
+.ginputs{display:flex; gap:14px; flex-wrap:wrap}
+.gfld{display:flex; flex-direction:column; gap:5px; flex:1; min-width:120px}
+.gfld label{font-family:var(--mono); font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--sepia)}
+.gfld input{border:1px solid var(--rule-strong); border-radius:3px; padding:9px 11px; font-size:18px; font-family:var(--mono); background:#fff; width:100%}
+.maxrow{display:flex; gap:6px}
+.maxrow input{flex:1; min-width:0}
+.btn.small{padding:0 10px; font-size:12px; white-space:nowrap; font-family:var(--mono)}
+.gres{margin-top:18px; display:flex; align-items:center; gap:16px; min-height:76px}
+.gres .badge{width:74px; height:74px; border-radius:9px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff; flex:none; box-shadow:0 3px 12px var(--shadow)}
+.gres .badge .num{font-family:var(--serif); font-size:40px; font-weight:600; line-height:.9}
+.gres .badge .z{font-family:var(--mono); font-size:8.5px; letter-spacing:.14em; opacity:.9; margin-top:2px}
+.gres .txt{min-width:0}
+.gres .txt .word{font-family:var(--serif); font-size:23px; font-weight:600; line-height:1.1}
+.gres .txt .detail{font-size:12.5px; color:var(--ink-soft); margin-top:3px; font-family:var(--mono)}
+.gempty{color:var(--ink-faint); font-size:14px; font-style:italic}
+.scalemark{position:relative; height:15px}
+.scalemark .pin{position:absolute; top:3px; width:0; height:12px; border-left:2px solid var(--ink)}
+.scalemark .pin::before{content:""; position:absolute; top:-4px; left:-4px; border:5px solid transparent; border-top-color:var(--ink); border-bottom:none}
+.scalemark .pin::after{content:attr(data-pct); position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-family:var(--mono); font-size:10px; color:var(--ink); white-space:nowrap; font-weight:600}
+.scalebar{display:flex; height:26px; border-radius:4px; overflow:hidden; border:1px solid var(--rule-strong)}
+.scalebar .seg{display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:12px; color:#fff; min-width:0}
+.scaleaxis{display:flex; justify-content:space-between; font-family:var(--mono); font-size:9px; color:var(--ink-faint); margin-top:3px}
+.gtable{width:100%; border-collapse:collapse; margin-top:15px; font-size:13px}
+.gtable th,.gtable td{text-align:left; padding:5px 8px; border-bottom:1px solid var(--rule)}
+.gtable th{font-family:var(--mono); font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--sepia); font-weight:600}
+.gtable td.g{font-family:var(--serif); font-weight:600; white-space:nowrap}
+.gtable td.pts{font-family:var(--mono); text-align:right; white-space:nowrap}
+.gtable tr.hit{background:var(--green-tint)}
+.gtable tr.hit td{font-weight:600}
+.gtable .swatch{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:8px; vertical-align:middle}
+@media (max-width:760px){ .gcard{grid-template-columns:1fr} .gcard .left{border-right:none; border-bottom:1px solid var(--rule)} }
+
+/* ---------- Druckbogen ---------- */
+#sheet{display:none}
+.hidden{display:none !important}
+
+@media (max-width:640px){
+  .search input{width:100%}
+  .row{grid-template-columns:24px 1fr; gap:10px}
+  .rowacts{grid-column:1/-1; opacity:1; justify-content:flex-end}
+  .modal .grid2{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+
+/* ===================== PRINT ===================== */
+@media print{
+  @page{size:A4 portrait; margin:14mm 15mm}
+  body{background:#fff; background-image:none}
+  .wrap{display:none !important}
+  .scrim{display:none !important}
+  #sheet{display:block !important; color:#111; font-family:var(--serif)}
+  .sheet-head{display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #111; padding-bottom:8px; margin-bottom:4px}
+  .sheet-head .title h1{font-size:17pt; margin:0; font-weight:700; letter-spacing:-.01em}
+  .sheet-head .title .st{font-style:italic; font-size:11pt; color:#333; margin-top:2px}
+  .sheet-head .brand{text-align:right; font-family:var(--sans); font-size:8pt; color:#333; line-height:1.35}
+  .sheet-meta{display:grid; grid-template-columns:1fr 1fr 1fr; gap:2px 18px; font-family:var(--sans); font-size:9pt; margin:8px 0 6px}
+  .sheet-meta .mrow{display:flex; gap:6px; align-items:baseline; padding:3px 0; border-bottom:.6pt solid #999}
+  .sheet-meta .mrow .k{color:#444; white-space:nowrap; font-size:8pt; text-transform:uppercase; letter-spacing:.05em}
+  .sheet-meta .mrow .val{flex:1; font-style:italic}
+  .scheme{font-family:var(--sans); font-size:8.5pt; color:#333; margin:2px 0 8px; display:flex; justify-content:space-between; align-items:center}
+  .scheme .pts{font-weight:700; color:#000}
+  table.exam{width:100%; border-collapse:collapse; font-size:10.5pt}
+  table.exam thead{display:table-header-group}
+  table.exam th,table.exam td{border:.8pt solid #111; padding:0; text-align:left; vertical-align:middle}
+  table.exam th{background:#eceee6; font-family:var(--sans); font-size:8.5pt; font-weight:700; padding:5px 7px; letter-spacing:.02em}
+  table.exam th .p{display:block; font-weight:400; color:#333; font-size:7.5pt; font-family:var(--mono); margin-top:1px}
+  table.exam td{height:30px; padding:3px 7px}
+  table.exam td.num{text-align:center; font-family:var(--mono); font-weight:700; width:26px; background:#f4f5ef}
+  table.exam col.c-num{width:26px} table.exam col.c-fam{width:19%} table.exam col.c-score{width:44px}
+  table.exam td.sol{font-style:italic}
+  table.exam td.sol .gg{font-style:italic}
+  table.exam td.score{text-align:center; background:#f8f8f4; font-family:var(--mono)}
+  table.exam tr{break-inside:avoid}
+  .sheet-scale{font-family:var(--sans); font-size:8pt; color:#333; margin-top:10px; padding:4px 8px; border:.6pt solid #999; border-radius:3px; background:#f6f7f1; letter-spacing:.01em}
+  .sheet-foot{display:flex; justify-content:space-between; align-items:flex-end; margin-top:10px; font-family:var(--sans); font-size:9pt}
+  .sheet-foot .sig{border-top:.8pt solid #111; padding-top:3px; width:210px; text-align:center; color:#444; font-size:8pt}
+  .sheet-foot .sum{font-family:var(--serif); font-size:11pt}
+  .sheet-foot .sum b{font-size:13pt}
+  .solution-note{font-family:var(--sans); font-size:8pt; color:#b00; border:.8pt solid #b00; padding:2px 7px; border-radius:3px; display:inline-block}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">Abschlussprüfung · Pflanzenkenntnis</p>
+    <h1>Pflanzenkenntnis · Prüfungslisten</h1>
+    <div class="profilerow">
+      <div class="pfield"><label for="frSelect">Fachrichtung</label><select id="frSelect"></select></div>
+      <div class="pfield"><label for="nivSelect">Ausbildung</label><select id="nivSelect"></select></div>
+      <span class="profsub" id="profSub"></span>
+    </div>
+    <div class="tools">
+      <button class="btn primary" id="btnImport"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>Excel importieren</button>
+      <button class="btn" id="btnAdd"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>Art hinzufügen</button>
+      <button class="btn" id="btnGrade"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h14a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 7h8M8 11h3M14 11h2M8 15h3M14 15h2"/></svg>Notenrechner</button>
+      <button class="btn" id="btnSchema"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 12h16M4 19h16M8 3v4M14 10v4M10 17v4"/></svg>Prüfungsschema</button>
+      <span class="spacer"></span>
+      <button class="btn ghost" id="btnOpen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Sicherung laden</button>
+      <button class="btn ghost" id="btnSave"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>Sichern</button>
+      <button class="btn ghost" id="btnReset" title="Zurück zur hinterlegten Liste dieses Profils"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 019-9 9 9 0 016.5 2.8L21 8M21 3v5h-5"/><path d="M21 12a9 9 0 01-9 9 9 9 0 01-6.5-2.8L3 16M3 21v-5h5"/></svg>Standardliste</button>
+      <span class="dbstatus"><span class="dot" id="dbdot"></span><span id="dbname">Standardliste</span></span>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="field search">
+      <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+      <input id="q" type="search" placeholder="Suche: Gattung, Art, Familie, Name …" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="cat">Kategorie</label>
+      <select id="cat"><option value="">alle</option></select>
+    </div>
+    <label class="switch"><input type="checkbox" id="onlyzp"><span class="track"></span>nur ZP-relevant</label>
+  </div>
+
+  <div class="selbar">
+    <div class="count"><span class="n" id="selN">0</span><span class="of">/ <span id="selTarget">20</span></span><span class="lab">gezogen</span></div>
+    <span class="pts-pill" id="ptsPill">max. 0 P.</span>
+    <span class="spacer"></span>
+    <div class="drawn">
+      <label class="switch" style="gap:6px"><span style="font-family:var(--mono);font-size:12px;color:var(--sepia)">Anzahl</span></label>
+      <input id="drawCount" type="number" min="1" max="60" value="20" aria-label="Anzahl zu ziehender Arten">
+      <button class="btn primary" id="btnDraw"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4H4v3M17 4h3v3M7 20H4v-3M17 20h3v-3"/><circle cx="9" cy="9" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.3" fill="currentColor" stroke="none"/></svg>Zufällig ziehen</button>
+    </div>
+    <button class="btn" id="btnShuffle" title="Reihenfolge der Auswahl neu mischen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 3h5v5M4 20l17-17M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>Mischen</button>
+    <button class="btn ghost" id="btnClear">Auswahl leeren</button>
+    <button class="btn madder" id="btnPrint"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>Bogen drucken</button>
+  </div>
+
+  <section class="grader" id="grader" hidden>
+    <div class="gcard">
+      <div class="left">
+        <p class="gtitle">Notenrechner</p>
+        <div class="modeswitch" id="gMode"></div>
+        <div class="ginputs">
+          <div class="gfld"><label>Erreichte Punkte</label><input id="gPts" type="number" min="0" step="0.5" inputmode="decimal" placeholder="z. B. 156"></div>
+          <div class="gfld"><label>von Höchstpunktzahl</label><div class="maxrow"><input id="gMax" type="number" min="1" step="1" value="200"><button class="btn ghost small" id="gSync" title="Höchstpunktzahl aus aktueller Auswahl (× 10 P.)">= 200 P.</button></div></div>
+        </div>
+        <div class="gres" id="gRes"><div class="gempty">Punkte eingeben …</div></div>
+      </div>
+      <div class="right">
+        <p class="gtitle">Bewertungsskala <span id="gScaleMax"></span></p>
+        <div class="scalemark" id="gMark"></div>
+        <div class="scalebar" id="gBar"></div>
+        <div class="scaleaxis"><span>0 %</span><span>50 %</span><span>100 %</span></div>
+        <table class="gtable" id="gTable"></table>
+        <p class="gnote" id="gNote"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="grader" id="schemaPanel" hidden>
+    <div class="gcard onecol">
+      <div class="left noborder">
+        <p class="gtitle">Prüfungsschema · Spalten, Punkte &amp; Anzahl</p>
+        <div class="scwrap">
+          <div class="gfld scanz"><label>Pflanzen je Prüfung</label><input id="scAnzahl" type="number" min="1" max="60" step="1"></div>
+          <div class="scgrid" id="scFields"></div>
+        </div>
+        <p class="gnote" id="scSum"></p>
+        <p class="gnote">Mit&nbsp;▲▼ die Reihenfolge ändern – sie bestimmt die Spaltenfolge auf dem Bogen. Punkte dürfen Nachkommastellen haben (z.&nbsp;B. 0,5); 0&nbsp;Punkte bedeutet: Spalte wird nicht bewertet und erscheint nicht auf dem Bogen. Änderungen gelten für das gewählte Profil und bleiben im Browser gespeichert.</p>
+      </div>
+    </div>
+  </section>
+
+  <main id="list"></main>
+</div>
+
+<!-- ========== Druckbogen ========== -->
+<div id="sheet"></div>
+
+<!-- ========== Import-Dialog ========== -->
+<div class="scrim" id="importScrim">
+  <div class="modal">
+    <header><h3>Excel importieren</h3><p id="importSummary">Datei wird gelesen …</p></header>
+    <div class="body">
+      <div class="radio-cards" id="importChoice">
+        <label class="rcard sel"><input type="radio" name="impmode" value="replace" checked><div><b>Bestehende Liste ersetzen</b><span>Alle vorhandenen Arten werden gelöscht und durch die Excel-Daten ersetzt.</span></div></label>
+        <label class="rcard"><input type="radio" name="impmode" value="append"><div><b>Anhängen</b><span>Neue Arten werden ergänzt; Dubletten (gleiche Gattung + Art + dt. Name) werden übersprungen.</span></div></label>
+      </div>
+      <div class="hint" id="importHint"></div>
+    </div>
+    <footer>
+      <button class="btn ghost" id="importCancel">Abbrechen</button>
+      <button class="btn primary" id="importConfirm">Importieren</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ========== Bearbeiten-Dialog ========== -->
+<div class="scrim" id="editScrim">
+  <div class="modal">
+    <header><h3 id="editTitle">Art bearbeiten</h3><p>Gattung und Art werden im Druckbogen getrennt bewertet.</p></header>
+    <div class="body">
+      <div class="grid2">
+        <div class="fld"><label>Gattung</label><input id="fGattung" placeholder="z. B. Allium"></div>
+        <div class="fld"><label>Art (Epitheton)</label><input id="fArt" placeholder="z. B. cepa Cepa-Grp."></div>
+      </div>
+      <div class="grid2">
+        <div class="fld"><label>Familie</label><input id="fFamilie" placeholder="z. B. Amaryllidaceae"></div>
+        <div class="fld"><label>Kategorie</label><input id="fKat" list="katlist" placeholder="z. B. Gemüsepflanzen"><datalist id="katlist"></datalist></div>
+      </div>
+      <div class="fld"><label>Deutscher Name</label><input id="fDe" placeholder="z. B. Küchen-Zwiebel"></div>
+      <div class="grid2">
+        <div class="fld"><label>Synonyme</label><input id="fSyn" placeholder="optional"></div>
+        <div class="fld"><label>ZP-relevant</label><select id="fZp"><option value="0">nein</option><option value="1">ja</option></select></div>
+      </div>
+      <div class="fld"><label>Bemerkungen</label><textarea id="fBem" placeholder="optional – erscheint nur intern, nicht auf dem Prüfungsbogen"></textarea></div>
+    </div>
+    <footer>
+      <button class="btn ghost" id="editCancel">Abbrechen</button>
+      <button class="btn primary" id="editSave">Speichern</button>
+    </footer>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>/*__XLSX_JS__*/</script>
+<script>
+const SEEDS=/*__SEEDS__*/{};
+/*__APP_JS__*/
+</script>
+</body>
+</html>
