@@ -604,18 +604,30 @@ function refresh(){ sortCache(); syncSelection(); }
 
 function markDirty(){ setStatus("dirty"); persist(); }
 
-/* ---------- Browser-Speicher (localStorage, je Profil) ---------- */
+/* ---------- Browser-Speicher (localStorage, je Profil) ----------
+   In Kiosk-/Sandbox-Umgebungen kann localStorage fehlen oder werfen. Dann greift
+   ein flüchtiger In-Memory-Speicher, damit Änderungen wenigstens für die laufende
+   Sitzung erhalten bleiben (statt eines harten Speicherfehlers). */
 const LS_PREFIX="pflanzenkenntnis.";
 const dataKey = id => LS_PREFIX+"data."+id;
+const store = (()=>{
+  let ok=false;
+  try{ const k=LS_PREFIX+"__probe"; localStorage.setItem(k,"1"); localStorage.removeItem(k); ok=true; }catch(e){ ok=false; }
+  const mem=new Map();
+  return {
+    get persistent(){ return ok; },
+    get(k){ if(ok){ try{ return localStorage.getItem(k); }catch(e){ ok=false; } } return mem.has(k)?mem.get(k):null; },
+    set(k,v){ v=String(v); if(ok){ try{ localStorage.setItem(k,v); return true; }catch(e){ ok=false; } } mem.set(k,v); return false; },
+    remove(k){ if(ok){ try{ localStorage.removeItem(k); }catch(e){ ok=false; } } mem.delete(k); }
+  };
+})();
 let persistTimer=null, isSeed=true;
 function persist(){
   clearTimeout(persistTimer);
   persistTimer=setTimeout(()=>{
-    try{
-      localStorage.setItem(dataKey(profileId), JSON.stringify({v:2,plants:cache,schema,nextId}));
-      localStorage.setItem(LS_PREFIX+"profile", profileId);
-      isSeed=false; setStatus("saved");
-    }catch(e){ setStatus("err"); }
+    const saved=store.set(dataKey(profileId), JSON.stringify({v:2,plants:cache,schema,nextId}));
+    store.set(LS_PREFIX+"profile", profileId);
+    isSeed=false; setStatus(saved?"saved":"session");
   },300);
 }
 function normPlant(p){
@@ -633,7 +645,7 @@ function loadProfile(id){
   if(!PROFILE_DEFS[id]) id="gemuesebau_gaertner";
   profileId=id; const def=PROFILE_DEFS[id];
   selection=[];
-  let raw=null; try{ raw=localStorage.getItem(dataKey(id)); }catch(e){}
+  let raw=store.get(dataKey(id));
   if(raw){
     try{
       const d=JSON.parse(raw);
@@ -642,7 +654,7 @@ function loadProfile(id){
       if(!schema.scale) schema.scale=cloneSchema(def.schema).scale;
       scaleCfg=schema.scale;
       nextId=d.nextId || (cache.reduce((m,p)=>Math.max(m,p.id),0)+1);
-      isSeed=false; setStatus("saved");
+      isSeed=false; setStatus(store.persistent?"saved":"session");
     }catch(e){ seedInto(def); isSeed=true; setStatus("seed"); }
   }else{
     seedInto(def); isSeed=true; setStatus(cache.length?"seed":"empty");
@@ -650,7 +662,7 @@ function loadProfile(id){
 }
 function switchProfile(id){
   loadProfile(id);
-  try{ localStorage.setItem(LS_PREFIX+"profile", id); }catch(e){}
+  store.set(LS_PREFIX+"profile", id);
   applyDrawDefault();
   refresh(); renderAll();
 }
@@ -659,7 +671,7 @@ function resetToDefault(){
   const def=PROFILE_DEFS[profileId];
   const label=def.fr+" · "+def.niveau;
   if(!confirm(`Alle im Browser gespeicherten Änderungen für „${label}“ verwerfen und zur hinterlegten Liste zurückkehren?`)) return;
-  try{ localStorage.removeItem(dataKey(profileId)); }catch(e){}
+  store.remove(dataKey(profileId));
   seedInto(def); selection=[]; isSeed=true;
   setStatus(cache.length?"seed":"empty"); refresh(); renderAll();
   toast(cache.length?"Standardliste wiederhergestellt":"Liste geleert (keine hinterlegten Daten)");
@@ -699,11 +711,12 @@ function importBackup(){
 function setStatus(s){
   const dot=$("#dbdot"), name=$("#dbname");
   const map={
-    seed:  ["dot",       "Standardliste · hinterlegte Daten"],
-    empty: ["dot",       "Keine hinterlegte Liste · Excel importieren"],
-    dirty: ["dot dirty", "Browser-Speicher · sichert …"],
-    saved: ["dot saved", "Im Browser gespeichert"],
-    err:   ["dot dirty", "Speichern fehlgeschlagen"]
+    seed:   ["dot",       "Standardliste · hinterlegte Daten"],
+    empty:  ["dot",       "Keine hinterlegte Liste · Excel importieren"],
+    dirty:  ["dot dirty", "Browser-Speicher · sichert …"],
+    saved:  ["dot saved", "Im Browser gespeichert"],
+    session:["dot dirty", "Nur diese Sitzung · Browser-Speicher nicht verfügbar"],
+    err:    ["dot dirty", "Speichern fehlgeschlagen"]
   };
   const [cls,txt]=map[s]||map.seed;
   dot.className=cls; name.textContent=txt;
@@ -1249,7 +1262,7 @@ function updateSchema(){
 (function boot(){
   try{
     populateSelectors();
-    let pid=null; try{ pid=localStorage.getItem(LS_PREFIX+"profile"); }catch(e){}
+    const pid=store.get(LS_PREFIX+"profile");
     loadProfile(pid&&PROFILE_DEFS[pid]?pid:"gemuesebau_gaertner");
     applyDrawDefault();
     refresh(); wire(); renderAll();
