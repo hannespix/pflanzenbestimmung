@@ -16,6 +16,8 @@ const KAT_ORDER = ["Gemüsepflanzen","Gewürzkräuter","Bei-, Wild- oder Unkräu
 /* ---- Bewertungsfelder (Spalten des Prüfungsbogens) ---- */
 const FIELD_LABEL = { gattung:"Gattung", art:"Art", familie:"Familie", deutscher_name:"Deutscher Name" };
 const FIELD_ORDER = ["gattung","art","familie","deutscher_name"];
+/* Punkte hübsch: Dezimalkomma, keine überflüssige ,0 (z. B. 0,5 · 2 · 1,5) */
+const fmtPts = n => (Math.round((+n||0)*100)/100).toString().replace(".",",");
 /* dynamisch aus aktivem Prüfungsschema (profile-abhängig) */
 function activeCols(){ return (schema&&schema.cols||[]).filter(c=>c.pts>0); }
 function ptsPer(){ return activeCols().reduce((s,c)=>s+(c.pts||0),0); }
@@ -56,6 +58,7 @@ const DEZ = (()=>{
    scaleCfg zeigt immer auf schema.scale des aktiven Profils. */
 let schema = null;             // {anzahl, cols:[{key,pts}], scale:{mode,lin}}
 let scaleCfg = { mode:"linear", lin:[90,70,50,30,10] };
+let schemaOrder = null;        // Editor-Reihenfolge der Bewertungsfelder (Spaltenfolge)
 function saveCfg(){ markDirty(); }
 
 /* Standard-Prüfungsschema (Pflanzenkenntnis grüne Berufe, BW) */
@@ -84,6 +87,22 @@ FR_LIST.forEach(fr=>NIVEAUS.forEach(nv=>{
   PROFILE_DEFS[id]={ id, fr, niveauKey:nv.key, niveau:nv.label, anzahl:nv.anzahl,
     schema:stdSchema(nv.anzahl), seed:(typeof SEEDS!=="undefined"&&SEEDS[id])||[] };
 }));
+
+/* ---- Profil-spezifische Schema-Overrides (Vorgabe der zuständigen Stelle) ----
+   Greifen für frische Browser bzw. nach »Standardliste«; ein bereits im Browser
+   gespeichertes Schema behält seine Kopie. Reihenfolge der cols = Spaltenreihenfolge
+   auf dem Bogen. */
+// Garten- und Landschaftsbau · Gärtner/in: Gattung 1, Art 1, Deutscher Name 2 = 80 P./20
+PROFILE_DEFS["garten_und_landschaftsbau_gaertner"].schema = {
+  anzahl:20, cols:[{key:"gattung",pts:1},{key:"art",pts:1},{key:"deutscher_name",pts:2}],
+  scale:{mode:"linear",lin:[90,70,50,30,10]}
+};
+// Garten- und Landschaftsbau · Fachwerker/in: Deutscher Name 3, Gattung 0,5, Art 0,5 = 60 P./15
+PROFILE_DEFS["garten_und_landschaftsbau_fachwerker"].schema = {
+  anzahl:15, cols:[{key:"deutscher_name",pts:3},{key:"gattung",pts:0.5},{key:"art",pts:0.5}],
+  scale:{mode:"linear",lin:[90,70,50,30,10]}
+};
+
 let profileId="gemuesebau_gaertner";
 /* lineare Notenbänder (Prozentbereiche je Stufe) aus den 5 Grenzen */
 function linBands(G){
@@ -177,7 +196,7 @@ function seedInto(def){
 function loadProfile(id){
   if(!PROFILE_DEFS[id]) id="gemuesebau_gaertner";
   profileId=id; const def=PROFILE_DEFS[id];
-  selection=[];
+  selection=[]; schemaOrder=null;
   let raw=store.get(dataKey(id));
   if(raw){
     try{
@@ -205,7 +224,7 @@ function resetToDefault(){
   const label=def.fr+" · "+def.niveau;
   if(!confirm(`Alle im Browser gespeicherten Änderungen für „${label}“ verwerfen und zur hinterlegten Liste zurückkehren?`)) return;
   store.remove(dataKey(profileId));
-  seedInto(def); selection=[]; isSeed=true;
+  seedInto(def); selection=[]; isSeed=true; schemaOrder=null;
   setStatus(cache.length?"seed":"empty"); refresh(); renderAll();
   toast(cache.length?"Standardliste wiederhergestellt":"Liste geleert (keine hinterlegten Daten)");
 }
@@ -483,7 +502,7 @@ function clearSel(){ selection=[]; renderList(); syncSelUI(); }
 function syncSelUI(){
   $("#selN").textContent=selection.length;
   $("#selTarget").textContent=$("#drawCount").value||drawTarget();
-  $("#ptsPill").textContent="max. "+(selection.length*ptsPer())+" P.";
+  $("#ptsPill").textContent="max. "+fmtPts(selection.length*ptsPer())+" P.";
   document.querySelectorAll(".row").forEach(r=>{
     const on=selection.includes(+r.dataset.id);
     r.classList.toggle("on",on);
@@ -491,7 +510,7 @@ function syncSelUI(){
   });
   const has=selection.length>0;
   $("#btnPrint").disabled=!has; $("#btnClear").disabled=!has; $("#btnShuffle").disabled=selection.length<2;
-  const sync=$("#gSync"); if(sync) sync.textContent="= "+((selection.length||drawTarget())*ptsPer())+" P.";
+  const sync=$("#gSync"); if(sync) sync.textContent="= "+fmtPts((selection.length||drawTarget())*ptsPer())+" P.";
   const gr=$("#grader");
   if(gr && !gr.hasAttribute("hidden")){
     if(!$("#gMax").dataset.touched){ $("#gMax").value=(selection.length||drawTarget())*ptsPer(); }
@@ -571,8 +590,8 @@ function buildSheet(mode){ // mode: 'blank' | 'solution'
   const colgroup=`<colgroup><col class="c-num">`+
     cols.map(c=>`<col${c.key==="familie"?' class="c-fam"':''}>`).join("")+
     (sol?`<col class="c-score">`:``)+`</colgroup>`;
-  const heads=cols.map(c=>`<th>${esc(FIELD_LABEL[c.key]||c.key)}<span class="p">${c.pts} P.</span></th>`).join("");
-  const scoreHead = sol ? `<th>Punkte<span class="p">${per}</span></th>` : "";
+  const heads=cols.map(c=>`<th>${esc(FIELD_LABEL[c.key]||c.key)}<span class="p">${fmtPts(c.pts)} P.</span></th>`).join("");
+  const scoreHead = sol ? `<th>Punkte<span class="p">${fmtPts(per)}</span></th>` : "";
   const feldText = cols.map(c=>FIELD_LABEL[c.key]||c.key).join(", ").replace(/,([^,]*)$/," und$1");
 
   $("#sheet").innerHTML=`
@@ -596,7 +615,7 @@ function buildSheet(mode){ // mode: 'blank' | 'solution'
     </div>
     <div class="scheme">
       <span>Je Pflanze werden ${esc(feldText)} getrennt bewertet.</span>
-      <span class="pts">${plants.length} Pflanzen · max. ${maxP} Punkte</span>
+      <span class="pts">${plants.length} Pflanzen · max. ${fmtPts(maxP)} Punkte</span>
     </div>
     <table class="exam">
       ${colgroup}
@@ -606,7 +625,7 @@ function buildSheet(mode){ // mode: 'blank' | 'solution'
     <div class="sheet-scale">Bewertungsschlüssel (${keyLabel}): ${key}</div>
     <div class="sheet-foot">
       <div class="sig">Datum, Unterschrift Prüfende</div>
-      <div class="sum">Erreicht: <b>&nbsp;&nbsp;&nbsp;&nbsp;</b> / ${maxP} Punkte</div>
+      <div class="sum">Erreicht: <b>&nbsp;&nbsp;&nbsp;&nbsp;</b> / ${fmtPts(maxP)} Punkte</div>
     </div>`;
 }
 function printSheet(mode){
@@ -752,7 +771,7 @@ function populateSelectors(){
 function syncProfileUI(){
   const def=PROFILE_DEFS[profileId];
   $("#frSelect").value=slug(def.fr); $("#nivSelect").value=def.niveauKey;
-  $("#profSub").textContent=`${drawTarget()} Pflanzen · max. ${drawTarget()*ptsPer()} P.`;
+  $("#profSub").textContent=`${drawTarget()} Pflanzen · max. ${fmtPts(drawTarget()*ptsPer())} P.`;
 }
 function applyProfileSelect(){
   const id=$("#frSelect").value+"_"+$("#nivSelect").value;
@@ -764,27 +783,53 @@ function applyDrawDefault(){ $("#drawCount").value=drawTarget(); $("#selTarget")
 function toggleSchema(){
   const s=$("#schemaPanel"); if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); renderSchema(); } else s.setAttribute("hidden","");
 }
+/* Editor-Reihenfolge: erst bewertete Spalten (cols-Reihenfolge = Spaltenfolge auf
+   dem Bogen), dann die restlichen Felder (0 Punkte) in Standardreihenfolge. */
+function ensureSchemaOrder(){
+  if(!schemaOrder){
+    const inCols=schema.cols.map(c=>c.key);
+    schemaOrder=inCols.concat(FIELD_ORDER.filter(k=>!inCols.includes(k)));
+  }
+  // genau die vier bekannten Felder, keine Dubletten
+  schemaOrder=schemaOrder.filter((k,i)=>FIELD_ORDER.includes(k)&&schemaOrder.indexOf(k)===i);
+  FIELD_ORDER.forEach(k=>{ if(!schemaOrder.includes(k)) schemaOrder.push(k); });
+}
 function renderSchema(){
   $("#scAnzahl").value=schema.anzahl;
+  ensureSchemaOrder();
   const host=$("#scFields"); host.innerHTML="";
-  FIELD_ORDER.forEach(k=>{
+  schemaOrder.forEach((k,idx)=>{
     const col=schema.cols.find(c=>c.key===k); const pts=col?col.pts:0;
     const row=el("div","scrow");
-    row.innerHTML=`<span class="scname">${FIELD_LABEL[k]}</span>
-      <input class="scpts" type="number" min="0" max="20" step="1" value="${pts}" data-k="${k}" aria-label="Punkte ${FIELD_LABEL[k]}"><span class="scp">P.</span>`;
+    row.innerHTML=`<span class="scorder">
+        <button class="scmove" data-mv="up" data-i="${idx}" title="nach oben" aria-label="${FIELD_LABEL[k]} nach oben"${idx===0?" disabled":""}>▲</button>
+        <button class="scmove" data-mv="down" data-i="${idx}" title="nach unten" aria-label="${FIELD_LABEL[k]} nach unten"${idx===schemaOrder.length-1?" disabled":""}>▼</button>
+      </span>
+      <span class="scname">${FIELD_LABEL[k]}</span>
+      <input class="scpts" type="text" inputmode="decimal" value="${fmtPts(pts)}" data-k="${k}" aria-label="Punkte ${FIELD_LABEL[k]}"><span class="scp">P.</span>`;
     host.appendChild(row);
   });
   host.querySelectorAll(".scpts").forEach(inp=>inp.onchange=updateSchema);
+  host.querySelectorAll(".scmove").forEach(b=>b.onclick=()=>moveSchemaField(+b.dataset.i,b.dataset.mv));
   $("#scAnzahl").onchange=updateSchema;
-  $("#scSum").textContent=`${ptsPer()} P. je Pflanze · max. ${schema.anzahl*ptsPer()} P. gesamt`;
+  $("#scSum").textContent=`${fmtPts(ptsPer())} P. je Pflanze · max. ${fmtPts(schema.anzahl*ptsPer())} P. gesamt`;
+}
+function moveSchemaField(i,dir){
+  ensureSchemaOrder();
+  const j=dir==="up"?i-1:i+1;
+  if(j<0||j>=schemaOrder.length) return;
+  [schemaOrder[i],schemaOrder[j]]=[schemaOrder[j],schemaOrder[i]];
+  updateSchema();
 }
 function updateSchema(){
+  ensureSchemaOrder();
   const anzahl=Math.max(1,Math.round(parseFloat($("#scAnzahl").value)||drawTarget()));
-  const cols=[];
+  const ptsByKey={};
   $("#scFields").querySelectorAll(".scpts").forEach(inp=>{
-    const pts=Math.max(0,Math.round(parseFloat(inp.value)||0));
-    if(pts>0) cols.push({key:inp.dataset.k,pts});
+    let v=parseFloat(String(inp.value).replace(",",".")); if(isNaN(v)) v=0;
+    ptsByKey[inp.dataset.k]=Math.max(0,Math.min(20,Math.round(v*100)/100));
   });
+  const cols=schemaOrder.map(k=>({key:k,pts:ptsByKey[k]!=null?ptsByKey[k]:0})).filter(c=>c.pts>0);
   if(!cols.length){ toast("Mindestens ein Bewertungsfeld mit Punkten nötig",true); renderSchema(); return; }
   schema.anzahl=anzahl; schema.cols=cols; scaleCfg=schema.scale;
   markDirty(); applyDrawDefault(); renderSchema(); syncProfileUI(); renderList(); syncSelUI();

@@ -106,6 +106,40 @@ async function main() {
   assert(blank.rows === 20, "Prüfungsbogen sollte 20 Zeilen haben, war " + blank.rows);
   assert(!blank.note, "Leerer Prüfungsbogen darf 'Nur für Prüfende' nicht zeigen");
 
+  // 6b) GaLaBau-Schema-Overrides: Fachwerker Deutscher Name (3) zuerst, Gattung/Art je 0,5
+  await page.select("#frSelect", "garten_und_landschaftsbau");
+  await page.select("#nivSelect", "fachwerker");
+  await page.$eval("#nivSelect", (e) => e.dispatchEvent(new Event("change")));
+  const gala = await page.evaluate(() => {
+    drawRandom(); buildSheet("solution");
+    return {
+      anzahl: schema.anzahl,
+      order: schema.cols.map((c) => c.key).join(","),
+      per: ptsPer(),
+      max: selection.length * ptsPer(),
+      heads: [...document.querySelectorAll("#sheet thead th")].map((t) => t.childNodes[0].textContent.trim())
+    };
+  });
+  assert(gala.anzahl === 15, "GaLaBau/Fachwerker: 15 Pflanzen erwartet, war " + gala.anzahl);
+  assert(gala.order === "deutscher_name,gattung,art", "GaLaBau/Fachwerker: Spaltenreihenfolge falsch: " + gala.order);
+  assert(gala.per === 4 && gala.max === 60, "GaLaBau/Fachwerker: 4 P./Pflanze und 60 P. gesamt erwartet, war " + gala.per + "/" + gala.max);
+  assert(gala.heads[1] === "Deutscher Name", "GaLaBau/Fachwerker: erste Bewertungsspalte muss Deutscher Name sein, war " + gala.heads[1]);
+
+  // 6c) Spaltenreihenfolge editierbar: erstes Feld nach unten schieben ändert cols-Reihenfolge
+  const reordered = await page.evaluate(() => {
+    if ($("#schemaPanel").hasAttribute("hidden")) toggleSchema();
+    const before = schema.cols.map((c) => c.key).join(",");
+    moveSchemaField(0, "down");
+    return { before, after: schema.cols.map((c) => c.key).join(",") };
+  });
+  assert(reordered.before !== reordered.after && reordered.after.split(",").length === 3,
+    "Reorder sollte die Spaltenreihenfolge ändern: " + reordered.before + " -> " + reordered.after);
+
+  // zurück auf Baumschule/Gärtner für den Persistenz-Test
+  await page.select("#frSelect", "baumschule");
+  await page.select("#nivSelect", "gaertner");
+  await page.$eval("#nivSelect", (e) => e.dispatchEvent(new Event("change")));
+
   // 7) localStorage-Persistenz über Reload: eine Art hinzufügen, neu laden, prüfen
   await page.evaluate(() => {
     cache.push({ id: nextId++, gattung: "Smoketestia", art: "verificata", familie: "Testaceae",
@@ -120,12 +154,15 @@ async function main() {
     cache.some((p) => p.gattung === "Smoketestia" && p.art === "verificata"));
   assert(persisted, "Hinzugefügte Art überlebte den Reload nicht (localStorage)");
 
-  // 8) Zurücksetzen räumt den Browser-Speicher wieder auf (kein Test-Rest)
-  await page.evaluate(() => localStorage.removeItem("pflanzenkenntnis.data.baumschule_gaertner"));
+  // 8) Testreste im Browser-Speicher aufräumen
+  await page.evaluate(() => {
+    localStorage.removeItem("pflanzenkenntnis.data.baumschule_gaertner");
+    localStorage.removeItem("pflanzenkenntnis.data.garten_und_landschaftsbau_fachwerker");
+  });
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Smoke-Test OK – Boot, Profilwechsel (148/248), Ziehen, Bogen (Leer/Lösung), Persistenz.");
+  console.log("Smoke-Test OK – Boot, Profilwechsel (148/248), GaLaBau-Schema (60 P., Dt. Name zuerst), Reorder, Ziehen, Bogen, Persistenz.");
 }
 
 main().catch((e) => { console.error("Smoke-Test FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
