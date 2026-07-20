@@ -13,8 +13,11 @@
  * Der Parser ist identisch zur Import-Logik im Tool (src/app.js):
  *   - findet die Kopfzeile automatisch (Botanischer Name + Familie)
  *   - trennt Gattung (erstes Wort) und Art (Rest, inkl. var./ssp./Gruppen)
- *   - erkennt Kategorie-Überschriften (Text in Spalte A ohne bot. Namen)
+ *   - hängt eine separate Sorte-Spalte an die Art an (Gattung/Art/Sorte-Listen)
+ *   - erkennt Kategorie-Überschriften (Text in Spalte A ohne bot. Namen), auch
+ *     die erste Rubrik oberhalb der Kopfzeile, sowie eine Verwendungs-/Kategorie-Spalte
  *   - übernimmt Deutscher Name, Familie, Synonyme und ZP-Kennzeichen
+ *     (ZP-Spalte auch als „P“/„Prüfung“/„FW“/„Fachwerk.“ mit Werten AP/ZP)
  *
  * Ausgabeformat je Zeile (kompaktes Array, wie im Tool erwartet):
  *   [gattung, art, familie, deutscher_name, kategorie, zp(0|1), synonyme]
@@ -22,12 +25,17 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { createRequire } from "module";
 
-const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
-const XLSX = require(path.join(ROOT, "lib", "xlsx.full.min.js"));
+// SheetJS ist ein Standalone-Browser-Bundle. Unter aktuellem Node liefert ein
+// blankes require() ein leeres Objekt (die Bibliothek exportiert primär über die
+// globale Variable XLSX). Deshalb im Funktions-Scope auswerten und dabei
+// exports/module/define/window abschirmen, damit der Standalone-Zweig greift –
+// so lädt der Konverter dieselbe Datei genauso wie der Browser.
+const XLSX = (new Function("exports", "module", "define", "window",
+  fs.readFileSync(path.join(ROOT, "lib", "xlsx.full.min.js"), "utf8") + "\n;return XLSX;"
+))(undefined, undefined, undefined, undefined);
 
 const norm = (s) => (s == null ? "" : String(s)).replace(/\s+/g, " ").trim();
 const tidy = (s) => {
@@ -41,14 +49,18 @@ const split = (b) => {
   const p = b.split(" ");
   return [p.shift(), p.join(" ")];
 };
+// Titel-/Fuß-/Quellzeilen, die weder Datenzeile noch Kategorie sind
+const isNoise = (s) => /^(https?:|stand[:\s]|quelle|pflanzenliste)/i.test(norm(s));
 const H = {
   botanisch: /(botan|wissensch|lateinisch|bot\.?\s*name|artname)/i,
   deutsch: /(deutsch|trivial|dt\.?\s*name)/i,
   familie: /(familie|family)/i,
-  zp: /^zp\.?$|zwischenpr/i,
+  zp: /^zp\.?$|^p$|^fw$|pr(ü|ue)fung|zwischenpr|fachwerk/i,
   synonyme: /synonym/i,
   gattung: /^gattung$|genus/i,
   art: /^art$|epitheton|species/i,
+  sorte: /^sorte$|^sorten|kultivar|cultivar/i,
+  kategorie: /^kategorie$|^verwendung$/i,
 };
 
 function parseSheet(rows) {
@@ -71,6 +83,14 @@ function parseSheet(rows) {
   const maxIdx = Math.max(...Object.values(m));
   const out = [];
   let kat = "";
+  // Anfangs-Kategorie: eine allein stehende Rubrik knapp oberhalb der Kopfzeile
+  // (manche Listen setzen die erste Rubrik über die Spaltentitel).
+  for (let i = hr - 1; i >= Math.max(0, hr - 4); i--) {
+    const c = rows[i].map(norm);
+    if (c[0] && !c.slice(1).join("") && !isNoise(c[0]) && !/^nr/i.test(c[0])) {
+      kat = c[0].replace(/^\d+[.)]?\s*/, ""); break;
+    }
+  }
   for (let i = hr + 1; i < rows.length; i++) {
     const cells = rows[i].map((x) => (x == null ? "" : x));
     while (cells.length <= maxIdx) cells.push("");
@@ -78,18 +98,25 @@ function parseSheet(rows) {
     const bot = hasBot ? norm(cells[m.botanisch]) : "";
     const fam = norm(cells[m.familie]);
     const a0 = norm(cells[0]);
+    // Fußzeilen / URLs / Stand-Angaben überspringen (vor der Kategorie-Erkennung)
+    if (isNoise(bot) || isNoise(a0)) continue;
+    // Kategorie-Überschrift: Text in Spalte A, aber kein bot. Name/Familie
     if (!bot && !fam && !(hasGA && norm(cells[m.gattung])) && a0 && !/^nr/i.test(a0)) {
       kat = a0.replace(/^\d+[.)]?\s*/, ""); continue;
     }
-    if (/^https?:|^stand:|^quelle/i.test(bot) || /^https?:|^stand:|^quelle/i.test(a0)) continue;
     let g, ar;
-    if (hasGA && norm(cells[m.gattung])) { g = norm(cells[m.gattung]); ar = tidy(cells[m.art]); }
-    else { if (!bot) continue;[g, ar] = split(bot); }
+    if (hasGA && norm(cells[m.gattung])) {
+      g = norm(cells[m.gattung]); ar = tidy(cells[m.art]);
+      if (m.sorte != null) { const sv = tidy(cells[m.sorte]); if (sv) ar = norm(ar + " " + sv); }
+    } else { if (!bot) continue;[g, ar] = split(bot); }
     if (!g) continue;
+    // Kategorie aus einer Verwendungs-/Kategorie-Spalte hat Vorrang vor der Rubrik
+    let rowKat = kat;
+    if (m.kategorie != null) { const kv = norm(cells[m.kategorie]); if (kv) rowKat = kv; }
     out.push([
       g, ar, fam,
       m.deutsch != null ? norm(cells[m.deutsch]) : "",
-      kat,
+      rowKat,
       m.zp != null && /zp|x|ja|1|✓/i.test(norm(cells[m.zp])) ? 1 : 0,
       m.synonyme != null ? norm(cells[m.synonyme]) : "",
     ]);

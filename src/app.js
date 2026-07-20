@@ -1,7 +1,8 @@
 /* ============================================================
-   Pflanzenkenntnis · Abschlussprüfung Gemüsebau
-   Hinterlegte Liste + Browser-Speicher (localStorage), Excel-Import (SheetJS).
-   Vollständig offline, ohne Datenbank-Engine.
+   Pflanzenkenntnis · Prüfungslisten der grünen Berufe (BW)
+   14 Profile (7 Fachrichtungen × Gärtner/Fachwerker), je eigene Liste,
+   Schema und Notenschlüssel. Hinterlegte Seeds + Browser-Speicher
+   (localStorage), Excel-Import (SheetJS). Offline, ohne Datenbank-Engine.
    ============================================================ */
 "use strict";
 
@@ -248,11 +249,15 @@ const HEAD = {
   botanisch:/(botan|wissensch|lateinisch|bot\.?\s*name|artname)/i,
   deutsch:/(deutsch|trivial|dt\.?\s*name)/i,
   familie:/(familie|family)/i,
-  zp:/^zp\.?$|zwischenpr/i,
+  zp:/^zp\.?$|^p$|^fw$|pr(ü|ue)fung|zwischenpr|fachwerk/i,
   synonyme:/(synonym)/i,
   gattung:/^gattung$|genus/i,
-  art:/^art$|epitheton|species/i
+  art:/^art$|epitheton|species/i,
+  sorte:/^sorte$|^sorten|kultivar|cultivar/i,
+  kategorie:/^kategorie$|^verwendung$/i
 };
+// Titel-/Fuß-/Quellzeilen, die weder Datenzeile noch Kategorie sind
+const isNoise = s => /^(https?:|stand[:\s]|quelle|pflanzenliste)/i.test(norm(s));
 function tidyName(s){ s=norm(s); s=s.replace(/\b(var|subsp|ssp|f|cv|convar)\.(?=\S)/g,"$1. "); return norm(s); }
 function splitBinomial(bot){ bot=tidyName(bot); if(!bot) return {gattung:"",art:""}; const p=bot.split(" "); return {gattung:p.shift(), art:p.join(" ")}; }
 function findHeaderRow(rows){
@@ -278,6 +283,13 @@ function parseWorkbook(buf){
     if((!hasBot&&!hasGA)||m.familie==null) continue;
     const maxIdx=Math.max(...Object.values(m));
     let kat="";
+    // Anfangs-Kategorie: eine allein stehende Rubrik knapp oberhalb der Kopfzeile
+    for(let i=hr-1;i>=Math.max(0,hr-4);i--){
+      const c=rows[i].map(norm);
+      if(c[0] && !c.slice(1).join("") && !isNoise(c[0]) && !/^nr/i.test(c[0])){
+        kat=c[0].replace(/^\d+[\.\)]?\s*/,""); break;
+      }
+    }
     for(let i=hr+1;i<rows.length;i++){
       const cells=rows[i].map(x=>x==null?"":x);
       while(cells.length<=maxIdx) cells.push("");
@@ -285,20 +297,26 @@ function parseWorkbook(buf){
       const bot=hasBot?norm(cells[m.botanisch]):"";
       const fam=norm(cells[m.familie]);
       const a0=norm(cells[0]);
+      // Fußzeilen / URLs / Stand-Angaben überspringen (vor der Kategorie-Erkennung)
+      if(isNoise(bot) || isNoise(a0)) continue;
       // Kategorie-Überschrift: Text in Spalte A, aber kein bot. Name/Familie
       if(!bot && !fam && !(hasGA&&norm(cells[m.gattung])) && a0 && !/^nr/i.test(a0)){
         kat = a0.replace(/^\d+[\.\)]?\s*/,""); continue;
       }
-      // Fußzeilen / URLs überspringen
-      if(/^https?:|^stand:|^quelle/i.test(bot) || /^https?:|^stand:|^quelle/i.test(a0)) continue;
       let g,ar;
-      if(hasGA && norm(cells[m.gattung])){ g=norm(cells[m.gattung]); ar=tidyName(cells[m.art]); }
+      if(hasGA && norm(cells[m.gattung])){
+        g=norm(cells[m.gattung]); ar=tidyName(cells[m.art]);
+        if(m.sorte!=null){ const sv=tidyName(cells[m.sorte]); if(sv) ar=norm(ar+" "+sv); }
+      }
       else { if(!bot) continue; ({gattung:g,art:ar}=splitBinomial(bot)); }
       if(!g) continue;
+      // Kategorie aus einer Verwendungs-/Kategorie-Spalte hat Vorrang vor der Rubrik
+      let rowKat=kat;
+      if(m.kategorie!=null){ const kv=norm(cells[m.kategorie]); if(kv) rowKat=kv; }
       out.push({
         gattung:g, art:ar, familie:fam,
         deutscher_name:m.deutsch!=null?norm(cells[m.deutsch]):"",
-        kategorie:kat,
+        kategorie:rowKat,
         zp:(m.zp!=null && /zp|x|ja|1|✓/i.test(norm(cells[m.zp])))?1:0,
         synonyme:m.synonyme!=null?norm(cells[m.synonyme]):"",
         bemerkungen:""
