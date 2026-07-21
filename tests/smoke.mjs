@@ -90,11 +90,14 @@ async function main() {
     toggleHelp();
     const tips = ["#btnImport", "#btnDraw", "#btnPrint", "#btnHelp", "#btnSchema", "#btnSettings"]
       .every((s) => (document.querySelector(s).getAttribute("title") || "").length > 15);
-    return { open, hiddenAfter: $("#helpPanel").hasAttribute("hidden"), tips };
+    const icon = document.querySelector('link[rel="icon"]');
+    const favicon = !!icon && /^data:image\/svg\+xml,/.test(icon.getAttribute("href") || "");
+    return { open, hiddenAfter: $("#helpPanel").hasAttribute("hidden"), tips, favicon };
   });
   assert(help.open.vis && help.open.active && help.open.hasContent, "Hilfe-Panel öffnet nicht korrekt");
   assert(help.hiddenAfter, "Hilfe-Panel schließt nicht");
   assert(help.tips, "Nicht alle wichtigen Buttons haben einen (aussagekräftigen) Tooltip");
+  assert(help.favicon, "Inline-Favicon (data:image/svg+xml) fehlt");
 
   // 2) Standardprofil gemuesebau_gaertner: 148 Arten in der Liste sichtbar
   await page.select("#frSelect", "gemuesebau");
