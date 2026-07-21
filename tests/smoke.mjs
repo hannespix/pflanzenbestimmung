@@ -82,6 +82,20 @@ async function main() {
   assert(!active.closedState.active && active.closedState.pressed === "false",
     "Modul-Button bleibt nach dem Schließen aktiv");
 
+  // 1c) Hilfe-Panel öffnet mit Inhalt und markiert seinen Button; Tooltips vorhanden
+  const help = await page.evaluate(() => {
+    toggleHelp();
+    const open = { vis: !$("#helpPanel").hasAttribute("hidden"), active: $("#btnHelp").classList.contains("active"),
+      hasContent: /In fünf Schritten/.test($("#helpPanel").textContent) };
+    toggleHelp();
+    const tips = ["#btnImport", "#btnDraw", "#btnPrint", "#btnHelp", "#btnSchema", "#btnSettings"]
+      .every((s) => (document.querySelector(s).getAttribute("title") || "").length > 15);
+    return { open, hiddenAfter: $("#helpPanel").hasAttribute("hidden"), tips };
+  });
+  assert(help.open.vis && help.open.active && help.open.hasContent, "Hilfe-Panel öffnet nicht korrekt");
+  assert(help.hiddenAfter, "Hilfe-Panel schließt nicht");
+  assert(help.tips, "Nicht alle wichtigen Buttons haben einen (aussagekräftigen) Tooltip");
+
   // 2) Standardprofil gemuesebau_gaertner: 148 Arten in der Liste sichtbar
   await page.select("#frSelect", "gemuesebau");
   await page.select("#nivSelect", "gaertner");
@@ -287,7 +301,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Smoke-Test OK – Boot, aktiver Panel-Zustand, Profilwechsel (148/248), GaLaBau-Schema, Ziehen, Bogen, Prüfung speichern/laden/kopieren/aktualisieren, Einstellungen, Vorschau, Sicherung (inkl. Prüfungen/Einstellungen), Persistenz.");
+  console.log("Smoke-Test OK – Boot, aktiver Panel-Zustand, Hilfe + Tooltips, Profilwechsel (148/248), GaLaBau-Schema, Ziehen, Bogen, Prüfung speichern/laden/kopieren/aktualisieren, Einstellungen, Vorschau, Sicherung, Persistenz.");
 }
 
 main().catch((e) => { console.error("Smoke-Test FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
