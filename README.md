@@ -11,6 +11,10 @@ und die jeweiligen Fachwerker, aus **einer** gemeinsamen Pflanzendatenbank gebau
   zum Üben: Karteikarten mit Spaced-Repetition (Leitner), Multiple-Choice-Quiz und
   Tippen — **keine** Prüfungslisten-Erstellung, **kein** Notenschlüssel.
 
+Eine gemeinsame **Startseite** (`index.html`) verzweigt zu beiden Werkzeugen
+(**Lernen** / **Prüfen**); zusätzlich sind die beiden Tools direkt untereinander
+verlinkt.
+
 > Zuständige Stelle: Regierungspräsidium Freiburg · Abschlussprüfung Gärtner/in
 > und Fachwerker/in.
 
@@ -96,20 +100,25 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
 **Online:** Nach jedem Merge veröffentlicht die `pages`-Action den aktuellen Stand
 automatisch auf **GitHub Pages** → <https://hannespix.github.io/pflanzenbestimmung/>
 (einmalig in den Repo-Einstellungen unter *Pages* die Quelle *GitHub Actions*
-aktivieren). Das Prüfungswerkzeug liegt dort als Startseite, das Lern-Tool unter
-`…/pflanzen-lernen.html` (aus dem Prüfungswerkzeug ist es zusätzlich verlinkt).
+aktivieren). Die **Startseite** dort verzweigt zu *Lernen* und *Prüfen*; die
+Werkzeuge liegen unter `…/pflanzenkenntnis.html` und `…/pflanzen-lernen.html` und
+sind zusätzlich direkt untereinander verlinkt.
 
-**Offline:** `pflanzenkenntnis.html` (Prüfende) bzw. `pflanzen-lernen.html` (Azubis)
-aus dem Repo-Root im Browser öffnen (Doppelklick genügt — die Dateien sind
-eigenständig und benötigen kein Internet). Identisch gebaut liegen sie auch unter
-`dist/`. Änderungen bzw. Lernfortschritt bleiben im Browser gespeichert.
+**Offline:** `index.html` (Startseite), `pflanzenkenntnis.html` (Prüfende) bzw.
+`pflanzen-lernen.html` (Azubis) aus dem Repo-Root im Browser öffnen (Doppelklick
+genügt — die Dateien sind eigenständig und benötigen kein Internet; für die
+Verzweigung der Startseite müssen alle drei im selben Ordner liegen). Identisch
+gebaut liegen sie auch unter `dist/`. Änderungen bzw. Lernfortschritt bleiben im
+Browser gespeichert.
 
 ## Build
 
 ```bash
-python3 build.py                                   # erzeugt dist/ + Root-Verteilkopien (beide Tools)
-python3 tools/check_offline.py dist/pflanzenkenntnis.html   # prüft: keine externen Ressourcen
+python3 build.py                                   # erzeugt dist/ + Root-Verteilkopien (Startseite + beide Tools)
+python3 tools/check_offline.py dist/index.html             # prüft: keine externen Ressourcen
+python3 tools/check_offline.py dist/pflanzenkenntnis.html
 python3 tools/check_offline.py dist/pflanzen-lernen.html
+node tests/start.mjs                               # Puppeteer-Smoke Startseite (Verzweigung)
 node tests/smoke.mjs                               # Puppeteer-Smoke Prüfungswerkzeug
 node tests/learn.mjs                               # Puppeteer-Smoke Lern-Tool
 ```
@@ -130,9 +139,11 @@ python3 build.py
 ├─ CLAUDE.md                 Arbeitsanweisungen für Claude Code
 ├─ README.md
 ├─ build.py                  Template + Logik + Seeds (+ SheetJS)  →  dist/ + Root-Kopien
+├─ index.html                Verteilkopie Startseite (versioniert)
 ├─ pflanzenkenntnis.html     Verteilkopie Prüfungswerkzeug (versioniert)
 ├─ pflanzen-lernen.html      Verteilkopie Lern-Tool (versioniert)
 ├─ src/
+│  ├─ start.html             HTML der Startseite (Verzweigung Lernen/Prüfen)
 │  ├─ template.html          HTML-Gerüst Prüfungswerkzeug (CSS, Platzhalter)
 │  ├─ app.js                 gesamte Logik Prüfungswerkzeug (Vanilla JS)
 │  ├─ learn.html             HTML-Gerüst Lern-Tool (CSS, Platzhalter)
@@ -146,16 +157,18 @@ python3 build.py
 │  ├─ rebuild_seeds.sh       alle Seeds aus data/<id>.<ext> neu erzeugen
 │  └─ check_offline.py       CI-Check: keine externen Ressourcen (Datei als Argument)
 ├─ tests/
+│  ├─ start.mjs              Puppeteer-Smoke Startseite (Verzweigung) gegen dist/
 │  ├─ smoke.mjs              Puppeteer-Smoke Prüfungswerkzeug gegen dist/ (file://)
 │  └─ learn.mjs              Puppeteer-Smoke Lern-Tool gegen dist/ (file://)
 ├─ data/                     Quell-Excel je Profil (data/<profil-id>.<ext>)
 └─ dist/                     Build-Ergebnis (nicht versioniert)
 ```
 
-Die Dateien **`pflanzenkenntnis.html`** und **`pflanzen-lernen.html`** im Repo-Root
-sind die fertigen Offline-Dateien zum direkten Herunterladen und Öffnen. `build.py`
-schreibt sie bei jedem Build byte-identisch zu den Kopien in `dist/` mit (beide aus
-derselben Pflanzendatenbank).
+Die Dateien **`index.html`** (Startseite), **`pflanzenkenntnis.html`** und
+**`pflanzen-lernen.html`** im Repo-Root sind die fertigen Offline-Dateien zum
+direkten Herunterladen und Öffnen. `build.py` schreibt sie bei jedem Build
+byte-identisch zu den Kopien in `dist/` mit (alle aus derselben
+Pflanzendatenbank).
 
 ---
 

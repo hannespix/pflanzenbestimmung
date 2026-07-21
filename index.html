@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pflanzenkenntnis · grüne Berufe</title>
+<meta name="description" content="Werkzeuge zur Pflanzenkenntnis-Prüfung der grünen Berufe: Lernen für Auszubildende und Prüfungslisten für Prüfende – eine gemeinsame Pflanzendatenbank, vollständig offline.">
+<meta name="theme-color" content="#2b4f38">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232b4f38'/%3E%3Cpath d='M9 23 C 9 12 16 7 23 9 C 23 20 16 25 9 23 Z' fill='%23a8c9ac'/%3E%3Cpath d='M11 21 C 15 16 19 12 22 10' stroke='%232b4f38' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --paper:#eceee6; --surface:#f6f7f1; --surface-2:#f1f2ea;
+  --ink:#22352b; --ink-soft:#56604f; --ink-faint:#8a9182;
+  --green:#3d6b4d; --green-deep:#2b4f38; --green-tint:#e2ebe1;
+  --sepia:#7a6a4f; --madder:#9c3b2e; --madder-soft:#c96a5a; --madder-tint:#f3e2dd;
+  --gold:#a9842b;
+  --rule:#cdd0c0; --rule-strong:#a9ad98; --shadow:rgba(34,53,43,.10);
+  --serif:'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua','URW Palladio L',Georgia,'Times New Roman',serif;
+  --sans:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --mono:'SFMono-Regular','Cascadia Code',Menlo,Consolas,'Liberation Mono',monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:var(--sans); color:var(--ink); background:var(--paper);
+  background-image:radial-gradient(var(--rule) .5px,transparent .5px); background-size:22px 22px;
+  -webkit-font-smoothing:antialiased; line-height:1.45; min-height:100vh}
+.wrap{max-width:820px; margin:0 auto; padding:40px 20px 60px; display:flex; flex-direction:column; min-height:100vh}
+
+/* Kopf */
+.masthead{background:var(--surface); border:1px solid var(--rule-strong); border-radius:4px; padding:26px 26px 22px; box-shadow:0 1px 0 var(--shadow); position:relative; overflow:hidden}
+.masthead::before{content:""; position:absolute; left:0; top:0; bottom:0; width:6px; background:repeating-linear-gradient(180deg,var(--green) 0 10px,var(--green-deep) 10px 20px)}
+.eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:var(--sepia); margin:0 0 8px 8px}
+.masthead h1{font-family:var(--serif); font-weight:600; font-size:clamp(25px,4.4vw,36px); margin:0 0 8px 8px; letter-spacing:-.01em; line-height:1.06}
+.lede{margin:0 0 2px 8px; color:var(--ink-soft); font-size:15.5px; max-width:56ch}
+.lede b{color:var(--green-deep); font-weight:600}
+
+/* Auswahl */
+.choices{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin:22px 0 0}
+.choice{display:flex; flex-direction:column; text-decoration:none; color:inherit; background:var(--surface);
+  border:1px solid var(--rule-strong); border-left-width:6px; border-radius:6px; padding:22px 22px 20px;
+  box-shadow:0 1px 0 var(--shadow); transition:transform .1s, box-shadow .15s, border-color .15s; position:relative}
+.choice:hover{transform:translateY(-2px); box-shadow:0 8px 24px var(--shadow)}
+.choice:focus-visible{outline:2px solid var(--madder); outline-offset:3px}
+.choice.learn{border-left-color:var(--green)}
+.choice.learn:hover{border-color:var(--green)}
+.choice.exam{border-left-color:var(--madder-soft)}
+.choice.exam:hover{border-color:var(--madder-soft)}
+.choice .ic{width:40px; height:40px; border-radius:8px; display:flex; align-items:center; justify-content:center; margin-bottom:14px}
+.choice.learn .ic{background:var(--green-tint); color:var(--green-deep)}
+.choice.exam .ic{background:var(--madder-tint); color:var(--madder)}
+.choice .ic svg{width:23px; height:23px}
+.tag{font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--sepia); margin-bottom:4px}
+.choice h2{font-family:var(--serif); font-weight:600; font-size:26px; margin:0 0 8px; color:var(--green-deep); line-height:1.1}
+.choice.exam h2{color:var(--madder)}
+.choice p{margin:0 0 18px; font-size:14.5px; color:var(--ink-soft); flex:1}
+.go{font-family:var(--mono); font-size:12.5px; letter-spacing:.02em; font-weight:600; display:inline-flex; align-items:center; gap:6px; align-self:flex-start;
+  border:1px solid var(--rule-strong); border-radius:4px; padding:8px 13px; background:var(--surface-2); transition:background .12s, border-color .12s}
+.choice.learn .go{color:var(--green-deep)} .choice.learn:hover .go{background:var(--green-tint); border-color:var(--green)}
+.choice.exam .go{color:var(--madder)} .choice.exam:hover .go{background:var(--madder-tint); border-color:var(--madder-soft)}
+
+/* Fuß */
+.foot{margin-top:24px; padding-top:18px; border-top:1px solid var(--rule); color:var(--ink-faint); font-size:12.5px; line-height:1.7}
+.foot .db{font-family:var(--mono); color:var(--sepia)}
+.foot b{color:var(--ink-soft); font-weight:600}
+.spacer{flex:1}
+
+@media (max-width:620px){
+  .wrap{padding:26px 16px 46px}
+  .choices{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">Pflanzenkenntnis · grüne Berufe</p>
+    <h1>Womit möchtest du arbeiten?</h1>
+    <p class="lede">Zwei Werkzeuge aus <b>einer gemeinsamen Pflanzendatenbank</b> – für alle sieben
+      Fachrichtungen und die Fachwerker. Beide laufen vollständig offline im Browser, ganz ohne Internet.</p>
+  </header>
+
+  <main class="choices">
+    <a class="choice learn" href="pflanzen-lernen.html">
+      <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="14" height="12" rx="2"/><path d="M7 9h6M7 13h4M21 8v9a2 2 0 0 1-2 2H8"/></svg></span>
+      <span class="tag">für Auszubildende</span>
+      <h2>Lernen</h2>
+      <p>Pflanzen üben mit Karteikarten, Quiz und Tippen – mit verteiltem Wiederholen (Spaced Repetition).
+        Der Lernfortschritt bleibt gespeichert. Keine Prüfungslisten, keine Noten – nur üben.</p>
+      <span class="go">Lernen öffnen&nbsp;→</span>
+    </a>
+    <a class="choice exam" href="pflanzenkenntnis.html">
+      <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3.2A1.2 1.2 0 0 1 10.2 2h3.6A1.2 1.2 0 0 1 15 3.2V4M8.5 11l1.5 1.5 3-3M8 16h5"/></svg></span>
+      <span class="tag">für Prüfende</span>
+      <h2>Prüfen</h2>
+      <p>Prüfungslisten ziehen, Prüfungsbogen und Musterlösung drucken, Noten rechnen und Prüfungen
+        nach Datum speichern – für alle Fachrichtungen, mit einstellbarem Schema und Notenschlüssel.</p>
+      <span class="go">Prüfen öffnen&nbsp;→</span>
+    </a>
+  </main>
+
+  <div class="spacer"></div>
+
+  <footer class="foot">
+    <p><span class="db">Gemeinsame Datenbank: <b>14 Profile · 2114 Arten</b></span> – beide Werkzeuge werden aus
+      denselben Listen gebaut, sodass Lernen und Prüfen exakt denselben Pflanzenbestand nutzen.</p>
+    <p>Vollständig offline · kein CDN · Baden-Württemberg · zuständige Stelle im Prüfungswerkzeug einstellbar.</p>
+  </footer>
+</div>
+</body>
+</html>

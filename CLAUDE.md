@@ -30,17 +30,27 @@ Bitte alle Antworten und Commit-/PR-Texte **auf Deutsch**.
 
 ## Architektur & Datenfluss
 
-Aus **einer** gemeinsamen Pflanzendatenbank (`seeds/`) werden **zwei** eigenständige
-Offline-Dateien gebaut:
+Aus **einer** gemeinsamen Pflanzendatenbank (`seeds/`) werden **drei** eigenständige
+Offline-Dateien gebaut — eine Startseite und die zwei Werkzeuge:
 
 ```
-                          ┌─► dist/pflanzenkenntnis.html  Prüfungswerkzeug (Prüfende)
-seeds/*.json  ────────────┤   (template.html + app.js  + Seeds + SheetJS inline)
+src/start.html  ──────────────► dist/index.html            Startseite (verzweigt zu Lernen/Prüfen)
+                                 (start.html + Kennzahlen, statisch, ohne Seeds)
+
+                          ┌────► dist/pflanzenkenntnis.html  Prüfungswerkzeug (Prüfende)
+seeds/*.json  ────────────┤      (template.html + app.js  + Seeds + SheetJS inline)
 src/{template,app}.js  ───┤
-src/{learn.html,learn.js} ┼─► dist/pflanzen-lernen.html   Lern-Tool (Azubis)
-lib/xlsx.full.min.js  ────┘   (learn.html    + learn.js + Seeds, OHNE SheetJS)
-                → build.py schreibt beide Dateien + versionierte Root-Kopien
+src/{learn.html,learn.js} ┼────► dist/pflanzen-lernen.html   Lern-Tool (Azubis)
+lib/xlsx.full.min.js  ────┘      (learn.html    + learn.js + Seeds, OHNE SheetJS)
+                → build.py schreibt alle drei Dateien + versionierte Root-Kopien
 ```
+
+**Startseite** (`index.html`) — gemeinsamer Einstieg, verzweigt zu **Lernen**
+(`pflanzen-lernen.html`) und **Prüfen** (`pflanzenkenntnis.html`); die beiden Tools
+sind zusätzlich direkt untereinander verlinkt:
+- **`src/start.html`** — statische Seite mit dem Platzhalter `/*__STATS__*/`
+  (von `build.py` durch die Kennzahl der Datenbank ersetzt, z. B. »14 Profile ·
+  2114 Arten«). Keine Seeds, kein JS. Baut nur, wenn `src/start.html` existiert.
 
 **Prüfungswerkzeug** (`pflanzenkenntnis.html`):
 - **`src/template.html`** — HTML-Gerüst, gesamtes CSS und die Platzhalter
@@ -76,9 +86,10 @@ Zur **Laufzeit** hält das Tool die Daten pro Profil getrennt:
 ## Build & Test
 
 ```bash
-python3 build.py                                         # -> beide dist/*.html + Root-Kopien
-python3 tools/check_offline.py dist/pflanzenkenntnis.html  # Offline-Check (muss grün sein)
-python3 tools/check_offline.py dist/pflanzen-lernen.html   # dito für das Lern-Tool
+python3 build.py                                         # -> alle drei dist/*.html + Root-Kopien
+python3 tools/check_offline.py dist/index.html             # Offline-Check Startseite (muss grün sein)
+python3 tools/check_offline.py dist/pflanzenkenntnis.html  # dito Prüfungswerkzeug
+python3 tools/check_offline.py dist/pflanzen-lernen.html   # dito Lern-Tool
 ```
 
 Node (Konverter und Tests):
@@ -86,6 +97,7 @@ Node (Konverter und Tests):
 ```bash
 node tools/xlsx_to_seed.mjs <excel> <profil-id> [--sheet "Blattname"]
 bash tools/rebuild_seeds.sh            # alle Seeds aus data/<id>.<ext> neu erzeugen
+node tests/start.mjs                    # Puppeteer-Smoke Startseite (Verzweigung)
 node tests/smoke.mjs                    # Puppeteer-Smoke Prüfungswerkzeug (npm test)
 node tests/learn.mjs                    # Puppeteer-Smoke Lern-Tool
 ```
@@ -281,6 +293,13 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       `pflanzenlernen.`), Link zurück zur Prüfungsversion. `src/learn.html` +
       `src/learn.js`; `build.py` baut beide Dateien; Smoke-Test `tests/learn.mjs`;
       CI und Pages-Deploy erfassen beide Dateien.
+- [x] **Gemeinsame Startseite** (`index.html`, aus `src/start.html`): verzweigt zu
+      **Lernen** und **Prüfen** (zwei Karten), zeigt die Kennzahl der gemeinsamen
+      Datenbank (Platzhalter `/*__STATS__*/`). Reziproker »Lernversion«-Link im
+      Prüfungswerkzeug (das Lern-Tool verlinkt bereits die »Prüfungsversion«).
+      `build.py` schreibt `index.html`; Pages deployt sie als Root (`_site/index.html`);
+      Smoke-Test `tests/start.mjs` klickt beide Verzweigungen durch; CI prüft alle drei
+      Dateien (Offline-Check + Smoke).
 
 ## Offene Aufgaben (TODO)
 
