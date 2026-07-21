@@ -1,9 +1,15 @@
-# Pflanzenkenntnis — Prüfungslisten (grüne Berufe)
+# Pflanzenkenntnis — grüne Berufe
 
-Ein **einzelnes, vollständig offline lauffähiges HTML-Werkzeug** für die
-Pflanzenkenntnis-Prüfung der grünen Berufe: Prüfungslisten ziehen, Prüfungsbogen
-und Musterlösung drucken, Noten rechnen — für alle sieben Gärtner-Fachrichtungen
-und die jeweiligen Fachwerker.
+Zwei **eigenständige, vollständig offline lauffähige HTML-Werkzeuge** rund um die
+Pflanzenkenntnis-Prüfung der grünen Berufe — für alle sieben Gärtner-Fachrichtungen
+und die jeweiligen Fachwerker, aus **einer** gemeinsamen Pflanzendatenbank gebaut:
+
+- **`pflanzenkenntnis.html` — Prüfungswerkzeug (für Prüfende).** Prüfungslisten
+  ziehen, Prüfungsbogen und Musterlösung drucken, Noten rechnen, Prüfungen nach
+  Datum speichern.
+- **`pflanzen-lernen.html` — Lern-Tool (für Azubis).** Dieselben Pflanzenlisten
+  zum Üben: Karteikarten mit Spaced-Repetition (Leitner), Multiple-Choice-Quiz und
+  Tippen — **keine** Prüfungslisten-Erstellung, **kein** Notenschlüssel.
 
 > Zuständige Stelle: Regierungspräsidium Freiburg · Abschlussprüfung Gärtner/in
 > und Fachwerker/in.
@@ -13,7 +19,7 @@ Arbeitsanweisungen für die Weiterentwicklung mit Claude Code stehen in
 
 ---
 
-## Funktionen
+## Prüfungswerkzeug (`pflanzenkenntnis.html`)
 
 - **Fachrichtung + Ausbildung wählen** (7 Fachrichtungen × Gärtner/in 20 Pflanzen
   / Fachwerker/in 15 Pflanzen = 14 Profile). Jedes Profil hat eigene Liste,
@@ -58,24 +64,54 @@ Arbeitsanweisungen für die Weiterentwicklung mit Claude Code stehen in
 
 ---
 
+## Lern-Tool (`pflanzen-lernen.html`)
+
+Für Auszubildende zum **Üben** derselben Pflanzenlisten — ohne Prüfungslisten-
+Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (dieselben
+14 Profile und Listen wie im Prüfungswerkzeug); ein Link führt zur Prüfungsversion.
+
+- **Drei Lernmodi:**
+  - **Karteikarten** mit **Spaced-Repetition (Leitner-Boxen 1–5).** Karte umdrehen,
+    dann selbst einschätzen: »Nochmal« · »Schwer« · »Gewusst«. Fällige Karten kommen
+    nach dem Leitner-Rhythmus (0/1/3/7/16 Tage) wieder – man übt gezielt das, was
+    noch sitzt bzw. wieder dran ist.
+  - **Multiple-Choice-Quiz** – eine richtige Antwort unter plausiblen Ablenkern
+    (bevorzugt aus derselben Kategorie bzw. Familie).
+  - **Tippen** – Antwort selbst eingeben; tippfehlertolerant (kleine Abweichungen
+    zählen als richtig), Gattung/Art bzw. Synonyme werden getrennt geprüft.
+- **Abfragerichtung wählbar:** Deutsch → Botanisch, Botanisch → Deutsch oder
+  Art → Familie.
+- **Lernstoff eingrenzen:** nach Kategorie und optional nur **ZP-relevante** Arten;
+  Sitzungslänge einstellbar.
+- **Fortschritt bleibt erhalten** (localStorage, je Profil getrennt, Namensraum
+  `pflanzenlernen.`) – die Leitner-Boxen und Fälligkeiten überleben das Schließen.
+- Gleiche Leitplanken: **vollständig offline**, kein CDN, kein Framework,
+  deutschsprachig, mobiltauglich. Baut **ohne** SheetJS (kein Excel-Import nötig)
+  und ist dadurch deutlich kleiner.
+
+---
+
 ## Nutzung
 
 **Online:** Nach jedem Merge veröffentlicht die `pages`-Action den aktuellen Stand
 automatisch auf **GitHub Pages** → <https://hannespix.github.io/pflanzenbestimmung/>
 (einmalig in den Repo-Einstellungen unter *Pages* die Quelle *GitHub Actions*
-aktivieren).
+aktivieren). Das Prüfungswerkzeug liegt dort als Startseite, das Lern-Tool unter
+`…/pflanzen-lernen.html` (aus dem Prüfungswerkzeug ist es zusätzlich verlinkt).
 
-**Offline:** `pflanzenkenntnis.html` (Repo-Root) im Browser öffnen (Doppelklick
-genügt — die Datei ist eigenständig und benötigt kein Internet). Identisch gebaut
-liegt sie auch unter `dist/pflanzenkenntnis.html`. Änderungen bleiben im Browser
-gespeichert.
+**Offline:** `pflanzenkenntnis.html` (Prüfende) bzw. `pflanzen-lernen.html` (Azubis)
+aus dem Repo-Root im Browser öffnen (Doppelklick genügt — die Dateien sind
+eigenständig und benötigen kein Internet). Identisch gebaut liegen sie auch unter
+`dist/`. Änderungen bzw. Lernfortschritt bleiben im Browser gespeichert.
 
 ## Build
 
 ```bash
-python3 build.py                 # erzeugt dist/ + Root-Verteilkopie
-python3 tools/check_offline.py   # prüft: keine externen Ressourcen
-node tests/smoke.mjs             # Puppeteer-Smoke-Test (optional, empfohlen)
+python3 build.py                                   # erzeugt dist/ + Root-Verteilkopien (beide Tools)
+python3 tools/check_offline.py dist/pflanzenkenntnis.html   # prüft: keine externen Ressourcen
+python3 tools/check_offline.py dist/pflanzen-lernen.html
+node tests/smoke.mjs                               # Puppeteer-Smoke Prüfungswerkzeug
+node tests/learn.mjs                               # Puppeteer-Smoke Lern-Tool
 ```
 
 Neue/aktualisierte Fachrichtungsliste einbauen:
@@ -93,28 +129,33 @@ python3 build.py
 ```
 ├─ CLAUDE.md                 Arbeitsanweisungen für Claude Code
 ├─ README.md
-├─ build.py                  Template + Logik + Seeds + SheetJS  →  dist/ + Root-Kopie
-├─ pflanzenkenntnis.html     Verteilkopie (versioniert, direkt herunterladbar)
+├─ build.py                  Template + Logik + Seeds (+ SheetJS)  →  dist/ + Root-Kopien
+├─ pflanzenkenntnis.html     Verteilkopie Prüfungswerkzeug (versioniert)
+├─ pflanzen-lernen.html      Verteilkopie Lern-Tool (versioniert)
 ├─ src/
-│  ├─ template.html          HTML-Gerüst, CSS, Platzhalter
-│  └─ app.js                 gesamte Logik (Vanilla JS)
+│  ├─ template.html          HTML-Gerüst Prüfungswerkzeug (CSS, Platzhalter)
+│  ├─ app.js                 gesamte Logik Prüfungswerkzeug (Vanilla JS)
+│  ├─ learn.html             HTML-Gerüst Lern-Tool (CSS, Platzhalter)
+│  └─ learn.js               gesamte Logik Lern-Tool (Vanilla JS)
 ├─ seeds/
 │  └─ <profil-id>.json       Pflanzenliste je Profil (14 Dateien, Name = Profil-ID)
 ├─ lib/
-│  └─ xlsx.full.min.js       SheetJS (inline eingebettet, kein CDN)
+│  └─ xlsx.full.min.js       SheetJS (nur im Prüfungswerkzeug inline, kein CDN)
 ├─ tools/
 │  ├─ xlsx_to_seed.mjs       Excel → seeds/<id>.json
 │  ├─ rebuild_seeds.sh       alle Seeds aus data/<id>.<ext> neu erzeugen
-│  └─ check_offline.py       CI-Check: keine externen Ressourcen
+│  └─ check_offline.py       CI-Check: keine externen Ressourcen (Datei als Argument)
 ├─ tests/
-│  └─ smoke.mjs              Puppeteer-Smoke-Test gegen dist/ (file://)
+│  ├─ smoke.mjs              Puppeteer-Smoke Prüfungswerkzeug gegen dist/ (file://)
+│  └─ learn.mjs              Puppeteer-Smoke Lern-Tool gegen dist/ (file://)
 ├─ data/                     Quell-Excel je Profil (data/<profil-id>.<ext>)
 └─ dist/                     Build-Ergebnis (nicht versioniert)
 ```
 
-Die Datei **`pflanzenkenntnis.html`** im Repo-Root ist die fertige Offline-Datei
-zum direkten Herunterladen und Öffnen. `build.py` schreibt sie bei jedem Build
-byte-identisch zu `dist/pflanzenkenntnis.html` mit.
+Die Dateien **`pflanzenkenntnis.html`** und **`pflanzen-lernen.html`** im Repo-Root
+sind die fertigen Offline-Dateien zum direkten Herunterladen und Öffnen. `build.py`
+schreibt sie bei jedem Build byte-identisch zu den Kopien in `dist/` mit (beide aus
+derselben Pflanzendatenbank).
 
 ---
 

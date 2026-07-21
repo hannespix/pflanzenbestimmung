@@ -30,20 +30,38 @@ Bitte alle Antworten und Commit-/PR-Texte **auf Deutsch**.
 
 ## Architektur & Datenfluss
 
+Aus **einer** gemeinsamen Pflanzendatenbank (`seeds/`) werden **zwei** eigenständige
+Offline-Dateien gebaut:
+
 ```
-seeds/*.json  ─┐
-src/app.js    ─┼─► build.py ─► dist/pflanzenkenntnis.html  (eine Offline-Datei)
-src/template.html ┘            (Template + Logik + Seeds + SheetJS inline)
-lib/xlsx.full.min.js ─┘
+                          ┌─► dist/pflanzenkenntnis.html  Prüfungswerkzeug (Prüfende)
+seeds/*.json  ────────────┤   (template.html + app.js  + Seeds + SheetJS inline)
+src/{template,app}.js  ───┤
+src/{learn.html,learn.js} ┼─► dist/pflanzen-lernen.html   Lern-Tool (Azubis)
+lib/xlsx.full.min.js  ────┘   (learn.html    + learn.js + Seeds, OHNE SheetJS)
+                → build.py schreibt beide Dateien + versionierte Root-Kopien
 ```
 
+**Prüfungswerkzeug** (`pflanzenkenntnis.html`):
 - **`src/template.html`** — HTML-Gerüst, gesamtes CSS und die Platzhalter
   `/*__XLSX_JS__*/`, `/*__APP_JS__*/`, `/*__SEEDS__*/{}`.
 - **`src/app.js`** — die komplette Logik (Vanilla JS, IIFE `boot()` am Ende).
+
+**Lern-Tool** (`pflanzen-lernen.html`, für Azubis — nur Üben, keine Prüfungslisten,
+keine Noten):
+- **`src/learn.html`** — eigenes HTML-Gerüst/CSS mit den Platzhaltern
+  `/*__APP_JS__*/` und `/*__SEEDS__*/{}` (kein `/*__XLSX_JS__*/` — SheetJS wird nicht
+  gebraucht, daher deutlich kleiner).
+- **`src/learn.js`** — Lernlogik (Vanilla JS): Karteikarten mit Leitner-SRS,
+  Multiple-Choice-Quiz, Tippen; Namensraum `pflanzenlernen.` im `localStorage`.
+- Baut nur, wenn **beide** Dateien existieren; nutzt dieselben `SEEDS`.
+
+**Gemeinsam:**
 - **`seeds/<profil-id>.json`** — eine Pflanzenliste je Profil. Dateiname = Profil-ID.
   `build.py` sammelt automatisch **alle** Dateien aus `seeds/` in das globale
   Objekt `SEEDS = { "<profil-id>": [ [gattung, art, familie, dt_name, kategorie, zp, synonyme], … ] }`.
-- **`build.py`** — fügt alles zusammen und schreibt `dist/pflanzenkenntnis.html`.
+- **`build.py`** — fügt alles zusammen und schreibt beide `dist/*.html` plus die
+  versionierten Root-Kopien.
 
 Zur **Laufzeit** hält das Tool die Daten pro Profil getrennt:
 - Beim Start wird das zuletzt gewählte Profil geladen (oder `gemuesebau_gaertner`).
@@ -58,8 +76,9 @@ Zur **Laufzeit** hält das Tool die Daten pro Profil getrennt:
 ## Build & Test
 
 ```bash
-python3 build.py                       # -> dist/pflanzenkenntnis.html
-python3 tools/check_offline.py         # Offline-Check (muss grün sein)
+python3 build.py                                         # -> beide dist/*.html + Root-Kopien
+python3 tools/check_offline.py dist/pflanzenkenntnis.html  # Offline-Check (muss grün sein)
+python3 tools/check_offline.py dist/pflanzen-lernen.html   # dito für das Lern-Tool
 ```
 
 Node (Konverter und Tests):
@@ -67,7 +86,8 @@ Node (Konverter und Tests):
 ```bash
 node tools/xlsx_to_seed.mjs <excel> <profil-id> [--sheet "Blattname"]
 bash tools/rebuild_seeds.sh            # alle Seeds aus data/<id>.<ext> neu erzeugen
-node tests/smoke.mjs                    # Puppeteer-Smoke gegen dist/ (npm test)
+node tests/smoke.mjs                    # Puppeteer-Smoke Prüfungswerkzeug (npm test)
+node tests/learn.mjs                    # Puppeteer-Smoke Lern-Tool
 ```
 
 Der Smoke-Test nutzt `puppeteer` oder `puppeteer-core` und findet Chromium über
@@ -250,6 +270,17 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
 - [x] Konverter-Ladefehler behoben (SheetJS-Standalone via require lieferte unter
       aktuellem Node ein leeres Objekt) und Import robuster gemacht (Sorte-Spalte,
       unbeschriftete/AP-ZP-Markerspalten, Verwendungs-Kategorie, Hybrid-Gattungen).
+- [x] **Zweites Werkzeug: Lern-Tool für Azubis** (`pflanzen-lernen.html`, aus
+      denselben Seeds). Kein Prüfungslisten-Ziehen, kein Notenschlüssel. Drei Modi:
+      **Karteikarten** mit Spaced-Repetition (Leitner-Boxen 1–5, 0/1/3/7/16 Tage,
+      Selbst­einschätzung Nochmal/Schwer/Gewusst), **Multiple-Choice-Quiz**
+      (Ablenker bevorzugt aus gleicher Kategorie/Familie) und **Tippen**
+      (tippfehlertolerant, Gattung/Art bzw. Synonyme getrennt geprüft).
+      Abfragerichtung de→bot / bot→de / Art→Familie, Filter Kategorie/ZP,
+      Sitzungslänge. Fortschritt je Profil im `localStorage` (Namensraum
+      `pflanzenlernen.`), Link zurück zur Prüfungsversion. `src/learn.html` +
+      `src/learn.js`; `build.py` baut beide Dateien; Smoke-Test `tests/learn.mjs`;
+      CI und Pages-Deploy erfassen beide Dateien.
 
 ## Offene Aufgaben (TODO)
 

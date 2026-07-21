@@ -16,20 +16,26 @@ jobs:
           python-version: "3.12"
       - name: Build (Single-File HTML)
         run: python3 build.py
-      - name: Verteilkopie im Repo-Root ist aktuell
-        run: git diff --exit-code pflanzenkenntnis.html
-      - name: Offline-Check (kein CDN, keine externen Ressourcen)
-        run: python3 tools/check_offline.py
+      - name: Verteilkopien im Repo-Root sind aktuell
+        run: git diff --exit-code pflanzenkenntnis.html pflanzen-lernen.html
+      - name: Offline-Check Prüfungswerkzeug (kein CDN, keine externen Ressourcen)
+        run: python3 tools/check_offline.py dist/pflanzenkenntnis.html
+      - name: Offline-Check Lern-Tool (kein CDN, keine externen Ressourcen)
+        run: python3 tools/check_offline.py dist/pflanzen-lernen.html
       - name: Node einrichten
         uses: actions/setup-node@v4
         with:
           node-version: "20"
       - name: Puppeteer (inkl. Chromium) installieren
         run: npm install --no-save puppeteer@23
-      - name: Puppeteer-Smoke-Test (gegen dist/)
+      - name: Puppeteer-Smoke-Test Prüfungswerkzeug (gegen dist/)
         run: node tests/smoke.mjs
-      - name: Artefakt hochladen
+      - name: Puppeteer-Smoke-Test Lern-Tool (gegen dist/)
+        run: node tests/learn.mjs
+      - name: Artefakte hochladen
         uses: actions/upload-artifact@v4
         with:
           name: pflanzenkenntnis-html
-          path: dist/pflanzenkenntnis.html
+          path: |
+            dist/pflanzenkenntnis.html
+            dist/pflanzen-lernen.html
