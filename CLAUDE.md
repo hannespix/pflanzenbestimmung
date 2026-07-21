@@ -225,6 +225,15 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       als Snapshot samt Schema in `localStorage` (Key `pflanzenkenntnis.exams`),
       Laden/Drucken/JSON-Download/Löschen. `buildSheet(mode, ctx)` druckt aus dem
       Snapshot. Backup-`.json` pro Prüfung.
+- [x] Einstellungen (global, Key `pflanzenkenntnis.settings`): Bogen-Titel,
+      zuständige Stelle (2 Zeilen) und Musterlösungs-Vermerk editierbar, damit
+      andere zuständige Stellen als das RP Freiburg das Werkzeug nutzen können.
+      `buildSheet` liest den Kopf aus `settings`.
+- [x] Auswahl-/Bogen-Vorschau (`#previewPanel`): aktuelle Auswahl bearbeiten –
+      Reihenfolge ▲▼, Art bearbeiten (Writeback in `cache`/DB, inkl. Bemerkungen/
+      Synonyme), entfernen, bestehende/neue Art ergänzen.
+- [x] Prüfungen kopieren (neues Datum) und geladene Prüfung nach Bearbeitung
+      aktualisieren (`loadedExamId`).
 - [x] Puppeteer-Smoke-Test (`tests/smoke.mjs`) und CI-Integration (`build.yml`).
 - [x] `localStorage`-Ausfall-Fallback (In-Memory) für Kiosk-/Sandbox-Profile.
 - [x] Konverter-Ladefehler behoben (SheetJS-Standalone via require lieferte unter

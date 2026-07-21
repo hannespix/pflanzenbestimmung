@@ -187,16 +187,64 @@ async function main() {
   const examsAfter = await page.evaluate(() => exams.length);
   assert(examsAfter === 1, "Gespeicherte Prüfung überlebte den Reload nicht: " + examsAfter);
 
+  // 7c) Einstellungen: zuständige Stelle editierbar und auf dem Bogen sichtbar
+  const settingsCheck = await page.evaluate(() => {
+    if ($("#settingsPanel").hasAttribute("hidden")) toggleSettings();
+    $("#set_stelle1").value = "Landwirtschaftskammer Musterland";
+    $("#set_stelle1").onchange();
+    drawRandom(); buildSheet("blank");
+    return {
+      inSheet: /Landwirtschaftskammer Musterland/.test(document.querySelector("#sheet .brand").textContent),
+      persisted: /Landwirtschaftskammer Musterland/.test(localStorage.getItem("pflanzenkenntnis.settings") || "")
+    };
+  });
+  assert(settingsCheck.inSheet && settingsCheck.persisted, "Einstellungen: zuständige Stelle nicht übernommen");
+
+  // 7d) Vorschau: Reihenfolge ändern, Bearbeiten schreibt in die DB zurück, Entfernen
+  const preview = await page.evaluate(() => {
+    drawRandom();
+    if ($("#previewPanel").hasAttribute("hidden")) togglePreview();
+    const before = selection.slice(0, 2).join(",");
+    movePreview(0, 1);
+    const reordered = selection.slice(0, 2).join(",") !== before;
+    const fid = selection[0];
+    openEdit(fid); $("#fBem").value = "Smoke-Notiz"; saveEdit();
+    const writeback = cache.find((x) => x.id === fid).bemerkungen === "Smoke-Notiz";
+    const n0 = selection.length; pvRemove(selection[selection.length - 1]);
+    return { reordered, writeback, removed: n0 - selection.length };
+  });
+  assert(preview.reordered, "Vorschau: Reorder wirkt nicht");
+  assert(preview.writeback, "Vorschau: Bearbeiten schreibt nicht in die DB zurück");
+  assert(preview.removed === 1, "Vorschau: Entfernen wirkt nicht");
+
+  // 7e) Prüfung kopieren + geladene Prüfung nach Änderung aktualisieren
+  const copyUpd = await page.evaluate(() => {
+    drawRandom();
+    if ($("#examsPanel").hasAttribute("hidden")) toggleExams();
+    $("#exDate").value = "2026-05-02"; saveExam();
+    const base = exams.length;
+    copyExam(exams.find((e) => e.date === "2026-05-02").id);
+    const copied = exams.length === base + 1;
+    const lid = exams[0].id; loadExam(lid);
+    const beforeN = exams.find((e) => e.id === lid).plants.length;
+    pvRemove(selection[0]); updateLoadedExam();
+    const afterN = exams.find((e) => e.id === lid).plants.length;
+    return { copied, updated: afterN === beforeN - 1 };
+  });
+  assert(copyUpd.copied, "Prüfung kopieren erzeugt keine neue Prüfung");
+  assert(copyUpd.updated, "Geladene Prüfung aktualisieren wirkt nicht");
+
   // 8) Testreste im Browser-Speicher aufräumen
   await page.evaluate(() => {
     localStorage.removeItem("pflanzenkenntnis.data.baumschule_gaertner");
     localStorage.removeItem("pflanzenkenntnis.data.garten_und_landschaftsbau_fachwerker");
     localStorage.removeItem("pflanzenkenntnis.exams");
+    localStorage.removeItem("pflanzenkenntnis.settings");
   });
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Smoke-Test OK – Boot, Profilwechsel (148/248), GaLaBau-Schema (60 P., Dt. Name zuerst), Reorder, Ziehen, Bogen, Prüfung speichern/laden/drucken, Persistenz.");
+  console.log("Smoke-Test OK – Boot, Profilwechsel (148/248), GaLaBau-Schema, Ziehen, Bogen, Prüfung speichern/laden/kopieren/aktualisieren, Einstellungen (zuständige Stelle), Vorschau (reorder/edit/entfernen), Persistenz.");
 }
 
 main().catch((e) => { console.error("Smoke-Test FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
