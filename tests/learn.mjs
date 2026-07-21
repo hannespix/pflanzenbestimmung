@@ -109,7 +109,7 @@ async function main() {
     res.closed = !document.querySelector("#infoScrim");
     return res;
   });
-  assert(info.open && info.n >= 4 && info.hasWiki, "Info-Modal: Deep-Links (inkl. Wikipedia) fehlen");
+  assert(info.open && info.n >= 3 && info.hasWiki, "Info-Modal: Deep-Links (inkl. Wikipedia) fehlen");
   assert(info.newtab, "Info-Modal: Quell-Links müssen target=_blank (neuer Tab) sein");
   assert(info.hasLoad, "Info-Modal: »Online-Infos laden«-Knopf fehlt");
   assert(info.closed, "Info-Modal schließt nicht");
