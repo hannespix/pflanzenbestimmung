@@ -17,7 +17,9 @@ jobs:
       - name: Build (Single-File HTML)
         run: python3 build.py
       - name: Verteilkopien im Repo-Root sind aktuell
-        run: git diff --exit-code pflanzenkenntnis.html pflanzen-lernen.html
+        run: git diff --exit-code index.html pflanzenkenntnis.html pflanzen-lernen.html
+      - name: Offline-Check Startseite (kein CDN, keine externen Ressourcen)
+        run: python3 tools/check_offline.py dist/index.html
       - name: Offline-Check Prüfungswerkzeug (kein CDN, keine externen Ressourcen)
         run: python3 tools/check_offline.py dist/pflanzenkenntnis.html
       - name: Offline-Check Lern-Tool (kein CDN, keine externen Ressourcen)
@@ -28,6 +30,8 @@ jobs:
           node-version: "20"
       - name: Puppeteer (inkl. Chromium) installieren
         run: npm install --no-save puppeteer@23
+      - name: Puppeteer-Smoke-Test Startseite (gegen dist/)
+        run: node tests/start.mjs
       - name: Puppeteer-Smoke-Test Prüfungswerkzeug (gegen dist/)
         run: node tests/smoke.mjs
       - name: Puppeteer-Smoke-Test Lern-Tool (gegen dist/)

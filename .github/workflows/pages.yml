@@ -33,14 +33,16 @@ jobs:
           python-version: "3.12"
       - name: Build (Single-File HTML)
         run: python3 build.py
+      - name: Offline-Check Startseite (kein CDN, keine externen Ressourcen)
+        run: python3 tools/check_offline.py dist/index.html
       - name: Offline-Check Prüfungswerkzeug (kein CDN, keine externen Ressourcen)
         run: python3 tools/check_offline.py dist/pflanzenkenntnis.html
       - name: Offline-Check Lern-Tool (kein CDN, keine externen Ressourcen)
         run: python3 tools/check_offline.py dist/pflanzen-lernen.html
-      - name: Seite vorbereiten (Prüfungswerkzeug + Lern-Tool)
+      - name: Seite vorbereiten (Startseite + beide Werkzeuge)
         run: |
           mkdir -p _site
-          cp dist/pflanzenkenntnis.html _site/index.html
+          cp dist/index.html _site/index.html
           cp dist/pflanzenkenntnis.html _site/pflanzenkenntnis.html
           cp dist/pflanzen-lernen.html _site/pflanzen-lernen.html
       - name: Pages konfigurieren

@@ -5,9 +5,10 @@ Build-Skript – erzeugt aus den Quellen vollständig offline lauffähige HTML-D
 
 Aufruf:  python3 build.py
 Ergebnisse:
+  dist/index.html              Startseite (verzweigt zu Lernen / Prüfen)
   dist/pflanzenkenntnis.html   Prüfungswerkzeug (für Prüfende)
   dist/pflanzen-lernen.html    Lern-Tool (für Azubis)
-  + versionierte Verteilkopien beider Dateien im Repo-Root
+  + versionierte Verteilkopien aller Dateien im Repo-Root
 """
 import pathlib, json, sys
 
@@ -40,6 +41,13 @@ def render(tpl, app, seeds_json, xlsx=None):
             print(f"FEHLER: Platzhalter {ph} nicht ersetzt", file=sys.stderr); sys.exit(1)
     return out
 
+def render_landing(tpl, stats):
+    # Statische Startseite: nur die Kennzahl der gemeinsamen Datenbank einsetzen.
+    out = tpl.replace("/*__STATS__*/", stats)
+    if "__STATS__" in out:
+        print("FEHLER: Platzhalter __STATS__ nicht ersetzt", file=sys.stderr); sys.exit(1)
+    return out
+
 def write_out(out, name):
     dist = ROOT / "dist"; dist.mkdir(exist_ok=True)
     (dist / name).write_text(out, encoding="utf-8")
@@ -63,6 +71,13 @@ def main():
         write_out(learn, "pflanzen-lernen.html")
 
     total = sum(len(v) for v in seeds.values())
+
+    # Gemeinsame Startseite (verzweigt zu Lernen / Prüfen); nur wenn beide Ziele existieren
+    if (ROOT / "src/start.html").exists():
+        stats = f"{len(seeds)} Profile · {total} Arten"
+        landing = render_landing(read("src/start.html"), stats)
+        write_out(landing, "index.html")
+
     print(f"Profile mit Seed: {len(seeds)}  ·  Arten gesamt: {total}")
     for pid, arr in seeds.items():
         print(f"  - {pid}: {len(arr)}")

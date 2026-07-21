@@ -6,10 +6,11 @@
   "type": "module",
   "scripts": {
     "build": "python3 build.py",
-    "check": "python3 tools/check_offline.py dist/pflanzenkenntnis.html && python3 tools/check_offline.py dist/pflanzen-lernen.html",
+    "check": "python3 tools/check_offline.py dist/index.html && python3 tools/check_offline.py dist/pflanzenkenntnis.html && python3 tools/check_offline.py dist/pflanzen-lernen.html",
     "seed": "node tools/xlsx_to_seed.mjs",
     "seeds": "bash tools/rebuild_seeds.sh",
-    "test": "node tests/smoke.mjs && node tests/learn.mjs",
+    "test": "node tests/start.mjs && node tests/smoke.mjs && node tests/learn.mjs",
+    "test:start": "node tests/start.mjs",
     "test:exam": "node tests/smoke.mjs",
     "test:learn": "node tests/learn.mjs"
   },
