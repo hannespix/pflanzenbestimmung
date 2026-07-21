@@ -154,11 +154,11 @@ main{margin-top:18px}
 .cathead{display:flex; align-items:center; gap:10px; font-family:var(--serif); font-size:18px; font-weight:600; color:var(--green-deep); padding-bottom:6px; margin-bottom:10px; border-bottom:1.5px solid var(--rule)}
 .catn{font-family:var(--mono); font-size:11px; font-weight:400; color:var(--sepia); background:var(--surface-2); border:1px solid var(--rule); border-radius:10px; padding:1px 8px}
 .splist{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr 1fr; gap:8px}
-.sprow{border:1px solid var(--rule-strong); background:var(--surface); border-radius:6px; padding:10px 12px; cursor:pointer; transition:background .12s,border-color .12s,transform .04s}
+.sprow{min-width:0; overflow:hidden; border:1px solid var(--rule-strong); background:var(--surface); border-radius:6px; padding:10px 12px; cursor:pointer; transition:background .12s,border-color .12s,transform .04s}
 .sprow:hover{background:#fff; border-color:var(--green)}
 .sprow:active{transform:translateY(1px)}
 .sprow:focus-visible{outline:2px solid var(--madder); outline-offset:2px}
-.sp-main{display:flex; align-items:center; gap:8px}
+.sp-main{display:flex; align-items:center; gap:8px; min-width:0}
 .sp-bot{font-family:var(--serif); font-size:15.5px; color:var(--ink); font-style:italic; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .sp-zp{font-family:var(--mono); font-size:9.5px; letter-spacing:.05em; color:var(--madder); border:1px solid var(--madder-soft); border-radius:3px; padding:0 4px; flex:none}
 .sp-go{font-size:14px; color:var(--green); flex:none}
@@ -172,7 +172,7 @@ main{margin-top:18px}
 .modal-x{position:absolute; top:8px; right:10px; border:none; background:transparent; font-size:24px; line-height:1; color:var(--ink-soft); cursor:pointer; padding:4px 9px; border-radius:4px}
 .modal-x:hover{background:var(--surface-2); color:var(--ink)}
 .modal-head{border-bottom:1px solid var(--rule); padding:0 28px 12px 0; margin-bottom:14px}
-.mh-bot{font-family:var(--serif); font-size:22px; font-style:italic; color:var(--ink); line-height:1.15}
+.mh-bot{font-family:var(--serif); font-size:22px; font-style:italic; color:var(--ink); line-height:1.15; overflow-wrap:anywhere}
 .mh-de{font-family:var(--serif); font-size:17px; color:var(--green-deep); margin-top:2px}
 .mh-fam{font-family:var(--mono); font-size:11px; letter-spacing:.04em; color:var(--sepia); text-transform:uppercase; margin-top:6px}
 .srclabel{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); margin-bottom:8px}
@@ -193,6 +193,10 @@ main{margin-top:18px}
   .rate button{min-width:0}
   .wphost img{float:none; display:block; width:100%; max-width:220px; margin:0 auto 12px}
   .splist{grid-template-columns:1fr}
+  .scrim{padding:3vh 12px}
+  .modal{padding:18px 16px}
+  .mh-bot{font-size:20px}
+  .srcgrid a{font-size:12.5px; padding:7px 10px}
 }
 /* ===== Design-Politur: mehr Ruhe, weiche Übergänge, dezente Tiefe ===== */
 html{scroll-behavior:smooth}
