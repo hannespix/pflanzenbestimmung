@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pflanzenkenntnis · Lernen (grüne Berufe)</title>
+<meta name="theme-color" content="#2b4f38">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232b4f38'/%3E%3Cpath d='M9 23 C 9 12 16 7 23 9 C 23 20 16 25 9 23 Z' fill='%23a8c9ac'/%3E%3Cpath d='M11 21 C 15 16 19 12 22 10' stroke='%232b4f38' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --paper:#eceee6; --surface:#f6f7f1; --surface-2:#f1f2ea;
+  --ink:#22352b; --ink-soft:#56604f; --ink-faint:#8a9182;
+  --green:#3d6b4d; --green-deep:#2b4f38; --green-tint:#e2ebe1;
+  --sepia:#7a6a4f; --madder:#9c3b2e; --madder-soft:#c96a5a; --madder-tint:#f3e2dd;
+  --gold:#a9842b;
+  --rule:#cdd0c0; --rule-strong:#a9ad98; --shadow:rgba(34,53,43,.10);
+  --serif:'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua','URW Palladio L',Georgia,'Times New Roman',serif;
+  --sans:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --mono:'SFMono-Regular','Cascadia Code',Menlo,Consolas,'Liberation Mono',monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:var(--sans); color:var(--ink); background:var(--paper);
+  background-image:radial-gradient(var(--rule) .5px,transparent .5px); background-size:22px 22px;
+  -webkit-font-smoothing:antialiased; line-height:1.45}
+button{font-family:inherit; cursor:pointer}
+input,select{font-family:inherit; color:inherit}
+.wrap{max-width:840px; margin:0 auto; padding:28px 20px 80px}
+
+/* Kopf */
+.masthead{background:var(--surface); border:1px solid var(--rule-strong); border-radius:4px; padding:20px 22px; box-shadow:0 1px 0 var(--shadow); position:relative; overflow:hidden}
+.masthead::before{content:""; position:absolute; left:0; top:0; bottom:0; width:6px; background:repeating-linear-gradient(180deg,var(--green) 0 10px,var(--green-deep) 10px 20px)}
+.mast-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px 14px; flex-wrap:wrap}
+.eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:var(--sepia); margin:0 0 6px 8px}
+.masthead h1{font-family:var(--serif); font-weight:600; font-size:clamp(23px,4vw,32px); margin:0 0 2px 8px; letter-spacing:-.01em; line-height:1.05}
+.profilerow{display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px; margin:14px 0 2px 8px}
+.pfield{display:flex; flex-direction:column; gap:4px}
+.pfield label{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia)}
+.pfield select{border:1.4px solid var(--green); background:#fff; border-radius:4px; padding:9px 30px 9px 12px; font-size:15px; font-family:var(--serif); font-weight:600; color:var(--green-deep);
+  appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%232b4f38' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 11px center}
+.profsub{font-family:var(--mono); font-size:12px; color:var(--ink-soft); padding-bottom:9px}
+.examlink{white-space:nowrap; text-decoration:none}
+
+/* Buttons */
+.btn{border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); padding:8px 13px; border-radius:3px; font-size:13.5px; font-weight:500; display:inline-flex; align-items:center; gap:7px; transition:background .12s,border-color .12s,transform .04s; text-decoration:none}
+.btn:hover{background:#fff; border-color:var(--green)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--green); border-color:var(--green-deep); color:#f4f7f1}
+.btn.primary:hover{background:var(--green-deep)}
+.btn.ghost{background:transparent; border-color:transparent}
+.btn.ghost:hover{background:var(--surface-2); border-color:var(--rule)}
+.btn.big{font-size:15px; padding:11px 20px}
+.btn:disabled{opacity:.4; cursor:not-allowed}
+.btn:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--madder); outline-offset:2px}
+
+/* Setup */
+.setup{background:var(--surface); border:1px solid var(--rule-strong); border-top:none; border-radius:0 0 4px 4px; padding:16px 18px; margin-top:-1px; display:flex; flex-direction:column; gap:14px}
+.setrow{display:flex; flex-wrap:wrap; gap:12px 16px; align-items:center}
+.field{display:flex; align-items:center; gap:7px}
+.field label{font-size:12px; color:var(--sepia); font-family:var(--mono); letter-spacing:.04em}
+select.mini,input.mini{border:1px solid var(--rule-strong); background:var(--surface-2); border-radius:3px; padding:8px 26px 8px 10px; font-size:14px; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2356604f' stroke-width='1.4'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center}
+input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mono); background-image:none}
+.switch{display:inline-flex; align-items:center; gap:8px; font-size:13.5px; cursor:pointer; user-select:none}
+.switch input{position:absolute; opacity:0; width:0; height:0}
+.switch .track{width:34px; height:19px; border-radius:19px; background:var(--rule-strong); position:relative; transition:background .15s; flex:none}
+.switch .track::after{content:""; position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%; background:#fff; transition:transform .15s}
+.switch input:checked + .track{background:var(--green)}
+.switch input:checked + .track::after{transform:translateX(15px)}
+/* Modus-Umschalter */
+.modes{display:flex; gap:0; border:1px solid var(--rule-strong); border-radius:5px; overflow:hidden; width:fit-content; max-width:100%; flex-wrap:wrap}
+.modes button{border:none; background:var(--surface-2); color:var(--ink-soft); padding:9px 15px; font-size:13.5px; border-right:1px solid var(--rule-strong); display:inline-flex; align-items:center; gap:7px}
+.modes button:last-child{border-right:none}
+.modes button:hover{background:#fff}
+.modes button.on{background:var(--green); color:#f4f7f1; font-weight:600}
+.modes .ic{width:15px; height:15px}
+.startrow{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
+.startrow .hint{font-size:12.5px; color:var(--ink-soft)}
+
+/* Fortschritt */
+.progress{display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center; margin:16px 0 0; padding:12px 16px; border:1px solid var(--rule); border-radius:4px; background:var(--surface)}
+.pstat{display:flex; align-items:baseline; gap:6px; font-family:var(--serif)}
+.pstat .n{font-size:22px; font-weight:600; color:var(--green-deep); font-variant-numeric:tabular-nums}
+.pstat .l{font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia)}
+.pbar{flex:1; min-width:160px; height:12px; border-radius:7px; background:var(--surface-2); border:1px solid var(--rule); overflow:hidden; display:flex}
+.pbar span{height:100%}
+.pbar .b-neu{background:var(--rule-strong)} .pbar .b-lern{background:var(--gold)} .pbar .b-fest{background:var(--green)}
+.plegend{display:flex; gap:12px; font-family:var(--mono); font-size:10.5px; color:var(--ink-soft); flex-wrap:wrap}
+.plegend i{display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:5px; vertical-align:middle}
+
+/* Lernbühne */
+main{margin-top:18px}
+.stage-empty{text-align:center; padding:48px 24px; border:1.5px dashed var(--rule-strong); border-radius:6px; background:var(--surface); color:var(--ink-soft)}
+.stage-empty svg{width:46px; height:46px; color:var(--green); opacity:.7}
+.stage-empty h2{font-family:var(--serif); color:var(--ink); font-size:20px; margin:12px 0 6px}
+.sessionbar{display:flex; align-items:center; gap:12px; margin-bottom:12px; font-family:var(--mono); font-size:12px; color:var(--ink-soft)}
+.sessionbar .sbar{flex:1; height:6px; border-radius:4px; background:var(--surface-2); border:1px solid var(--rule); overflow:hidden}
+.sessionbar .sbar i{display:block; height:100%; background:var(--green); transition:width .2s}
+
+/* Karteikarte */
+.card{border:1px solid var(--rule-strong); border-radius:8px; background:var(--surface); box-shadow:0 2px 10px var(--shadow); min-height:230px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:34px 26px; text-align:center; cursor:pointer; position:relative}
+.card .side-label{position:absolute; top:12px; left:16px; font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--sepia)}
+.card .prompt{font-family:var(--serif); font-size:clamp(22px,4vw,30px); color:var(--ink); line-height:1.2}
+.card .prompt .g{font-style:italic}
+.card .prompt .a{font-style:italic; color:var(--ink-soft)}
+.card .sub{margin-top:8px; font-size:14px; color:var(--green-deep); font-family:var(--serif)}
+.card .answer{margin-top:16px; padding-top:16px; border-top:1px solid var(--rule); width:100%}
+.card .answer .big{font-family:var(--serif); font-size:clamp(20px,3.6vw,26px); color:var(--green-deep); font-weight:600}
+.card .answer .meta{margin-top:6px; font-size:13.5px; color:var(--ink-soft)}
+.card .flip-hint{margin-top:16px; font-size:12.5px; color:var(--ink-faint); font-style:italic}
+.rate{display:flex; gap:10px; margin-top:14px; justify-content:center; flex-wrap:wrap}
+.rate button{flex:1; min-width:120px; border:1px solid var(--rule-strong); background:#fff; border-radius:5px; padding:11px 12px; font-size:14px; font-weight:600; display:flex; flex-direction:column; align-items:center; gap:2px}
+.rate .r-again{color:var(--madder)} .rate .r-again:hover{border-color:var(--madder); background:var(--madder-tint)}
+.rate .r-hard{color:var(--gold)} .rate .r-hard:hover{border-color:var(--gold); background:#f6efdc}
+.rate .r-good{color:var(--green-deep)} .rate .r-good:hover{border-color:var(--green); background:var(--green-tint)}
+.rate small{font-family:var(--mono); font-size:10px; font-weight:400; color:var(--ink-faint)}
+
+/* Quiz */
+.qprompt{font-family:var(--serif); font-size:clamp(20px,3.6vw,26px); text-align:center; margin:6px 0 4px; line-height:1.25}
+.qprompt .g,.qprompt .a{font-style:italic}
+.qsub{text-align:center; font-size:13px; color:var(--sepia); margin-bottom:16px; font-family:var(--mono)}
+.options{display:grid; gap:10px}
+.opt{border:1px solid var(--rule-strong); background:var(--surface); border-radius:6px; padding:13px 16px; font-size:15px; font-family:var(--serif); text-align:left; display:flex; align-items:center; gap:10px}
+.opt:hover:not(:disabled){border-color:var(--green); background:#fff}
+.opt .k{font-family:var(--mono); font-size:12px; color:var(--sepia); border:1px solid var(--rule); border-radius:4px; padding:1px 7px; flex:none}
+.opt.correct{border-color:var(--green); background:var(--green-tint)}
+.opt.wrong{border-color:var(--madder-soft); background:var(--madder-tint)}
+.opt:disabled{cursor:default}
+
+/* Tippen */
+.typebox{display:flex; flex-direction:column; gap:12px; align-items:center}
+.typebox input{width:100%; max-width:460px; border:1.4px solid var(--rule-strong); border-radius:5px; padding:13px 14px; font-size:18px; font-family:var(--serif); background:#fff; text-align:center}
+.typebox input.ok{border-color:var(--green); background:var(--green-tint)}
+.typebox input.no{border-color:var(--madder-soft); background:var(--madder-tint)}
+.feedback{min-height:26px; text-align:center; font-size:14.5px}
+.feedback .good{color:var(--green-deep); font-weight:600}
+.feedback .bad{color:var(--madder); font-weight:600}
+.feedback .sol{color:var(--ink); font-family:var(--serif)}
+.nav{display:flex; justify-content:center; gap:10px; margin-top:16px}
+
+/* Toast */
+.toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px); opacity:0; background:var(--green-deep); color:#eef4ea; padding:11px 18px; border-radius:5px; font-size:13.5px; box-shadow:0 8px 24px rgba(28,42,34,.3); transition:.25s; z-index:60; pointer-events:none; max-width:90vw}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--madder)}
+
+@media (max-width:640px){
+  .mast-top{flex-direction:column; align-items:stretch}
+  .rate button{min-width:0}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <div class="mast-top">
+      <div class="mast-title">
+        <p class="eyebrow">Pflanzen lernen · grüne Berufe</p>
+        <h1>Pflanzenkenntnis · Lernen</h1>
+      </div>
+      <a class="btn ghost examlink" href="pflanzenkenntnis.html" title="Zur Prüfungsversion für Prüfende (Listen ziehen, Bogen drucken, Noten)">Prüfungsversion&nbsp;→</a>
+    </div>
+    <div class="profilerow">
+      <div class="pfield"><label for="frSelect">Fachrichtung</label><select id="frSelect" title="Fachrichtung wählen – bestimmt den Lernstoff (Pflanzenliste)."></select></div>
+      <div class="pfield"><label for="nivSelect">Ausbildung</label><select id="nivSelect" title="Gärtner/in oder Fachwerker/in – jeweils eigene Liste."></select></div>
+      <span class="profsub" id="profSub"></span>
+    </div>
+  </header>
+
+  <div class="setup">
+    <div class="setrow">
+      <div class="field"><label for="cat">Kategorie</label><select id="cat" class="mini" title="Nur eine Kategorie lernen (z. B. Gehölze)."><option value="">alle</option></select></div>
+      <label class="switch" title="Nur ZP-relevante Arten (für die Zwischenprüfung)."><input type="checkbox" id="onlyzp"><span class="track"></span>nur ZP-relevant</label>
+      <div class="field"><label for="richtung">Abfrage</label><select id="richtung" class="mini" title="Welche Seite gefragt wird.">
+        <option value="de2bot">Deutscher Name → botanisch</option>
+        <option value="bot2de">botanisch → Deutscher Name</option>
+        <option value="art2fam">Art → Familie</option>
+      </select></div>
+      <div class="field"><label for="sessLen">Karten/Sitzung</label><input id="sessLen" class="mini" type="number" min="5" max="100" value="20" title="Wie viele Karten eine Sitzung umfasst."></div>
+    </div>
+    <div class="modes" id="modeTabs">
+      <button data-mode="cards" class="on" title="Karteikarten mit Selbsteinschätzung und verteiltem Wiederholen (Leitner/Spaced Repetition)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="14" height="12" rx="2"/><path d="M7 9h6M7 13h4M21 8v9a2 2 0 01-2 2H8"/></svg>Karteikarten</button>
+      <button data-mode="quiz" title="Multiple-Choice-Quiz: aus vier Optionen die richtige wählen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5M12 17h.01"/></svg>Quiz</button>
+      <button data-mode="type" title="Tippen: den Namen selbst eingeben (tippfehler-tolerant)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8"/></svg>Tippen</button>
+    </div>
+    <div class="startrow">
+      <button class="btn primary big" id="btnStart" title="Neue Lernsitzung mit den aktuellen Einstellungen starten">Sitzung starten</button>
+      <span class="hint" id="startHint"></span>
+    </div>
+  </div>
+
+  <section class="progress" id="progress" hidden></section>
+
+  <main id="stage"></main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SEEDS=/*__SEEDS__*/{};
+/*__APP_JS__*/
+</script>
+</body>
+</html>

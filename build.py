@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
-Build-Skript – erzeugt aus den Quellen eine einzelne, vollständig offline
-lauffähige HTML-Datei (kein CDN, keine Runtime-Abhängigkeiten außer inline SheetJS).
+Build-Skript – erzeugt aus den Quellen vollständig offline lauffähige HTML-Dateien
+(kein CDN, keine Runtime-Abhängigkeiten außer inline SheetJS im Prüfungswerkzeug).
 
 Aufruf:  python3 build.py
-Ergebnis: dist/pflanzenkenntnis.html
-          + versionierte Verteilkopie pflanzenkenntnis.html im Repo-Root
+Ergebnisse:
+  dist/pflanzenkenntnis.html   Prüfungswerkzeug (für Prüfende)
+  dist/pflanzen-lernen.html    Lern-Tool (für Azubis)
+  + versionierte Verteilkopien beider Dateien im Repo-Root
 """
 import pathlib, json, sys
 
@@ -14,11 +16,7 @@ ROOT = pathlib.Path(__file__).parent
 def read(p):
     return (ROOT / p).read_text(encoding="utf-8")
 
-def main():
-    tpl  = read("src/template.html")
-    app  = read("src/app.js")
-    xlsx = read("lib/xlsx.full.min.js")
-
+def load_seeds():
     # Alle Seeds einsammeln: Dateiname (ohne .json) = Profil-ID
     seeds = {}
     for f in sorted((ROOT / "seeds").glob("*.json")):
@@ -29,25 +27,42 @@ def main():
         if not isinstance(data, list):
             print(f"FEHLER: {f.name} muss ein Array sein", file=sys.stderr); sys.exit(1)
         seeds[f.stem] = data
-    seeds_json = json.dumps(seeds, ensure_ascii=False, separators=(",", ":"))
+    return seeds
 
-    out = tpl.replace("/*__XLSX_JS__*/", xlsx)
+def render(tpl, app, seeds_json, xlsx=None):
+    out = tpl
+    if xlsx is not None:
+        out = out.replace("/*__XLSX_JS__*/", xlsx)
     out = out.replace("/*__APP_JS__*/", app)
     out = out.replace("/*__SEEDS__*/{}", seeds_json)
-
     for ph in ["__XLSX_JS__", "__APP_JS__", "__SEEDS__", "__SEED__", "__WASM_B64__", "__SQL_WASM_JS__"]:
         if ph in out:
             print(f"FEHLER: Platzhalter {ph} nicht ersetzt", file=sys.stderr); sys.exit(1)
+    return out
 
+def write_out(out, name):
     dist = ROOT / "dist"; dist.mkdir(exist_ok=True)
-    target = dist / "pflanzenkenntnis.html"
-    target.write_text(out, encoding="utf-8")
+    (dist / name).write_text(out, encoding="utf-8")
     # Verteilkopie im Repo-Root: versioniert, direkt aus GitHub herunterladbar
-    (ROOT / "pflanzenkenntnis.html").write_text(out, encoding="utf-8")
+    (ROOT / name).write_text(out, encoding="utf-8")
+    kb = round(len(out.encode("utf-8")) / 1024)
+    print(f"OK  dist/{name}  ({kb} KB)")
+
+def main():
+    seeds = load_seeds()
+    seeds_json = json.dumps(seeds, ensure_ascii=False, separators=(",", ":"))
+
+    # Prüfungswerkzeug (inkl. SheetJS für den Excel-Import)
+    exam = render(read("src/template.html"), read("src/app.js"), seeds_json,
+                  xlsx=read("lib/xlsx.full.min.js"))
+    write_out(exam, "pflanzenkenntnis.html")
+
+    # Lern-Tool (kein Excel-Import → ohne SheetJS)
+    if (ROOT / "src/learn.html").exists() and (ROOT / "src/learn.js").exists():
+        learn = render(read("src/learn.html"), read("src/learn.js"), seeds_json)
+        write_out(learn, "pflanzen-lernen.html")
 
     total = sum(len(v) for v in seeds.values())
-    kb = round(len(out.encode("utf-8")) / 1024)
-    print(f"OK  {target.relative_to(ROOT)}  ({kb} KB)")
     print(f"Profile mit Seed: {len(seeds)}  ·  Arten gesamt: {total}")
     for pid, arr in seeds.items():
         print(f"  - {pid}: {len(arr)}")
