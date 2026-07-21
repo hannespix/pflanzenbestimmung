@@ -14,6 +14,13 @@ Bitte alle Antworten und Commit-/PR-Texte **auf Deutsch**.
 - **Vollständig offline. Kein CDN, keine externen Ressourcen.** Alle Bibliotheken
   werden beim Build inline eingebettet. `python3 tools/check_offline.py` muss grün
   bleiben (läuft in CI).
+- **Eine bewusste Ausnahme, nur im Lern-Tool:** Das »ℹ Mehr zur Pflanze«-Modal bietet
+  **optionale** Online-Infos (deutsche Wikipedia). Sie sind **opt-in** (nur auf
+  Knopfdruck), laden **nichts beim Seitenaufbau** und nutzen **JSONP** (zur Laufzeit
+  erzeugtes `<script>`) statt `fetch`/`XHR` – dadurch bleibt `check_offline.py` grün
+  und der Kern (Karteikarten/Quiz/Tippen) funktioniert **ohne Netz** vollständig
+  weiter; nur die Anreicherung entfällt. Die Deep-Link-Buttons öffnen bloß einen neuen
+  Tab. **Das Prüfungswerkzeug bleibt strikt offline** – dort keine Online-Funktion.
 - **Kein Framework, kein Build-Tool-Zoo.** Reines Vanilla-JS, eine `app.js`, ein
   `template.html`. Kein React/Vue/Svelte, kein npm-Bundler, kein TypeScript.
   Node wird nur für das Konverter-Skript (`tools/xlsx_to_seed.mjs`) gebraucht.
@@ -295,6 +302,15 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       `pflanzenlernen.`), Link zurück zur Prüfungsversion. `src/learn.html` +
       `src/learn.js`; `build.py` baut beide Dateien; Smoke-Test `tests/learn.mjs`;
       CI und Pages-Deploy erfassen beide Dateien.
+- [x] **Pflanzen-Info-Modal im Lern-Tool** (»ℹ Mehr zur Pflanze«): kuratierte
+      Deep-Links je Art (Wikipedia/NaturaDB/Baumkunde/Gaißmayer/GBIF/iNaturalist, aus
+      dem botan. Namen gebaut, Zusatzquellen nach Fachrichtung; öffnen neuen Tab →
+      offline-rein) plus **opt-in** »Online-Infos laden« via **Wikipedia-JSONP**
+      (deutscher Kurztext + Vorschaubild direkt im Modal, funktioniert auch als lokale
+      Datei, Cache je Art, Offline-/Nicht-gefunden-Fallback mit »Erneut versuchen«,
+      Quelle CC BY-SA). Trigger in Karteikarte/Quiz/Tippen. `check_offline.py` bleibt
+      grün (kein `fetch`, kein statisches `script src`). `tests/learn.mjs` prüft Modal
+      + Deep-Links offline (ohne den Netz-Abruf auszulösen).
 - [x] **Gemeinsame Startseite** (`index.html`, aus `src/start.html`): verzweigt zu
       **Lernen** und **Prüfen** (zwei Karten), zeigt die Kennzahl der gemeinsamen
       Datenbank (Platzhalter `/*__STATS__*/`). Reziproker »Lernversion«-Link im

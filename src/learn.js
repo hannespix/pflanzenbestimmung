@@ -262,8 +262,10 @@ function flipCard(){
     <div class="prompt">${promptHTML(c)}</div>
     ${promptSub(c)?`<div class="sub">${esc(promptSub(c))}</div>`:""}
     <div class="answer"><div class="big">${esc(answerText(c)||"—")}</div>
-      ${answerMeta(c)?`<div class="meta">${answerMeta(c)}</div>`:""}</div>`;
+      ${answerMeta(c)?`<div class="meta">${answerMeta(c)}</div>`:""}</div>
+    <div style="margin-top:14px">${infoBtnHTML("Mehr zur Pflanze")}</div>`;
   $("#card").onclick=null;
+  wireInfoBtn();
   const cur = pget(c.key).box||0;               // Intervall je Knopf aus der aktuellen Box ableiten
   const days = g => g==="again" ? 0 : BOX_DAYS[boxAfter(cur,g)-1];
   const when = n => n<=0 ? "heute" : (n===1 ? "morgen" : "in "+n+" Tagen");
@@ -308,8 +310,8 @@ function answerQuiz(btn, chosen, opts){
   grade(c, ok?"good":"again"); if(ok) sess.correct++; else requeueCurrent();
   $("#fb").innerHTML = ok ? `<span class="good">Richtig!</span>`
     : `<span class="bad">Leider falsch.</span> <span class="sol">Richtig: ${esc(correct)}</span>`;
-  const nav=$("#nav"); nav.innerHTML=`<button class="btn primary" id="wt">Weiter</button>`;
-  $("#wt").onclick=advance; $("#wt").focus();
+  const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
+  wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
 }
 
 function renderType(){
@@ -334,17 +336,136 @@ function submitType(inp){
   grade(c, ok?"good":"again"); if(ok) sess.correct++; else requeueCurrent();
   $("#fb").innerHTML = ok ? `<span class="good">Richtig!</span>`
     : `<span class="bad">Nicht ganz.</span> <span class="sol">Richtig: ${esc(answerText(c))}</span>`;
-  const nav=$("#nav"); nav.innerHTML=`<button class="btn primary" id="wt">Weiter</button>`;
-  $("#wt").onclick=advance; $("#wt").focus();
+  const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
+  wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
 }
 
 function startHintOnly(){
   $("#stage").innerHTML = `<div class="stage-empty">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22V8M12 8C12 8 7 3 4 4c-1 3 4 8 8 8zM12 8c0 0 5-5 8-4 1 3-4 8-8 8z"/></svg>
     <h2>Bereit zum Lernen</h2>
-    <p>Wähle Fachrichtung, Modus und Richtung, dann »Sitzung starten«. Dein Fortschritt wird je Profil im Browser gespeichert und steuert, welche Arten wann drankommen.</p>
+    <p>Wähle Fachrichtung, Modus und Richtung, dann »Sitzung starten«. Dein Fortschritt wird je Profil im Browser gespeichert und steuert, welche Arten wann drankommen. Beim Lernen führt »ℹ Mehr zur Pflanze« zu Quellen und – optional online – zu Kurztext und Bild.</p>
   </div>`;
 }
+
+/* ---------- Info-Modal: Quellen-Deeplinks (offline) + optional Wikipedia (JSONP) ----------
+   Deep-Links öffnen nur einen neuen Tab (laden nichts in die Seite) → offline-rein.
+   Die Online-Anreicherung ist OPT-IN (Knopf) und nutzt JSONP (dynamisch erzeugtes
+   <script>), nicht fetch/XHR – umgeht damit CORS/file://-Sperren und hält den
+   Offline-Kern intakt: ohne Netz funktioniert das Tool vollständig weiter. */
+function deepLinks(c){
+  const q = encodeURIComponent(norm(c.g+" "+c.a));
+  const kat = (c.kat||"").toLowerCase();
+  // Zusatzquellen nach Fachrichtung (Kategorie-Bezeichnungen sind je Liste uneinheitlich)
+  const woody   = /baumschule|landschaftsbau|obstbau/.test(profileId) || /gehölz|baum|strauch|obst/.test(kat);
+  const stauden = /stauden/.test(profileId) || /staude/.test(kat);
+  const list = [{ n:"Wikipedia", u:"https://de.wikipedia.org/wiki/Spezial:Suche?search="+q }];
+  if(woody)   list.push({ n:"Baumkunde", u:"https://www.baumkunde.de/Suche/"+q+"/" });
+  if(stauden) list.push({ n:"Gaißmayer", u:"https://www.gaissmayer.de/?s="+q });
+  list.push({ n:"NaturaDB",    u:"https://www.naturadb.de/suche/?q="+q });
+  list.push({ n:"GBIF",        u:"https://www.gbif.org/species/search?q="+q });
+  list.push({ n:"iNaturalist", u:"https://www.inaturalist.org/taxa/search?q="+q+"&locale=de" });
+  return list;
+}
+const wikiCache = new Map();   // card.key -> {title,extract,thumb,url} | null (nicht gefunden)
+let __wpN = 0;
+function wikiJSONP(title){
+  return new Promise((resolve,reject)=>{
+    const cb = "__wpcb"+(++__wpN);
+    const sc = document.createElement("script");
+    let done = false;
+    const cleanup = ()=>{ try{ delete window[cb]; }catch(e){ window[cb]=undefined; } if(sc.parentNode) sc.parentNode.removeChild(sc); };
+    const to = setTimeout(()=>{ if(done) return; done=true; cleanup(); reject(new Error("timeout")); }, 7000);
+    window[cb] = d=>{ if(done) return; done=true; clearTimeout(to); cleanup(); resolve(d); };
+    sc.onerror = ()=>{ if(done) return; done=true; clearTimeout(to); cleanup(); reject(new Error("network")); };
+    sc.src = "https://de.wikipedia.org/w/api.php?action=query&format=json&prop=extracts%7Cpageimages"+
+      "&exintro=1&explaintext=1&piprop=thumbnail&pithumbsize=320&redirects=1&titles="+
+      encodeURIComponent(title)+"&callback="+cb;
+    document.head.appendChild(sc);
+  });
+}
+function wikiFirstPage(d){
+  const pg = d && d.query && d.query.pages; if(!pg) return null;
+  const k = Object.keys(pg)[0]; if(!k || k==="-1") return null;
+  const p = pg[k]; return (p && p.missing===undefined && p.extract) ? p : null;
+}
+function shortenExtract(t){
+  t = norm(t); if(t.length<=520) return t;
+  const cut = t.slice(0,520), dot = cut.lastIndexOf(". ");
+  return (dot>300 ? cut.slice(0,dot+1) : cut)+" …";
+}
+function renderWiki(host, d){
+  host.innerHTML =
+    (d.thumb ? `<img src="${esc(d.thumb)}" alt="${esc(d.title)}" loading="lazy">` : "")+
+    `<div class="wp-text">${esc(d.extract)}</div>`+
+    `<div class="wp-src">Quelle: <a href="${esc(d.url)}" target="_blank" rel="noopener">Wikipedia – ${esc(d.title)}</a> · Text unter CC BY-SA</div>`;
+}
+async function loadWiki(card, host, btn){
+  if(navigator.onLine===false){
+    host.innerHTML='<div class="wp-note">Offline – für Online-Infos ist Internet nötig. Die Links oben funktionieren, sobald du online bist.</div>'; return;
+  }
+  btn.disabled=true; btn.textContent="lädt …";
+  let pg=null, hadResponse=false;
+  try{
+    pg = wikiFirstPage(await wikiJSONP(norm(card.g+" "+card.a))); hadResponse=true;
+    if(!pg && card.a){                                  // Artikel unter vollem Namen fehlt → Gattung versuchen
+      try{ pg = wikiFirstPage(await wikiJSONP(card.g)); }catch(e){ /* Gattungs-Versuch egal */ }
+    }
+  }catch(e){ /* Netzfehler/Timeout → hadResponse bleibt false */ }
+  if(!pg){
+    if(hadResponse){                                    // echte „nicht gefunden" – cachen, Knopf weg
+      wikiCache.set(card.key, null);
+      host.innerHTML='<div class="wp-note">Kein deutscher Wikipedia-Artikel gefunden. Die Links oben führen dich weiter.</div>';
+      if(btn.parentNode) btn.remove();
+    } else {                                            // offline/blockiert – nicht cachen, Wiederholung anbieten
+      host.innerHTML='<div class="wp-note">Online-Infos konnten nicht geladen werden (offline oder blockiert). Die Links oben funktionieren weiterhin.</div>';
+      btn.disabled=false; btn.textContent="🌐 Erneut versuchen";
+    }
+    return;
+  }
+  const data = { title:pg.title, extract:shortenExtract(pg.extract),
+    thumb: pg.thumbnail && pg.thumbnail.source,
+    url: "https://de.wikipedia.org/wiki/"+encodeURIComponent(pg.title.replace(/ /g,"_")) };
+  wikiCache.set(card.key, data); renderWiki(host, data); if(btn.parentNode) btn.remove();
+}
+let infoEl=null;
+function infoKey(e){ if(e.key==="Escape") closeInfo(); }
+function closeInfo(){ if(infoEl){ infoEl.remove(); infoEl=null; document.removeEventListener("keydown", infoKey); } }
+function openInfo(card){
+  if(!card) return;
+  closeInfo();
+  const links = deepLinks(card).map(l=>
+    `<a href="${esc(l.u)}" target="_blank" rel="noopener">${esc(l.n)}<span class="ext">↗</span></a>`).join("");
+  const fam = [card.fam, card.kat].filter(Boolean).join(" · ");
+  const scrim = el("div","scrim"); scrim.id="infoScrim";
+  scrim.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Pflanzen-Info">
+     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <div class="modal-head">
+       <div class="mh-bot">${esc(norm(card.g+" "+card.a))}</div>
+       ${card.de?`<div class="mh-de">${esc(card.de)}</div>`:""}
+       ${fam?`<div class="mh-fam">${esc(fam)}</div>`:""}
+     </div>
+     <div class="srcblock">
+       <div class="srclabel">Nachschlagen · öffnet neuen Tab</div>
+       <div class="srcgrid">${links}</div>
+     </div>
+     <div class="wpblock">
+       <button class="btn primary" id="wpLoad" title="Kurztext und Bild von der deutschen Wikipedia laden (nur online)">🌐 Online-Infos laden (Wikipedia)</button>
+       <div class="wphost" id="wpHost"></div>
+     </div>
+   </div>`;
+  document.body.appendChild(scrim); infoEl=scrim;
+  scrim.addEventListener("click", e=>{ if(e.target===scrim) closeInfo(); });
+  $("#infoClose").onclick = closeInfo;
+  const host = scrim.querySelector("#wpHost"), btn = scrim.querySelector("#wpLoad");
+  const cached = wikiCache.get(card.key);
+  if(cached){ renderWiki(host, cached); btn.remove(); }
+  else if(cached===null){ host.innerHTML='<div class="wp-note">Kein deutscher Wikipedia-Artikel gefunden. Die Links oben führen dich weiter.</div>'; btn.remove(); }
+  else btn.onclick = ()=>loadWiki(card, host, btn);
+  document.addEventListener("keydown", infoKey);
+}
+const infoBtnHTML = label => `<button class="btn ghost infobtn" id="infoBtn" title="Quellen &amp; Online-Infos zu dieser Pflanze">ℹ ${esc(label||"Mehr")}</button>`;
+function wireInfoBtn(){ const b=$("#infoBtn"); if(b) b.onclick=e=>{ e.stopPropagation(); openInfo(current); }; }
 
 /* ---------- Profil-Wechsel ---------- */
 function loadProfile(id){
@@ -408,3 +529,5 @@ function wire(){
 })();
 /* für Tests / Konsole */
 window.startSession=startSession;
+window.openInfo=openInfo;
+window.closeInfo=closeInfo;

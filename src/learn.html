@@ -142,9 +142,33 @@ main{margin-top:18px}
 .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
 .toast.err{background:var(--madder)}
 
+/* Info-Modal (Quellen-Deeplinks offline + optionale Online-Infos) */
+.scrim{position:fixed; inset:0; background:rgba(20,32,26,.55); display:flex; align-items:flex-start; justify-content:center; padding:5vh 16px; z-index:80; overflow:auto}
+.scrim[hidden]{display:none}
+.modal{background:var(--surface); border:1px solid var(--rule-strong); border-radius:8px; box-shadow:0 18px 50px rgba(20,32,26,.4); width:100%; max-width:560px; padding:22px 22px 20px; position:relative}
+.modal-x{position:absolute; top:8px; right:10px; border:none; background:transparent; font-size:24px; line-height:1; color:var(--ink-soft); cursor:pointer; padding:4px 9px; border-radius:4px}
+.modal-x:hover{background:var(--surface-2); color:var(--ink)}
+.modal-head{border-bottom:1px solid var(--rule); padding:0 28px 12px 0; margin-bottom:14px}
+.mh-bot{font-family:var(--serif); font-size:22px; font-style:italic; color:var(--ink); line-height:1.15}
+.mh-de{font-family:var(--serif); font-size:17px; color:var(--green-deep); margin-top:2px}
+.mh-fam{font-family:var(--mono); font-size:11px; letter-spacing:.04em; color:var(--sepia); text-transform:uppercase; margin-top:6px}
+.srclabel{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); margin-bottom:8px}
+.srcgrid{display:flex; flex-wrap:wrap; gap:8px}
+.srcgrid a{display:inline-flex; align-items:center; gap:6px; text-decoration:none; border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); border-radius:5px; padding:7px 11px; font-size:13px; font-weight:500}
+.srcgrid a:hover{background:#fff; border-color:var(--green)}
+.srcgrid a .ext{font-family:var(--mono); font-size:11px; color:var(--ink-faint)}
+.wpblock{margin-top:16px; border-top:1px solid var(--rule); padding-top:14px}
+.wphost{margin-top:12px}
+.wphost img{float:left; width:132px; max-width:42%; height:auto; border-radius:5px; border:1px solid var(--rule); margin:2px 14px 8px 0}
+.wp-text{font-size:14px; color:var(--ink); line-height:1.5}
+.wp-src{clear:both; font-family:var(--mono); font-size:11px; color:var(--ink-faint); margin-top:12px}
+.wp-src a{color:var(--green-deep)}
+.wp-note{font-size:13px; color:var(--ink-soft); font-style:italic}
+
 @media (max-width:640px){
   .mast-top{flex-direction:column; align-items:stretch}
   .rate button{min-width:0}
+  .wphost img{float:none; display:block; width:100%; max-width:220px; margin:0 auto 12px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none !important}}
 </style>
