@@ -717,10 +717,7 @@ function syncExamControls(){
 function examCtx(ex){ return { plants:ex.plants, schema:ex.schema, def:{fr:ex.fr,niveau:ex.niveau}, date:ex.date }; }
 function printExam(id){
   const ex=exams.find(e=>e.id===id); if(!ex) return;
-  const choice=window.prompt("Gespeicherte Prüfung drucken:\n\n[1] Prüfungsbogen (leer)\n[2] Musterlösung (mit Antworten)\n\nBitte 1 oder 2 eingeben:","1");
-  if(choice==null) return;
-  buildSheet(choice.trim()==="2"?"solution":"blank", examCtx(ex));
-  window.print();
+  askPrintMode(m=>{ buildSheet(m, examCtx(ex)); window.print(); });
 }
 function loadExam(id){
   const ex=exams.find(e=>e.id===id); if(!ex) return;
@@ -1024,6 +1021,10 @@ function wire(){
     document.querySelectorAll("#importChoice .rcard").forEach(c=>c.classList.remove("sel"));
     e.target.closest(".rcard").classList.add("sel");
   }));
+  // Druck-Dialog
+  $("#printBlank").onclick=()=>{ $("#printScrim").classList.remove("open"); if(printChoose) printChoose("blank"); };
+  $("#printSolution").onclick=()=>{ $("#printScrim").classList.remove("open"); if(printChoose) printChoose("solution"); };
+  $("#printCancel").onclick=()=>$("#printScrim").classList.remove("open");
   // Edit-Dialog
   $("#editCancel").onclick=()=>{ selectNewAfterSave=false; $("#editScrim").classList.remove("open"); };
   $("#editSave").onclick=saveEdit;
@@ -1032,11 +1033,11 @@ function wire(){
   document.addEventListener("keydown",e=>{ if(e.key==="Escape") document.querySelectorAll(".scrim.open").forEach(s=>s.classList.remove("open")); });
 }
 
-function askPrintMode(){
-  // Leichter Auswahl-Dialog: Prüfungsbogen (leer) oder Musterlösung
-  const choice=window.prompt("Bogen drucken:\n\n[1] Prüfungsbogen (leer, zum Ausfüllen)\n[2] Musterlösung (mit Antworten, nur für Prüfende)\n\nBitte 1 oder 2 eingeben:","1");
-  if(choice==null) return;
-  printSheet(choice.trim()==="2"?"solution":"blank");
+/* Druck-Dialog (Prüfungsbogen / Musterlösung) mit Callback statt window.prompt */
+let printChoose=null;
+function askPrintMode(cb){
+  printChoose = cb || ((m)=>printSheet(m));
+  $("#printScrim").classList.add("open");
 }
 
 /* Sichtbares Feedback: welche Modul-Panels gerade geöffnet sind */

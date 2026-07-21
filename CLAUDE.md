@@ -236,6 +236,12 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       aktualisieren (`loadedExamId`).
 - [x] Sichtbares Feedback für geöffnete Modul-Panels: aktive Toggle-Buttons
       (`.btn.active` + `aria-pressed`), zentral über `syncPanelButtons()`.
+- [x] UI aufgeräumt: Druck-Dialog (`#printScrim`, `askPrintMode(cb)`) statt
+      `window.prompt`; Kopf-Werkzeugleiste in beschriftete Gruppen (Liste ·
+      Werkzeuge · Sicherung), Speicherstatus oben rechts; Auswahl-Leiste mit
+      »Ziehen« zuerst und gruppierten Aktionen.
+- [x] Sicherung enthält Prüfungen und Einstellungen (`backupData`/`applyBackup`).
+- [x] GitHub-Pages-Deploy nach jedem Merge (`.github/workflows/pages.yml`).
 - [x] Puppeteer-Smoke-Test (`tests/smoke.mjs`) und CI-Integration (`build.yml`).
 - [x] `localStorage`-Ausfall-Fallback (In-Memory) für Kiosk-/Sandbox-Profile.
 - [x] Konverter-Ladefehler behoben (SheetJS-Standalone via require lieferte unter
