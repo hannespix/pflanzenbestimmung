@@ -57,9 +57,15 @@ Arbeitsanweisungen für die Weiterentwicklung mit Claude Code stehen in
 
 ## Nutzung
 
-`pflanzenkenntnis.html` (Repo-Root) im Browser öffnen (Doppelklick genügt — die
-Datei ist eigenständig und benötigt kein Internet). Identisch gebaut liegt sie auch
-unter `dist/pflanzenkenntnis.html`. Änderungen bleiben im Browser gespeichert.
+**Online:** Nach jedem Merge veröffentlicht die `pages`-Action den aktuellen Stand
+automatisch auf **GitHub Pages** → <https://hannespix.github.io/pflanzenbestimmung/>
+(einmalig in den Repo-Einstellungen unter *Pages* die Quelle *GitHub Actions*
+aktivieren).
+
+**Offline:** `pflanzenkenntnis.html` (Repo-Root) im Browser öffnen (Doppelklick
+genügt — die Datei ist eigenständig und benötigt kein Internet). Identisch gebaut
+liegt sie auch unter `dist/pflanzenkenntnis.html`. Änderungen bleiben im Browser
+gespeichert.
 
 ## Build
 
