@@ -90,9 +90,16 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
   Sitzungslänge einstellbar.
 - **Fortschritt bleibt erhalten** (localStorage, je Profil getrennt, Namensraum
   `pflanzenlernen.`) – die Leitner-Boxen und Fälligkeiten überleben das Schließen.
-- Gleiche Leitplanken: **vollständig offline**, kein CDN, kein Framework,
-  deutschsprachig, mobiltauglich. Baut **ohne** SheetJS (kein Excel-Import nötig)
-  und ist dadurch deutlich kleiner.
+- **Mehr zur Pflanze (ℹ):** Zu jeder Art öffnet ein Info-Modal kuratierte Links zu
+  deutschen Pflanzendatenbanken (Wikipedia, NaturaDB, Baumkunde, Gaißmayer, GBIF,
+  iNaturalist – passend zur Fachrichtung; öffnen in neuem Tab, also offline-rein).
+  Optional holt »Online-Infos laden« per Wikipedia einen deutschen Kurztext samt
+  Vorschaubild direkt ins Modal (nur online; funktioniert auch als lokale Datei, da
+  ohne CORS-Umweg geladen wird; Quelle CC BY-SA).
+- Gleiche Leitplanken: **vollständig offline** (der Lernkern braucht **nie** Internet;
+  nur die optionalen »Online-Infos« oben sind eine bewusste, opt-in Ausnahme), kein
+  CDN, kein Framework, deutschsprachig, mobiltauglich. Baut **ohne** SheetJS (kein
+  Excel-Import nötig) und ist dadurch deutlich kleiner.
 
 ---
 

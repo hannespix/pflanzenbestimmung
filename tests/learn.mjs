@@ -92,6 +92,28 @@ async function main() {
   assert(sched.good.box >= 2 && sched.good.due > sched.t, "good (neu): Box ≥2, künftig fällig");
   assert(sched.again.due !== sched.good.due, "again und good dürfen eine neue Karte nicht gleich einplanen");
 
+  // Info-Modal: Deep-Links (offline) + Online-Laden-Knopf vorhanden, schließt sauber.
+  // Der Wikipedia-Abruf (JSONP) wird NICHT ausgelöst – der Test bleibt offline.
+  const info = await page.evaluate(() => {
+    const c = pool()[0];
+    openInfo(c);
+    const links = [...document.querySelectorAll("#infoScrim .srcgrid a")].map((a) => a.getAttribute("href"));
+    const res = {
+      open: !!document.querySelector("#infoScrim"),
+      n: links.length,
+      hasWiki: links.some((h) => /de\.wikipedia\.org/.test(h)),
+      hasLoad: !!document.querySelector("#wpLoad"),
+      newtab: [...document.querySelectorAll("#infoScrim .srcgrid a")].every((a) => a.target === "_blank"),
+    };
+    closeInfo();
+    res.closed = !document.querySelector("#infoScrim");
+    return res;
+  });
+  assert(info.open && info.n >= 4 && info.hasWiki, "Info-Modal: Deep-Links (inkl. Wikipedia) fehlen");
+  assert(info.newtab, "Info-Modal: Quell-Links müssen target=_blank (neuer Tab) sein");
+  assert(info.hasLoad, "Info-Modal: »Online-Infos laden«-Knopf fehlt");
+  assert(info.closed, "Info-Modal schließt nicht");
+
   // Quiz: richtige Option wählen -> Feedback »Richtig«
   const quiz = await page.evaluate(() => {
     document.querySelector('#modeTabs button[data-mode="quiz"]').click();
@@ -129,7 +151,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Quiz, Tippen, Fortschritt-Persistenz.");
+  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Quiz, Tippen, Fortschritt-Persistenz.");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
