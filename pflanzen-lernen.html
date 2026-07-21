@@ -194,7 +194,49 @@ main{margin-top:18px}
   .wphost img{float:none; display:block; width:100%; max-width:220px; margin:0 auto 12px}
   .splist{grid-template-columns:1fr}
 }
-@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+/* ===== Design-Politur: mehr Ruhe, weiche Übergänge, dezente Tiefe ===== */
+html{scroll-behavior:smooth}
+body{line-height:1.5}
+.wrap{padding:38px 22px 100px}
+.masthead{padding:24px 26px; box-shadow:0 1px 2px var(--shadow), 0 18px 40px -34px rgba(34,53,43,.55)}
+.setup{padding:18px 20px; gap:16px}
+main{margin-top:22px}
+.progress{padding:14px 18px}
+.btn{transition:background .15s, border-color .15s, box-shadow .15s, transform .06s}
+.btn.primary:hover{box-shadow:0 8px 20px -10px var(--green-deep)}
+.modes button{transition:background .15s, color .15s, box-shadow .15s}
+.modes button.on{box-shadow:inset 0 0 0 1px var(--green-deep)}
+.pbar span{transition:width .5s cubic-bezier(.4,0,.2,1)}
+.sessionbar .sbar i{transition:width .35s cubic-bezier(.4,0,.2,1)}
+
+@keyframes riseIn{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
+@keyframes revealIn{from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none}}
+@keyframes scrimIn{from{opacity:0} to{opacity:1}}
+@keyframes modalIn{from{opacity:0; transform:translateY(12px) scale(.97)} to{opacity:1; transform:none}}
+
+.card{min-height:250px; animation:riseIn .3s cubic-bezier(.2,.7,.2,1) both;
+  box-shadow:0 2px 10px var(--shadow), 0 26px 50px -36px rgba(34,53,43,.6); transition:box-shadow .2s, transform .12s}
+.card:hover{box-shadow:0 4px 16px var(--shadow), 0 30px 56px -34px rgba(34,53,43,.5)}
+.card .answer{animation:revealIn .32s ease both}
+.rate{animation:revealIn .36s ease both}
+.rate button{transition:background .14s, border-color .14s, transform .08s, box-shadow .14s}
+.rate button:hover{transform:translateY(-2px); box-shadow:0 8px 18px -12px rgba(34,53,43,.6)}
+.qprompt,.qsub{animation:revealIn .28s ease both}
+.options{animation:riseIn .3s ease both}
+.opt{transition:background .14s, border-color .14s, transform .08s, box-shadow .14s}
+.opt:hover:not(:disabled){transform:translateY(-1px); box-shadow:0 6px 14px -10px rgba(34,53,43,.5)}
+.typebox,.stage-empty{animation:riseIn .3s ease both}
+.catblock{animation:riseIn .3s ease both}
+.sprow{transition:background .14s, border-color .14s, transform .08s, box-shadow .14s}
+.sprow:hover{transform:translateY(-1px); box-shadow:0 6px 16px -11px rgba(34,53,43,.5)}
+
+.scrim{animation:scrimIn .18s ease both; backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px)}
+.modal{animation:modalIn .26s cubic-bezier(.2,.7,.2,1) both; box-shadow:0 24px 60px -12px rgba(20,32,26,.5)}
+.srcgrid a{transition:background .14s, border-color .14s, transform .08s}
+.srcgrid a:hover{transform:translateY(-1px)}
+.toast{border-radius:8px}
+
+@media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important; scroll-behavior:auto !important}}
 </style>
 </head>
 <body>
