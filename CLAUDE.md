@@ -303,9 +303,11 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       `src/learn.js`; `build.py` baut beide Dateien; Smoke-Test `tests/learn.mjs`;
       CI und Pages-Deploy erfassen beide Dateien.
 - [x] **Pflanzen-Info-Modal im Lern-Tool** (»ℹ Mehr zur Pflanze«): kuratierte
-      Deep-Links je Art (Wikipedia/NaturaDB/Baumkunde/Gaißmayer/iNaturalist,
-      als **reines Binom** via `searchName()` gebaut – Sorten-/Gruppen-Zusatz weglassen,
-      sonst 0 Treffer; Gaißmayer = Shop-Suche, nicht `?s=`; InfoFlora bewusst raus
+      Deep-Links je Art (Wikipedia/NaturaDB/Baumkunde/Gaißmayer/iNaturalist).
+      **Granularität differenziert:** Wikipedia sucht **fein** (voller Name inkl.
+      Sorte/Unterart – löst sauber auf, 404t nie); die anderen Quellen **grob** mit dem
+      reinen Binom via `searchName()` (Sorten-/Gruppen-Zusatz weglassen, sonst 0 Treffer;
+      mehrere Treffer dort ok). Gaißmayer = Shop-Suche, nicht `?s=`; InfoFlora bewusst raus
       (nur CH-Wildflora, 404 für Kulturen); Zusatzquellen nach Fachrichtung; öffnen neuen Tab →
       offline-rein) plus **opt-in** »Online-Infos laden« via **Wikipedia-JSONP**
       (deutscher Kurztext + Vorschaubild direkt im Modal, funktioniert auch als lokale

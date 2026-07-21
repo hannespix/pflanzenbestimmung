@@ -97,8 +97,9 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
 - **Mehr zur Pflanze (ℹ):** Zu jeder Art öffnet ein Info-Modal kuratierte Links zu
   deutschsprachigen Pflanzenquellen (Wikipedia, NaturaDB, Baumkunde, Gaißmayer,
   iNaturalist – passend zur Fachrichtung; öffnen in neuem Tab, also offline-rein).
-  Die Suche nutzt bewusst das **reine Binom** (Gattung + Art, ohne Sorten-/Gruppen-
-  Zusatz), damit die Datenbanken auch bei Sorten Treffer liefern.
+  **Wikipedia** sucht **fein** (voller Name inkl. Sorte/Unterart – Wikipedia löst das
+  sauber auf); die **anderen** Quellen suchen **grob** mit dem reinen Binom (Gattung +
+  Art), weil sie bei zu feiner Suche oft nichts finden (mehrere Treffer sind dort ok).
   Optional holt »Online-Infos laden« per Wikipedia einen deutschen Kurztext samt
   Vorschaubild direkt ins Modal (nur online; funktioniert auch als lokale Datei, da
   ohne CORS-Umweg geladen wird; Quelle CC BY-SA).
