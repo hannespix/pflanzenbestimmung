@@ -134,12 +134,18 @@ lineare BW-Skala; Abweichungen sind pro Profil im Tool einstellbar.
 | Staudengärtnerei | 248 | 128 |
 | Zierpflanzenbau | 254 | 80 |
 
-**Hart hinterlegte Schema-Abweichungen** (Vorgabe der zuständigen Stelle):
+**Bewertungsschemata** (Vorgabe der zuständigen Stelle, hart hinterlegt):
 
-- Garten- und Landschaftsbau · **Gärtner/in**: Gattung 1, Art 1, Deutscher Name 2
-  = 80 Punkte bei 20 Pflanzen.
-- Garten- und Landschaftsbau · **Fachwerker/in**: Deutscher Name 3, Gattung 0,5,
-  Art 0,5 = 60 Punkte bei 15 Pflanzen; Deutscher Name als erste Spalte.
+- **Fachwerker/in – alle sieben Fachrichtungen:** Deutscher Name 3, Gattung 0,5,
+  Art 0,5 = 4 P./Pflanze · 15 Pflanzen = **60 Punkte**; Deutscher Name zuerst.
+- **Gärtner/in Garten- und Landschaftsbau:** Gattung 1, Art 1, Deutscher Name 2
+  = 4 P./Pflanze · 20 Pflanzen = **80 Punkte**.
+- **Gärtner/in Produktionsfachrichtungen** (Baumschule, Friedhofsgärtnerei,
+  Gemüsebau, Obstbau, Staudengärtnerei, Zierpflanzenbau): Gattung 3, Art 3,
+  Familie 1, Deutscher Name 3 = 10 P./Pflanze · 20 Pflanzen = **200 Punkte**
+  (Standardschema).
+
+Alle mit linearer BW-Skala; im Tool pro Profil weiter anpassbar.
 
 Roadmap siehe TODO-Liste in [`CLAUDE.md`](./CLAUDE.md).
 

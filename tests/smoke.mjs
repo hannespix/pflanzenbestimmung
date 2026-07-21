@@ -178,6 +178,30 @@ async function main() {
   assert(reordered.before !== reordered.after && reordered.after.split(",").length === 3,
     "Reorder sollte die Spaltenreihenfolge ändern: " + reordered.before + " -> " + reordered.after);
 
+  // 6d) Schema-Matrix: alle Fachwerker 60 P. (Dt. Name zuerst), GaLaBau-Gärtner 80 P., Produktions-Gärtner 200 P.
+  const matrix = await page.evaluate(() => {
+    const load = (fr, niv) => {
+      $("#frSelect").value = fr; $("#nivSelect").value = niv; applyProfileSelect();
+      return { per: ptsPer(), anzahl: schema.anzahl, max: schema.anzahl * ptsPer(),
+        order: schema.cols.map((c) => c.key).join(",") };
+    };
+    return {
+      fwGemuese: load("gemuesebau", "fachwerker"),
+      fwBaum: load("baumschule", "fachwerker"),
+      fwZier: load("zierpflanzenbau", "fachwerker"),
+      galaG: load("garten_und_landschaftsbau", "gaertner"),
+      prodG: load("baumschule", "gaertner")
+    };
+  });
+  assert(matrix.fwGemuese.max === 60 && matrix.fwGemuese.anzahl === 15 && matrix.fwGemuese.order === "deutscher_name,gattung,art",
+    "Gemüsebau/Fachwerker: 60 P. (15) mit Dt. Name zuerst erwartet: " + JSON.stringify(matrix.fwGemuese));
+  assert(matrix.fwBaum.max === 60 && matrix.fwZier.max === 60,
+    "Baumschule/Zierpflanzenbau Fachwerker: je 60 P. erwartet: " + JSON.stringify([matrix.fwBaum, matrix.fwZier]));
+  assert(matrix.galaG.max === 80 && matrix.galaG.per === 4 && matrix.galaG.order === "gattung,art,deutscher_name",
+    "GaLaBau/Gärtner: 80 P. (1/1/2) erwartet: " + JSON.stringify(matrix.galaG));
+  assert(matrix.prodG.max === 200 && matrix.prodG.per === 10 && matrix.prodG.order === "gattung,art,familie,deutscher_name",
+    "Produktions-Gärtner (Baumschule): 200 P. (3/3/1/3) erwartet: " + JSON.stringify(matrix.prodG));
+
   // zurück auf Baumschule/Gärtner für den Persistenz-Test
   await page.select("#frSelect", "baumschule");
   await page.select("#nivSelect", "gaertner");
@@ -189,8 +213,10 @@ async function main() {
       deutscher_name: "Prüfkraut", kategorie: "", zp: 0, synonyme: "", bemerkungen: "" });
     markDirty();
   });
+  // auf den tatsächlichen Inhalt warten (nicht nur die Existenz des Schlüssels),
+  // damit der debounced persist() sicher abgeschlossen ist
   await page.waitForFunction(
-    "localStorage.getItem('pflanzenkenntnis.data.baumschule_gaertner')!=null", { timeout: 5000 });
+    "(localStorage.getItem('pflanzenkenntnis.data.baumschule_gaertner')||'').includes('Smoketestia')", { timeout: 5000 });
   await page.reload({ waitUntil: "load" });
   await page.waitForFunction("window.pickExcel!=null", { timeout: 10000 });
   const persisted = await page.evaluate(() =>
