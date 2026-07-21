@@ -215,10 +215,11 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
 - [x] Seeds für **alle 14 Profile** aus den Excel-Listen erzeugt (2114 Arten).
       Quellen liegen als `data/<profil-id>.<ext>`; `tools/rebuild_seeds.sh`
       erzeugt alle Seeds reproduzierbar neu.
-- [x] Schema-Overrides für Garten- und Landschaftsbau hinterlegt (Gärtner 1/1/2
-      = 80 P.; Fachwerker Dt. Name 3 / Gattung 0,5 / Art 0,5 = 60 P., Dt. Name
-      zuerst). Übrige Fachrichtungen: Standard 3/3/1/3 bestätigt (Quellen
-      enthalten keine abweichenden Punktangaben).
+- [x] Bewertungsschemata hart hinterlegt: **alle 7 Fachwerker** Dt. Name 3 /
+      Gattung 0,5 / Art 0,5 = 60 P. (15, Dt. Name zuerst); **Gärtner GaLaBau**
+      1/1/2 = 80 P. (20); **Gärtner Produktionsfachrichtungen** Standard 3/3/1/3
+      = 200 P. (20). Overrides in `app.js` nach `PROFILE_DEFS`; Produktion nutzt
+      das Standardschema (kein Override).
 - [x] Spaltenreihenfolge im Prüfungsschema editierbar (▲▼); Punkte mit
       Nachkommastellen (0,5) und deutschem Dezimalkomma.
 - [x] Prüfungen nach Prüfungsdatum speichern (»Prüfungen«-Panel): gezogene Liste

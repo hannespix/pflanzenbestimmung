@@ -91,16 +91,29 @@ FR_LIST.forEach(fr=>NIVEAUS.forEach(nv=>{
 /* ---- Profil-spezifische Schema-Overrides (Vorgabe der zuständigen Stelle) ----
    Greifen für frische Browser bzw. nach »Standardliste«; ein bereits im Browser
    gespeichertes Schema behält seine Kopie. Reihenfolge der cols = Spaltenreihenfolge
-   auf dem Bogen. */
-// Garten- und Landschaftsbau · Gärtner/in: Gattung 1, Art 1, Deutscher Name 2 = 80 P./20
+   auf dem Bogen.
+
+   Bewertungsregeln (BW, zuständige Stelle):
+   - Fachwerker/in (alle 7 Fachrichtungen): Deutscher Name 3, Gattung 0,5, Art 0,5
+     = 4 P./Pflanze · 15 Pflanzen = 60 Punkte, Deutscher Name zuerst.
+   - Gärtner/in Garten- und Landschaftsbau: Gattung 1, Art 1, Deutscher Name 2
+     = 4 P./Pflanze · 20 Pflanzen = 80 Punkte.
+   - Gärtner/in Produktionsfachrichtungen (Baumschule, Friedhofsgärtnerei,
+     Gemüsebau, Obstbau, Staudengärtnerei, Zierpflanzenbau): Gattung 3, Art 3,
+     Familie 1, Deutscher Name 3 = 10 P./Pflanze · 20 Pflanzen = 200 Punkte.
+     Das ist bereits das Standardschema (stdSchema) – kein Override nötig. */
+const LIN_SCALE = {mode:"linear",lin:[90,70,50,30,10]};
+// Fachwerker/in – für alle sieben Fachrichtungen identisch
+FR_LIST.forEach(fr=>{
+  PROFILE_DEFS[slug(fr)+"_fachwerker"].schema = {
+    anzahl:15, cols:[{key:"deutscher_name",pts:3},{key:"gattung",pts:0.5},{key:"art",pts:0.5}],
+    scale:{mode:"linear",lin:LIN_SCALE.lin.slice()}
+  };
+});
+// Gärtner/in · Garten- und Landschaftsbau
 PROFILE_DEFS["garten_und_landschaftsbau_gaertner"].schema = {
   anzahl:20, cols:[{key:"gattung",pts:1},{key:"art",pts:1},{key:"deutscher_name",pts:2}],
-  scale:{mode:"linear",lin:[90,70,50,30,10]}
-};
-// Garten- und Landschaftsbau · Fachwerker/in: Deutscher Name 3, Gattung 0,5, Art 0,5 = 60 P./15
-PROFILE_DEFS["garten_und_landschaftsbau_fachwerker"].schema = {
-  anzahl:15, cols:[{key:"deutscher_name",pts:3},{key:"gattung",pts:0.5},{key:"art",pts:0.5}],
-  scale:{mode:"linear",lin:[90,70,50,30,10]}
+  scale:{mode:"linear",lin:LIN_SCALE.lin.slice()}
 };
 
 let profileId="gemuesebau_gaertner";
