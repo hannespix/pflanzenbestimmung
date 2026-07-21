@@ -137,6 +137,8 @@ let nextId=1;                 // laufende ID-Vergabe
 let selection=[];             // ids in Reihenfolge
 let editId=null, pendingImport=null;
 let exams=[];                 // gespeicherte Prüfungen (nach Prüfungsdatum), snapshot-basiert
+let loadedExamId=null;        // aktuell in die Auswahl geladene Prüfung (für »Aktualisieren«)
+let settings=null;            // globale Einstellungen (zuständige Stelle, Bogen-Titel …)
 
 /* ---------- Toast ---------- */
 let toastT=null;
@@ -197,7 +199,7 @@ function seedInto(def){
 function loadProfile(id){
   if(!PROFILE_DEFS[id]) id="gemuesebau_gaertner";
   profileId=id; const def=PROFILE_DEFS[id];
-  selection=[]; schemaOrder=null;
+  selection=[]; schemaOrder=null; loadedExamId=null;
   let raw=store.get(dataKey(id));
   if(raw){
     try{
@@ -517,6 +519,7 @@ function syncSelUI(){
     if(!$("#gMax").dataset.touched){ $("#gMax").value=(selection.length||drawTarget())*ptsPer(); }
     renderGrader();
   }
+  if(!$("#previewPanel").hasAttribute("hidden")) renderPreview();
 }
 
 /* ---------- Bearbeiten / Hinzufügen / Löschen ---------- */
@@ -543,11 +546,13 @@ function saveEdit(){
     deutscher_name:norm($("#fDe").value), kategorie:norm($("#fKat").value), zp:parseInt($("#fZp").value)||0,
     synonyme:norm($("#fSyn").value), bemerkungen:$("#fBem").value.trim() };
   if(!obj.gattung){ toast("Gattung darf nicht leer sein",true); return; }
-  if(editId!=null){ const p=cache.find(x=>x.id===editId); if(p) Object.assign(p,obj); }
-  else{ cache.push({id:nextId++,...obj}); }
+  const wasNew=editId==null;
+  if(!wasNew){ const p=cache.find(x=>x.id===editId); if(p) Object.assign(p,obj); }
+  else{ const nid=nextId++; cache.push({id:nid,...obj}); if(selectNewAfterSave) selection.push(nid); }
+  selectNewAfterSave=false;
   markDirty(); refresh(); refreshKatList(); renderList(); syncSelUI();
   $("#editScrim").classList.remove("open");
-  toast(editId!=null?"Gespeichert":"Art hinzugefügt");
+  toast(wasNew?"Art hinzugefügt":"Gespeichert");
 }
 function delPlant(id,p){
   if(!confirm(`„${p.gattung} ${p.art}“ löschen?`)) return;
@@ -602,12 +607,12 @@ function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gesp
   $("#sheet").innerHTML=`
     <div class="sheet-head">
       <div class="title">
-        <h1>Pflanzenkenntnisse${sol?" — Musterlösung":""}</h1>
+        <h1>${esc((settings&&settings.sheetTitle)||"Pflanzenkenntnisse")}${sol?" — Musterlösung":""}</h1>
         <div class="st">Abschlussprüfung ${esc(def.niveau)} · Fachrichtung ${esc(def.fr)}</div>
       </div>
       <div class="brand">
-        Regierungspräsidium Freiburg<br>Zuständige Stelle Grüne Berufe<br>
-        ${sol?'<span class="solution-note">Nur für Prüfende</span>':""}
+        ${[settings&&settings.stelle1, settings&&settings.stelle2].filter(x=>norm(x)).map(esc).join("<br>")}
+        ${sol&&norm(settings&&settings.pruefendeNote)?`<br><span class="solution-note">${esc(settings.pruefendeNote)}</span>`:""}
       </div>
     </div>
     <div class="sheet-meta">
@@ -663,9 +668,38 @@ function saveExam(){
   const exam={ id:"ex"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),
     savedAt:new Date().toISOString(), date, profileId, fr:def.fr, niveau:def.niveau,
     label, plants, schema:cloneSchema(schema) };
-  exams.unshift(exam); saveExams(); renderExams();
-  $("#exLabel").value="";
+  exams.unshift(exam); saveExams(); loadedExamId=exam.id; renderExams(); syncExamControls();
   toast(`Prüfung gespeichert (${plants.length} Pflanzen · ${fmtDate(date)})`);
+}
+function copyExam(id){
+  const ex=exams.find(e=>e.id===id); if(!ex) return;
+  const copy=JSON.parse(JSON.stringify(ex));
+  copy.id="ex"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36);
+  copy.savedAt=new Date().toISOString();
+  copy.date=todayISO();
+  copy.label=(ex.label?ex.label+" ":"")+"(Kopie)";
+  exams.unshift(copy); saveExams(); renderExams();
+  toast("Prüfung kopiert – mit heutigem Datum, jetzt bearbeitbar (»Laden«)");
+}
+function updateLoadedExam(){
+  const ex=exams.find(e=>e.id===loadedExamId);
+  if(!ex){ toast("Keine geladene Prüfung zum Aktualisieren",true); return; }
+  if(!selection.length){ toast("Auswahl ist leer",true); return; }
+  const def=PROFILE_DEFS[profileId];
+  ex.date=$("#exDate").value||ex.date;
+  ex.label=norm($("#exLabel").value);
+  ex.profileId=profileId; ex.fr=def.fr; ex.niveau=def.niveau;
+  ex.plants=selectedPlants().map(p=>({gattung:p.gattung,art:p.art,familie:p.familie,
+    deutscher_name:p.deutscher_name,kategorie:p.kategorie,zp:p.zp?1:0}));
+  ex.schema=cloneSchema(schema); ex.savedAt=new Date().toISOString();
+  saveExams(); renderExams(); syncExamControls();
+  toast(`Prüfung aktualisiert (${ex.plants.length} Pflanzen · ${fmtDate(ex.date)})`);
+}
+function syncExamControls(){
+  const btn=$("#exUpdate"); if(!btn) return;
+  const ex=exams.find(e=>e.id===loadedExamId);
+  if(ex){ btn.hidden=false; btn.textContent="„"+fmtDate(ex.date)+"“ aktualisieren"; }
+  else{ btn.hidden=true; if(loadedExamId&&!ex) loadedExamId=null; }
 }
 function examCtx(ex){ return { plants:ex.plants, schema:ex.schema, def:{fr:ex.fr,niveau:ex.niveau}, date:ex.date }; }
 function printExam(id){
@@ -686,9 +720,11 @@ function loadExam(id){
   const byKey=new Map(cache.map(p=>[key(p),p.id]));
   const ids=[], fehlend=[];
   ex.plants.forEach(p=>{ const id=byKey.get(key(p)); if(id!=null) ids.push(id); else fehlend.push(p.gattung+" "+p.art); });
-  selection=ids; renderList(); syncSelUI();
+  selection=ids; loadedExamId=ex.id;
+  if(!$("#examsPanel").hasAttribute("hidden")){ $("#exDate").value=ex.date||todayISO(); $("#exLabel").value=ex.label||""; }
+  renderList(); syncSelUI(); syncExamControls();
   if(fehlend.length) toast(`${ids.length} übernommen, ${fehlend.length} nicht in der aktuellen Liste`,true);
-  else toast(`${ids.length} Arten der Prüfung geladen`);
+  else toast(`${ids.length} Arten geladen – jetzt bearbeitbar, dann »Aktualisieren« oder neu speichern`);
 }
 function downloadExam(id){
   const ex=exams.find(e=>e.id===id); if(!ex) return;
@@ -698,37 +734,156 @@ function downloadExam(id){
 function delExam(id){
   const ex=exams.find(e=>e.id===id); if(!ex) return;
   if(!confirm(`Gespeicherte Prüfung „${ex.fr} · ${fmtDate(ex.date)}“ löschen?`)) return;
-  exams=exams.filter(e=>e.id!==id); saveExams(); renderExams();
+  if(id===loadedExamId) loadedExamId=null;
+  exams=exams.filter(e=>e.id!==id); saveExams(); renderExams(); syncExamControls();
   toast("Prüfung gelöscht");
 }
 function toggleExams(){
   const s=$("#examsPanel");
-  if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); if(!$("#exDate").value) $("#exDate").value=todayISO(); renderExams(); }
+  if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); if(!$("#exDate").value) $("#exDate").value=todayISO(); renderExams(); syncExamControls(); }
   else s.setAttribute("hidden","");
 }
 function renderExams(){
   const host=$("#examList"); host.innerHTML="";
   if(!exams.length){ host.innerHTML='<div class="exempty">Noch keine Prüfung gespeichert. Ziehe eine Liste, wähle das Prüfungsdatum und speichere sie hier.</div>'; return; }
   exams.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.savedAt||"").localeCompare(a.savedAt||"")).forEach(ex=>{
-    const row=el("div","exrow");
+    const row=el("div","exrow"+(ex.id===loadedExamId?" active":""));
     row.innerHTML=`<div class="exmeta">
         <span class="exdate">${esc(fmtDate(ex.date))}</span>
         <span class="exprof">${esc(ex.fr)} · ${esc(ex.niveau)}</span>
         <span class="excount">${ex.plants.length} Pflanzen</span>
         ${ex.label?`<span class="exlabel">${esc(ex.label)}</span>`:""}
+        ${ex.id===loadedExamId?'<span class="tag zp">geladen</span>':""}
       </div>
       <div class="exacts">
         <button class="btn small" data-act="load">Laden</button>
+        <button class="btn small" data-act="copy" title="Als neue Prüfung mit heutigem Datum kopieren">Kopieren</button>
         <button class="btn small" data-act="print">Drucken</button>
         <button class="btn small ghost" data-act="dl" title="Als JSON herunterladen">JSON</button>
         <button class="btn small ghost del" data-act="del" title="Löschen">Löschen</button>
       </div>`;
     row.querySelector('[data-act="load"]').onclick=()=>loadExam(ex.id);
+    row.querySelector('[data-act="copy"]').onclick=()=>copyExam(ex.id);
     row.querySelector('[data-act="print"]').onclick=()=>printExam(ex.id);
     row.querySelector('[data-act="dl"]').onclick=()=>downloadExam(ex.id);
     row.querySelector('[data-act="del"]').onclick=()=>delExam(ex.id);
     host.appendChild(row);
   });
+}
+
+/* ============================================================
+   Auswahl-/Bogen-Vorschau (aktuelle Auswahl bearbeiten)
+   Reihenfolge ändern, Arten bearbeiten (Änderungen gehen in die Liste/DB),
+   ergänzen und entfernen – eine Vorschau dessen, was auf den Bogen kommt.
+   ============================================================ */
+let selectNewAfterSave=false;
+function togglePreview(){
+  const s=$("#previewPanel");
+  if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); renderPreview(); s.scrollIntoView({block:"nearest"}); }
+  else s.setAttribute("hidden","");
+}
+function movePreview(idx,dir){
+  const j=idx+dir; if(j<0||j>=selection.length) return;
+  [selection[idx],selection[j]]=[selection[j],selection[idx]];
+  renderList(); syncSelUI();
+}
+function pvRemove(id){ selection=selection.filter(x=>x!==id); renderList(); syncSelUI(); }
+function pvAddExisting(){
+  const v=norm($("#pvAdd").value); if(!v){ return; }
+  const lv=v.toLowerCase();
+  const found=cache.find(p=>!selection.includes(p.id) && (
+    (p.gattung+" "+p.art).toLowerCase()===lv ||
+    (p.gattung+" "+p.art+(p.deutscher_name?" — "+p.deutscher_name:"")).toLowerCase()===lv ||
+    (p.deutscher_name||"").toLowerCase()===lv));
+  if(!found){ toast("Art nicht gefunden – bitte aus der Vorschlagsliste wählen",true); return; }
+  selection.push(found.id); $("#pvAdd").value=""; renderList(); syncSelUI();
+  toast(`„${found.gattung} ${found.art}“ zur Auswahl hinzugefügt`);
+}
+function pvAddNew(){ selectNewAfterSave=true; openEdit(null); }
+function renderPreview(){
+  const plants=selectedPlants();
+  $("#pvCount").textContent=plants.length;
+  $("#pvPts").textContent=fmtPts(plants.length*ptsPer());
+  // Vorschlagsliste (noch nicht gewählte Arten)
+  $("#pvAddList").innerHTML=cache.filter(p=>!selection.includes(p.id))
+    .map(p=>`<option value="${esc(p.gattung+" "+p.art+(p.deutscher_name?" — "+p.deutscher_name:""))}">`).join("");
+  const host=$("#previewList"); host.innerHTML="";
+  if(!plants.length){ host.innerHTML='<div class="exempty">Noch nichts ausgewählt. Ziehe eine Liste oder füge unten Arten hinzu.</div>'; return; }
+  plants.forEach((p,idx)=>{
+    const row=el("div","pvrow");
+    row.innerHTML=`<span class="pvnum">${idx+1}</span>
+      <div class="pvname">
+        <div class="binom"><span class="g">${esc(p.gattung)}</span> <span class="a">${esc(p.art)}</span></div>
+        <div class="meta">
+          <span class="fam">${esc(p.familie)}</span>
+          ${p.deutscher_name?`<span class="de">${esc(p.deutscher_name)}</span>`:""}
+          ${p.zp?`<span class="tag zp">ZP</span>`:""}
+          ${p.synonyme?`<span class="tag" title="${esc(p.synonyme)}">Syn.</span>`:""}
+          ${p.bemerkungen?`<span class="tag bem" title="${esc(p.bemerkungen)}">Bem.</span>`:""}
+        </div>
+      </div>
+      <div class="pvacts">
+        <button class="iconbtn" data-a="up" title="nach oben" aria-label="nach oben"${idx===0?" disabled":""}><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 15l6-6 6 6"/></svg></button>
+        <button class="iconbtn" data-a="down" title="nach unten" aria-label="nach unten"${idx===plants.length-1?" disabled":""}><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+        <button class="iconbtn" data-a="edit" title="Bearbeiten (wird in die Liste übernommen)" aria-label="Bearbeiten"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16zM14 6l4 4"/></svg></button>
+        <button class="iconbtn del" data-a="rm" title="Aus Auswahl entfernen" aria-label="Entfernen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>`;
+    const id=p.id;
+    row.querySelector('[data-a="up"]').onclick=()=>movePreview(idx,-1);
+    row.querySelector('[data-a="down"]').onclick=()=>movePreview(idx,1);
+    row.querySelector('[data-a="edit"]').onclick=()=>openEdit(id);
+    row.querySelector('[data-a="rm"]').onclick=()=>pvRemove(id);
+    host.appendChild(row);
+  });
+}
+
+/* ============================================================
+   Einstellungen (global, nicht profilgebunden)
+   Damit auch andere zuständige Stellen als das RP Freiburg das Werkzeug nutzen.
+   ============================================================ */
+const SETTINGS_KEY = LS_PREFIX+"settings";
+function defaultSettings(){ return {
+  stelle1:"Regierungspräsidium Freiburg",
+  stelle2:"Zuständige Stelle Grüne Berufe",
+  pruefendeNote:"Nur für Prüfende",
+  sheetTitle:"Pflanzenkenntnisse"
+}; }
+function loadSettings(){
+  let s=null; try{ const raw=store.get(SETTINGS_KEY); if(raw) s=JSON.parse(raw); }catch(e){}
+  settings=Object.assign(defaultSettings(), (s&&typeof s==="object")?s:{});
+}
+function saveSettings(){ store.set(SETTINGS_KEY, JSON.stringify(settings)); }
+const SETTINGS_FIELDS=[
+  {key:"sheetTitle",   label:"Titel des Bogens",              ph:"Pflanzenkenntnisse"},
+  {key:"stelle1",      label:"Zuständige Stelle (Zeile 1)",   ph:"z. B. Regierungspräsidium …"},
+  {key:"stelle2",      label:"Zuständige Stelle (Zeile 2)",   ph:"z. B. Zuständige Stelle Grüne Berufe"},
+  {key:"pruefendeNote",label:"Vermerk auf der Musterlösung",  ph:"z. B. Nur für Prüfende"}
+];
+function toggleSettings(){
+  const s=$("#settingsPanel");
+  if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); renderSettings(); }
+  else s.setAttribute("hidden","");
+}
+function renderSettings(){
+  const host=$("#setFields"); host.innerHTML="";
+  SETTINGS_FIELDS.forEach(f=>{
+    const row=el("div","setrow");
+    row.innerHTML=`<label for="set_${f.key}">${esc(f.label)}</label>
+      <input id="set_${f.key}" type="text" value="${esc(settings[f.key]||"")}" placeholder="${esc(f.ph)}" data-k="${f.key}">`;
+    host.appendChild(row);
+  });
+  host.querySelectorAll("input[data-k]").forEach(inp=>inp.onchange=updateSettings);
+}
+function updateSettings(){
+  $("#setFields").querySelectorAll("input[data-k]").forEach(inp=>{ settings[inp.dataset.k]=norm(inp.value); });
+  if(!norm(settings.sheetTitle)) settings.sheetTitle=defaultSettings().sheetTitle;
+  saveSettings();
+  toast("Einstellungen gespeichert");
+}
+function resetSettings(){
+  if(!confirm("Alle Einstellungen auf die Standardwerte (Regierungspräsidium Freiburg) zurücksetzen?")) return;
+  settings=defaultSettings(); saveSettings(); renderSettings();
+  toast("Einstellungen zurückgesetzt");
 }
 
 /* ============================================================
@@ -827,9 +982,19 @@ function wire(){
   $("#btnShuffle").onclick=shuffleSel;
   $("#btnClear").onclick=clearSel;
   $("#btnPrint").onclick=()=>askPrintMode();
+  // Auswahl-/Bogen-Vorschau
+  $("#btnPreview").onclick=togglePreview;
+  $("#pvAddBtn").onclick=pvAddExisting;
+  $("#pvAdd").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); pvAddExisting(); } });
+  $("#pvAddNew").onclick=pvAddNew;
+  $("#pvPrint").onclick=()=>askPrintMode();
   // Gespeicherte Prüfungen
   $("#btnExams").onclick=toggleExams;
   $("#exSave").onclick=saveExam;
+  $("#exUpdate").onclick=updateLoadedExam;
+  // Einstellungen
+  $("#btnSettings").onclick=toggleSettings;
+  $("#setReset").onclick=resetSettings;
   // Profil-Auswahl
   $("#frSelect").addEventListener("change",()=>applyProfileSelect());
   $("#nivSelect").addEventListener("change",()=>applyProfileSelect());
@@ -843,7 +1008,7 @@ function wire(){
     e.target.closest(".rcard").classList.add("sel");
   }));
   // Edit-Dialog
-  $("#editCancel").onclick=()=>$("#editScrim").classList.remove("open");
+  $("#editCancel").onclick=()=>{ selectNewAfterSave=false; $("#editScrim").classList.remove("open"); };
   $("#editSave").onclick=saveEdit;
   // Scrim-Klick schließt
   document.querySelectorAll(".scrim").forEach(s=>s.addEventListener("mousedown",e=>{ if(e.target===s) s.classList.remove("open"); }));
@@ -861,7 +1026,9 @@ function renderAll(){
   syncProfileUI(); refreshKatList(); renderList(); syncSelUI();
   if(!$("#grader").hasAttribute("hidden")) renderGrader();
   if(!$("#schemaPanel").hasAttribute("hidden")) renderSchema();
-  if(!$("#examsPanel").hasAttribute("hidden")) renderExams();
+  if(!$("#examsPanel").hasAttribute("hidden")){ renderExams(); syncExamControls(); }
+  if(!$("#settingsPanel").hasAttribute("hidden")) renderSettings();
+  if(!$("#previewPanel").hasAttribute("hidden")) renderPreview();
 }
 
 /* ---------- Fachrichtungs-/Profil-Auswahl ---------- */
@@ -941,6 +1108,7 @@ function updateSchema(){
 (function boot(){
   try{
     populateSelectors();
+    loadSettings();
     loadExams();
     const pid=store.get(LS_PREFIX+"profile");
     loadProfile(pid&&PROFILE_DEFS[pid]?pid:"gemuesebau_gaertner");

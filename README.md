@@ -25,13 +25,22 @@ Arbeitsanweisungen für die Weiterentwicklung mit Claude Code stehen in
   deutschen Namen, ZP-Kennzeichen und Kategorie-Überschriften.
 - **Zufällig ziehen** (Profil-Anzahl als Vorgabe) oder manuell anhaken, Reihenfolge
   mischen.
+- **Auswahl · Bogen-Vorschau (bearbeiten):** eine Extra-Ansicht der aktuellen
+  Auswahl – Reihenfolge per ▲▼ (= Spaltenreihenfolge auf dem Bogen), Arten
+  bearbeiten (öffnet die Art; Änderungen inkl. Bemerkungen und Synonyme werden in
+  die Liste/DB übernommen), aus der Auswahl entfernen oder Arten (bestehend/neu)
+  ergänzen.
+- **Einstellungen:** Kopf des Bogens anpassbar – Titel, **zuständige Stelle**
+  (zwei Zeilen) und der Vermerk auf der Musterlösung; damit auch andere zuständige
+  Stellen als das RP Freiburg das Werkzeug nutzen können (geräteweit gespeichert).
 - **Druck:** Prüfungsbogen (leer) und Musterlösung (gefüllt, mit Punktespalte).
   Spalten und Punkte richten sich nach dem Prüfungsschema des Profils.
 - **Prüfungen speichern (nach Prüfungsdatum):** eine gezogene Liste als
   Momentaufnahme (samt Schema) unter einem Prüfungsdatum sichern – im Tool
-  wieder **laden**, erneut **drucken** (Bogen/Musterlösung) oder als **`.json`
-  herunterladen**. Bleibt exakt reproduzierbar, auch wenn die Profil-Liste
-  später geändert wird.
+  wieder **laden**, **kopieren** (z. B. für den nächsten Prüfungstag), nach dem
+  Bearbeiten **aktualisieren**, erneut **drucken** (Bogen/Musterlösung) oder als
+  **`.json` herunterladen**. Bleibt exakt reproduzierbar, auch wenn die
+  Profil-Liste später geändert wird.
 - **Prüfungsschema** einstellbar: welche Felder mit wie vielen Punkten (auch
   Nachkommastellen wie 0,5) bewertet werden, in **welcher Reihenfolge** (▲▼ –
   bestimmt die Spaltenfolge auf dem Bogen) und wie viele Pflanzen je Prüfung.

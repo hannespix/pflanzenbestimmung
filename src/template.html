@@ -77,6 +77,7 @@ input,select{font-family:inherit; color:inherit}
 .exlist{display:flex; flex-direction:column; gap:8px; margin-top:12px}
 .exempty{font-size:13.5px; color:var(--ink-faint); font-style:italic; padding:8px 0}
 .exrow{display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center; justify-content:space-between; background:var(--surface-2); border:1px solid var(--rule); border-radius:4px; padding:9px 12px}
+.exrow.active{border-color:var(--green); background:var(--green-tint)}
 .exmeta{display:flex; flex-wrap:wrap; gap:5px 12px; align-items:baseline; min-width:0}
 .exdate{font-family:var(--serif); font-size:15.5px; font-weight:600; color:var(--green-deep)}
 .exprof{font-size:13px; color:var(--ink)}
@@ -84,6 +85,26 @@ input,select{font-family:inherit; color:inherit}
 .exlabel{font-size:12.5px; color:var(--ink-soft); font-style:italic}
 .exacts{display:flex; gap:6px; flex-wrap:wrap}
 .exacts .del:hover{border-color:var(--madder); color:var(--madder)}
+/* Einstellungen */
+.setgrid{display:flex; flex-direction:column; gap:12px; max-width:560px}
+.setrow{display:flex; flex-direction:column; gap:4px}
+.setrow label{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia)}
+.setrow input{border:1px solid var(--rule-strong); border-radius:3px; padding:8px 10px; font-size:14px; background:#fff; width:100%}
+.setfoot{margin-top:14px}
+/* Auswahl-/Bogen-Vorschau */
+.pvlist{display:flex; flex-direction:column; margin-top:6px; border:1px solid var(--rule); border-radius:4px; overflow:hidden}
+.pvrow{display:grid; grid-template-columns:34px 1fr auto; gap:12px; align-items:center; padding:8px 12px; border-bottom:1px solid var(--rule); background:#fff}
+.pvrow:last-child{border-bottom:none}
+.pvrow:nth-child(even){background:var(--surface-2)}
+.pvnum{font-family:var(--mono); font-weight:700; color:var(--sepia); text-align:center}
+.pvname{min-width:0}
+.pvacts{display:flex; gap:2px; align-items:center}
+.pvacts .iconbtn{padding:5px}
+.pvacts .iconbtn:disabled{opacity:.3; cursor:not-allowed}
+.pvadd{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:12px}
+.pvadd input{flex:1; min-width:220px; border:1px solid var(--rule-strong); border-radius:3px; padding:8px 10px; font-size:14px; background:#fff}
+.btn.madder.small{background:var(--madder); border-color:#7e2e23; color:#fbeee9}
+.btn.madder.small:hover{background:#7e2e23}
 .masthead .tools{display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 0 8px; align-items:center}
 .spacer{flex:1 1 auto}
 .dbstatus{font-family:var(--mono); font-size:12px; color:var(--ink-soft); display:flex; align-items:center; gap:7px}
@@ -337,6 +358,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       <button class="btn" id="btnGrade"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h14a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 7h8M8 11h3M14 11h2M8 15h3M14 15h2"/></svg>Notenrechner</button>
       <button class="btn" id="btnSchema"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 12h16M4 19h16M8 3v4M14 10v4M10 17v4"/></svg>Prüfungsschema</button>
       <button class="btn" id="btnExams"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Prüfungen</button>
+      <button class="btn" id="btnSettings"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Einstellungen</button>
       <span class="spacer"></span>
       <button class="btn ghost" id="btnOpen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Sicherung laden</button>
       <button class="btn ghost" id="btnSave"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>Sichern</button>
@@ -367,6 +389,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       <button class="btn primary" id="btnDraw"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4H4v3M17 4h3v3M7 20H4v-3M17 20h3v-3"/><circle cx="9" cy="9" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.3" fill="currentColor" stroke="none"/></svg>Zufällig ziehen</button>
     </div>
     <button class="btn" id="btnShuffle" title="Reihenfolge der Auswahl neu mischen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 3h5v5M4 20l17-17M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>Mischen</button>
+    <button class="btn" id="btnPreview" title="Auswahl als Bogen-Vorschau ansehen und bearbeiten"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.5"/></svg>Vorschau · bearbeiten</button>
     <button class="btn ghost" id="btnClear">Auswahl leeren</button>
     <button class="btn madder" id="btnPrint"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>Bogen drucken</button>
   </div>
@@ -414,10 +437,40 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
         <div class="exsave">
           <div class="gfld exd"><label for="exDate">Prüfungsdatum</label><input id="exDate" type="date"></div>
           <div class="gfld exl"><label for="exLabel">Bezeichnung (optional)</label><input id="exLabel" type="text" placeholder="z. B. Ausschuss 2, Vormittag"></div>
-          <button class="btn primary" id="exSave"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h11l3 3v15a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 3v5h7M8 13h8M8 17h5"/></svg>Aktuelle Auswahl speichern</button>
+          <button class="btn primary" id="exSave"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h11l3 3v15a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 3v5h7M8 13h8M8 17h5"/></svg>Als neue Prüfung speichern</button>
+          <button class="btn" id="exUpdate" hidden title="Die geladene Prüfung mit der aktuellen Auswahl überschreiben">Aktualisieren</button>
         </div>
         <p class="gnote">Die gezogene Liste wird als Momentaufnahme (samt Schema) gespeichert – so bleibt die Prüfung exakt reproduzierbar, auch wenn die Profil-Liste später geändert wird. »Laden« stellt die Auswahl wieder her, »Drucken« erzeugt Bogen oder Musterlösung, »JSON« lädt die Prüfung als Datei herunter.</p>
         <div class="exlist" id="examList"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="grader" id="settingsPanel" hidden>
+    <div class="gcard onecol">
+      <div class="left noborder">
+        <p class="gtitle">Einstellungen · Kopf des Prüfungsbogens</p>
+        <div class="setgrid" id="setFields"></div>
+        <p class="gnote">Diese Angaben erscheinen auf Prüfungsbogen und Musterlösung – so lässt sich das Werkzeug für jede zuständige Stelle anpassen. Sie gelten geräteweit (im Browser gespeichert) und werden sofort übernommen.</p>
+        <div class="setfoot"><button class="btn ghost" id="setReset">Auf Standard zurücksetzen</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="grader" id="previewPanel" hidden>
+    <div class="gcard onecol">
+      <div class="left noborder">
+        <p class="gtitle">Auswahl · Bogen-Vorschau — <span id="pvCount">0</span> Pflanzen · max. <span id="pvPts">0</span> P.</p>
+        <p class="gnote">Reihenfolge mit ▲▼ ändern (= Reihenfolge auf dem Bogen). »Bearbeiten« öffnet die Art – Änderungen (auch Bemerkungen und Synonyme) werden in die Liste übernommen. »Entfernen« nimmt die Art nur aus dieser Auswahl.</p>
+        <div class="pvlist" id="previewList"></div>
+        <div class="pvadd">
+          <input id="pvAdd" type="text" list="pvAddList" placeholder="Art zur Auswahl hinzufügen … (Gattung Art)">
+          <datalist id="pvAddList"></datalist>
+          <button class="btn small" id="pvAddBtn">Hinzufügen</button>
+          <button class="btn small ghost" id="pvAddNew">Neue Art anlegen</button>
+          <span class="spacer"></span>
+          <button class="btn small madder" id="pvPrint">Bogen drucken</button>
+        </div>
       </div>
     </div>
   </section>
