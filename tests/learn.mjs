@@ -122,6 +122,22 @@ async function main() {
   assert(wc.cands.some((t) => /^beta vulgaris$/i.test(t)), "Wiki-Kandidaten müssen das reine Binom »Beta vulgaris« enthalten (" + wc.name + " → " + JSON.stringify(wc.cands) + ")");
   assert(!wc.cands.some((t) => /^beta$/i.test(t)), "Wiki-Kandidaten dürfen NICHT die bloße Gattung »Beta« enthalten (griech. Buchstabe)");
 
+  // Granularität der Deep-Links: reines Binom, KEIN Sorten-/Gruppen-Zusatz
+  const gran = await page.evaluate(() => {
+    const c = allCards.find((x) => /grp\.|convar\.|'/i.test(x.a));
+    if (!c) return { skip: true };
+    openInfo(c);
+    const hrefs = [...document.querySelectorAll("#infoScrim .srcgrid a")].map((a) => decodeURIComponent(a.href));
+    closeInfo();
+    return { full: (c.g + " " + c.a).trim(), sn: searchName(c), hrefs };
+  });
+  if (!gran.skip) {
+    assert(/ /.test(gran.sn) && !/grp\.|convar\.|'/i.test(gran.sn), "searchName muss das reine Binom sein (" + gran.full + " → " + gran.sn + ")");
+    assert(gran.hrefs.length && gran.hrefs.every((h) => !/grp\.|convar\.|conditiva|aggregatum|cepa-grp/i.test(h)),
+      "Deep-Link-URLs dürfen den Sorten-/Gruppen-Zusatz nicht enthalten: " + JSON.stringify(gran.hrefs));
+    assert(gran.hrefs.some((h) => h.includes(gran.sn)), "Deep-Link-URLs müssen den Binom-Suchbegriff enthalten");
+  }
+
   // Quiz: richtige Option wählen -> Feedback »Richtig«
   const quiz = await page.evaluate(() => {
     document.querySelector('#modeTabs button[data-mode="quiz"]').click();
