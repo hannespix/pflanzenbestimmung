@@ -665,7 +665,6 @@ function deepLinks(c){
   if(woody)   list.push({ n:"Baumkunde", u:"https://www.baumkunde.de/Suche/"+q+"/" });
   if(stauden) list.push({ n:"Gaißmayer", u:"https://www.gaissmayer.de/?s="+q });
   list.push({ n:"NaturaDB",    u:"https://www.naturadb.de/suche/?q="+q });
-  list.push({ n:"Bilder",      u:"https://www.google.com/search?tbm=isch&hl=de&q="+q });
   list.push({ n:"iNaturalist", u:"https://www.inaturalist.org/taxa/search?q="+q+"&locale=de" });
   return list;
 }
@@ -702,18 +701,30 @@ function renderWiki(host, d){
     `<div class="wp-text">${esc(d.extract)}</div>`+
     `<div class="wp-src">Quelle: <a href="${esc(d.url)}" target="_blank" rel="noopener">Wikipedia – ${esc(d.title)}</a> · Text unter CC BY-SA</div>`;
 }
+/* Kandidaten in sinnvoller Reihenfolge – bewusst OHNE bloße Gattung.
+   Grund: viele Gattungsnamen sind auf Wikipedia mehrdeutig (»Beta« = griech.
+   Buchstabe, »Iris« = u. a. Auge). Sorten-/Gruppen-Einträge (»Beta vulgaris
+   Conditiva-Grp.«) haben keinen eigenen Artikel → wir treffen über das reine
+   Binom (»Beta vulgaris« → »Rübe«) bzw. den deutschen Namen. */
+function wikiCandidates(card){
+  const cands=[], seen=new Set();
+  const add=s=>{ s=norm(s); if(s && !seen.has(s.toLowerCase())){ seen.add(s.toLowerCase()); cands.push(s); } };
+  add(card.g+" "+card.a);                               // voller Name (z. B. mit Sorte/Gruppe)
+  const epi=(norm(card.a).split(" ").filter(w=>!/^([×x]|var\.|subsp\.|ssp\.|f\.|cv\.|convar\.)$/i.test(w))[0])||"";
+  if(epi) add(card.g+" "+epi);                          // reines Binom ohne Zusatz (»Beta vulgaris«)
+  add((card.de||"").split(/[,;/]/)[0]);                 // deutscher Name (oft der echte Artikeltitel)
+  return cands;
+}
 async function loadWiki(card, host, btn){
   if(navigator.onLine===false){
     host.innerHTML='<div class="wp-note">Offline – für Online-Infos ist Internet nötig. Die Links oben funktionieren, sobald du online bist.</div>'; return;
   }
   btn.disabled=true; btn.textContent="lädt …";
   let pg=null, hadResponse=false;
-  try{
-    pg = wikiFirstPage(await wikiJSONP(norm(card.g+" "+card.a))); hadResponse=true;
-    if(!pg && card.a){                                  // Artikel unter vollem Namen fehlt → Gattung versuchen
-      try{ pg = wikiFirstPage(await wikiJSONP(card.g)); }catch(e){ /* Gattungs-Versuch egal */ }
-    }
-  }catch(e){ /* Netzfehler/Timeout → hadResponse bleibt false */ }
+  for(const t of wikiCandidates(card)){
+    try{ const d=await wikiJSONP(t); hadResponse=true; pg=wikiFirstPage(d); if(pg) break; }
+    catch(e){ /* Netzfehler/Timeout – nächster Versuch (hadResponse ggf. false) */ }
+  }
   if(!pg){
     if(hadResponse){                                    // echte „nicht gefunden" – cachen, Knopf weg
       wikiCache.set(card.key, null);
@@ -836,6 +847,7 @@ function wire(){
 window.startSession=startSession;
 window.openInfo=openInfo;
 window.closeInfo=closeInfo;
+window.wikiCandidates=wikiCandidates;
 
 </script>
 </body>

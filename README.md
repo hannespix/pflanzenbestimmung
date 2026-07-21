@@ -96,8 +96,7 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
   `pflanzenlernen.`) – die Leitner-Boxen und Fälligkeiten überleben das Schließen.
 - **Mehr zur Pflanze (ℹ):** Zu jeder Art öffnet ein Info-Modal kuratierte Links zu
   deutschsprachigen Pflanzenquellen (Wikipedia, NaturaDB, Baumkunde, Gaißmayer,
-  eine Bilder-Suche und iNaturalist – passend zur Fachrichtung; öffnen in neuem Tab,
-  also offline-rein).
+  iNaturalist – passend zur Fachrichtung; öffnen in neuem Tab, also offline-rein).
   Optional holt »Online-Infos laden« per Wikipedia einen deutschen Kurztext samt
   Vorschaubild direkt ins Modal (nur online; funktioniert auch als lokale Datei, da
   ohne CORS-Umweg geladen wird; Quelle CC BY-SA).
