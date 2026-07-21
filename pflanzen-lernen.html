@@ -710,20 +710,20 @@ function binomEpithet(a){
 }
 function searchName(c){ return norm(c.g+" "+binomEpithet(c.a)); }
 function deepLinks(c){
-  const name = searchName(c);
-  const q = encodeURIComponent(name);
-  const slug = name.toLowerCase().replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,"");  // z. B. »beta-vulgaris«
+  const q = encodeURIComponent(searchName(c));
   const kat = (c.kat||"").toLowerCase();
   // Zusatzquellen nach Fachrichtung (Kategorie-Bezeichnungen sind je Liste uneinheitlich)
   const woody   = /baumschule|landschaftsbau|obstbau/.test(profileId) || /gehölz|baum|strauch|obst/.test(kat);
   const stauden = /stauden/.test(profileId) || /staude/.test(kat);
   const list = [{ n:"Wikipedia", u:"https://de.wikipedia.org/wiki/Spezial:Suche?search="+q }];
   if(woody)   list.push({ n:"Baumkunde", u:"https://www.baumkunde.de/Suche/"+q+"/" });
-  if(stauden) list.push({ n:"Gaißmayer", u:"https://www.gaissmayer.de/?s="+q });
+  // Gaißmayer: echte Shop-Suche (die alte ?s=-URL leitete nur auf die Startseite um)
+  if(stauden) list.push({ n:"Gaißmayer", u:"https://www.gaissmayer.de/web/shop/suche/produkte/?filter%5Bartikel%5D%5Btext_suche%5D%5Bwerte%5D%5B%5D="+q });
   list.push({ n:"NaturaDB",    u:"https://www.naturadb.de/suche/?q="+q });
-  list.push({ n:"InfoFlora",   u:"https://www.infoflora.ch/de/flora/"+slug+".html" });
   list.push({ n:"iNaturalist", u:"https://www.inaturalist.org/taxa/search?q="+q+"&locale=de" });
   return list;
+  // InfoFlora bewusst entfernt: nur Schweizer Wildflora (404 für Zierpflanzen/Kulturen),
+  // keine per GET ansteuerbare Artensuche – ließ sich nicht verlässlich verlinken.
 }
 const wikiCache = new Map();   // card.key -> {title,extract,thumb,url} | null (nicht gefunden)
 let __wpN = 0;
