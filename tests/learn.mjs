@@ -122,20 +122,24 @@ async function main() {
   assert(wc.cands.some((t) => /^beta vulgaris$/i.test(t)), "Wiki-Kandidaten müssen das reine Binom »Beta vulgaris« enthalten (" + wc.name + " → " + JSON.stringify(wc.cands) + ")");
   assert(!wc.cands.some((t) => /^beta$/i.test(t)), "Wiki-Kandidaten dürfen NICHT die bloße Gattung »Beta« enthalten (griech. Buchstabe)");
 
-  // Granularität der Deep-Links: reines Binom, KEIN Sorten-/Gruppen-Zusatz
+  // Granularität: Wikipedia FEIN (voller Name), andere Quellen GROB (reines Binom)
   const gran = await page.evaluate(() => {
     const c = allCards.find((x) => /grp\.|convar\.|'/i.test(x.a));
     if (!c) return { skip: true };
     openInfo(c);
-    const hrefs = [...document.querySelectorAll("#infoScrim .srcgrid a")].map((a) => decodeURIComponent(a.href));
+    const links = [...document.querySelectorAll("#infoScrim .srcgrid a")].map((a) => ({
+      n: a.textContent.replace(/[↗\s]+$/, ""), href: decodeURIComponent(a.href),
+    }));
     closeInfo();
-    return { full: (c.g + " " + c.a).trim(), sn: searchName(c), hrefs };
+    return { full: (c.g + " " + c.a).trim(), sn: searchName(c), links };
   });
   if (!gran.skip) {
     assert(/ /.test(gran.sn) && !/grp\.|convar\.|'/i.test(gran.sn), "searchName muss das reine Binom sein (" + gran.full + " → " + gran.sn + ")");
-    assert(gran.hrefs.length && gran.hrefs.every((h) => !/grp\.|convar\.|conditiva|aggregatum|cepa-grp/i.test(h)),
-      "Deep-Link-URLs dürfen den Sorten-/Gruppen-Zusatz nicht enthalten: " + JSON.stringify(gran.hrefs));
-    assert(gran.hrefs.some((h) => h.includes(gran.sn)), "Deep-Link-URLs müssen den Binom-Suchbegriff enthalten");
+    const wiki = gran.links.find((l) => /wikipedia/i.test(l.n));
+    const others = gran.links.filter((l) => !/wikipedia/i.test(l.n));
+    assert(wiki && wiki.href.includes(gran.full), "Wikipedia soll fein suchen (voller Name inkl. Sorte): " + (wiki && wiki.href));
+    assert(others.length && others.every((l) => l.href.includes(gran.sn) && !/grp\.|convar\./i.test(l.href)),
+      "Andere Quellen sollen grob (reines Binom, ohne Sortenzusatz) suchen: " + JSON.stringify(others));
   }
 
   // Quiz: richtige Option wählen -> Feedback »Richtig«

@@ -412,12 +412,13 @@ function binomEpithet(a){
 }
 function searchName(c){ return norm(c.g+" "+binomEpithet(c.a)); }
 function deepLinks(c){
-  const q = encodeURIComponent(searchName(c));
+  const full = encodeURIComponent(norm(c.g+" "+c.a));  // Wikipedia: FEIN – exakter Name inkl. Sorte/Unterart (Wikipedia löst das auf und 404t nie)
+  const q = encodeURIComponent(searchName(c));          // andere Quellen: GROB – reines Binom (zu fein → oft 0 Treffer/404; mehrere Treffer sind hier ok)
   const kat = (c.kat||"").toLowerCase();
   // Zusatzquellen nach Fachrichtung (Kategorie-Bezeichnungen sind je Liste uneinheitlich)
   const woody   = /baumschule|landschaftsbau|obstbau/.test(profileId) || /gehölz|baum|strauch|obst/.test(kat);
   const stauden = /stauden/.test(profileId) || /staude/.test(kat);
-  const list = [{ n:"Wikipedia", u:"https://de.wikipedia.org/wiki/Spezial:Suche?search="+q }];
+  const list = [{ n:"Wikipedia", u:"https://de.wikipedia.org/wiki/Spezial:Suche?search="+full }];
   if(woody)   list.push({ n:"Baumkunde", u:"https://www.baumkunde.de/Suche/"+q+"/" });
   // Gaißmayer: echte Shop-Suche (die alte ?s=-URL leitete nur auf die Startseite um)
   if(stauden) list.push({ n:"Gaißmayer", u:"https://www.gaissmayer.de/web/shop/suche/produkte/?filter%5Bartikel%5D%5Btext_suche%5D%5Bwerte%5D%5B%5D="+q });
