@@ -1,0 +1,53 @@
+name: pages
+
+# Veröffentlicht den aktuellen Stand des Werkzeugs nach jedem Merge (Push auf
+# main) automatisch auf GitHub Pages. Voraussetzung: in den Repo-Einstellungen
+# unter „Pages“ als Quelle „GitHub Actions“ wählen (der Workflow versucht das per
+# enablement:true selbst zu aktivieren, sofern das Token die Rechte hat).
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Gleichzeitige Deploys vermeiden; laufende abbrechen, wenn ein neuer Merge kommt.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build (Single-File HTML)
+        run: python3 build.py
+      - name: Offline-Check (kein CDN, keine externen Ressourcen)
+        run: python3 tools/check_offline.py
+      - name: Seite vorbereiten (index.html + benannte Datei)
+        run: |
+          mkdir -p _site
+          cp dist/pflanzenkenntnis.html _site/index.html
+          cp dist/pflanzenkenntnis.html _site/pflanzenkenntnis.html
+      - name: Pages konfigurieren
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: Artefakt hochladen
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Auf GitHub Pages veröffentlichen
+        id: deployment
+        uses: actions/deploy-pages@v4
