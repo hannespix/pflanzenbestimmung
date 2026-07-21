@@ -51,6 +51,9 @@ Arbeitsanweisungen für die Weiterentwicklung mit Claude Code stehen in
   Einstellungen** – »Sicherung laden« stellt alles wieder her),
   **Zurücksetzen** auf die hinterlegte Liste. In Kiosk-/Sandbox-Umgebungen ohne
   localStorage bleiben Änderungen wenigstens für die laufende Sitzung erhalten.
+- **Hilfe & Tooltips:** eingebaute Kurzanleitung (Button »Hilfe«) mit Erklärung
+  jeder Funktion; nahezu jede Schaltfläche und jedes Feld hat einen erklärenden
+  Tooltip.
 - **Barrierearm, druckoptimiert (A4)**, herbarium-nahe Gestaltung.
 
 ---

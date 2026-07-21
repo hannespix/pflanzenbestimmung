@@ -105,9 +105,20 @@ input,select{font-family:inherit; color:inherit}
 .pvadd input{flex:1; min-width:220px; border:1px solid var(--rule-strong); border-radius:3px; padding:8px 10px; font-size:14px; background:#fff}
 .btn.madder.small{background:var(--madder); border-color:#7e2e23; color:#fbeee9}
 .btn.madder.small:hover{background:#7e2e23}
-/* Kopfzeile: Titel + Speicherstatus */
+/* Kopfzeile: Titel + Hilfe + Speicherstatus */
 .mast-top{display:flex; justify-content:space-between; align-items:flex-start; gap:14px}
 .mast-title{min-width:0}
+.mast-right{display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end}
+/* Hilfe-Panel */
+.help{max-width:820px}
+.hlead{font-size:14px; color:var(--ink-soft); margin:0 0 14px; line-height:1.5}
+.help h4{font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--sepia); margin:18px 0 8px; border-bottom:1px solid var(--rule); padding-bottom:4px}
+.hsteps{margin:0; padding-left:22px; display:flex; flex-direction:column; gap:6px; font-size:14px; line-height:1.5}
+.hnotes{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:5px; font-size:13.5px; line-height:1.45; color:var(--ink-soft)}
+.hdl{margin:0; display:grid; grid-template-columns:minmax(130px,190px) 1fr; gap:6px 16px; font-size:13.5px; line-height:1.45}
+.hdl dt{font-family:var(--serif); font-weight:600; color:var(--green-deep)}
+.hdl dd{margin:0; color:var(--ink-soft)}
+@media (max-width:640px){ .hdl{grid-template-columns:1fr; gap:2px 0} .hdl dd{margin:0 0 8px} }
 /* Gruppierte Werkzeugleiste (Liste · Werkzeuge · Sicherung) */
 .masthead .tools{display:flex; flex-wrap:wrap; gap:14px 22px; margin:16px 0 0 8px; align-items:flex-start}
 .tgroup{display:flex; flex-direction:column; gap:6px}
@@ -369,66 +380,112 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
         <p class="eyebrow">Abschlussprüfung · Pflanzenkenntnis</p>
         <h1>Pflanzenkenntnis · Prüfungslisten</h1>
       </div>
-      <span class="dbstatus" title="Speicherstatus dieser Liste im Browser"><span class="dot" id="dbdot"></span><span id="dbname">Standardliste</span></span>
+      <div class="mast-right">
+        <button class="btn ghost" id="btnHelp" title="Kurzanleitung und Erklärung aller Funktionen ein- oder ausblenden"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5"/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/></svg>Hilfe</button>
+        <span class="dbstatus" title="Speicherstatus dieser Liste im Browser: hinterlegte Standardliste oder im Browser gespeicherte Änderungen"><span class="dot" id="dbdot"></span><span id="dbname">Standardliste</span></span>
+      </div>
     </div>
     <div class="profilerow">
-      <div class="pfield"><label for="frSelect">Fachrichtung</label><select id="frSelect"></select></div>
-      <div class="pfield"><label for="nivSelect">Ausbildung</label><select id="nivSelect"></select></div>
-      <span class="profsub" id="profSub"></span>
+      <div class="pfield"><label for="frSelect">Fachrichtung</label><select id="frSelect" title="Fachrichtung wählen – eine der sieben Gärtner-Fachrichtungen. Jede hat eine eigene Pflanzenliste."></select></div>
+      <div class="pfield"><label for="nivSelect">Ausbildung</label><select id="nivSelect" title="Ausbildung wählen: Gärtner/in (20 Pflanzen) oder Fachwerker/in (15 Pflanzen). Fachwerker haben eigene Listen."></select></div>
+      <span class="profsub" id="profSub" title="Vorgabe dieses Profils: Anzahl Pflanzen je Prüfung und Höchstpunktzahl"></span>
     </div>
     <div class="tools">
       <div class="tgroup">
         <span class="glabel">Liste</span>
         <div class="grow">
-          <button class="btn primary" id="btnImport"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>Excel importieren</button>
-          <button class="btn" id="btnAdd"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>Art hinzufügen</button>
+          <button class="btn primary" id="btnImport" title="Excel-Liste (.xlsx/.xls) importieren. Kopfzeile, Gattung/Art-Trennung, Familie, deutscher Name, Kategorien und ZP werden automatisch erkannt. Vor dem Übernehmen kann die Liste ersetzt oder ergänzt werden."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>Excel importieren</button>
+          <button class="btn" id="btnAdd" title="Eine einzelne Art von Hand hinzufügen: Gattung, Art, Familie, deutscher Name, Kategorie, Synonyme, Bemerkungen und ZP-Kennzeichen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>Art hinzufügen</button>
         </div>
       </div>
       <div class="tgroup">
         <span class="glabel">Werkzeuge</span>
         <div class="grow">
-          <button class="btn" id="btnSchema"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 12h16M4 19h16M8 3v4M14 10v4M10 17v4"/></svg>Prüfungsschema</button>
-          <button class="btn" id="btnGrade"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h14a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 7h8M8 11h3M14 11h2M8 15h3M14 15h2"/></svg>Notenrechner</button>
-          <button class="btn" id="btnExams"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Prüfungen</button>
-          <button class="btn" id="btnSettings"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Einstellungen</button>
+          <button class="btn" id="btnSchema" title="Prüfungsschema festlegen: welche Spalten (Gattung, Art, Familie, deutscher Name) mit wie vielen Punkten bewertet werden, in welcher Reihenfolge (▲▼) und wie viele Pflanzen je Prüfung. Gilt pro Profil."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 12h16M4 19h16M8 3v4M14 10v4M10 17v4"/></svg>Prüfungsschema</button>
+          <button class="btn" id="btnGrade" title="Notenrechner: erreichte Punkte in eine Note umrechnen. Lineare Baden-Württemberg-Skala (Standard) oder IHK-Schlüssel; Notengrenzen einstellbar; zeigt Note, Prozent und Punktschwellen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h14a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 7h8M8 11h3M14 11h2M8 15h3M14 15h2"/></svg>Notenrechner</button>
+          <button class="btn" id="btnExams" title="Gespeicherte Prüfungen (nach Prüfungsdatum): aktuelle Auswahl sichern, laden, kopieren (z. B. für den nächsten Prüfungstag), aktualisieren, drucken, als JSON herunterladen oder löschen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Prüfungen</button>
+          <button class="btn" id="btnSettings" title="Einstellungen für den Kopf des Bogens: Titel, zuständige Stelle (zwei Zeilen) und Vermerk auf der Musterlösung – so nutzbar für jede zuständige Stelle. Gilt geräteweit."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Einstellungen</button>
         </div>
       </div>
       <div class="tgroup">
         <span class="glabel">Sicherung</span>
         <div class="grow">
-          <button class="btn ghost" id="btnOpen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Sicherung laden</button>
-          <button class="btn ghost" id="btnSave"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>Sichern</button>
-          <button class="btn ghost" id="btnReset" title="Zurück zur hinterlegten Liste dieses Profils"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 019-9 9 9 0 016.5 2.8L21 8M21 3v5h-5"/><path d="M21 12a9 9 0 01-9 9 9 9 0 01-6.5-2.8L3 16M3 21v-5h5"/></svg>Standardliste</button>
+          <button class="btn ghost" id="btnOpen" title="Eine zuvor erstellte Sicherung (.json) laden – stellt Liste, gespeicherte Prüfungen und Einstellungen wieder her."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Sicherung laden</button>
+          <button class="btn ghost" id="btnSave" title="Alles als .json-Datei sichern: aktuelle Liste dieses Profils, alle gespeicherten Prüfungen und die Einstellungen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>Sichern</button>
+          <button class="btn ghost" id="btnReset" title="Alle im Browser gespeicherten Änderungen dieses Profils verwerfen und zur hinterlegten Standardliste zurückkehren."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 019-9 9 9 0 016.5 2.8L21 8M21 3v5h-5"/><path d="M21 12a9 9 0 01-9 9 9 9 0 01-6.5-2.8L3 16M3 21v-5h5"/></svg>Standardliste</button>
         </div>
       </div>
     </div>
   </header>
 
+  <section class="grader" id="helpPanel" hidden>
+    <div class="gcard onecol">
+      <div class="left noborder help">
+        <p class="gtitle">Hilfe · Kurzanleitung &amp; alle Funktionen</p>
+        <p class="hlead">Dieses Werkzeug zieht zufällig Pflanzen aus einer Liste, druckt Prüfungsbogen und Musterlösung und rechnet Noten – für die Pflanzenkenntnis-Prüfung der grünen Berufe. Es läuft vollständig <b>offline</b> im Browser; alle Änderungen werden je Profil im Browser gespeichert.</p>
+
+        <h4>In fünf Schritten zur Prüfung</h4>
+        <ol class="hsteps">
+          <li><b>Fachrichtung &amp; Ausbildung</b> oben wählen (z. B. Gemüsebau · Gärtner/in). Jedes der 14 Profile hat eine eigene Liste, ein eigenes Bewertungsschema und einen eigenen Notenschlüssel.</li>
+          <li>Bei Bedarf die Liste <b>durchsuchen und filtern</b> – Suche, Kategorie oder „nur ZP-relevant".</li>
+          <li><b>Anzahl</b> festlegen und <b>Zufällig ziehen</b> – oder Arten in der Liste unten einzeln anhaken.</li>
+          <li><b>Vorschau · bearbeiten</b>: Reihenfolge per ▲▼ ändern, Arten bearbeiten, ergänzen oder entfernen.</li>
+          <li><b>Bogen drucken</b>: im Dialog Prüfungsbogen (leer) oder Musterlösung (mit Antworten) wählen.</li>
+        </ol>
+
+        <h4>Werkzeuge (Kopfzeile)</h4>
+        <dl class="hdl">
+          <dt>Prüfungsschema</dt><dd>Legt fest, welche Spalten (Gattung, Art, Familie, deutscher Name) mit wie vielen Punkten bewertet werden, in welcher Reihenfolge (▲▼ = Spaltenfolge auf dem Bogen) und wie viele Pflanzen je Prüfung. Punkte dürfen Nachkommastellen haben (z. B. 0,5). Gilt pro Profil.</dd>
+          <dt>Notenrechner</dt><dd>Rechnet erreichte Punkte in eine Note um – lineare Baden-Württemberg-Skala (Standard) oder IHK-Schlüssel. Notengrenzen sind einstellbar; angezeigt werden Note, Prozent, Dezimalnote und die Punktschwellen.</dd>
+          <dt>Prüfungen</dt><dd>Speichert die gezogene Liste als Momentaufnahme (samt Schema) unter einem <b>Prüfungsdatum</b>. Von dort: laden, <b>kopieren</b> (z. B. für den nächsten Prüfungstag), nach dem Bearbeiten <b>aktualisieren</b>, drucken oder als <b>.json</b> herunterladen.</dd>
+          <dt>Einstellungen</dt><dd>Passt den Kopf des Bogens an: Titel, <b>zuständige Stelle</b> (zwei Zeilen) und den Vermerk auf der Musterlösung – so ist das Werkzeug für jede zuständige Stelle nutzbar. Gilt geräteweit.</dd>
+        </dl>
+
+        <h4>Liste &amp; Daten</h4>
+        <dl class="hdl">
+          <dt>Excel importieren</dt><dd>Liest eine .xlsx/.xls-Liste ein. Kopfzeile, Gattung/Art-Trennung, Familie, deutscher Name, Kategorien und ZP werden automatisch erkannt; beim Import kann die Liste ersetzt oder ergänzt werden.</dd>
+          <dt>Art hinzufügen</dt><dd>Fügt eine einzelne Art von Hand hinzu (mit Synonymen, Bemerkungen und ZP-Kennzeichen).</dd>
+          <dt>Sicherung laden / Sichern</dt><dd>Sichert bzw. lädt <b>alles</b> als eine .json-Datei: die Liste dieses Profils, alle gespeicherten Prüfungen und die Einstellungen.</dd>
+          <dt>Standardliste</dt><dd>Verwirft die im Browser gespeicherten Änderungen dieses Profils und stellt die hinterlegte Liste wieder her.</dd>
+        </dl>
+
+        <h4>Gut zu wissen</h4>
+        <ul class="hnotes">
+          <li><b>Gattung</b> = erstes Wort des botanischen Namens, <b>Art</b> = Rest (inkl. <i>var.</i>/<i>ssp.</i>/Sorten).</li>
+          <li><b>ZP</b> kennzeichnet für die Zwischenprüfung relevante Arten.</li>
+          <li>Für Baden-Württemberg ist die <b>lineare</b> Notenskala Standard (jede Note gleiche Spannweite).</li>
+          <li>Der Speicherstatus oben rechts zeigt, ob die hinterlegte Standardliste aktiv ist oder Änderungen im Browser gespeichert sind.</li>
+          <li>Fast alle Schaltflächen und Felder haben einen <b>Tooltip</b> – kurz mit der Maus darüber verweilen.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
   <div class="controls">
     <div class="field search">
       <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
-      <input id="q" type="search" placeholder="Suche: Gattung, Art, Familie, Name …" autocomplete="off">
+      <input id="q" type="search" placeholder="Suche: Gattung, Art, Familie, Name …" autocomplete="off" title="Live-Suche in Gattung, Art, Familie, deutschem Namen und Synonymen. Wirkt auch auf das Zufalls-Ziehen (nur Treffer werden gezogen).">
     </div>
     <div class="field">
       <label for="cat">Kategorie</label>
-      <select id="cat"><option value="">alle</option></select>
+      <select id="cat" title="Liste auf eine Kategorie einschränken (z. B. Gemüsepflanzen, Gehölze, Stauden …). Wirkt auch auf das Zufalls-Ziehen."><option value="">alle</option></select>
     </div>
-    <label class="switch"><input type="checkbox" id="onlyzp"><span class="track"></span>nur ZP-relevant</label>
+    <label class="switch" title="Nur ZP-relevante Arten anzeigen (für die Zwischenprüfung gekennzeichnet)."><input type="checkbox" id="onlyzp"><span class="track"></span>nur ZP-relevant</label>
   </div>
 
   <div class="selbar">
     <div class="draw">
       <label class="drawlab" for="drawCount">Anzahl</label>
-      <input id="drawCount" type="number" min="1" max="60" value="20" aria-label="Anzahl zu ziehender Arten">
-      <button class="btn primary" id="btnDraw"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4H4v3M17 4h3v3M7 20H4v-3M17 20h3v-3"/><circle cx="9" cy="9" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.3" fill="currentColor" stroke="none"/></svg>Zufällig ziehen</button>
+      <input id="drawCount" type="number" min="1" max="60" value="20" aria-label="Anzahl zu ziehender Arten" title="Anzahl der zufällig zu ziehenden Arten. Vorgabe je Profil (Gärtner 20, Fachwerker 15), frei änderbar.">
+      <button class="btn primary" id="btnDraw" title="Aus der aktuellen (gefilterten) Liste zufällig die eingestellte Anzahl ziehen. Ersetzt eine bestehende Auswahl."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4H4v3M17 4h3v3M7 20H4v-3M17 20h3v-3"/><circle cx="9" cy="9" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.3" fill="currentColor" stroke="none"/></svg>Zufällig ziehen</button>
     </div>
-    <div class="count"><span class="n" id="selN">0</span><span class="of">/ <span id="selTarget">20</span></span><span class="lab">gezogen</span><span class="pts-pill" id="ptsPill">max. 0 P.</span></div>
+    <div class="count" title="Gezogene Arten von Soll-Anzahl · maximal erreichbare Punktzahl der Auswahl"><span class="n" id="selN">0</span><span class="of">/ <span id="selTarget">20</span></span><span class="lab">gezogen</span><span class="pts-pill" id="ptsPill">max. 0 P.</span></div>
     <span class="spacer"></span>
     <div class="selacts">
-      <button class="btn" id="btnShuffle" title="Reihenfolge der Auswahl neu mischen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 3h5v5M4 20l17-17M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>Mischen</button>
-      <button class="btn" id="btnPreview" title="Auswahl als Bogen-Vorschau ansehen und bearbeiten"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.5"/></svg>Vorschau · bearbeiten</button>
-      <button class="btn ghost" id="btnClear">Auswahl leeren</button>
-      <button class="btn madder" id="btnPrint"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>Bogen drucken</button>
+      <button class="btn" id="btnShuffle" title="Reihenfolge der gezogenen Arten neu mischen (ändert nur die Reihenfolge auf dem Bogen, nicht die Auswahl)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 3h5v5M4 20l17-17M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>Mischen</button>
+      <button class="btn" id="btnPreview" title="Auswahl als Bogen-Vorschau öffnen: Reihenfolge ändern, Arten bearbeiten (mit Rückschreiben in die Liste), entfernen oder ergänzen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.5"/></svg>Vorschau · bearbeiten</button>
+      <button class="btn ghost" id="btnClear" title="Die aktuelle Auswahl vollständig leeren (die Liste selbst bleibt unverändert).">Auswahl leeren</button>
+      <button class="btn madder" id="btnPrint" title="Prüfungsbogen (leer) oder Musterlösung (mit Antworten) drucken – Variante im Dialog wählen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>Bogen drucken</button>
     </div>
   </div>
 
@@ -438,8 +495,8 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
         <p class="gtitle">Notenrechner</p>
         <div class="modeswitch" id="gMode"></div>
         <div class="ginputs">
-          <div class="gfld"><label>Erreichte Punkte</label><input id="gPts" type="number" min="0" step="0.5" inputmode="decimal" placeholder="z. B. 156"></div>
-          <div class="gfld"><label>von Höchstpunktzahl</label><div class="maxrow"><input id="gMax" type="number" min="1" step="1" value="200"><button class="btn ghost small" id="gSync" title="Höchstpunktzahl aus aktueller Auswahl (× 10 P.)">= 200 P.</button></div></div>
+          <div class="gfld"><label>Erreichte Punkte</label><input id="gPts" type="number" min="0" step="0.5" inputmode="decimal" placeholder="z. B. 156" title="Vom Prüfling erreichte Punktzahl eingeben (Nachkommastellen erlaubt)."></div>
+          <div class="gfld"><label>von Höchstpunktzahl</label><div class="maxrow"><input id="gMax" type="number" min="1" step="1" value="200" title="Höchstpunktzahl der Prüfung (Grundlage der Notenberechnung)."><button class="btn ghost small" id="gSync" title="Höchstpunktzahl aus der aktuellen Auswahl übernehmen (Pflanzenzahl × Punkte je Pflanze).">= 200 P.</button></div></div>
         </div>
         <div class="gres" id="gRes"><div class="gempty">Punkte eingeben …</div></div>
       </div>
@@ -473,9 +530,9 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       <div class="left noborder">
         <p class="gtitle">Gespeicherte Prüfungen · nach Prüfungsdatum</p>
         <div class="exsave">
-          <div class="gfld exd"><label for="exDate">Prüfungsdatum</label><input id="exDate" type="date"></div>
-          <div class="gfld exl"><label for="exLabel">Bezeichnung (optional)</label><input id="exLabel" type="text" placeholder="z. B. Ausschuss 2, Vormittag"></div>
-          <button class="btn primary" id="exSave"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h11l3 3v15a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 3v5h7M8 13h8M8 17h5"/></svg>Als neue Prüfung speichern</button>
+          <div class="gfld exd"><label for="exDate">Prüfungsdatum</label><input id="exDate" type="date" title="Datum, unter dem diese Prüfung gespeichert wird (Vorgabe: heute)."></div>
+          <div class="gfld exl"><label for="exLabel">Bezeichnung (optional)</label><input id="exLabel" type="text" placeholder="z. B. Ausschuss 2, Vormittag" title="Freie Bezeichnung zur Unterscheidung (z. B. Ausschuss, Uhrzeit) – optional."></div>
+          <button class="btn primary" id="exSave" title="Die aktuelle Auswahl als neue Prüfung unter dem gewählten Datum speichern (Momentaufnahme samt Schema)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h11l3 3v15a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 3v5h7M8 13h8M8 17h5"/></svg>Als neue Prüfung speichern</button>
           <button class="btn" id="exUpdate" hidden title="Die geladene Prüfung mit der aktuellen Auswahl überschreiben">Aktualisieren</button>
         </div>
         <p class="gnote">Die gezogene Liste wird als Momentaufnahme (samt Schema) gespeichert – so bleibt die Prüfung exakt reproduzierbar, auch wenn die Profil-Liste später geändert wird. »Laden« stellt die Auswahl wieder her, »Drucken« erzeugt Bogen oder Musterlösung, »JSON« lädt die Prüfung als Datei herunter.</p>
@@ -490,7 +547,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
         <p class="gtitle">Einstellungen · Kopf des Prüfungsbogens</p>
         <div class="setgrid" id="setFields"></div>
         <p class="gnote">Diese Angaben erscheinen auf Prüfungsbogen und Musterlösung – so lässt sich das Werkzeug für jede zuständige Stelle anpassen. Sie gelten geräteweit (im Browser gespeichert) und werden sofort übernommen.</p>
-        <div class="setfoot"><button class="btn ghost" id="setReset">Auf Standard zurücksetzen</button></div>
+        <div class="setfoot"><button class="btn ghost" id="setReset" title="Titel, zuständige Stelle und Vermerk auf die Standardwerte (Regierungspräsidium Freiburg) zurücksetzen.">Auf Standard zurücksetzen</button></div>
       </div>
     </div>
   </section>
@@ -502,12 +559,12 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
         <p class="gnote">Reihenfolge mit ▲▼ ändern (= Reihenfolge auf dem Bogen). »Bearbeiten« öffnet die Art – Änderungen (auch Bemerkungen und Synonyme) werden in die Liste übernommen. »Entfernen« nimmt die Art nur aus dieser Auswahl.</p>
         <div class="pvlist" id="previewList"></div>
         <div class="pvadd">
-          <input id="pvAdd" type="text" list="pvAddList" placeholder="Art zur Auswahl hinzufügen … (Gattung Art)">
+          <input id="pvAdd" type="text" list="pvAddList" placeholder="Art zur Auswahl hinzufügen … (Gattung Art)" title="Eine bereits vorhandene Art aus diesem Profil zur Auswahl hinzufügen – tippen und aus der Vorschlagsliste wählen.">
           <datalist id="pvAddList"></datalist>
-          <button class="btn small" id="pvAddBtn">Hinzufügen</button>
-          <button class="btn small ghost" id="pvAddNew">Neue Art anlegen</button>
+          <button class="btn small" id="pvAddBtn" title="Die im Feld gewählte Art zur Auswahl hinzufügen.">Hinzufügen</button>
+          <button class="btn small ghost" id="pvAddNew" title="Eine neue Art anlegen und direkt zur Auswahl hinzufügen (wird auch in die Liste übernommen).">Neue Art anlegen</button>
           <span class="spacer"></span>
-          <button class="btn small madder" id="pvPrint">Bogen drucken</button>
+          <button class="btn small madder" id="pvPrint" title="Prüfungsbogen oder Musterlösung dieser Auswahl drucken (Variante im Dialog).">Bogen drucken</button>
         </div>
       </div>
     </div>
@@ -1380,11 +1437,11 @@ function renderExams(){
         ${ex.id===loadedExamId?'<span class="tag zp">geladen</span>':""}
       </div>
       <div class="exacts">
-        <button class="btn small" data-act="load">Laden</button>
-        <button class="btn small" data-act="copy" title="Als neue Prüfung mit heutigem Datum kopieren">Kopieren</button>
-        <button class="btn small" data-act="print">Drucken</button>
-        <button class="btn small ghost" data-act="dl" title="Als JSON herunterladen">JSON</button>
-        <button class="btn small ghost del" data-act="del" title="Löschen">Löschen</button>
+        <button class="btn small" data-act="load" title="Diese Prüfung in die Auswahl laden (zum Ansehen, Bearbeiten oder erneuten Drucken)">Laden</button>
+        <button class="btn small" data-act="copy" title="Als neue Prüfung mit heutigem Datum kopieren – z. B. für den nächsten Prüfungstag, dann frei editierbar">Kopieren</button>
+        <button class="btn small" data-act="print" title="Prüfungsbogen oder Musterlösung dieser Prüfung drucken (Variante im Dialog)">Drucken</button>
+        <button class="btn small ghost" data-act="dl" title="Diese Prüfung als .json-Datei herunterladen (Sicherung/Weitergabe)">JSON</button>
+        <button class="btn small ghost del" data-act="del" title="Diese gespeicherte Prüfung löschen">Löschen</button>
       </div>`;
     row.querySelector('[data-act="load"]').onclick=()=>loadExam(ex.id);
     row.querySelector('[data-act="copy"]').onclick=()=>copyExam(ex.id);
@@ -1622,6 +1679,8 @@ function wire(){
   // Einstellungen
   $("#btnSettings").onclick=toggleSettings;
   $("#setReset").onclick=resetSettings;
+  // Hilfe
+  $("#btnHelp").onclick=toggleHelp;
   // Profil-Auswahl
   $("#frSelect").addEventListener("change",()=>applyProfileSelect());
   $("#nivSelect").addEventListener("change",()=>applyProfileSelect());
@@ -1655,9 +1714,15 @@ function askPrintMode(cb){
 
 /* Sichtbares Feedback: welche Modul-Panels gerade geöffnet sind */
 const PANEL_BUTTONS=[
-  ["#btnGrade","#grader"],["#btnSchema","#schemaPanel"],["#btnExams","#examsPanel"],
-  ["#btnSettings","#settingsPanel"],["#btnPreview","#previewPanel"]
+  ["#btnHelp","#helpPanel"],["#btnGrade","#grader"],["#btnSchema","#schemaPanel"],
+  ["#btnExams","#examsPanel"],["#btnSettings","#settingsPanel"],["#btnPreview","#previewPanel"]
 ];
+function toggleHelp(){
+  const s=$("#helpPanel");
+  if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); s.scrollIntoView({block:"nearest"}); }
+  else s.setAttribute("hidden","");
+  syncPanelButtons();
+}
 function syncPanelButtons(){
   PANEL_BUTTONS.forEach(([b,p])=>{
     const btn=$(b), pan=$(p); if(!btn||!pan) return;

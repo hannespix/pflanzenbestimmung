@@ -240,6 +240,8 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       `window.prompt`; Kopf-Werkzeugleiste in beschriftete Gruppen (Liste ·
       Werkzeuge · Sicherung), Speicherstatus oben rechts; Auswahl-Leiste mit
       »Ziehen« zuerst und gruppierten Aktionen.
+- [x] Ausführliche Hilfe (`#helpPanel`, Button »Hilfe«) mit Kurzanleitung und
+      Erklärung jeder Funktion; detaillierte `title`-Tooltips auf Buttons/Feldern.
 - [x] Sicherung enthält Prüfungen und Einstellungen (`backupData`/`applyBackup`).
 - [x] GitHub-Pages-Deploy nach jedem Merge (`.github/workflows/pages.yml`).
 - [x] Puppeteer-Smoke-Test (`tests/smoke.mjs`) und CI-Integration (`build.yml`).

@@ -767,11 +767,11 @@ function renderExams(){
         ${ex.id===loadedExamId?'<span class="tag zp">geladen</span>':""}
       </div>
       <div class="exacts">
-        <button class="btn small" data-act="load">Laden</button>
-        <button class="btn small" data-act="copy" title="Als neue Prüfung mit heutigem Datum kopieren">Kopieren</button>
-        <button class="btn small" data-act="print">Drucken</button>
-        <button class="btn small ghost" data-act="dl" title="Als JSON herunterladen">JSON</button>
-        <button class="btn small ghost del" data-act="del" title="Löschen">Löschen</button>
+        <button class="btn small" data-act="load" title="Diese Prüfung in die Auswahl laden (zum Ansehen, Bearbeiten oder erneuten Drucken)">Laden</button>
+        <button class="btn small" data-act="copy" title="Als neue Prüfung mit heutigem Datum kopieren – z. B. für den nächsten Prüfungstag, dann frei editierbar">Kopieren</button>
+        <button class="btn small" data-act="print" title="Prüfungsbogen oder Musterlösung dieser Prüfung drucken (Variante im Dialog)">Drucken</button>
+        <button class="btn small ghost" data-act="dl" title="Diese Prüfung als .json-Datei herunterladen (Sicherung/Weitergabe)">JSON</button>
+        <button class="btn small ghost del" data-act="del" title="Diese gespeicherte Prüfung löschen">Löschen</button>
       </div>`;
     row.querySelector('[data-act="load"]').onclick=()=>loadExam(ex.id);
     row.querySelector('[data-act="copy"]').onclick=()=>copyExam(ex.id);
@@ -1009,6 +1009,8 @@ function wire(){
   // Einstellungen
   $("#btnSettings").onclick=toggleSettings;
   $("#setReset").onclick=resetSettings;
+  // Hilfe
+  $("#btnHelp").onclick=toggleHelp;
   // Profil-Auswahl
   $("#frSelect").addEventListener("change",()=>applyProfileSelect());
   $("#nivSelect").addEventListener("change",()=>applyProfileSelect());
@@ -1042,9 +1044,15 @@ function askPrintMode(cb){
 
 /* Sichtbares Feedback: welche Modul-Panels gerade geöffnet sind */
 const PANEL_BUTTONS=[
-  ["#btnGrade","#grader"],["#btnSchema","#schemaPanel"],["#btnExams","#examsPanel"],
-  ["#btnSettings","#settingsPanel"],["#btnPreview","#previewPanel"]
+  ["#btnHelp","#helpPanel"],["#btnGrade","#grader"],["#btnSchema","#schemaPanel"],
+  ["#btnExams","#examsPanel"],["#btnSettings","#settingsPanel"],["#btnPreview","#previewPanel"]
 ];
+function toggleHelp(){
+  const s=$("#helpPanel");
+  if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); s.scrollIntoView({block:"nearest"}); }
+  else s.setAttribute("hidden","");
+  syncPanelButtons();
+}
 function syncPanelButtons(){
   PANEL_BUTTONS.forEach(([b,p])=>{
     const btn=$(b), pan=$(p); if(!btn||!pan) return;
