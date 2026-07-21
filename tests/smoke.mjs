@@ -249,6 +249,23 @@ async function main() {
   assert(copyUpd.copied, "Prüfung kopieren erzeugt keine neue Prüfung");
   assert(copyUpd.updated, "Geladene Prüfung aktualisieren wirkt nicht");
 
+  // 7f) Sicherung enthält Prüfungen und Einstellungen und stellt sie wieder her
+  const backup = await page.evaluate(() => {
+    // Ausgangszustand: mind. eine Prüfung und eine angepasste zuständige Stelle
+    if (!exams.length) { drawRandom(); if ($("#examsPanel").hasAttribute("hidden")) toggleExams(); $("#exDate").value = "2026-04-01"; saveExam(); }
+    settings.stelle1 = "Prüfstelle Backup"; saveSettings();
+    const data = JSON.parse(JSON.stringify(backupData()));
+    const inBackup = { exams: Array.isArray(data.exams) ? data.exams.length : -1, stelle1: data.settings && data.settings.stelle1 };
+    // Zustand zerstören, dann aus der Sicherung wiederherstellen
+    exams = []; saveExams(); settings = defaultSettings(); saveSettings();
+    const r = applyBackup(data);
+    return { inBackup, restoredExams: exams.length, restoredStelle: settings.stelle1, r };
+  });
+  assert(backup.inBackup.exams >= 1, "Sicherung enthält keine Prüfungen");
+  assert(backup.inBackup.stelle1 === "Prüfstelle Backup", "Sicherung enthält die Einstellungen nicht");
+  assert(backup.restoredExams === backup.inBackup.exams, "Prüfungen wurden aus der Sicherung nicht wiederhergestellt");
+  assert(backup.restoredStelle === "Prüfstelle Backup", "Einstellungen wurden aus der Sicherung nicht wiederhergestellt");
+
   // 8) Testreste im Browser-Speicher aufräumen
   await page.evaluate(() => {
     localStorage.removeItem("pflanzenkenntnis.data.baumschule_gaertner");
@@ -259,7 +276,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Smoke-Test OK – Boot, Profilwechsel (148/248), GaLaBau-Schema, Ziehen, Bogen, Prüfung speichern/laden/kopieren/aktualisieren, Einstellungen (zuständige Stelle), Vorschau (reorder/edit/entfernen), Persistenz.");
+  console.log("Smoke-Test OK – Boot, aktiver Panel-Zustand, Profilwechsel (148/248), GaLaBau-Schema, Ziehen, Bogen, Prüfung speichern/laden/kopieren/aktualisieren, Einstellungen, Vorschau, Sicherung (inkl. Prüfungen/Einstellungen), Persistenz.");
 }
 
 main().catch((e) => { console.error("Smoke-Test FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });

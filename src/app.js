@@ -238,25 +238,38 @@ function downloadText(text,name,mime){
   const a=el("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),4000);
 }
+/* Sicherung enthält die aktuelle Profilliste UND die geräteweiten Daten:
+   gespeicherte Prüfungen und Einstellungen (zuständige Stelle etc.). */
+function backupData(){
+  return { v:3, profile:profileId, exported:new Date().toISOString(),
+    plants:cache, schema, nextId, exams, settings };
+}
+function applyBackup(d){
+  if(!d||!Array.isArray(d.plants)) throw new Error("Format");
+  cache=d.plants.map(normPlant);
+  if(d.schema&&Array.isArray(d.schema.cols)){ schema=d.schema; if(!schema.scale) schema.scale=cloneSchema(PROFILE_DEFS[profileId].schema).scale; scaleCfg=schema.scale; }
+  else if(d.scale&&d.scale.mode){ schema.scale=d.scale; scaleCfg=schema.scale; }
+  nextId=d.nextId || (cache.reduce((m,p)=>Math.max(m,p.id),0)+1);
+  // Geräteweite Daten wiederherstellen (rückwärtskompatibel: fehlt der Schlüssel
+  // in älteren Sicherungen, bleibt der Bestand unangetastet).
+  let exN=null;
+  if(Array.isArray(d.exams)){ exams=d.exams; saveExams(); exN=d.exams.length; }
+  if(d.settings&&typeof d.settings==="object"){ settings=Object.assign(defaultSettings(),d.settings); saveSettings(); }
+  selection=[]; loadedExamId=null; markDirty(); refresh(); renderAll();
+  return { plants:cache.length, exams:exN };
+}
 function exportBackup(){
   const d=new Date().toISOString().slice(0,10);
-  downloadText(JSON.stringify({v:2,profile:profileId,exported:new Date().toISOString(),plants:cache,schema,nextId},null,0),
-    `pflanzenliste_${profileId}_${d}.json`);
-  toast("Backup-Datei erstellt");
+  downloadText(JSON.stringify(backupData(),null,0), `pflanzenliste_${profileId}_${d}.json`);
+  toast(`Sicherung erstellt (${cache.length} Arten, ${exams.length} Prüfungen)`);
 }
 function importBackup(){
   const inp=el("input"); inp.type="file"; inp.accept=".json,application/json";
   inp.onchange=async()=>{
     const f=inp.files[0]; if(!f) return;
     try{
-      const d=JSON.parse(await f.text());
-      if(!d||!Array.isArray(d.plants)) throw new Error("Format");
-      cache=d.plants.map(normPlant);
-      if(d.schema&&Array.isArray(d.schema.cols)){ schema=d.schema; if(!schema.scale) schema.scale=cloneSchema(PROFILE_DEFS[profileId].schema).scale; scaleCfg=schema.scale; }
-      else if(d.scale&&d.scale.mode){ schema.scale=d.scale; scaleCfg=schema.scale; }
-      nextId=d.nextId || (cache.reduce((m,p)=>Math.max(m,p.id),0)+1);
-      selection=[]; markDirty(); refresh(); renderAll();
-      toast(cache.length+" Arten aus Sicherung geladen");
+      const r=applyBackup(JSON.parse(await f.text()));
+      toast(`Sicherung geladen: ${r.plants} Arten`+(r.exams!=null?`, ${r.exams} Prüfungen`:""));
     }catch(e){ toast("Keine gültige Backup-Datei (.json)",true); }
   };
   inp.click();

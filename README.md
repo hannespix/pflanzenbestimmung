@@ -46,7 +46,9 @@ Arbeitsanweisungen für die Weiterentwicklung mit Claude Code stehen in
   bestimmt die Spaltenfolge auf dem Bogen) und wie viele Pflanzen je Prüfung.
 - **Notenrechner** mit **linearer BW-Skala** (Standard) oder IHK-Schlüssel;
   Notengrenzen editierbar; zeigt Note, Prozent, Dezimalnote und die Punktschwellen.
-- **Browser-Speicher** (localStorage) je Profil, **Backup als `.json`**,
+- **Browser-Speicher** (localStorage) je Profil, **Sicherung als `.json`**
+  (enthält die Profilliste **sowie die gespeicherten Prüfungen und die
+  Einstellungen** – »Sicherung laden« stellt alles wieder her),
   **Zurücksetzen** auf die hinterlegte Liste. In Kiosk-/Sandbox-Umgebungen ohne
   localStorage bleiben Änderungen wenigstens für die laufende Sitzung erhalten.
 - **Barrierearm, druckoptimiert (A4)**, herbarium-nahe Gestaltung.
