@@ -76,9 +76,10 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
 
 - **Drei Lernmodi:**
   - **Karteikarten** mit **Spaced-Repetition (Leitner-Boxen 1–5).** Karte umdrehen,
-    dann selbst einschätzen: »Nochmal« · »Schwer« · »Gewusst«. Fällige Karten kommen
-    nach dem Leitner-Rhythmus (0/1/3/7/16 Tage) wieder – man übt gezielt das, was
-    noch sitzt bzw. wieder dran ist.
+    dann selbst einschätzen: »Nochmal« (heute nochmal) · »Unsicher« (bald) · »Gewusst«
+    (in einigen Tagen). Jede Bewertung plant die Karte sofort neu ein – Intervalle
+    1/3/7/16/35 Tage, und **jeder Knopf zeigt an, wann die Karte wiederkommt**.
+    »Nochmal« bringt sie zusätzlich in derselben Sitzung erneut; »sitzt« ab Box 4.
   - **Multiple-Choice-Quiz** – eine richtige Antwort unter plausiblen Ablenkern
     (bevorzugt aus derselben Kategorie bzw. Familie).
   - **Tippen** – Antwort selbst eingeben; tippfehlertolerant (kleine Abweichungen
