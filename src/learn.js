@@ -403,8 +403,18 @@ function applyMode(){
    Die Online-Anreicherung ist OPT-IN (Knopf) und nutzt JSONP (dynamisch erzeugtes
    <script>), nicht fetch/XHR – umgeht damit CORS/file://-Sperren und hält den
    Offline-Kern intakt: ohne Netz funktioniert das Tool vollständig weiter. */
+/* Suchbegriff für externe Datenbanken: reines Binom (Gattung + Art-Epitheton),
+   OHNE Sorten-/Gruppen-/Rang-Zusatz. Wichtig, sonst finden die DBs nichts – z. B.
+   NaturaDB liefert für »Beta vulgaris Conditiva-Grp.« 0 Treffer, für »Beta vulgaris«
+   dagegen Dutzende. Also bewusst nicht zu feingranular. */
+function binomEpithet(a){
+  return (norm(a).split(" ").filter(w=> w && !/^([×x]|var\.|subsp\.|ssp\.|f\.|cv\.|convar\.)$/i.test(w))[0]) || "";
+}
+function searchName(c){ return norm(c.g+" "+binomEpithet(c.a)); }
 function deepLinks(c){
-  const q = encodeURIComponent(norm(c.g+" "+c.a));
+  const name = searchName(c);
+  const q = encodeURIComponent(name);
+  const slug = name.toLowerCase().replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,"");  // z. B. »beta-vulgaris«
   const kat = (c.kat||"").toLowerCase();
   // Zusatzquellen nach Fachrichtung (Kategorie-Bezeichnungen sind je Liste uneinheitlich)
   const woody   = /baumschule|landschaftsbau|obstbau/.test(profileId) || /gehölz|baum|strauch|obst/.test(kat);
@@ -413,6 +423,7 @@ function deepLinks(c){
   if(woody)   list.push({ n:"Baumkunde", u:"https://www.baumkunde.de/Suche/"+q+"/" });
   if(stauden) list.push({ n:"Gaißmayer", u:"https://www.gaissmayer.de/?s="+q });
   list.push({ n:"NaturaDB",    u:"https://www.naturadb.de/suche/?q="+q });
+  list.push({ n:"InfoFlora",   u:"https://www.infoflora.ch/de/flora/"+slug+".html" });
   list.push({ n:"iNaturalist", u:"https://www.inaturalist.org/taxa/search?q="+q+"&locale=de" });
   return list;
 }
@@ -458,8 +469,7 @@ function wikiCandidates(card){
   const cands=[], seen=new Set();
   const add=s=>{ s=norm(s); if(s && !seen.has(s.toLowerCase())){ seen.add(s.toLowerCase()); cands.push(s); } };
   add(card.g+" "+card.a);                               // voller Name (z. B. mit Sorte/Gruppe)
-  const epi=(norm(card.a).split(" ").filter(w=>!/^([×x]|var\.|subsp\.|ssp\.|f\.|cv\.|convar\.)$/i.test(w))[0])||"";
-  if(epi) add(card.g+" "+epi);                          // reines Binom ohne Zusatz (»Beta vulgaris«)
+  add(searchName(card));                                // reines Binom ohne Zusatz (»Beta vulgaris«)
   add((card.de||"").split(/[,;/]/)[0]);                 // deutscher Name (oft der echte Artikeltitel)
   return cands;
 }
@@ -596,3 +606,4 @@ window.startSession=startSession;
 window.openInfo=openInfo;
 window.closeInfo=closeInfo;
 window.wikiCandidates=wikiCandidates;
+window.searchName=searchName;
