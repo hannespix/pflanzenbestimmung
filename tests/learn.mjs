@@ -114,6 +114,14 @@ async function main() {
   assert(info.hasLoad, "Info-Modal: »Online-Infos laden«-Knopf fehlt");
   assert(info.closed, "Info-Modal schließt nicht");
 
+  // Wikipedia-Auflösung: Sorten-/Gruppen-Eintrag findet das reine Binom, NIE die bloße Gattung
+  const wc = await page.evaluate(() => {
+    const c = allCards.find((x) => /^beta$/i.test(x.g)) || { g: "Beta", a: "vulgaris Conditiva-Grp.", de: "Rote Bete" };
+    return { name: (c.g + " " + c.a).trim(), cands: wikiCandidates(c) };
+  });
+  assert(wc.cands.some((t) => /^beta vulgaris$/i.test(t)), "Wiki-Kandidaten müssen das reine Binom »Beta vulgaris« enthalten (" + wc.name + " → " + JSON.stringify(wc.cands) + ")");
+  assert(!wc.cands.some((t) => /^beta$/i.test(t)), "Wiki-Kandidaten dürfen NICHT die bloße Gattung »Beta« enthalten (griech. Buchstabe)");
+
   // Quiz: richtige Option wählen -> Feedback »Richtig«
   const quiz = await page.evaluate(() => {
     document.querySelector('#modeTabs button[data-mode="quiz"]').click();
