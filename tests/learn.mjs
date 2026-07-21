@@ -138,6 +138,30 @@ async function main() {
   });
   assert(typed.good, "Tippen: korrekte Eingabe nicht als richtig gewertet");
 
+  // Liste / Nachschlagen: kategorisiert, durchsuchbar, Klick öffnet Info-Modal
+  const list = await page.evaluate(() => {
+    document.querySelector('#modeTabs button[data-mode="list"]').click();
+    const cats = document.querySelectorAll("#stage .catblock").length;
+    const allRows = document.querySelectorAll("#stage .sprow").length;
+    const startHidden = document.querySelector("#startRow").hidden;
+    const searchShown = !document.querySelector("#listSearchRow").hidden;
+    const s = document.querySelector("#listSearch");
+    s.value = "Allium"; s.dispatchEvent(new Event("input"));
+    const hits = [...document.querySelectorAll("#stage .sprow")].map((e) => e.textContent.toLowerCase());
+    const allMatch = hits.length > 0 && hits.every((t) => t.includes("allium"));
+    s.value = ""; s.dispatchEvent(new Event("input"));
+    const backToAll = document.querySelectorAll("#stage .sprow").length;
+    document.querySelector("#stage .sprow").click();
+    const modalOpen = !!document.querySelector("#infoScrim");
+    closeInfo();
+    return { cats, allRows, startHidden, searchShown, hitN: hits.length, allMatch, backToAll, modalOpen };
+  });
+  assert(list.cats >= 1 && list.allRows === 148, "Liste: 148 Zeilen in Kategorien erwartet, war " + list.allRows);
+  assert(list.startHidden && list.searchShown, "Liste: Start-Leiste aus / Suchfeld an erwartet");
+  assert(list.hitN > 0 && list.hitN < list.allRows && list.allMatch, "Liste-Suche »Allium« filtert nicht korrekt (" + list.hitN + ")");
+  assert(list.backToAll === list.allRows, "Liste: Leeren der Suche stellt nicht alle Zeilen wieder her");
+  assert(list.modalOpen, "Liste: Klick auf eine Art öffnet kein Info-Modal");
+
   // Fortschritt-Persistenz über einen Reload
   await page.waitForFunction("localStorage.getItem('pflanzenlernen.progress.gemuesebau_gaertner')!=null", { timeout: 5000 });
   const before = await page.evaluate(() => Object.keys(progress).length);
@@ -151,7 +175,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Quiz, Tippen, Fortschritt-Persistenz.");
+  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (kategorisiert/durchsuchbar/klickbar), Quiz, Tippen, Fortschritt-Persistenz.");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });

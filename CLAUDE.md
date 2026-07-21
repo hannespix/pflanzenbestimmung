@@ -311,6 +311,12 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Quelle CC BY-SA). Trigger in Karteikarte/Quiz/Tippen. `check_offline.py` bleibt
       grün (kein `fetch`, kein statisches `script src`). `tests/learn.mjs` prüft Modal
       + Deep-Links offline (ohne den Netz-Abruf auszulösen).
+- [x] **Nachschlage-Liste im Lern-Tool** (vierter Modus »Liste«): alle Arten des
+      Profils nach Kategorie gruppiert (wie im Prüfungswerkzeug), **durchsuchbar**
+      (Name/Familie/Synonym, akzent-tolerant via `deacc`); Klick auf eine Art öffnet
+      das Info-Modal. Start-Leiste und Fortschritt sind im Listenmodus ausgeblendet
+      (`applyMode()`); `[hidden]{display:none!important}` sorgt dafür, dass das
+      Attribut trotz `display:flex` greift. `tests/learn.mjs` deckt Liste + Suche ab.
 - [x] **Gemeinsame Startseite** (`index.html`, aus `src/start.html`): verzweigt zu
       **Lernen** und **Prüfen** (zwei Karten), zeigt die Kennzahl der gemeinsamen
       Datenbank (Platzhalter `/*__STATS__*/`). Reziproker »Lernversion«-Link im
