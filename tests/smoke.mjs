@@ -328,9 +328,20 @@ async function main() {
     localStorage.removeItem("pflanzenkenntnis.settings");
   });
 
+  // 9) Mobile-Layout: Status-Pille überlagert die Überschrift nicht (schmale Breite)
+  await page.setViewport({ width: 360, height: 720, deviceScaleFactor: 1 });
+  const mobile = await page.evaluate(() => {
+    const h1 = document.querySelector(".masthead h1").getBoundingClientRect();
+    const st = document.querySelector(".dbstatus").getBoundingClientRect();
+    const overlap = !(st.right < h1.left || st.left > h1.right || st.bottom < h1.top || st.top > h1.bottom);
+    return { overlap, statusBelowTitle: st.top >= h1.bottom - 1 };
+  });
+  assert(!mobile.overlap && mobile.statusBelowTitle,
+    "Mobile: Status-Pille überlagert die Überschrift (overlap=" + mobile.overlap + ")");
+
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Smoke-Test OK – Boot, aktiver Panel-Zustand, Hilfe + Tooltips, Profilwechsel (148/248), GaLaBau-Schema, Ziehen, Bogen, Prüfung speichern/laden/kopieren/aktualisieren, Einstellungen, Vorschau, Sicherung, Persistenz.");
+  console.log("Smoke-Test OK – Boot, aktiver Panel-Zustand, Hilfe + Tooltips, Profilwechsel (148/248), Schema-Matrix, Ziehen, Bogen, Prüfungen (speichern/laden/kopieren/aktualisieren), Einstellungen, Vorschau, Sicherung, Persistenz, Mobile-Kopf.");
 }
 
 main().catch((e) => { console.error("Smoke-Test FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });

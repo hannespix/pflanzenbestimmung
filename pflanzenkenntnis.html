@@ -109,7 +109,7 @@ input,select{font-family:inherit; color:inherit}
 .btn.madder.small{background:var(--madder); border-color:#7e2e23; color:#fbeee9}
 .btn.madder.small:hover{background:#7e2e23}
 /* Kopfzeile: Titel + Hilfe + Speicherstatus */
-.mast-top{display:flex; justify-content:space-between; align-items:flex-start; gap:14px}
+.mast-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px 14px; flex-wrap:wrap}
 .mast-title{min-width:0}
 .mast-right{display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end}
 /* Hilfe-Panel */
@@ -334,6 +334,10 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
   .row{grid-template-columns:24px 1fr; gap:10px}
   .rowacts{grid-column:1/-1; opacity:1; justify-content:flex-end}
   .modal .grid2{grid-template-columns:1fr}
+  /* Kopf: Titel und Status/Hilfe stapeln, damit die Status-Pille die
+     Überschrift nicht überlagert */
+  .mast-top{flex-direction:column; align-items:stretch}
+  .mast-right{width:100%; justify-content:space-between; margin-top:2px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none !important}}
 
