@@ -284,8 +284,10 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       unbeschriftete/AP-ZP-Markerspalten, Verwendungs-Kategorie, Hybrid-Gattungen).
 - [x] **Zweites Werkzeug: Lern-Tool für Azubis** (`pflanzen-lernen.html`, aus
       denselben Seeds). Kein Prüfungslisten-Ziehen, kein Notenschlüssel. Drei Modi:
-      **Karteikarten** mit Spaced-Repetition (Leitner-Boxen 1–5, 0/1/3/7/16 Tage,
-      Selbst­einschätzung Nochmal/Schwer/Gewusst), **Multiple-Choice-Quiz**
+      **Karteikarten** mit Spaced-Repetition (Leitner-Boxen 1–5, Intervalle
+      1/3/7/16/35 Tage; Selbsteinschätzung Nochmal/Unsicher/Gewusst plant je Box
+      unterschiedlich ein und aktualisiert den Fortschritt live, »Nochmal« zeigt die
+      Karte in derselben Sitzung erneut), **Multiple-Choice-Quiz**
       (Ablenker bevorzugt aus gleicher Kategorie/Familie) und **Tippen**
       (tippfehlertolerant, Gattung/Art bzw. Synonyme getrennt geprüft).
       Abfragerichtung de→bot / bot→de / Art→Familie, Filter Kategorie/ZP,

@@ -71,11 +71,26 @@ async function main() {
     document.querySelector("#card").click();               // umdrehen
     const flippedShown = /class="answer"/.test(document.querySelector("#card").innerHTML);
     document.querySelector(".rate .r-good").click();        // bewerten -> Box hoch, advance
-    return { hasCard, flippedShown, box: (progress[key] || {}).box || 0, doneAfter: sess.done };
+    return { hasCard, flippedShown, box: (progress[key] || {}).box || 0,
+             due: (progress[key] || {}).due || "", today: todayISO(), doneAfter: sess.done };
   });
   assert(cards.hasCard, "Karteikarte wird nicht angezeigt");
   assert(cards.flippedShown, "Karteikarte zeigt nach dem Umdrehen keine Antwort");
-  assert(cards.box >= 1 && cards.doneAfter === 1, "Bewertung wirkt nicht (Box/Fortschritt)");
+  assert(cards.doneAfter === 1, "Fortschritt (sess.done) stimmt nach einer Bewertung nicht");
+  assert(cards.box >= 2 && cards.due > cards.today,
+    "»Gewusst« muss eine neue Karte in Box ≥2 heben und in die Zukunft planen (war Box " + cards.box + ", fällig " + cards.due + ")");
+
+  // Leitner: die drei Bewertungen planen eine NEUE Karte unterschiedlich ein
+  const sched = await page.evaluate(() => {
+    const fresh = pool().filter((c) => !(progress[c.key] && progress[c.key].box)).slice(0, 3);
+    grade(fresh[0], "again"); grade(fresh[1], "hard"); grade(fresh[2], "good");
+    const P = (k) => progress[k];
+    return { t: todayISO(), again: P(fresh[0].key), hard: P(fresh[1].key), good: P(fresh[2].key) };
+  });
+  assert(sched.again.box === 1 && sched.again.due === sched.t, "again: Box 1, heute fällig");
+  assert(sched.hard.box === 1 && sched.hard.due > sched.t, "hard (neu): Box 1, aber künftig fällig");
+  assert(sched.good.box >= 2 && sched.good.due > sched.t, "good (neu): Box ≥2, künftig fällig");
+  assert(sched.again.due !== sched.good.due, "again und good dürfen eine neue Karte nicht gleich einplanen");
 
   // Quiz: richtige Option wählen -> Feedback »Richtig«
   const quiz = await page.evaluate(() => {
@@ -114,7 +129,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Karteikarten (umdrehen/bewerten), Quiz, Tippen, Fortschritt-Persistenz.");
+  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Quiz, Tippen, Fortschritt-Persistenz.");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
