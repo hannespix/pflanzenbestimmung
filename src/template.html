@@ -105,9 +105,16 @@ input,select{font-family:inherit; color:inherit}
 .pvadd input{flex:1; min-width:220px; border:1px solid var(--rule-strong); border-radius:3px; padding:8px 10px; font-size:14px; background:#fff}
 .btn.madder.small{background:var(--madder); border-color:#7e2e23; color:#fbeee9}
 .btn.madder.small:hover{background:#7e2e23}
-.masthead .tools{display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 0 8px; align-items:center}
+/* Kopfzeile: Titel + Speicherstatus */
+.mast-top{display:flex; justify-content:space-between; align-items:flex-start; gap:14px}
+.mast-title{min-width:0}
+/* Gruppierte Werkzeugleiste (Liste · Werkzeuge · Sicherung) */
+.masthead .tools{display:flex; flex-wrap:wrap; gap:14px 22px; margin:16px 0 0 8px; align-items:flex-start}
+.tgroup{display:flex; flex-direction:column; gap:6px}
+.tgroup .glabel{font-family:var(--mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--sepia); padding-left:2px}
+.tgroup .grow{display:flex; flex-wrap:wrap; gap:8px}
 .spacer{flex:1 1 auto}
-.dbstatus{font-family:var(--mono); font-size:12px; color:var(--ink-soft); display:flex; align-items:center; gap:7px}
+.dbstatus{font-family:var(--mono); font-size:12px; color:var(--ink-soft); display:flex; align-items:center; gap:7px; white-space:nowrap; background:var(--surface-2); border:1px solid var(--rule); border-radius:20px; padding:5px 12px}
 .dot{width:8px; height:8px; border-radius:50%; background:var(--rule-strong)}
 .dot.saved{background:var(--green)} .dot.dirty{background:var(--madder)}
 
@@ -166,9 +173,12 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .count .n{font-size:30px; font-weight:600; color:var(--green-deep); line-height:1; font-variant-numeric:tabular-nums}
 .count .of{font-size:14px; color:var(--ink-soft)}
 .count .lab{font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--sepia); margin-left:2px}
-.drawn{display:flex; align-items:center; gap:6px}
-.drawn input{width:52px; border:1px solid var(--rule-strong); border-radius:3px; padding:6px 8px; font-size:14px; text-align:center; font-family:var(--mono)}
-.pts-pill{font-family:var(--mono); font-size:11px; color:var(--madder); background:var(--madder-tint); border:1px solid var(--madder-soft); border-radius:20px; padding:3px 9px; letter-spacing:.03em}
+/* Ziehen-Gruppe: Anzahl + Zufällig ziehen (Start des Ablaufs) */
+.draw{display:flex; align-items:center; gap:8px; padding-right:14px; border-right:1px solid var(--rule)}
+.drawlab{font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--sepia)}
+.draw input{width:56px; border:1px solid var(--rule-strong); border-radius:3px; padding:7px 8px; font-size:15px; text-align:center; font-family:var(--mono); background:#fff}
+.pts-pill{font-family:var(--mono); font-size:11px; color:var(--madder); background:var(--madder-tint); border:1px solid var(--madder-soft); border-radius:20px; padding:3px 9px; letter-spacing:.03em; align-self:center}
+.selacts{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
 
 /* ---------- Liste (Herbarium-Register) ---------- */
 .cathead{
@@ -241,6 +251,11 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .rcard.sel{border-color:var(--green); background:var(--green-tint)}
 .rcard input{margin-top:3px}
 .rcard b{font-size:14px} .rcard span{font-size:12.5px; color:var(--ink-soft); display:block; margin-top:2px}
+/* Karten-Buttons (z. B. Druck-Dialog): wählbare Karte statt Radiobutton */
+.rcard-btn{background:var(--surface-2); text-align:left; width:100%; align-items:center; font:inherit; color:inherit; transition:background .12s,border-color .12s}
+.rcard-btn:hover{border-color:var(--green); background:#fff}
+.rcard-btn .ic{width:24px; height:24px; color:var(--green-deep); flex:none}
+.rcard-btn:last-child .ic{color:var(--madder)}
 
 /* ---------- Toast ---------- */
 .toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px); opacity:0;
@@ -349,25 +364,43 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 <body>
 <div class="wrap">
   <header class="masthead">
-    <p class="eyebrow">Abschlussprüfung · Pflanzenkenntnis</p>
-    <h1>Pflanzenkenntnis · Prüfungslisten</h1>
+    <div class="mast-top">
+      <div class="mast-title">
+        <p class="eyebrow">Abschlussprüfung · Pflanzenkenntnis</p>
+        <h1>Pflanzenkenntnis · Prüfungslisten</h1>
+      </div>
+      <span class="dbstatus" title="Speicherstatus dieser Liste im Browser"><span class="dot" id="dbdot"></span><span id="dbname">Standardliste</span></span>
+    </div>
     <div class="profilerow">
       <div class="pfield"><label for="frSelect">Fachrichtung</label><select id="frSelect"></select></div>
       <div class="pfield"><label for="nivSelect">Ausbildung</label><select id="nivSelect"></select></div>
       <span class="profsub" id="profSub"></span>
     </div>
     <div class="tools">
-      <button class="btn primary" id="btnImport"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>Excel importieren</button>
-      <button class="btn" id="btnAdd"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>Art hinzufügen</button>
-      <button class="btn" id="btnGrade"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h14a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 7h8M8 11h3M14 11h2M8 15h3M14 15h2"/></svg>Notenrechner</button>
-      <button class="btn" id="btnSchema"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 12h16M4 19h16M8 3v4M14 10v4M10 17v4"/></svg>Prüfungsschema</button>
-      <button class="btn" id="btnExams"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Prüfungen</button>
-      <button class="btn" id="btnSettings"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Einstellungen</button>
-      <span class="spacer"></span>
-      <button class="btn ghost" id="btnOpen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Sicherung laden</button>
-      <button class="btn ghost" id="btnSave"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>Sichern</button>
-      <button class="btn ghost" id="btnReset" title="Zurück zur hinterlegten Liste dieses Profils"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 019-9 9 9 0 016.5 2.8L21 8M21 3v5h-5"/><path d="M21 12a9 9 0 01-9 9 9 9 0 01-6.5-2.8L3 16M3 21v-5h5"/></svg>Standardliste</button>
-      <span class="dbstatus"><span class="dot" id="dbdot"></span><span id="dbname">Standardliste</span></span>
+      <div class="tgroup">
+        <span class="glabel">Liste</span>
+        <div class="grow">
+          <button class="btn primary" id="btnImport"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>Excel importieren</button>
+          <button class="btn" id="btnAdd"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>Art hinzufügen</button>
+        </div>
+      </div>
+      <div class="tgroup">
+        <span class="glabel">Werkzeuge</span>
+        <div class="grow">
+          <button class="btn" id="btnSchema"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 12h16M4 19h16M8 3v4M14 10v4M10 17v4"/></svg>Prüfungsschema</button>
+          <button class="btn" id="btnGrade"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h14a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 7h8M8 11h3M14 11h2M8 15h3M14 15h2"/></svg>Notenrechner</button>
+          <button class="btn" id="btnExams"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Prüfungen</button>
+          <button class="btn" id="btnSettings"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Einstellungen</button>
+        </div>
+      </div>
+      <div class="tgroup">
+        <span class="glabel">Sicherung</span>
+        <div class="grow">
+          <button class="btn ghost" id="btnOpen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Sicherung laden</button>
+          <button class="btn ghost" id="btnSave"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>Sichern</button>
+          <button class="btn ghost" id="btnReset" title="Zurück zur hinterlegten Liste dieses Profils"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 019-9 9 9 0 016.5 2.8L21 8M21 3v5h-5"/><path d="M21 12a9 9 0 01-9 9 9 9 0 01-6.5-2.8L3 16M3 21v-5h5"/></svg>Standardliste</button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -384,18 +417,19 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
   </div>
 
   <div class="selbar">
-    <div class="count"><span class="n" id="selN">0</span><span class="of">/ <span id="selTarget">20</span></span><span class="lab">gezogen</span></div>
-    <span class="pts-pill" id="ptsPill">max. 0 P.</span>
-    <span class="spacer"></span>
-    <div class="drawn">
-      <label class="switch" style="gap:6px"><span style="font-family:var(--mono);font-size:12px;color:var(--sepia)">Anzahl</span></label>
+    <div class="draw">
+      <label class="drawlab" for="drawCount">Anzahl</label>
       <input id="drawCount" type="number" min="1" max="60" value="20" aria-label="Anzahl zu ziehender Arten">
       <button class="btn primary" id="btnDraw"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4H4v3M17 4h3v3M7 20H4v-3M17 20h3v-3"/><circle cx="9" cy="9" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.3" fill="currentColor" stroke="none"/></svg>Zufällig ziehen</button>
     </div>
-    <button class="btn" id="btnShuffle" title="Reihenfolge der Auswahl neu mischen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 3h5v5M4 20l17-17M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>Mischen</button>
-    <button class="btn" id="btnPreview" title="Auswahl als Bogen-Vorschau ansehen und bearbeiten"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.5"/></svg>Vorschau · bearbeiten</button>
-    <button class="btn ghost" id="btnClear">Auswahl leeren</button>
-    <button class="btn madder" id="btnPrint"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>Bogen drucken</button>
+    <div class="count"><span class="n" id="selN">0</span><span class="of">/ <span id="selTarget">20</span></span><span class="lab">gezogen</span><span class="pts-pill" id="ptsPill">max. 0 P.</span></div>
+    <span class="spacer"></span>
+    <div class="selacts">
+      <button class="btn" id="btnShuffle" title="Reihenfolge der Auswahl neu mischen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 3h5v5M4 20l17-17M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>Mischen</button>
+      <button class="btn" id="btnPreview" title="Auswahl als Bogen-Vorschau ansehen und bearbeiten"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.5"/></svg>Vorschau · bearbeiten</button>
+      <button class="btn ghost" id="btnClear">Auswahl leeren</button>
+      <button class="btn madder" id="btnPrint"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>Bogen drucken</button>
+    </div>
   </div>
 
   <section class="grader" id="grader" hidden>
@@ -527,6 +561,26 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       <button class="btn ghost" id="editCancel">Abbrechen</button>
       <button class="btn primary" id="editSave">Speichern</button>
     </footer>
+  </div>
+</div>
+
+<!-- ========== Druck-Dialog ========== -->
+<div class="scrim" id="printScrim">
+  <div class="modal">
+    <header><h3>Bogen drucken</h3><p>Welche Variante möchtest du drucken?</p></header>
+    <div class="body">
+      <div class="radio-cards">
+        <button class="rcard rcard-btn" id="printBlank">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>
+          <div><b>Prüfungsbogen</b><span>Leer, zum Ausfüllen durch die Prüflinge.</span></div>
+        </button>
+        <button class="rcard rcard-btn" id="printSolution">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          <div><b>Musterlösung</b><span>Mit Antworten und Punktespalte — nur für Prüfende.</span></div>
+        </button>
+      </div>
+    </div>
+    <footer><button class="btn ghost" id="printCancel">Abbrechen</button></footer>
   </div>
 </div>
 

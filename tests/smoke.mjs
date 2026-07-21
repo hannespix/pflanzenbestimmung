@@ -121,6 +121,17 @@ async function main() {
   assert(blank.rows === 20, "Prüfungsbogen sollte 20 Zeilen haben, war " + blank.rows);
   assert(!blank.note, "Leerer Prüfungsbogen darf 'Nur für Prüfende' nicht zeigen");
 
+  // 6a) Druck-Dialog (ersetzt window.prompt): öffnet, wählt Variante, schließt
+  const printDlg = await page.evaluate(() => {
+    let picked = null;
+    askPrintMode((m) => { picked = m; });
+    const opened = $("#printScrim").classList.contains("open");
+    $("#printSolution").click();
+    return { opened, closed: !$("#printScrim").classList.contains("open"), picked };
+  });
+  assert(printDlg.opened, "Druck-Dialog öffnet nicht");
+  assert(printDlg.closed && printDlg.picked === "solution", "Druck-Dialog liefert die gewählte Variante nicht");
+
   // 6b) GaLaBau-Schema-Overrides: Fachwerker Deutscher Name (3) zuerst, Gattung/Art je 0,5
   await page.select("#frSelect", "garten_und_landschaftsbau");
   await page.select("#nivSelect", "fachwerker");
