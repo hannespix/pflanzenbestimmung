@@ -303,8 +303,8 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       `src/learn.js`; `build.py` baut beide Dateien; Smoke-Test `tests/learn.mjs`;
       CI und Pages-Deploy erfassen beide Dateien.
 - [x] **Pflanzen-Info-Modal im Lern-Tool** (»ℹ Mehr zur Pflanze«): kuratierte
-      Deep-Links je Art (Wikipedia/NaturaDB/Baumkunde/Gaißmayer/GBIF/iNaturalist, aus
-      dem botan. Namen gebaut, Zusatzquellen nach Fachrichtung; öffnen neuen Tab →
+      Deep-Links je Art (Wikipedia/NaturaDB/Baumkunde/Gaißmayer/Bilder-Suche/iNaturalist,
+      aus dem botan. Namen gebaut, Zusatzquellen nach Fachrichtung; öffnen neuen Tab →
       offline-rein) plus **opt-in** »Online-Infos laden« via **Wikipedia-JSONP**
       (deutscher Kurztext + Vorschaubild direkt im Modal, funktioniert auch als lokale
       Datei, Cache je Art, Offline-/Nicht-gefunden-Fallback mit »Erneut versuchen«,

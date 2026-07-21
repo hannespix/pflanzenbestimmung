@@ -413,7 +413,7 @@ function deepLinks(c){
   if(woody)   list.push({ n:"Baumkunde", u:"https://www.baumkunde.de/Suche/"+q+"/" });
   if(stauden) list.push({ n:"Gaißmayer", u:"https://www.gaissmayer.de/?s="+q });
   list.push({ n:"NaturaDB",    u:"https://www.naturadb.de/suche/?q="+q });
-  list.push({ n:"GBIF",        u:"https://www.gbif.org/species/search?q="+q });
+  list.push({ n:"Bilder",      u:"https://www.google.com/search?tbm=isch&hl=de&q="+q });
   list.push({ n:"iNaturalist", u:"https://www.inaturalist.org/taxa/search?q="+q+"&locale=de" });
   return list;
 }
