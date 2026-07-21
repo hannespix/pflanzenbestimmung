@@ -19,6 +19,7 @@
   --mono:'SFMono-Regular','Cascadia Code',Menlo,Consolas,'Liberation Mono',monospace;
 }
 *{box-sizing:border-box}
+[hidden]{display:none !important}   /* damit .progress/.startrow/.listsearchrow (display:flex) das hidden-Attribut respektieren */
 html,body{margin:0}
 body{font-family:var(--sans); color:var(--ink); background:var(--paper);
   background-image:radial-gradient(var(--rule) .5px,transparent .5px); background-size:22px 22px;
@@ -142,6 +143,28 @@ main{margin-top:18px}
 .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
 .toast.err{background:var(--madder)}
 
+/* Liste / Nachschlagen (durchsuchbar, kategorisiert) */
+.listsearchrow{display:flex; align-items:center; gap:8px; border:1.4px solid var(--rule-strong); background:#fff; border-radius:6px; padding:0 12px}
+.listsearchrow:focus-within{border-color:var(--green)}
+.listsearchrow .lsic{width:17px; height:17px; color:var(--ink-faint); flex:none}
+.listsearch{flex:1; border:none; outline:none; background:transparent; padding:11px 4px; font-size:15px; color:var(--ink)}
+.listsearch::-webkit-search-cancel-button{cursor:pointer}
+.listtop{font-family:var(--mono); font-size:11.5px; color:var(--ink-soft); margin:2px 2px 14px; letter-spacing:.02em}
+.catblock{margin-bottom:22px}
+.cathead{display:flex; align-items:center; gap:10px; font-family:var(--serif); font-size:18px; font-weight:600; color:var(--green-deep); padding-bottom:6px; margin-bottom:10px; border-bottom:1.5px solid var(--rule)}
+.catn{font-family:var(--mono); font-size:11px; font-weight:400; color:var(--sepia); background:var(--surface-2); border:1px solid var(--rule); border-radius:10px; padding:1px 8px}
+.splist{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.sprow{border:1px solid var(--rule-strong); background:var(--surface); border-radius:6px; padding:10px 12px; cursor:pointer; transition:background .12s,border-color .12s,transform .04s}
+.sprow:hover{background:#fff; border-color:var(--green)}
+.sprow:active{transform:translateY(1px)}
+.sprow:focus-visible{outline:2px solid var(--madder); outline-offset:2px}
+.sp-main{display:flex; align-items:center; gap:8px}
+.sp-bot{font-family:var(--serif); font-size:15.5px; color:var(--ink); font-style:italic; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.sp-zp{font-family:var(--mono); font-size:9.5px; letter-spacing:.05em; color:var(--madder); border:1px solid var(--madder-soft); border-radius:3px; padding:0 4px; flex:none}
+.sp-go{font-size:14px; color:var(--green); flex:none}
+.sp-sub{font-size:12.5px; color:var(--ink-soft); margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.sp-fam{color:var(--sepia)}
+
 /* Info-Modal (Quellen-Deeplinks offline + optionale Online-Infos) */
 .scrim{position:fixed; inset:0; background:rgba(20,32,26,.55); display:flex; align-items:flex-start; justify-content:center; padding:5vh 16px; z-index:80; overflow:auto}
 .scrim[hidden]{display:none}
@@ -169,6 +192,7 @@ main{margin-top:18px}
   .mast-top{flex-direction:column; align-items:stretch}
   .rate button{min-width:0}
   .wphost img{float:none; display:block; width:100%; max-width:220px; margin:0 auto 12px}
+  .splist{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none !important}}
 </style>
@@ -205,10 +229,15 @@ main{margin-top:18px}
       <button data-mode="cards" class="on" title="Karteikarten mit Selbsteinschätzung und verteiltem Wiederholen (Leitner/Spaced Repetition)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="14" height="12" rx="2"/><path d="M7 9h6M7 13h4M21 8v9a2 2 0 01-2 2H8"/></svg>Karteikarten</button>
       <button data-mode="quiz" title="Multiple-Choice-Quiz: aus vier Optionen die richtige wählen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5M12 17h.01"/></svg>Quiz</button>
       <button data-mode="type" title="Tippen: den Namen selbst eingeben (tippfehler-tolerant)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8"/></svg>Tippen</button>
+      <button data-mode="list" title="Liste zum Nachschlagen: alle Arten nach Kategorie sortiert, durchsuchbar; zum Öffnen von Quellen und Infos antippen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>Liste</button>
     </div>
-    <div class="startrow">
+    <div class="startrow" id="startRow">
       <button class="btn primary big" id="btnStart" title="Neue Lernsitzung mit den aktuellen Einstellungen starten">Sitzung starten</button>
       <span class="hint" id="startHint"></span>
+    </div>
+    <div class="listsearchrow" id="listSearchRow" hidden>
+      <svg class="lsic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input id="listSearch" class="listsearch" type="search" autocomplete="off" spellcheck="false" placeholder="Liste durchsuchen – Name, Familie, Synonym …" aria-label="Liste durchsuchen">
     </div>
   </div>
 
@@ -571,6 +600,56 @@ function startHintOnly(){
   </div>`;
 }
 
+/* ---------- Liste / Nachschlagen (durchsuchbar, nach Kategorie gruppiert) ---------- */
+const deacc = s => (s==null?"":String(s)).normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+function renderList(){
+  const stage=$("#stage");
+  const raw = $("#listSearch") ? $("#listSearch").value : "";
+  const term = deacc(norm(raw)).toLowerCase();
+  let p = pool();
+  if(term){
+    const hay = c => deacc(c.g+" "+c.a+" "+c.de+" "+c.fam+" "+c.syn).toLowerCase();
+    p = p.filter(c => hay(c).includes(term));
+  }
+  if(!p.length){
+    stage.innerHTML = `<div class="stage-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <h2>Kein Treffer</h2><p>${term?("Nichts gefunden für »"+esc(raw)+"«."):"Keine Arten im aktuellen Filter."}</p></div>`;
+    return;
+  }
+  const groups=new Map();
+  p.forEach(c=>{ const k=c.kat||"Ohne Kategorie"; if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(c); });
+  const cats=[...groups.keys()].sort((a,b)=> katRank(a)-katRank(b) || a.localeCompare(b,"de"));
+  const flat=[];
+  let html=`<div class="listtop">${p.length} ${p.length===1?"Art":"Arten"}${term?(" · Treffer für »"+esc(raw)+"«"):""} · zum Nachschlagen antippen</div>`;
+  for(const cat of cats){
+    const rows=groups.get(cat).slice().sort((a,b)=> norm(a.g+" "+a.a).localeCompare(norm(b.g+" "+b.a),"de"));
+    html+=`<div class="catblock"><div class="cathead">${esc(cat)}<span class="catn">${rows.length}</span></div><ul class="splist">`;
+    rows.forEach(c=>{ const idx=flat.push(c)-1;
+      html+=`<li class="sprow" data-idx="${idx}" tabindex="0" role="button" aria-label="${esc(norm(c.g+" "+c.a))} – Infos öffnen">
+        <div class="sp-main"><span class="sp-bot">${esc(norm(c.g+" "+c.a))}</span>${c.zp?'<span class="sp-zp" title="prüfungsrelevant (ZP)">ZP</span>':""}<span class="sp-go">ℹ</span></div>
+        ${(c.de||c.fam)?`<div class="sp-sub">${c.de?esc(c.de):""}${c.de&&c.fam?" · ":""}${c.fam?`<span class="sp-fam">${esc(c.fam)}</span>`:""}</div>`:""}
+      </li>`;
+    });
+    html+=`</ul></div>`;
+  }
+  stage.innerHTML=html;
+  stage.querySelectorAll(".sprow").forEach(li=>{
+    const c=flat[+li.getAttribute("data-idx")];
+    li.onclick=()=>openInfo(c);
+    li.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openInfo(c); } };
+  });
+}
+/* Modus anwenden: Liste zeigt sofort die Nachschlage-Liste (ohne »Sitzung starten«) */
+function applyMode(){
+  const isList = mode==="list";
+  const sr=$("#startRow"), lsr=$("#listSearchRow");
+  if(sr) sr.hidden = isList;
+  if(lsr) lsr.hidden = !isList;
+  if(isList){ $("#progress").hidden = true; renderList(); }
+  else { renderProgress(); startHintOnly(); }
+}
+
 /* ---------- Info-Modal: Quellen-Deeplinks (offline) + optional Wikipedia (JSONP) ----------
    Deep-Links öffnen nur einen neuen Tab (laden nichts in die Seite) → offline-rein.
    Die Online-Anreicherung ist OPT-IN (Knopf) und nutzt JSONP (dynamisch erzeugtes
@@ -696,9 +775,9 @@ function loadProfile(id){
   profileId = id;
   allCards = cardsFor(id);
   loadProgress();
+  if($("#listSearch")) $("#listSearch").value="";   // Suche beim Profilwechsel zurücksetzen
   refreshKat();
-  renderProgress();
-  startHintOnly();
+  applyMode();                                       // Ansicht passend zum aktuellen Modus (inkl. Liste)
   store.set(LS_PREFIX+"profile", id);
 }
 function refreshKat(){
@@ -719,14 +798,17 @@ function applyProfile(){
 
 /* ---------- Verdrahtung ---------- */
 function wire(){
+  const refreshView = ()=>{ if(mode==="list") renderList(); else renderProgress(); };
   $("#frSelect").onchange=applyProfile;
   $("#nivSelect").onchange=applyProfile;
-  $("#cat").onchange=()=>renderProgress();
-  $("#onlyzp").onchange=()=>renderProgress();
-  $("#richtung").onchange=()=>{ richtung=$("#richtung").value; store.set(LS_PREFIX+"richtung",richtung); renderProgress(); };
+  $("#cat").onchange=refreshView;
+  $("#onlyzp").onchange=refreshView;
+  $("#richtung").onchange=()=>{ richtung=$("#richtung").value; store.set(LS_PREFIX+"richtung",richtung); refreshView(); };
+  $("#listSearch").oninput=()=>{ if(mode==="list") renderList(); };
   $("#modeTabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{
     mode=b.dataset.mode; store.set(LS_PREFIX+"mode",mode);
     $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
+    applyMode();
   });
   $("#btnStart").onclick=startSession;
 }

@@ -84,6 +84,10 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
     (bevorzugt aus derselben Kategorie bzw. Familie).
   - **Tippen** – Antwort selbst eingeben; tippfehlertolerant (kleine Abweichungen
     zählen als richtig), Gattung/Art bzw. Synonyme werden getrennt geprüft.
+- **Liste / Nachschlagen:** ein vierter Tab zeigt **alle** Arten des Profils nach
+  Kategorie gruppiert (wie im Prüfungswerkzeug) und **durchsuchbar** (Name, Familie,
+  Synonym; akzent-tolerant). Ein Klick auf eine Art öffnet direkt das Info-Modal
+  (Quellen-Links + optionale Online-Infos).
 - **Abfragerichtung wählbar:** Deutsch → Botanisch, Botanisch → Deutsch oder
   Art → Familie.
 - **Lernstoff eingrenzen:** nach Kategorie und optional nur **ZP-relevante** Arten;

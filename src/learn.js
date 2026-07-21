@@ -348,6 +348,56 @@ function startHintOnly(){
   </div>`;
 }
 
+/* ---------- Liste / Nachschlagen (durchsuchbar, nach Kategorie gruppiert) ---------- */
+const deacc = s => (s==null?"":String(s)).normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+function renderList(){
+  const stage=$("#stage");
+  const raw = $("#listSearch") ? $("#listSearch").value : "";
+  const term = deacc(norm(raw)).toLowerCase();
+  let p = pool();
+  if(term){
+    const hay = c => deacc(c.g+" "+c.a+" "+c.de+" "+c.fam+" "+c.syn).toLowerCase();
+    p = p.filter(c => hay(c).includes(term));
+  }
+  if(!p.length){
+    stage.innerHTML = `<div class="stage-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <h2>Kein Treffer</h2><p>${term?("Nichts gefunden für »"+esc(raw)+"«."):"Keine Arten im aktuellen Filter."}</p></div>`;
+    return;
+  }
+  const groups=new Map();
+  p.forEach(c=>{ const k=c.kat||"Ohne Kategorie"; if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(c); });
+  const cats=[...groups.keys()].sort((a,b)=> katRank(a)-katRank(b) || a.localeCompare(b,"de"));
+  const flat=[];
+  let html=`<div class="listtop">${p.length} ${p.length===1?"Art":"Arten"}${term?(" · Treffer für »"+esc(raw)+"«"):""} · zum Nachschlagen antippen</div>`;
+  for(const cat of cats){
+    const rows=groups.get(cat).slice().sort((a,b)=> norm(a.g+" "+a.a).localeCompare(norm(b.g+" "+b.a),"de"));
+    html+=`<div class="catblock"><div class="cathead">${esc(cat)}<span class="catn">${rows.length}</span></div><ul class="splist">`;
+    rows.forEach(c=>{ const idx=flat.push(c)-1;
+      html+=`<li class="sprow" data-idx="${idx}" tabindex="0" role="button" aria-label="${esc(norm(c.g+" "+c.a))} – Infos öffnen">
+        <div class="sp-main"><span class="sp-bot">${esc(norm(c.g+" "+c.a))}</span>${c.zp?'<span class="sp-zp" title="prüfungsrelevant (ZP)">ZP</span>':""}<span class="sp-go">ℹ</span></div>
+        ${(c.de||c.fam)?`<div class="sp-sub">${c.de?esc(c.de):""}${c.de&&c.fam?" · ":""}${c.fam?`<span class="sp-fam">${esc(c.fam)}</span>`:""}</div>`:""}
+      </li>`;
+    });
+    html+=`</ul></div>`;
+  }
+  stage.innerHTML=html;
+  stage.querySelectorAll(".sprow").forEach(li=>{
+    const c=flat[+li.getAttribute("data-idx")];
+    li.onclick=()=>openInfo(c);
+    li.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openInfo(c); } };
+  });
+}
+/* Modus anwenden: Liste zeigt sofort die Nachschlage-Liste (ohne »Sitzung starten«) */
+function applyMode(){
+  const isList = mode==="list";
+  const sr=$("#startRow"), lsr=$("#listSearchRow");
+  if(sr) sr.hidden = isList;
+  if(lsr) lsr.hidden = !isList;
+  if(isList){ $("#progress").hidden = true; renderList(); }
+  else { renderProgress(); startHintOnly(); }
+}
+
 /* ---------- Info-Modal: Quellen-Deeplinks (offline) + optional Wikipedia (JSONP) ----------
    Deep-Links öffnen nur einen neuen Tab (laden nichts in die Seite) → offline-rein.
    Die Online-Anreicherung ist OPT-IN (Knopf) und nutzt JSONP (dynamisch erzeugtes
@@ -473,9 +523,9 @@ function loadProfile(id){
   profileId = id;
   allCards = cardsFor(id);
   loadProgress();
+  if($("#listSearch")) $("#listSearch").value="";   // Suche beim Profilwechsel zurücksetzen
   refreshKat();
-  renderProgress();
-  startHintOnly();
+  applyMode();                                       // Ansicht passend zum aktuellen Modus (inkl. Liste)
   store.set(LS_PREFIX+"profile", id);
 }
 function refreshKat(){
@@ -496,14 +546,17 @@ function applyProfile(){
 
 /* ---------- Verdrahtung ---------- */
 function wire(){
+  const refreshView = ()=>{ if(mode==="list") renderList(); else renderProgress(); };
   $("#frSelect").onchange=applyProfile;
   $("#nivSelect").onchange=applyProfile;
-  $("#cat").onchange=()=>renderProgress();
-  $("#onlyzp").onchange=()=>renderProgress();
-  $("#richtung").onchange=()=>{ richtung=$("#richtung").value; store.set(LS_PREFIX+"richtung",richtung); renderProgress(); };
+  $("#cat").onchange=refreshView;
+  $("#onlyzp").onchange=refreshView;
+  $("#richtung").onchange=()=>{ richtung=$("#richtung").value; store.set(LS_PREFIX+"richtung",richtung); refreshView(); };
+  $("#listSearch").oninput=()=>{ if(mode==="list") renderList(); };
   $("#modeTabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{
     mode=b.dataset.mode; store.set(LS_PREFIX+"mode",mode);
     $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
+    applyMode();
   });
   $("#btnStart").onclick=startSession;
 }
