@@ -67,6 +67,21 @@ async function main() {
   // 1) Boot ohne Konsolenfehler
   assert(errs.length === 0, "Konsolenfehler beim Boot: " + errs.join(" | "));
 
+  // 1b) Aktiver Zustand: geöffnetes Modul-Panel markiert seinen Button
+  const active = await page.evaluate(() => {
+    const btn = document.querySelector("#btnGrade");
+    const wasActive = btn.classList.contains("active");
+    toggleGrader();
+    const openState = { active: btn.classList.contains("active"), pressed: btn.getAttribute("aria-pressed") };
+    toggleGrader();
+    const closedState = { active: btn.classList.contains("active"), pressed: btn.getAttribute("aria-pressed") };
+    return { wasActive, openState, closedState };
+  });
+  assert(!active.wasActive && active.openState.active && active.openState.pressed === "true",
+    "Modul-Button wird beim Öffnen nicht als aktiv markiert");
+  assert(!active.closedState.active && active.closedState.pressed === "false",
+    "Modul-Button bleibt nach dem Schließen aktiv");
+
   // 2) Standardprofil gemuesebau_gaertner: 148 Arten in der Liste sichtbar
   await page.select("#frSelect", "gemuesebau");
   await page.select("#nivSelect", "gaertner");

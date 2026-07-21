@@ -742,6 +742,7 @@ function toggleExams(){
   const s=$("#examsPanel");
   if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); if(!$("#exDate").value) $("#exDate").value=todayISO(); renderExams(); syncExamControls(); }
   else s.setAttribute("hidden","");
+  syncPanelButtons();
 }
 function renderExams(){
   const host=$("#examList"); host.innerHTML="";
@@ -781,6 +782,7 @@ function togglePreview(){
   const s=$("#previewPanel");
   if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); renderPreview(); s.scrollIntoView({block:"nearest"}); }
   else s.setAttribute("hidden","");
+  syncPanelButtons();
 }
 function movePreview(idx,dir){
   const j=idx+dir; if(j<0||j>=selection.length) return;
@@ -863,6 +865,7 @@ function toggleSettings(){
   const s=$("#settingsPanel");
   if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); renderSettings(); }
   else s.setAttribute("hidden","");
+  syncPanelButtons();
 }
 function renderSettings(){
   const host=$("#setFields"); host.innerHTML="";
@@ -897,6 +900,7 @@ function toggleGrader(){
     if(!$("#gMax").dataset.touched) $("#gMax").value=(selection.length||drawTarget())*ptsPer();
     renderGrader(); setTimeout(()=>$("#gPts").focus(),50);
   }else g.setAttribute("hidden","");
+  syncPanelButtons();
 }
 function renderGrader(){
   const max=Math.max(1, Math.round(parseFloat($("#gMax").value)||0));
@@ -1022,6 +1026,19 @@ function askPrintMode(){
   printSheet(choice.trim()==="2"?"solution":"blank");
 }
 
+/* Sichtbares Feedback: welche Modul-Panels gerade geöffnet sind */
+const PANEL_BUTTONS=[
+  ["#btnGrade","#grader"],["#btnSchema","#schemaPanel"],["#btnExams","#examsPanel"],
+  ["#btnSettings","#settingsPanel"],["#btnPreview","#previewPanel"]
+];
+function syncPanelButtons(){
+  PANEL_BUTTONS.forEach(([b,p])=>{
+    const btn=$(b), pan=$(p); if(!btn||!pan) return;
+    const open=!pan.hasAttribute("hidden");
+    btn.classList.toggle("active",open);
+    btn.setAttribute("aria-pressed",open?"true":"false");
+  });
+}
 function renderAll(){
   syncProfileUI(); refreshKatList(); renderList(); syncSelUI();
   if(!$("#grader").hasAttribute("hidden")) renderGrader();
@@ -1029,6 +1046,7 @@ function renderAll(){
   if(!$("#examsPanel").hasAttribute("hidden")){ renderExams(); syncExamControls(); }
   if(!$("#settingsPanel").hasAttribute("hidden")) renderSettings();
   if(!$("#previewPanel").hasAttribute("hidden")) renderPreview();
+  syncPanelButtons();
 }
 
 /* ---------- Fachrichtungs-/Profil-Auswahl ---------- */
@@ -1050,6 +1068,7 @@ function applyDrawDefault(){ $("#drawCount").value=drawTarget(); $("#selTarget")
 /* ---------- Prüfungsschema (Spalten/Punkte/Anzahl) ---------- */
 function toggleSchema(){
   const s=$("#schemaPanel"); if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); renderSchema(); } else s.setAttribute("hidden","");
+  syncPanelButtons();
 }
 /* Editor-Reihenfolge: erst bewertete Spalten (cols-Reihenfolge = Spaltenfolge auf
    dem Bogen), dann die restlichen Felder (0 Punkte) in Standardreihenfolge. */

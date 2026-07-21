@@ -234,6 +234,8 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Synonyme), entfernen, bestehende/neue Art ergänzen.
 - [x] Prüfungen kopieren (neues Datum) und geladene Prüfung nach Bearbeitung
       aktualisieren (`loadedExamId`).
+- [x] Sichtbares Feedback für geöffnete Modul-Panels: aktive Toggle-Buttons
+      (`.btn.active` + `aria-pressed`), zentral über `syncPanelButtons()`.
 - [x] Puppeteer-Smoke-Test (`tests/smoke.mjs`) und CI-Integration (`build.yml`).
 - [x] `localStorage`-Ausfall-Fallback (In-Memory) für Kiosk-/Sandbox-Profile.
 - [x] Konverter-Ladefehler behoben (SheetJS-Standalone via require lieferte unter

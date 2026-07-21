@@ -126,6 +126,10 @@ input,select{font-family:inherit; color:inherit}
 .btn.madder:hover{background:#7e2e23}
 .btn.ghost{background:transparent; border-color:transparent}
 .btn.ghost:hover{background:var(--surface-2); border-color:var(--rule)}
+/* Aktiver Zustand: dieses Modul-Panel ist gerade geöffnet */
+.btn.active{background:var(--green-tint); border-color:var(--green); color:var(--green-deep); font-weight:600; box-shadow:inset 0 1px 2px rgba(43,79,56,.14)}
+.btn.active:hover{background:#d7e4d6}
+.btn.active::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--green); flex:none; box-shadow:0 0 0 2px var(--green-tint)}
 .btn:disabled{opacity:.4; cursor:not-allowed}
 .btn:focus-visible,input:focus-visible,select:focus-visible,.chk:focus-visible{outline:2px solid var(--madder); outline-offset:2px}
 
