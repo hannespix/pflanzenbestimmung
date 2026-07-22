@@ -3,7 +3,8 @@
  * start.mjs – Smoke-Test für die gemeinsame Startseite (dist/index.html).
  * Prüft: Boot ohne Konsolenfehler · zwei Auswahlkarten mit korrekten Zielen ·
  * beide Zieldateien existieren · Verzweigung »Prüfen« lädt das Prüfungswerkzeug ·
- * Verzweigung »Lernen« lädt das Lern-Tool (jeweils per Klick, echte Navigation).
+ * Verzweigung »Lernen« lädt das Lern-Tool (jeweils per Klick, echte Navigation) ·
+ * Fußzeilen-Link »Impressum & Datenschutz« führt zu rechtliches.html (Impressum + DSGVO).
  */
 import fs from "fs";
 import path from "path";
@@ -37,7 +38,7 @@ function findChromium() {
 const assert = (c, m) => { if (!c) throw new Error("ASSERT: " + m); };
 
 async function main() {
-  for (const f of ["index.html", "pflanzenkenntnis.html", "pflanzen-lernen.html"])
+  for (const f of ["index.html", "pflanzenkenntnis.html", "pflanzen-lernen.html", "rechtliches.html"])
     if (!fs.existsSync(path.join(DIST, f)))
       throw new Error("dist/" + f + " fehlt – zuerst 'python3 build.py'.");
 
@@ -84,9 +85,34 @@ async function main() {
   ]);
   await page.waitForFunction("window.startSession!=null", { timeout: 10000 });
 
+  // Fußzeilen-Link zum Rechtlichen: auf der Startseite vorhanden und per Klick erreichbar
+  await page.goto(FILE, { waitUntil: "load" });
+  const legalHref = await page.evaluate(() => {
+    const a = document.querySelector(".foot a.legal");
+    return a ? a.getAttribute("href") : null;
+  });
+  assert(legalHref === "rechtliches.html", "Fußzeilen-Link »Impressum & Datenschutz« fehlt oder falsches Ziel");
+  await Promise.all([
+    page.waitForNavigation({ waitUntil: "load" }),
+    page.click(".foot a.legal"),
+  ]);
+  const legal = await page.evaluate(() => ({
+    title: document.title,
+    hasImpressum: !!document.getElementById("impressum"),
+    hasDatenschutz: !!document.getElementById("datenschutz"),
+    hasAnschrift: /Hannes Pix/.test(document.body.textContent) && /Ihringen/.test(document.body.textContent),
+    hasMail: !!document.querySelector('a[href^="mailto:"]'),
+    back: (document.querySelector("a.back") || {}).getAttribute ? document.querySelector("a.back").getAttribute("href") : null,
+  }));
+  assert(/Impressum/.test(legal.title), "rechtliches.html: Titel ohne »Impressum«");
+  assert(legal.hasImpressum && legal.hasDatenschutz, "rechtliches.html: Abschnitt Impressum/Datenschutz fehlt");
+  assert(legal.hasAnschrift, "rechtliches.html: Anschrift (Hannes Pix / Ihringen) fehlt");
+  assert(legal.hasMail, "rechtliches.html: Kontakt-E-Mail (mailto) fehlt");
+  assert(legal.back === "index.html", "rechtliches.html: Rücklink zur Startseite fehlt");
+
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Start-Smoke OK – Boot, zwei Auswahlkarten, Verzweigung »Prüfen« → Prüfungswerkzeug, »Lernen« → Lern-Tool.");
+  console.log("Start-Smoke OK – Boot, zwei Auswahlkarten, Verzweigung »Prüfen« → Prüfungswerkzeug, »Lernen« → Lern-Tool, Rechtliches (Impressum + Datenschutz) über Fußzeile erreichbar.");
 }
 
 main().catch((e) => { console.error("Start-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });

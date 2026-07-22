@@ -277,6 +277,10 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
   box-shadow:0 8px 24px rgba(28,42,34,.3); transition:.25s; z-index:60; pointer-events:none; max-width:90vw}
 .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
 .toast.err{background:var(--madder)}
+/* Seitenfuß mit Rechtlichem (im Druck über .wrap ausgeblendet) */
+.pagefoot{margin-top:40px; padding-top:18px; border-top:1px solid var(--rule); display:flex; flex-wrap:wrap; gap:8px 16px; justify-content:space-between; align-items:center; color:var(--ink-faint); font-family:var(--mono); font-size:11.5px; letter-spacing:.03em}
+.pagefoot .legal{color:var(--sepia); text-decoration:none; border-bottom:1px solid var(--rule); transition:color .12s,border-color .12s}
+.pagefoot .legal:hover{color:var(--green-deep); border-color:var(--green)}
 
 /* ---------- Notenrechner ---------- */
 .grader{margin:0 0 6px}
@@ -579,6 +583,11 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
   </section>
 
   <main id="list"></main>
+
+  <footer class="pagefoot">
+    <span>Pflanzenkenntnis · Prüfen · vollständig offline</span>
+    <a class="legal" href="rechtliches.html">Impressum &amp; Datenschutz</a>
+  </footer>
 </div>
 
 <!-- ========== Druckbogen ========== -->

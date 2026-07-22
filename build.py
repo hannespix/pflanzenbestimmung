@@ -8,6 +8,7 @@ Ergebnisse:
   dist/index.html              Startseite (verzweigt zu Lernen / Prüfen)
   dist/pflanzenkenntnis.html   Prüfungswerkzeug (für Prüfende)
   dist/pflanzen-lernen.html    Lern-Tool (für Azubis)
+  dist/rechtliches.html        Impressum & Datenschutz (statisch)
   + versionierte Verteilkopien aller Dateien im Repo-Root
 """
 import pathlib, json, sys
@@ -77,6 +78,10 @@ def main():
         stats = f"{len(seeds)} Profile · {total} Arten"
         landing = render_landing(read("src/start.html"), stats)
         write_out(landing, "index.html")
+
+    # Impressum & Datenschutz (statische Seite, keine Seeds/JS)
+    if (ROOT / "src/recht.html").exists():
+        write_out(read("src/recht.html"), "rechtliches.html")
 
     print(f"Profile mit Seed: {len(seeds)}  ·  Arten gesamt: {total}")
     for pid, arr in seeds.items():
