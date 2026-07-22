@@ -37,8 +37,9 @@ Bitte alle Antworten und Commit-/PR-Texte **auf Deutsch**.
 
 ## Architektur & Datenfluss
 
-Aus **einer** gemeinsamen Pflanzendatenbank (`seeds/`) werden **drei** eigenständige
-Offline-Dateien gebaut — eine Startseite und die zwei Werkzeuge:
+Aus **einer** gemeinsamen Pflanzendatenbank (`seeds/`) werden **vier** eigenständige
+Offline-Dateien gebaut — eine Startseite, die zwei Werkzeuge und eine statische
+Rechtliches-Seite (Impressum & Datenschutz):
 
 ```
 src/start.html  ──────────────► dist/index.html            Startseite (verzweigt zu Lernen/Prüfen)
@@ -49,7 +50,10 @@ seeds/*.json  ────────────┤      (template.html + app.
 src/{template,app}.js  ───┤
 src/{learn.html,learn.js} ┼────► dist/pflanzen-lernen.html   Lern-Tool (Azubis)
 lib/xlsx.full.min.js  ────┘      (learn.html    + learn.js + Seeds, OHNE SheetJS)
-                → build.py schreibt alle drei Dateien + versionierte Root-Kopien
+
+src/recht.html  ──────────────► dist/rechtliches.html      Impressum & Datenschutz
+                                 (statisch, ohne Seeds/JS; von allen Seiten verlinkt)
+                → build.py schreibt alle vier Dateien + versionierte Root-Kopien
 ```
 
 **Startseite** (`index.html`) — gemeinsamer Einstieg, verzweigt zu **Lernen**
@@ -93,10 +97,11 @@ Zur **Laufzeit** hält das Tool die Daten pro Profil getrennt:
 ## Build & Test
 
 ```bash
-python3 build.py                                         # -> alle drei dist/*.html + Root-Kopien
+python3 build.py                                         # -> alle vier dist/*.html + Root-Kopien
 python3 tools/check_offline.py dist/index.html             # Offline-Check Startseite (muss grün sein)
 python3 tools/check_offline.py dist/pflanzenkenntnis.html  # dito Prüfungswerkzeug
 python3 tools/check_offline.py dist/pflanzen-lernen.html   # dito Lern-Tool
+python3 tools/check_offline.py dist/rechtliches.html       # dito Impressum & Datenschutz
 ```
 
 Node (Konverter und Tests):
@@ -326,8 +331,18 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Datenbank (Platzhalter `/*__STATS__*/`). Reziproker »Lernversion«-Link im
       Prüfungswerkzeug (das Lern-Tool verlinkt bereits die »Prüfungsversion«).
       `build.py` schreibt `index.html`; Pages deployt sie als Root (`_site/index.html`);
-      Smoke-Test `tests/start.mjs` klickt beide Verzweigungen durch; CI prüft alle drei
+      Smoke-Test `tests/start.mjs` klickt beide Verzweigungen durch; CI prüft alle vier
       Dateien (Offline-Check + Smoke).
+- [x] **Impressum & Datenschutz** (`rechtliches.html`, aus `src/recht.html`): statische
+      vierte Seite (keine Seeds, kein JS), Herbarium-Look, `noindex`. Impressum nach
+      § 5 DDG (Hannes Pix, Ihringen am Kaiserstuhl; Kontakt
+      `pflanzenbestimmung@pix-el.de`) und Datenschutzerklärung (DSGVO): rein lokale
+      Verarbeitung, keine Cookies/kein Tracking, GitHub-Pages-Hosting (Art. 6 Abs. 1
+      lit. f), `localStorage`, **opt-in** Wikipedia-JSONP, externe Links, Betroffenen-
+      rechte + LfDI BW. Von allen drei Werkzeugen über eine Fußzeile (`.foot`/`.pagefoot`
+      → `rechtliches.html`) erreichbar; im Prüfungsbogen-Druck ausgeblendet (Fußzeile
+      liegt in `.wrap`). `build.py` baut die Seite; CI (Offline-Check) und Pages-Deploy
+      erfassen sie; `tests/start.mjs` klickt den Fußzeilen-Link durch und prüft Inhalt.
 
 ## Offene Aufgaben (TODO)
 

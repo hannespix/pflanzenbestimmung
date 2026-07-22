@@ -62,6 +62,8 @@ body{font-family:var(--sans); color:var(--ink); background:var(--paper);
 .foot{margin-top:24px; padding-top:18px; border-top:1px solid var(--rule); color:var(--ink-faint); font-size:12.5px; line-height:1.7}
 .foot .db{font-family:var(--mono); color:var(--sepia)}
 .foot b{color:var(--ink-soft); font-weight:600}
+.foot .legal{font-family:var(--mono); font-size:11.5px; letter-spacing:.04em; color:var(--sepia); text-decoration:none; border-bottom:1px solid var(--rule); transition:color .12s,border-color .12s}
+.foot .legal:hover{color:var(--green-deep); border-color:var(--green)}
 .spacer{flex:1}
 
 @media (max-width:620px){
@@ -115,6 +117,7 @@ html{scroll-behavior:smooth}
     <p><span class="db">Gemeinsame Datenbank: <b>/*__STATS__*/</b></span> – beide Werkzeuge werden aus
       denselben Listen gebaut, sodass Lernen und Prüfen exakt denselben Pflanzenbestand nutzen.</p>
     <p>Vollständig offline · kein CDN · Baden-Württemberg · zuständige Stelle im Prüfungswerkzeug einstellbar.</p>
+    <p><a class="legal" href="rechtliches.html">Impressum &amp; Datenschutz</a></p>
   </footer>
 </div>
 </body>

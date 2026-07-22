@@ -39,12 +39,15 @@ jobs:
         run: python3 tools/check_offline.py dist/pflanzenkenntnis.html
       - name: Offline-Check Lern-Tool (kein CDN, keine externen Ressourcen)
         run: python3 tools/check_offline.py dist/pflanzen-lernen.html
-      - name: Seite vorbereiten (Startseite + beide Werkzeuge)
+      - name: Offline-Check Impressum/Datenschutz (kein CDN, keine externen Ressourcen)
+        run: python3 tools/check_offline.py dist/rechtliches.html
+      - name: Seite vorbereiten (Startseite + beide Werkzeuge + Rechtliches)
         run: |
           mkdir -p _site
           cp dist/index.html _site/index.html
           cp dist/pflanzenkenntnis.html _site/pflanzenkenntnis.html
           cp dist/pflanzen-lernen.html _site/pflanzen-lernen.html
+          cp dist/rechtliches.html _site/rechtliches.html
       - name: Pages konfigurieren
         uses: actions/configure-pages@v5
         with:
