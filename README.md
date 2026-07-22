@@ -103,6 +103,8 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
   Optional holt »Online-Infos laden« per Wikipedia einen deutschen Kurztext samt
   Vorschaubild direkt ins Modal (nur online; funktioniert auch als lokale Datei, da
   ohne CORS-Umweg geladen wird; Quelle CC BY-SA).
+- **Hilfe & Tooltips:** eingebauter »Hilfe«-Knopf mit Kurzanleitung und Erklärung
+  aller Modi und Einstellungen; nahezu jedes Feld hat einen erklärenden Tooltip.
 - Gleiche Leitplanken: **vollständig offline** (der Lernkern braucht **nie** Internet;
   nur die optionalen »Online-Infos« oben sind eine bewusste, opt-in Ausnahme), kein
   CDN, kein Framework, deutschsprachig, mobiltauglich. Baut **ohne** SheetJS (kein

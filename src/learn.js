@@ -581,6 +581,11 @@ function wire(){
     applyMode();
   });
   $("#btnStart").onclick=startSession;
+  $("#btnHelp").onclick=()=>{
+    const h=$("#helpPanel"), b=$("#btnHelp"), willOpen=h.hidden;
+    h.hidden=!willOpen; b.classList.toggle("active",willOpen); b.setAttribute("aria-pressed",String(willOpen));
+    if(willOpen) h.scrollIntoView({behavior:"smooth",block:"nearest"});
+  };
 }
 
 /* ---------- Start ---------- */
