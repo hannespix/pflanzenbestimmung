@@ -41,6 +41,18 @@ input,select{font-family:inherit; color:inherit}
   appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%232b4f38' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 11px center}
 .profsub{font-family:var(--mono); font-size:12px; color:var(--ink-soft); padding-bottom:9px}
 .examlink{white-space:nowrap; text-decoration:none}
+.mast-right{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.btn .ic{width:16px; height:16px; flex:none}
+.btn.active{background:var(--green-tint); border-color:var(--green); color:var(--green-deep)}
+/* Hilfe-Panel */
+.helppanel{background:var(--surface); border:1px solid var(--rule-strong); border-radius:6px; padding:20px 22px; margin-top:16px; box-shadow:0 1px 0 var(--shadow)}
+.helppanel .hh{font-family:var(--serif); font-weight:600; font-size:20px; color:var(--green-deep); margin:0 0 8px}
+.helppanel h4{font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); margin:18px 0 8px}
+.hlead{font-size:14.5px; color:var(--ink-soft); line-height:1.55; margin:0}
+.hsteps{margin:0; padding-left:20px; font-size:14px; line-height:1.6} .hsteps li{margin:4px 0}
+.hdl{margin:0; display:grid; grid-template-columns:minmax(110px,150px) 1fr; gap:7px 14px; font-size:14px; line-height:1.5}
+.hdl dt{font-weight:600; color:var(--green-deep)} .hdl dd{margin:0; color:var(--ink-soft)}
+.hnotes{margin:0; padding-left:20px; font-size:14px; line-height:1.6; color:var(--ink-soft)} .hnotes li{margin:5px 0}
 
 /* Buttons */
 .btn{border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); padding:8px 13px; border-radius:3px; font-size:13.5px; font-weight:500; display:inline-flex; align-items:center; gap:7px; transition:background .12s,border-color .12s,transform .04s; text-decoration:none}
@@ -197,6 +209,8 @@ main{margin-top:18px}
   .modal{padding:18px 16px}
   .mh-bot{font-size:20px}
   .srcgrid a{font-size:12.5px; padding:7px 10px}
+  .hdl{grid-template-columns:1fr; gap:2px 0}
+  .hdl dt{margin-top:10px}
 }
 /* ===== Design-Politur: mehr Ruhe, weiche Übergänge, dezente Tiefe ===== */
 html{scroll-behavior:smooth}
@@ -251,7 +265,10 @@ main{margin-top:22px}
         <p class="eyebrow">Pflanzen lernen · grüne Berufe</p>
         <h1>Pflanzenkenntnis · Lernen</h1>
       </div>
-      <a class="btn ghost examlink" href="pflanzenkenntnis.html" title="Zur Prüfungsversion für Prüfende (Listen ziehen, Bogen drucken, Noten)">Prüfungsversion&nbsp;→</a>
+      <div class="mast-right">
+        <button class="btn ghost" id="btnHelp" aria-pressed="false" title="Kurzanleitung und Erklärung aller Modi und Einstellungen ein- oder ausblenden"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5"/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/></svg>Hilfe</button>
+        <a class="btn ghost examlink" href="pflanzenkenntnis.html" title="Zur Prüfungsversion für Prüfende (Prüfungslisten ziehen, Bogen und Musterlösung drucken, Noten rechnen)">Prüfungsversion&nbsp;→</a>
+      </div>
     </div>
     <div class="profilerow">
       <div class="pfield"><label for="frSelect">Fachrichtung</label><select id="frSelect" title="Fachrichtung wählen – bestimmt den Lernstoff (Pflanzenliste)."></select></div>
@@ -262,14 +279,14 @@ main{margin-top:22px}
 
   <div class="setup">
     <div class="setrow">
-      <div class="field"><label for="cat">Kategorie</label><select id="cat" class="mini" title="Nur eine Kategorie lernen (z. B. Gehölze)."><option value="">alle</option></select></div>
-      <label class="switch" title="Nur ZP-relevante Arten (für die Zwischenprüfung)."><input type="checkbox" id="onlyzp"><span class="track"></span>nur ZP-relevant</label>
-      <div class="field"><label for="richtung">Abfrage</label><select id="richtung" class="mini" title="Welche Seite gefragt wird.">
+      <div class="field"><label for="cat">Kategorie</label><select id="cat" class="mini" title="Lernstoff auf eine Kategorie eingrenzen (z. B. Gehölze, Stauden, Gemüsepflanzen). »alle Kategorien« = keine Einschränkung."><option value="">alle</option></select></div>
+      <label class="switch" title="Nur die für die Zwischenprüfung (ZP) markierten Arten üben."><input type="checkbox" id="onlyzp"><span class="track"></span>nur ZP-relevant</label>
+      <div class="field"><label for="richtung">Abfrage</label><select id="richtung" class="mini" title="Abfragerichtung: was auf der Vorderseite steht und was du nennen musst – Deutscher Name → botanisch, botanisch → Deutscher Name, oder Art → Familie.">
         <option value="de2bot">Deutscher Name → botanisch</option>
         <option value="bot2de">botanisch → Deutscher Name</option>
         <option value="art2fam">Art → Familie</option>
       </select></div>
-      <div class="field"><label for="sessLen">Karten/Sitzung</label><input id="sessLen" class="mini" type="number" min="5" max="100" value="20" title="Wie viele Karten eine Sitzung umfasst."></div>
+      <div class="field"><label for="sessLen">Karten/Sitzung</label><input id="sessLen" class="mini" type="number" min="5" max="100" value="20" title="Wie viele Karten (5–100) eine Sitzung umfasst. Neue und fällige Karten kommen zuerst."></div>
     </div>
     <div class="modes" id="modeTabs">
       <button data-mode="cards" class="on" title="Karteikarten mit Selbsteinschätzung und verteiltem Wiederholen (Leitner/Spaced Repetition)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="14" height="12" rx="2"/><path d="M7 9h6M7 13h4M21 8v9a2 2 0 01-2 2H8"/></svg>Karteikarten</button>
@@ -286,6 +303,56 @@ main{margin-top:22px}
       <input id="listSearch" class="listsearch" type="search" autocomplete="off" spellcheck="false" placeholder="Liste durchsuchen – Name, Familie, Synonym …" aria-label="Liste durchsuchen">
     </div>
   </div>
+
+  <section class="helppanel" id="helpPanel" hidden>
+    <h2 class="hh">Hilfe · So lernst du mit dem Tool</h2>
+    <p class="hlead">Übe die Pflanzen deiner Fachrichtung – mit Karteikarten, Quiz, Tippen und einer
+      Nachschlage-Liste. Alles läuft <b>offline</b> im Browser; dein Fortschritt wird je Profil
+      gespeichert. Keine Prüfungslisten, keine Noten – nur üben.</p>
+
+    <h4>In drei Schritten</h4>
+    <ol class="hsteps">
+      <li><b>Fachrichtung &amp; Ausbildung</b> oben wählen – das bestimmt deinen Lernstoff.</li>
+      <li><b>Modus</b> und <b>Abfragerichtung</b> wählen; bei Bedarf per Kategorie oder „nur ZP-relevant"
+        eingrenzen und die Sitzungslänge einstellen.</li>
+      <li><b>Sitzung starten</b> und losüben. Deine Bewertungen steuern, welche Karten wann wiederkommen.</li>
+    </ol>
+
+    <h4>Die vier Modi</h4>
+    <dl class="hdl">
+      <dt>Karteikarten</dt><dd>Frage ansehen, zum <b>Umdrehen</b> tippen, dann ehrlich bewerten:
+        <b>Nochmal</b> (heute nochmal) · <b>Unsicher</b> (bald wieder) · <b>Gewusst</b> (in einigen Tagen).
+        Das ist <b>Spaced Repetition</b> (Leitner-Boxen 1–5): Was sitzt, kommt seltener; was wackelt, öfter.
+        Jeder Knopf zeigt, wann die Karte wiederkommt.</dd>
+      <dt>Quiz</dt><dd>Multiple Choice – die richtige aus vier Möglichkeiten. Die Ablenker stammen
+        bevorzugt aus derselben Kategorie/Familie.</dd>
+      <dt>Tippen</dt><dd>Antwort selbst eingeben – <b>tippfehler-tolerant</b>; Gattung und Art bzw.
+        Synonyme werden getrennt geprüft.</dd>
+      <dt>Liste</dt><dd>Alle Arten des Profils zum <b>Nachschlagen</b>, nach Kategorie sortiert und
+        <b>durchsuchbar</b> (Name, Familie, Synonym). Ein Klick öffnet die Info zur Pflanze.</dd>
+    </dl>
+
+    <h4>Einstellungen</h4>
+    <dl class="hdl">
+      <dt>Abfrage</dt><dd>Was gefragt wird: Deutscher Name → botanisch, botanisch → Deutscher Name
+        oder Art → Familie.</dd>
+      <dt>Kategorie · nur ZP</dt><dd>Grenzt den Lernstoff ein – z. B. nur Gehölze, oder nur die für die
+        Zwischenprüfung markierten Arten.</dd>
+      <dt>Karten/Sitzung</dt><dd>Wie viele Karten eine Sitzung umfasst.</dd>
+    </dl>
+
+    <h4>Fortschritt &amp; mehr</h4>
+    <ul class="hnotes">
+      <li>Der Balken zeigt <b>neu · am Lernen · sitzt</b>. „sitzt" heißt sicher gemerkt (Box 4–5 von 5).</li>
+      <li><b>ℹ Mehr zur Pflanze</b> öffnet Quellen-Links (Wikipedia, NaturaDB u. a.) und – optional, nur
+        auf Knopfdruck – einen deutschen Kurztext samt Bild von Wikipedia. Der Kern funktioniert komplett
+        ohne Internet.</li>
+      <li>Dein Fortschritt bleibt im Browser gespeichert (je Profil getrennt). Anderer Browser oder
+        anderes Gerät = eigener Fortschritt.</li>
+      <li>Fast jedes Feld hat einen <b>Tooltip</b> – kurz mit der Maus darüber verweilen.</li>
+      <li>Über <b>Prüfungsversion →</b> geht es zum Werkzeug für Prüfende (Listen, Bögen, Noten).</li>
+    </ul>
+  </section>
 
   <section class="progress" id="progress" hidden></section>
 

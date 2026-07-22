@@ -92,6 +92,19 @@ async function main() {
   assert(sched.good.box >= 2 && sched.good.due > sched.t, "good (neu): Box ≥2, künftig fällig");
   assert(sched.again.due !== sched.good.due, "again und good dürfen eine neue Karte nicht gleich einplanen");
 
+  // Hilfe: Panel öffnet/schließt, Button zeigt aktiven Zustand
+  const help = await page.evaluate(() => {
+    const b = document.querySelector("#btnHelp"), h = document.querySelector("#helpPanel");
+    b.click();
+    const opened = !h.hidden && b.classList.contains("active") && b.getAttribute("aria-pressed") === "true";
+    const hasContent = h.querySelectorAll(".hdl dt").length >= 4;
+    b.click();
+    const closed = h.hidden && !b.classList.contains("active");
+    return { opened, hasContent, closed };
+  });
+  assert(help.opened && help.hasContent, "Hilfe-Panel öffnet nicht bzw. Inhalt fehlt");
+  assert(help.closed, "Hilfe-Panel schließt nicht");
+
   // Info-Modal: Deep-Links (offline) + Online-Laden-Knopf vorhanden, schließt sauber.
   // Der Wikipedia-Abruf (JSONP) wird NICHT ausgelöst – der Test bleibt offline.
   const info = await page.evaluate(() => {
@@ -203,7 +216,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (kategorisiert/durchsuchbar/klickbar), Quiz, Tippen, Fortschritt-Persistenz.");
+  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (kategorisiert/durchsuchbar/klickbar), Quiz, Tippen, Fortschritt-Persistenz.");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
