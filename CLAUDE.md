@@ -415,6 +415,20 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       für Tests exponiert, `tests/learn.mjs` prüft Produktions- und FW-Familie,
       Zeilenzahl, ZP-Spalte und Suchfilter-Wirkung.
 
+- [x] **Kategorien nach Wuchsform** für die 10 Profile, die aus den Quell-Excel
+      keine Kategorien mitbrachten (Baumschule, GaLaBau, Staudengärtnerei,
+      Zierpflanzenbau, Friedhof-Gärtner, Obst-FW u. a.). `tools/categorize_seeds.py`
+      setzt Feld 5 botanisch kuratiert: **Nadelgehölze · Laubgehölze ·
+      Kletterpflanzen · Stauden · Gräser · Farne · Zwiebel- und Knollenpflanzen ·
+      Ein- und zweijährige · Zimmerpflanzen**. Bestimmung: Art-Ausnahme → Gattung →
+      Familie → Fallback (Staude); gemischte Gattungen (Freiland- + Zimmer-/einj.
+      Arten) über Default + `SPECIES`; Nicht-Gefäßpflanzen (Cetraria/Sphagnum)
+      bleiben ohne Kategorie. Die vier Profile mit Kategorien aus der Quelle bleiben
+      unangetastet (`KEEP`). In `tools/rebuild_seeds.sh` eingehängt (reproduzierbar).
+      `KAT_ORDER` in `app.js`/`learn.js` um die Wuchsformen erweitert (Anzeige-
+      Reihenfolge). Verteilung per Puppeteer-PDF (GaLaBau, 8 Seiten) botanisch
+      geprüft; `tests/learn.mjs` prüft die Wuchsform-Gliederung.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei

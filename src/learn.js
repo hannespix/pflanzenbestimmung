@@ -32,7 +32,7 @@ const FR_LIST = ["Baumschule","Friedhofsgärtnerei","Garten- und Landschaftsbau"
 const NIVEAUS = [{key:"gaertner",label:"Gärtner/in"},{key:"fachwerker",label:"Fachwerker/in"}];
 function slug(s){ return s.toLowerCase().replace(/[äöü]/g,m=>({"ä":"ae","ö":"oe","ü":"ue"}[m])).replace(/ß/g,"ss")
   .replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""); }
-const KAT_ORDER = ["Gemüsepflanzen","Gewürzkräuter","Bei-, Wild- oder Unkräuter","Gründüngungspflanzen","Gehölze","Stauden","Zierpflanzen","Obstgehölze"];
+const KAT_ORDER = ["Nadelgehölze","Laubgehölze","Gehölze","Kletterpflanzen","Stauden","Gräser","Farne","Zwiebel- und Knollenpflanzen","Ein- und zweijährige","Zimmerpflanzen","Gemüsepflanzen","Gewürzkräuter","Bei-, Wild- oder Unkräuter","Gründüngungspflanzen","Zierpflanzen","Obstgehölze"];
 function katRank(k){ const i=KAT_ORDER.indexOf(k); return i<0?99:i; }
 
 /* Seed-Zeile: [gattung, art, familie, deutscher_name, kategorie, zp, synonyme] */

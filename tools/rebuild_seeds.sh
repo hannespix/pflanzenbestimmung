@@ -25,3 +25,7 @@ for id in "${ids[@]}"; do
   fi
   node tools/xlsx_to_seed.mjs "$file" "$id"
 done
+
+# Kategorien (Wuchsform) für die Profile ohne Kategorien in den Quelllisten
+# nachtragen – reproduzierbar, botanisch kuratiert (siehe Skript-Kopf).
+python3 tools/categorize_seeds.py

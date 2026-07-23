@@ -248,6 +248,25 @@ async function main() {
   assert(pfw.n === 80 && pfw.sub && pfw.fwHeads && pfw.noFam,
     "Druckliste FW: 80 Arten im Fachwerker-Formular erwartet: " + JSON.stringify(pfw));
 
+  // Kategorien nach Wuchsform: GaLaBau (aus Quelle ohne Kategorien) ist jetzt
+  // nach Nadelgehölze/Laubgehölze/Stauden/… gegliedert
+  const wuchs = await page.evaluate(() => {
+    document.querySelector("#frSelect").value = "garten_und_landschaftsbau";
+    document.querySelector("#frSelect").dispatchEvent(new Event("change"));
+    document.querySelector("#nivSelect").value = "gaertner";
+    document.querySelector("#nivSelect").dispatchEvent(new Event("change"));
+    const cats = [...document.querySelectorAll("#stage .cathead")].map((e) => e.childNodes[0].textContent.trim());
+    return { cats, hasNadel: cats.includes("Nadelgehölze"), hasLaub: cats.includes("Laubgehölze"),
+      hasStaude: cats.includes("Stauden"), n: cats.length };
+  });
+  assert(wuchs.hasNadel && wuchs.hasLaub && wuchs.hasStaude && wuchs.n >= 5,
+    "GaLaBau sollte nach Wuchsform gegliedert sein (Nadel-/Laubgehölze, Stauden …): " + JSON.stringify(wuchs.cats));
+  // zurück auf Standardprofil
+  await page.evaluate(() => {
+    document.querySelector("#frSelect").value = "gemuesebau";
+    document.querySelector("#frSelect").dispatchEvent(new Event("change"));
+  });
+
   // Fortschritt-Persistenz über einen Reload
   await page.waitForFunction("localStorage.getItem('pflanzenlernen.progress.gemuesebau_gaertner')!=null", { timeout: 5000 });
   const before = await page.evaluate(() => Object.keys(progress).length);
