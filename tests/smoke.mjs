@@ -320,6 +320,59 @@ async function main() {
   assert(backup.restoredExams === backup.inBackup.exams, "Prüfungen wurden aus der Sicherung nicht wiederhergestellt");
   assert(backup.restoredStelle === "Prüfstelle Backup", "Einstellungen wurden aus der Sicherung nicht wiederhergestellt");
 
+  // 7g) Gerätewechsel: Prüfungs-JSON exportieren, auf »frischem Gerät« importieren.
+  //     Früherer Bug: die Prüfungs-JSON wurde als Sicherung interpretiert und
+  //     ERSETZTE die Pflanzenliste; die Snapshot-Arten (ohne id) waren danach
+  //     nicht auswählbar. Jetzt: Import landet als gespeicherte Prüfung, die
+  //     Liste bleibt unberührt, »Laden« ergänzt fehlende Arten automatisch.
+  const xdev = await page.evaluate(() => {
+    if ($("#examsPanel").hasAttribute("hidden")) toggleExams();
+    drawRandom(); $("#exDate").value = "2026-07-01"; $("#exLabel").value = "Gerätetest"; saveExam();
+    const file = JSON.parse(JSON.stringify(exams[0])); // wie downloadExam (»JSON«)
+    return { file, drawn: file.plants.length };
+  });
+  await page.evaluate(() => { localStorage.removeItem("pflanzenkenntnis.exams"); }); // »Gerät B« ohne Prüfungen
+  await page.reload({ waitUntil: "load" });
+  await page.waitForFunction("window.pickExcel!=null", { timeout: 10000 });
+  const imp = await page.evaluate((file) => {
+    const before = cache.length;
+    const r1 = importJsonData(file);            // muss als Prüfung erkannt werden
+    const untouched = cache.length === before;  // Pflanzenliste NICHT ersetzt
+    const r2 = importJsonData(file);            // erneuter Import: kein Duplikat
+    // eine Snapshot-Art künstlich »fremd« machen → »Laden« muss sie ergänzen
+    const ex = exams.find((e) => e.id === file.id);
+    ex.plants[0] = { gattung: "Importia", art: "peregrina", familie: "Testaceae",
+      deutscher_name: "Import-Testpflanze", kategorie: ex.plants[0].kategorie, zp: 0 };
+    saveExams();
+    if ($("#examsPanel").hasAttribute("hidden")) toggleExams();
+    document.querySelector('#examList .exrow [data-act="load"]').click();
+    const added = cache.length === before + 1;
+    const neu = cache.find((p) => p.gattung === "Importia");
+    return { type1: r1.type, count: r1.count, dupe2: r2.dupe === true, exN: exams.length,
+      untouched, added, selOk: selection.length === ex.plants.length,
+      selectable: !!(neu && selection.includes(neu.id)) };
+  }, xdev.file);
+  assert(imp.type1 === "exam", "Prüfungs-JSON wurde nicht als Prüfung erkannt (type=" + imp.type1 + ")");
+  assert(imp.untouched, "Prüfungs-Import hat die Pflanzenliste verändert (alter Sicherungs-Bug)");
+  assert(imp.exN === 1 && imp.dupe2, "Erneuter Import derselben Prüfung erzeugte ein Duplikat");
+  assert(imp.count === xdev.drawn, "Importierte Prüfung hat falsche Pflanzenzahl: " + imp.count + "/" + xdev.drawn);
+  assert(imp.added, "Fehlende Snapshot-Art wurde beim Laden nicht in die Liste übernommen");
+  assert(imp.selOk && imp.selectable, "Geladene Prüfung ist nicht vollständig ausgewählt/auswählbar");
+
+  // 7h) Sicherung eines anderen Profils laden → Import wechselt zum gesicherten
+  //     Profil, statt still die Liste des aktiven Profils zu überschreiben
+  const bswitch = await page.evaluate(() => {
+    const data = JSON.parse(JSON.stringify(backupData()));
+    const other = profileId === "gemuesebau_gaertner" ? "obstbau_gaertner" : "gemuesebau_gaertner";
+    switchProfile(other);
+    $("#frSelect").value = slug(PROFILE_DEFS[other].fr); $("#nivSelect").value = PROFILE_DEFS[other].niveauKey;
+    const r = importJsonData(data);
+    return { type: r.type, backTo: profileId === data.profile,
+      sel: $("#frSelect").value === slug(PROFILE_DEFS[data.profile].fr) };
+  });
+  assert(bswitch.type === "backup" && bswitch.backTo, "Sicherung-Import wechselt nicht zum gesicherten Profil");
+  assert(bswitch.sel, "Profil-Auswahlfelder nach Sicherung-Import nicht synchron");
+
   // 8) Testreste im Browser-Speicher aufräumen
   await page.evaluate(() => {
     localStorage.removeItem("pflanzenkenntnis.data.baumschule_gaertner");
@@ -341,7 +394,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Smoke-Test OK – Boot, aktiver Panel-Zustand, Hilfe + Tooltips, Profilwechsel (148/248), Schema-Matrix, Ziehen, Bogen, Prüfungen (speichern/laden/kopieren/aktualisieren), Einstellungen, Vorschau, Sicherung, Persistenz, Mobile-Kopf.");
+  console.log("Smoke-Test OK – Boot, aktiver Panel-Zustand, Hilfe + Tooltips, Profilwechsel (148/248), Schema-Matrix, Ziehen, Bogen, Prüfungen (speichern/laden/kopieren/aktualisieren), Prüfungs-JSON-Import (Gerätewechsel, fehlende Arten ergänzt), Sicherung mit Profilwechsel, Einstellungen, Vorschau, Persistenz, Mobile-Kopf.");
 }
 
 main().catch((e) => { console.error("Smoke-Test FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });

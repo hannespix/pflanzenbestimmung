@@ -415,14 +415,14 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
         <div class="grow">
           <button class="btn" id="btnSchema" title="Prüfungsschema festlegen: welche Spalten (Gattung, Art, Familie, deutscher Name) mit wie vielen Punkten bewertet werden, in welcher Reihenfolge (▲▼) und wie viele Pflanzen je Prüfung. Gilt pro Profil."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 12h16M4 19h16M8 3v4M14 10v4M10 17v4"/></svg>Prüfungsschema</button>
           <button class="btn" id="btnGrade" title="Notenrechner: erreichte Punkte in eine Note umrechnen. Lineare Baden-Württemberg-Skala (Standard) oder IHK-Schlüssel; Notengrenzen einstellbar; zeigt Note, Prozent und Punktschwellen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h14a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 7h8M8 11h3M14 11h2M8 15h3M14 15h2"/></svg>Notenrechner</button>
-          <button class="btn" id="btnExams" title="Gespeicherte Prüfungen (nach Prüfungsdatum): aktuelle Auswahl sichern, laden, kopieren (z. B. für den nächsten Prüfungstag), aktualisieren, drucken, als JSON herunterladen oder löschen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Prüfungen</button>
+          <button class="btn" id="btnExams" title="Gespeicherte Prüfungen (nach Prüfungsdatum): aktuelle Auswahl sichern, laden, kopieren (z. B. für den nächsten Prüfungstag), aktualisieren, drucken, als JSON herunterladen, von einem anderen Gerät importieren oder löschen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Prüfungen</button>
           <button class="btn" id="btnSettings" title="Einstellungen für den Kopf des Bogens: Titel, zuständige Stelle (zwei Zeilen) und Vermerk auf der Musterlösung – so nutzbar für jede zuständige Stelle. Gilt geräteweit."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Einstellungen</button>
         </div>
       </div>
       <div class="tgroup">
         <span class="glabel">Sicherung</span>
         <div class="grow">
-          <button class="btn ghost" id="btnOpen" title="Eine zuvor erstellte Sicherung (.json) laden – stellt Liste, gespeicherte Prüfungen und Einstellungen wieder her."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Sicherung laden</button>
+          <button class="btn ghost" id="btnOpen" title="Eine .json-Datei laden – der Typ wird automatisch erkannt: Eine Gesamt-Sicherung stellt Liste, Prüfungen und Einstellungen wieder her (und wechselt zum gesicherten Profil); eine einzelne Prüfungs-JSON wird den gespeicherten Prüfungen hinzugefügt."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>JSON laden</button>
           <button class="btn ghost" id="btnSave" title="Alles als .json-Datei sichern: aktuelle Liste dieses Profils, alle gespeicherten Prüfungen und die Einstellungen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>Sichern</button>
           <button class="btn ghost" id="btnReset" title="Alle im Browser gespeicherten Änderungen dieses Profils verwerfen und zur hinterlegten Standardliste zurückkehren."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 019-9 9 9 0 016.5 2.8L21 8M21 3v5h-5"/><path d="M21 12a9 9 0 01-9 9 9 9 0 01-6.5-2.8L3 16M3 21v-5h5"/></svg>Standardliste</button>
         </div>
@@ -449,7 +449,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
         <dl class="hdl">
           <dt>Prüfungsschema</dt><dd>Legt fest, welche Spalten (Gattung, Art, Familie, deutscher Name) mit wie vielen Punkten bewertet werden, in welcher Reihenfolge (▲▼ = Spaltenfolge auf dem Bogen) und wie viele Pflanzen je Prüfung. Punkte dürfen Nachkommastellen haben (z. B. 0,5). Gilt pro Profil.</dd>
           <dt>Notenrechner</dt><dd>Rechnet erreichte Punkte in eine Note um – lineare Baden-Württemberg-Skala (Standard) oder IHK-Schlüssel. Notengrenzen sind einstellbar; angezeigt werden Note, Prozent, Dezimalnote und die Punktschwellen.</dd>
-          <dt>Prüfungen</dt><dd>Speichert die gezogene Liste als Momentaufnahme (samt Schema) unter einem <b>Prüfungsdatum</b>. Von dort: laden, <b>kopieren</b> (z. B. für den nächsten Prüfungstag), nach dem Bearbeiten <b>aktualisieren</b>, drucken oder als <b>.json</b> herunterladen.</dd>
+          <dt>Prüfungen</dt><dd>Speichert die gezogene Liste als Momentaufnahme (samt Schema) unter einem <b>Prüfungsdatum</b>. Von dort: laden, <b>kopieren</b> (z. B. für den nächsten Prüfungstag), nach dem Bearbeiten <b>aktualisieren</b>, drucken oder als <b>.json</b> herunterladen. Die .json-Datei lässt sich auf einem <b>anderen Gerät</b> über »Prüfung importieren« (im Prüfungen-Panel) oder »JSON laden« einlesen; beim »Laden« dort fehlende Arten werden automatisch in die Liste übernommen.</dd>
           <dt>Einstellungen</dt><dd>Passt den Kopf des Bogens an: Titel, <b>zuständige Stelle</b> (zwei Zeilen) und den Vermerk auf der Musterlösung – so ist das Werkzeug für jede zuständige Stelle nutzbar. Gilt geräteweit.</dd>
         </dl>
 
@@ -457,7 +457,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
         <dl class="hdl">
           <dt>Excel importieren</dt><dd>Liest eine .xlsx/.xls-Liste ein. Kopfzeile, Gattung/Art-Trennung, Familie, deutscher Name, Kategorien und ZP werden automatisch erkannt; beim Import kann die Liste ersetzt oder ergänzt werden.</dd>
           <dt>Art hinzufügen</dt><dd>Fügt eine einzelne Art von Hand hinzu (mit Synonymen, Bemerkungen und ZP-Kennzeichen).</dd>
-          <dt>Sicherung laden / Sichern</dt><dd>Sichert bzw. lädt <b>alles</b> als eine .json-Datei: die Liste dieses Profils, alle gespeicherten Prüfungen und die Einstellungen.</dd>
+          <dt>JSON laden / Sichern</dt><dd>»Sichern« schreibt <b>alles</b> in eine .json-Datei: die Liste dieses Profils, alle gespeicherten Prüfungen und die Einstellungen. »JSON laden« erkennt den Dateityp automatisch: eine Gesamt-Sicherung wird komplett wiederhergestellt (inkl. Wechsel zum gesicherten Profil), eine einzelne Prüfungs-.json wird nur den gespeicherten Prüfungen hinzugefügt – die Pflanzenliste bleibt unangetastet.</dd>
           <dt>Standardliste</dt><dd>Verwirft die im Browser gespeicherten Änderungen dieses Profils und stellt die hinterlegte Liste wieder her.</dd>
         </dl>
 
@@ -546,8 +546,9 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
           <div class="gfld exl"><label for="exLabel">Bezeichnung (optional)</label><input id="exLabel" type="text" placeholder="z. B. Ausschuss 2, Vormittag" title="Freie Bezeichnung zur Unterscheidung (z. B. Ausschuss, Uhrzeit) – optional."></div>
           <button class="btn primary" id="exSave" title="Die aktuelle Auswahl als neue Prüfung unter dem gewählten Datum speichern (Momentaufnahme samt Schema)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h11l3 3v15a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 3v5h7M8 13h8M8 17h5"/></svg>Als neue Prüfung speichern</button>
           <button class="btn" id="exUpdate" hidden title="Die geladene Prüfung mit der aktuellen Auswahl überschreiben">Aktualisieren</button>
+          <button class="btn ghost" id="exImport" title="Eine als .json heruntergeladene Prüfung importieren – z. B. von einem anderen Gerät oder von Kolleg/innen. Sie erscheint danach in der Liste unten; die Pflanzenliste des Profils bleibt unverändert."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21V9m0 0l-4 4m4-4l4 4M4 7V5a2 2 0 012-2h12a2 2 0 012 2v2"/></svg>Prüfung importieren (.json)</button>
         </div>
-        <p class="gnote">Die gezogene Liste wird als Momentaufnahme (samt Schema) gespeichert – so bleibt die Prüfung exakt reproduzierbar, auch wenn die Profil-Liste später geändert wird. »Laden« stellt die Auswahl wieder her, »Drucken« erzeugt Bogen oder Musterlösung, »JSON« lädt die Prüfung als Datei herunter.</p>
+        <p class="gnote">Die gezogene Liste wird als Momentaufnahme (samt Schema) gespeichert – so bleibt die Prüfung exakt reproduzierbar, auch wenn die Profil-Liste später geändert wird. »Laden« stellt die Auswahl wieder her (auf einem anderen Gerät fehlende Arten werden dabei automatisch in die Liste übernommen), »Drucken« erzeugt Bogen oder Musterlösung, »JSON« lädt die Prüfung als Datei herunter – zum Weitergeben oder für ein anderes Gerät (dort über »Prüfung importieren« einlesen).</p>
         <div class="exlist" id="examList"></div>
       </div>
     </div>
@@ -963,14 +964,63 @@ function exportBackup(){
   downloadText(JSON.stringify(backupData(),null,0), `pflanzenliste_${profileId}_${d}.json`);
   toast(`Sicherung erstellt (${cache.length} Arten, ${exams.length} Prüfungen)`);
 }
-function importBackup(){
+/* ---------- JSON laden: Sicherung ODER einzelne Prüfung, automatisch erkannt ----------
+   Eine Prüfungs-JSON (aus »JSON« im Prüfungen-Panel) hat plants+date+schema, aber
+   weder v noch profile – eine Gesamt-Sicherung hat v/profile. Früher fiel die
+   Prüfungs-JSON fälschlich in applyBackup und ERSETZTE die Pflanzenliste. */
+function isExamJson(d){
+  return !!(d && Array.isArray(d.plants) && typeof d.date==="string"
+    && d.schema && Array.isArray(d.schema.cols)
+    && (d.profileId||d.fr) && d.v===undefined && d.profile===undefined);
+}
+/* Einzelne Prüfung in die gespeicherten Prüfungen übernehmen (Liste bleibt unberührt).
+   Gleiche id bereits vorhanden → kein Duplikat, nur Hinweis. */
+function importExamData(d){
+  if(typeof d.id==="string" && exams.some(e=>e.id===d.id))
+    return { dupe:true, count:d.plants.length, id:d.id };
+  const plants=d.plants.map(p=>({gattung:norm(p.gattung||""),art:norm(p.art||""),familie:norm(p.familie||""),
+    deutscher_name:norm(p.deutscher_name||""),kategorie:norm(p.kategorie||""),zp:p.zp?1:0}))
+    .filter(p=>p.gattung||p.deutscher_name);
+  if(!plants.length) throw new Error("leer");
+  const def=PROFILE_DEFS[d.profileId]||PROFILE_DEFS[profileId];
+  const ex={ id:(typeof d.id==="string"&&d.id)?d.id:"ex"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),
+    savedAt:new Date().toISOString(),
+    date:/^\d{4}-\d{2}-\d{2}$/.test(d.date)?d.date:todayISO(),
+    profileId:PROFILE_DEFS[d.profileId]?d.profileId:profileId,
+    fr:norm(d.fr||def.fr), niveau:norm(d.niveau||def.niveau), label:norm(d.label||""),
+    plants, schema:(d.schema&&Array.isArray(d.schema.cols))?d.schema:cloneSchema(schema) };
+  exams.unshift(ex); saveExams(); renderExams(); syncExamControls();
+  return { dupe:false, count:plants.length, id:ex.id, date:ex.date };
+}
+function importJsonData(d){
+  if(isExamJson(d)) return Object.assign({type:"exam"}, importExamData(d));
+  if(d && Array.isArray(d.plants)){
+    // Gesamt-Sicherung: erst zum gesicherten Profil wechseln, dann anwenden –
+    // sonst würde still die Liste des gerade aktiven Profils überschrieben.
+    if(d.profile && d.profile!==profileId && PROFILE_DEFS[d.profile]){
+      switchProfile(d.profile);
+      $("#frSelect").value=slug(PROFILE_DEFS[d.profile].fr);
+      $("#nivSelect").value=PROFILE_DEFS[d.profile].niveauKey;
+    }
+    return Object.assign({type:"backup"}, applyBackup(d));
+  }
+  throw new Error("Format");
+}
+function importJsonFile(){
   const inp=el("input"); inp.type="file"; inp.accept=".json,application/json";
   inp.onchange=async()=>{
     const f=inp.files[0]; if(!f) return;
     try{
-      const r=applyBackup(JSON.parse(await f.text()));
-      toast(`Sicherung geladen: ${r.plants} Arten`+(r.exams!=null?`, ${r.exams} Prüfungen`:""));
-    }catch(e){ toast("Keine gültige Backup-Datei (.json)",true); }
+      const r=importJsonData(JSON.parse(await f.text()));
+      if(r.type==="exam"){
+        if($("#examsPanel").hasAttribute("hidden")) toggleExams();
+        toast(r.dupe
+          ? `Diese Prüfung ist bereits gespeichert (${r.count} Pflanzen)`
+          : `Prüfung importiert (${r.count} Pflanzen · ${fmtDate(r.date)}) – unten »Laden« drücken`);
+      }else{
+        toast(`Sicherung geladen: ${r.plants} Arten`+(r.exams!=null?`, ${r.exams} Prüfungen`:""));
+      }
+    }catch(e){ toast("Keine gültige .json-Datei (weder Sicherung noch Prüfung)",true); }
   };
   inp.click();
 }
@@ -1425,15 +1475,26 @@ function loadExam(id){
     switchProfile(ex.profileId);
     $("#frSelect").value=slug(PROFILE_DEFS[ex.profileId].fr); $("#nivSelect").value=PROFILE_DEFS[ex.profileId].niveauKey;
   }
-  // Snapshot-Pflanzen den aktuellen Arten zuordnen (nach Gattung+Art+dt. Name)
+  // Snapshot-Pflanzen den aktuellen Arten zuordnen (nach Gattung+Art+dt. Name).
+  // Fehlt eine Art (z. B. nach Import auf einem anderen Gerät oder weil die
+  // Profil-Liste geändert wurde), wird sie automatisch in die Liste übernommen –
+  // so ist eine geladene Prüfung immer vollständig aus- und abwählbar.
   const key=p=>(p.gattung+"|"+p.art+"|"+p.deutscher_name).toLowerCase();
   const byKey=new Map(cache.map(p=>[key(p),p.id]));
-  const ids=[], fehlend=[];
-  ex.plants.forEach(p=>{ const id=byKey.get(key(p)); if(id!=null) ids.push(id); else fehlend.push(p.gattung+" "+p.art); });
+  const ids=[]; let neu=0;
+  ex.plants.forEach(p=>{
+    let id=byKey.get(key(p));
+    if(id==null){
+      const np=normPlant(Object.assign({},p,{id:nextId++}));
+      cache.push(np); byKey.set(key(np),np.id); id=np.id; neu++;
+    }
+    ids.push(id);
+  });
   selection=ids; loadedExamId=ex.id;
+  if(neu){ refresh(); markDirty(); }
   if(!$("#examsPanel").hasAttribute("hidden")){ $("#exDate").value=ex.date||todayISO(); $("#exLabel").value=ex.label||""; }
   renderList(); syncSelUI(); syncExamControls();
-  if(fehlend.length) toast(`${ids.length} übernommen, ${fehlend.length} nicht in der aktuellen Liste`,true);
+  if(neu) toast(`${ids.length} Arten geladen – ${neu} davon neu in die Liste übernommen`);
   else toast(`${ids.length} Arten geladen – jetzt bearbeitbar, dann »Aktualisieren« oder neu speichern`);
 }
 function downloadExam(id){
@@ -1685,7 +1746,7 @@ function wire(){
   $("#gPts").addEventListener("input",renderGrader);
   $("#gMax").addEventListener("input",()=>{ $("#gMax").dataset.touched="1"; renderGrader(); });
   $("#gSync").onclick=()=>{ $("#gMax").value=(selection.length||drawTarget())*ptsPer(); delete $("#gMax").dataset.touched; renderGrader(); };
-  $("#btnOpen").onclick=importBackup;
+  $("#btnOpen").onclick=importJsonFile;
   $("#btnSave").onclick=exportBackup;
   $("#btnReset").onclick=resetToDefault;
   $("#q").addEventListener("input",()=>{ renderList(); syncSelUI(); });
@@ -1706,6 +1767,7 @@ function wire(){
   $("#btnExams").onclick=toggleExams;
   $("#exSave").onclick=saveExam;
   $("#exUpdate").onclick=updateLoadedExam;
+  $("#exImport").onclick=importJsonFile;
   // Einstellungen
   $("#btnSettings").onclick=toggleSettings;
   $("#setReset").onclick=resetSettings;
@@ -1862,6 +1924,7 @@ function updateSchema(){
 })();
 window.pickExcel=pickExcel;
 window.resetToDefault=resetToDefault;
+window.importJsonData=importJsonData; // für Datei-Import und Smoke-Test
 
 </script>
 </body>

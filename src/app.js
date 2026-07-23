@@ -276,14 +276,63 @@ function exportBackup(){
   downloadText(JSON.stringify(backupData(),null,0), `pflanzenliste_${profileId}_${d}.json`);
   toast(`Sicherung erstellt (${cache.length} Arten, ${exams.length} Prüfungen)`);
 }
-function importBackup(){
+/* ---------- JSON laden: Sicherung ODER einzelne Prüfung, automatisch erkannt ----------
+   Eine Prüfungs-JSON (aus »JSON« im Prüfungen-Panel) hat plants+date+schema, aber
+   weder v noch profile – eine Gesamt-Sicherung hat v/profile. Früher fiel die
+   Prüfungs-JSON fälschlich in applyBackup und ERSETZTE die Pflanzenliste. */
+function isExamJson(d){
+  return !!(d && Array.isArray(d.plants) && typeof d.date==="string"
+    && d.schema && Array.isArray(d.schema.cols)
+    && (d.profileId||d.fr) && d.v===undefined && d.profile===undefined);
+}
+/* Einzelne Prüfung in die gespeicherten Prüfungen übernehmen (Liste bleibt unberührt).
+   Gleiche id bereits vorhanden → kein Duplikat, nur Hinweis. */
+function importExamData(d){
+  if(typeof d.id==="string" && exams.some(e=>e.id===d.id))
+    return { dupe:true, count:d.plants.length, id:d.id };
+  const plants=d.plants.map(p=>({gattung:norm(p.gattung||""),art:norm(p.art||""),familie:norm(p.familie||""),
+    deutscher_name:norm(p.deutscher_name||""),kategorie:norm(p.kategorie||""),zp:p.zp?1:0}))
+    .filter(p=>p.gattung||p.deutscher_name);
+  if(!plants.length) throw new Error("leer");
+  const def=PROFILE_DEFS[d.profileId]||PROFILE_DEFS[profileId];
+  const ex={ id:(typeof d.id==="string"&&d.id)?d.id:"ex"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),
+    savedAt:new Date().toISOString(),
+    date:/^\d{4}-\d{2}-\d{2}$/.test(d.date)?d.date:todayISO(),
+    profileId:PROFILE_DEFS[d.profileId]?d.profileId:profileId,
+    fr:norm(d.fr||def.fr), niveau:norm(d.niveau||def.niveau), label:norm(d.label||""),
+    plants, schema:(d.schema&&Array.isArray(d.schema.cols))?d.schema:cloneSchema(schema) };
+  exams.unshift(ex); saveExams(); renderExams(); syncExamControls();
+  return { dupe:false, count:plants.length, id:ex.id, date:ex.date };
+}
+function importJsonData(d){
+  if(isExamJson(d)) return Object.assign({type:"exam"}, importExamData(d));
+  if(d && Array.isArray(d.plants)){
+    // Gesamt-Sicherung: erst zum gesicherten Profil wechseln, dann anwenden –
+    // sonst würde still die Liste des gerade aktiven Profils überschrieben.
+    if(d.profile && d.profile!==profileId && PROFILE_DEFS[d.profile]){
+      switchProfile(d.profile);
+      $("#frSelect").value=slug(PROFILE_DEFS[d.profile].fr);
+      $("#nivSelect").value=PROFILE_DEFS[d.profile].niveauKey;
+    }
+    return Object.assign({type:"backup"}, applyBackup(d));
+  }
+  throw new Error("Format");
+}
+function importJsonFile(){
   const inp=el("input"); inp.type="file"; inp.accept=".json,application/json";
   inp.onchange=async()=>{
     const f=inp.files[0]; if(!f) return;
     try{
-      const r=applyBackup(JSON.parse(await f.text()));
-      toast(`Sicherung geladen: ${r.plants} Arten`+(r.exams!=null?`, ${r.exams} Prüfungen`:""));
-    }catch(e){ toast("Keine gültige Backup-Datei (.json)",true); }
+      const r=importJsonData(JSON.parse(await f.text()));
+      if(r.type==="exam"){
+        if($("#examsPanel").hasAttribute("hidden")) toggleExams();
+        toast(r.dupe
+          ? `Diese Prüfung ist bereits gespeichert (${r.count} Pflanzen)`
+          : `Prüfung importiert (${r.count} Pflanzen · ${fmtDate(r.date)}) – unten »Laden« drücken`);
+      }else{
+        toast(`Sicherung geladen: ${r.plants} Arten`+(r.exams!=null?`, ${r.exams} Prüfungen`:""));
+      }
+    }catch(e){ toast("Keine gültige .json-Datei (weder Sicherung noch Prüfung)",true); }
   };
   inp.click();
 }
@@ -738,15 +787,26 @@ function loadExam(id){
     switchProfile(ex.profileId);
     $("#frSelect").value=slug(PROFILE_DEFS[ex.profileId].fr); $("#nivSelect").value=PROFILE_DEFS[ex.profileId].niveauKey;
   }
-  // Snapshot-Pflanzen den aktuellen Arten zuordnen (nach Gattung+Art+dt. Name)
+  // Snapshot-Pflanzen den aktuellen Arten zuordnen (nach Gattung+Art+dt. Name).
+  // Fehlt eine Art (z. B. nach Import auf einem anderen Gerät oder weil die
+  // Profil-Liste geändert wurde), wird sie automatisch in die Liste übernommen –
+  // so ist eine geladene Prüfung immer vollständig aus- und abwählbar.
   const key=p=>(p.gattung+"|"+p.art+"|"+p.deutscher_name).toLowerCase();
   const byKey=new Map(cache.map(p=>[key(p),p.id]));
-  const ids=[], fehlend=[];
-  ex.plants.forEach(p=>{ const id=byKey.get(key(p)); if(id!=null) ids.push(id); else fehlend.push(p.gattung+" "+p.art); });
+  const ids=[]; let neu=0;
+  ex.plants.forEach(p=>{
+    let id=byKey.get(key(p));
+    if(id==null){
+      const np=normPlant(Object.assign({},p,{id:nextId++}));
+      cache.push(np); byKey.set(key(np),np.id); id=np.id; neu++;
+    }
+    ids.push(id);
+  });
   selection=ids; loadedExamId=ex.id;
+  if(neu){ refresh(); markDirty(); }
   if(!$("#examsPanel").hasAttribute("hidden")){ $("#exDate").value=ex.date||todayISO(); $("#exLabel").value=ex.label||""; }
   renderList(); syncSelUI(); syncExamControls();
-  if(fehlend.length) toast(`${ids.length} übernommen, ${fehlend.length} nicht in der aktuellen Liste`,true);
+  if(neu) toast(`${ids.length} Arten geladen – ${neu} davon neu in die Liste übernommen`);
   else toast(`${ids.length} Arten geladen – jetzt bearbeitbar, dann »Aktualisieren« oder neu speichern`);
 }
 function downloadExam(id){
@@ -998,7 +1058,7 @@ function wire(){
   $("#gPts").addEventListener("input",renderGrader);
   $("#gMax").addEventListener("input",()=>{ $("#gMax").dataset.touched="1"; renderGrader(); });
   $("#gSync").onclick=()=>{ $("#gMax").value=(selection.length||drawTarget())*ptsPer(); delete $("#gMax").dataset.touched; renderGrader(); };
-  $("#btnOpen").onclick=importBackup;
+  $("#btnOpen").onclick=importJsonFile;
   $("#btnSave").onclick=exportBackup;
   $("#btnReset").onclick=resetToDefault;
   $("#q").addEventListener("input",()=>{ renderList(); syncSelUI(); });
@@ -1019,6 +1079,7 @@ function wire(){
   $("#btnExams").onclick=toggleExams;
   $("#exSave").onclick=saveExam;
   $("#exUpdate").onclick=updateLoadedExam;
+  $("#exImport").onclick=importJsonFile;
   // Einstellungen
   $("#btnSettings").onclick=toggleSettings;
   $("#setReset").onclick=resetSettings;
@@ -1175,3 +1236,4 @@ function updateSchema(){
 })();
 window.pickExcel=pickExcel;
 window.resetToDefault=resetToDefault;
+window.importJsonData=importJsonData; // für Datei-Import und Smoke-Test
