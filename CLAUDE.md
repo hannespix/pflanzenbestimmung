@@ -190,7 +190,16 @@ als fertig gilt.
   Umschaltoption vorhanden, inkl. offizieller Dezimaltabelle. Für die grünen Berufe
   in BW ist **linear** der Standard.
 - **Zwei Druckvarianten:** Prüfungsbogen (leer, zum Ausfüllen) und Musterlösung
-  (gefüllt, mit Punktespalte, »Nur für Prüfende«).
+  (gefüllt, »Nur für Prüfende«, kompakte Zeilen). **Die Leerbögen entsprechen den
+  offiziellen AP-Formularen** der Regierungspräsidien BW (Quellen:
+  `data/leerboegen/*.docx`) — drei Familien via `sheetFamily()`: **Fachwerker**
+  (alle 7; Titel + »Gartenbaufachwerker/in«, Dt. Name/Gattung/Art, »Gesamtpunkte«,
+  »Es wurde folgende Note erzielt«), **GaLaBau-Gärtner** (»… im Gartenbau GALA«,
+  Schreibfehler-Hinweiszeile) und **Produktions-Gärtner** (»… im Gartenbau«).
+  Spalten/Punkte kommen aus dem Prüfungsschema, Beschriftung à la Formular
+  (»Gattungsname · 3 Punkte (G)« bzw. FW »Gattung (botanisch)«), Arial,
+  10-mm-Schreibzeilen, Fußzeile = Einstellungen (`stelle1`/`stelle2`,
+  Standard »Regierungspräsidien Baden-Württemberg«).
 
 ---
 
@@ -357,6 +366,19 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       verwerfen. Sicherungs-Import wechselt zum im Backup gespeicherten Profil
       statt still das aktive zu überschreiben. Abgedeckt in `tests/smoke.mjs`
       (7g Gerätewechsel, 7h Profilwechsel).
+
+- [x] **Offizielle Leerbögen als Druck-Layout** (`buildSheet` neu): Nachbau der drei
+      AP-Formulare (FW_neu / Gärtner_GALA_ab_S26 / Gärtner_Produktion, Quellen in
+      `data/leerboegen/`). Familie je Profil (`sheetFamily`), Spaltenbreiten aus den
+      DOCX (dxa→%), Namensfeld, Punkte-Spalte, Abschlussbereich und Fußzeile im
+      Wortlaut der Vorlagen; GALA mit Schreibfehler-Hinweis. Musterlösung = gleiches
+      Formular mit kursiven Antworten, kompakten Zeilen (`table.exam.solved`),
+      Zuordnungszeile (`.sheet-meta`), rotem Vermerk und Bewertungsschlüssel; alles
+      einseitig (per Puppeteer-PDF verifiziert). Einstellungen umgestellt:
+      `sheetTitle` = Titel (Zusatz »im Gartenbau (GALA)«/»Gartenbaufachwerker/in«
+      automatisch beim Standardtitel), `stelle1/2` = Fußzeile; Migration ersetzt
+      unverändert gespeicherte alte Defaults. `.toast` wird im Druck ausgeblendet.
+      `tests/smoke.mjs` 6e prüft alle drei Familien.
 
 ## Offene Aufgaben (TODO)
 

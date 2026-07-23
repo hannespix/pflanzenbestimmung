@@ -160,7 +160,7 @@ async function main() {
       order: schema.cols.map((c) => c.key).join(","),
       per: ptsPer(),
       max: selection.length * ptsPer(),
-      heads: [...document.querySelectorAll("#sheet thead th")].map((t) => t.childNodes[0].textContent.trim())
+      heads: [...document.querySelectorAll("#sheet thead th")].map((t) => (t.childNodes[0] || { textContent: "" }).textContent.trim())
     };
   });
   assert(gala.anzahl === 15, "GaLaBau/Fachwerker: 15 Pflanzen erwartet, war " + gala.anzahl);
@@ -201,6 +201,39 @@ async function main() {
     "GaLaBau/Gärtner: 80 P. (1/1/2) erwartet: " + JSON.stringify(matrix.galaG));
   assert(matrix.prodG.max === 200 && matrix.prodG.per === 10 && matrix.prodG.order === "gattung,art,familie,deutscher_name",
     "Produktions-Gärtner (Baumschule): 200 P. (3/3/1/3) erwartet: " + JSON.stringify(matrix.prodG));
+
+  // 6e) Offizielle Leerbögen: drei Formular-Familien (Produktion / GaLaBau / Fachwerker)
+  const forms = await page.evaluate(() => {
+    const build = (fr, niv) => {
+      $("#frSelect").value = fr; $("#nivSelect").value = niv; applyProfileSelect();
+      drawRandom(); buildSheet("blank");
+      return { title: document.querySelector("#sheet h1").textContent,
+               html: document.querySelector("#sheet").innerHTML };
+    };
+    const prod = build("obstbau", "gaertner");
+    const gala = build("garten_und_landschaftsbau", "gaertner");
+    const fw = build("gemuesebau", "fachwerker");
+    return {
+      prodTitle: prod.title.trim(),
+      prodOk: /Gattungsname/.test(prod.html) && /Familienname/.test(prod.html) &&
+              /Auszubildende \/ Auszubildender/.test(prod.html) &&
+              /Erreichte Punktzahl:/.test(prod.html) && /Datum \/ Unterschrift des Prüfers/.test(prod.html) &&
+              !/Schreibfehler/.test(prod.html),
+      galaTitle: gala.title.trim(),
+      galaOk: /Schreibfehler führen zur Halbierung der Punktezahl/.test(gala.html) && /1 Punkt \(G\)/.test(gala.html),
+      fwTitle: fw.title.trim(),
+      fwOk: /Gartenbaufachwerker\/in/.test(fw.html) && /Gattung \(botanisch\)/.test(fw.html) &&
+            /0,5 Punkte/.test(fw.html) && !/\(G\)/.test(fw.html) &&
+            /Gesamtpunkte/.test(fw.html) && /Es wurde folgende Note erzielt:/.test(fw.html) &&
+            /Datum \/ Unterschrift Prüfende/.test(fw.html)
+    };
+  });
+  assert(/im Gartenbau$/.test(forms.prodTitle), "Produktions-Bogen: Titel »… im Gartenbau« erwartet, war: " + forms.prodTitle);
+  assert(forms.prodOk, "Produktions-Bogen entspricht nicht dem offiziellen Formular");
+  assert(/im Gartenbau GALA$/.test(forms.galaTitle), "GaLaBau-Bogen: Titel »… im Gartenbau GALA« erwartet, war: " + forms.galaTitle);
+  assert(forms.galaOk, "GaLaBau-Bogen: Schreibfehler-Hinweis/Punktangaben (G) fehlen");
+  assert(forms.fwTitle === "Abschlussprüfung Pflanzenbestimmung", "FW-Bogen: Titel ohne Zusatz erwartet, war: " + forms.fwTitle);
+  assert(forms.fwOk, "Fachwerker-Bogen entspricht nicht dem offiziellen Formular");
 
   // zurück auf Baumschule/Gärtner für den Persistenz-Test
   await page.select("#frSelect", "baumschule");
@@ -256,14 +289,14 @@ async function main() {
   const examsAfter = await page.evaluate(() => exams.length);
   assert(examsAfter === 1, "Gespeicherte Prüfung überlebte den Reload nicht: " + examsAfter);
 
-  // 7c) Einstellungen: zuständige Stelle editierbar und auf dem Bogen sichtbar
+  // 7c) Einstellungen: zuständige Stelle editierbar und in der Bogen-Fußzeile sichtbar
   const settingsCheck = await page.evaluate(() => {
     if ($("#settingsPanel").hasAttribute("hidden")) toggleSettings();
     $("#set_stelle1").value = "Landwirtschaftskammer Musterland";
     $("#set_stelle1").onchange();
     drawRandom(); buildSheet("blank");
     return {
-      inSheet: /Landwirtschaftskammer Musterland/.test(document.querySelector("#sheet .brand").textContent),
+      inSheet: /Landwirtschaftskammer Musterland/.test(document.querySelector("#sheet .ffoot").textContent),
       persisted: /Landwirtschaftskammer Musterland/.test(localStorage.getItem("pflanzenkenntnis.settings") || "")
     };
   });

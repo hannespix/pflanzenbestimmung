@@ -642,6 +642,23 @@ function delPlant(id,p){
    ============================================================ */
 function selectedPlants(){ return selection.map(id=>cache.find(p=>p.id===id)).filter(Boolean); }
 
+/* Offizielle Leerbögen: Nachbau der AP-Formulare der Regierungspräsidien BW
+   (AP_Formular_FW_neu / _Gaertner_GALA_ab_S26 / _Gaertner_Produktion, siehe
+   data/leerboegen/). Drei Formular-Familien, Zuordnung über Niveau/Fachrichtung. */
+function sheetFamily(def){
+  if(/fachwerker/i.test(def.niveau||"")||def.niveauKey==="fachwerker") return "fw";
+  if(/landschaftsbau/i.test(def.fr||"")) return "gala";
+  return "prod";
+}
+const SHEET_COL_LABEL={
+  fw: {gattung:"Gattung (botanisch)",art:"Art (botanisch)",familie:"Familie (botanisch)",deutscher_name:"Deutscher Name"},
+  std:{gattung:"Gattungsname",art:"Artname",familie:"Familienname",deutscher_name:"Deutscher Name"}
+};
+const SHEET_COL_W={ // Spaltenbreiten in % (aus den DOCX-Vorlagen, dxa umgerechnet)
+  fw:  {num:4.6, deutscher_name:36.6, gattung:27.4, art:23.5, pts:7.8},
+  gala:{num:5.8, gattung:27.5, art:29,   deutscher_name:26.1, pts:11.6},
+  prod:{num:5.8, gattung:21.4, art:22.1, familie:21.7, deutscher_name:21.7, pts:7.2}
+};
 function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gespeicherte Prüfung)
   ctx=ctx||{};
   const plants=ctx.plants||selectedPlants();
@@ -649,69 +666,79 @@ function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gesp
   const scale=sch.scale||scaleCfg;
   const def=ctx.def||PROFILE_DEFS[profileId];
   const cols=(sch.cols||[]).filter(c=>c.pts>0);
-  const dateStr=ctx.date?new Date(ctx.date+"T00:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"}):null;
-  const today=dateStr||new Date().toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"});
   const sol = mode==="solution";
+  const fam=sheetFamily(def);
   const per=cols.reduce((s,c)=>s+(c.pts||0),0), maxP=plants.length*per;
+  const dateStr=ctx.date?fmtDate(ctx.date):new Date().toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"});
 
-  const rows=plants.map((p,i)=>{
-    const num=`<td class="num">${i+1}</td>`;
-    const cells=cols.map(c=> sol
-      ? `<td class="sol">${c.key==="gattung"?`<span class="gg">${esc(p[c.key]||"")}</span>`:esc(p[c.key]||"")}</td>`
-      : `<td></td>`).join("");
-    const score = sol ? `<td class="score"></td>` : "";
-    return `<tr>${num}${cells}${score}</tr>`;
-  }).join("");
+  // Titel: Zusatz »im Gartenbau (GALA)« nur beim unveränderten Standardtitel
+  const base=norm(settings&&settings.sheetTitle)||defaultSettings().sheetTitle;
+  const title= base!==defaultSettings().sheetTitle ? base
+    : fam==="gala" ? base+" im Gartenbau GALA"
+    : fam==="prod" ? base+" im Gartenbau" : base;
 
-  let key, keyLabel;
-  if(scale.mode==="ihk"){
-    key=GRADE.map(g=>g.stufe===6?`6 unter ${thresholdPts(GRADE[4].min,maxP)}`:`${g.stufe} ab ${thresholdPts(g.min,maxP)}`).join(" · ");
-    keyLabel="100-Punkte-Schlüssel";
-  }else{
-    const B=linBands(scale.lin);
-    key=B.map(b=>b.stufe===6?`6 unter ${thresholdPts(B[4].lo,maxP)}`:`${b.stufe} ab ${thresholdPts(b.lo,maxP)}`).join(" · ");
-    keyLabel="linear, Baden-Württemberg";
+  // Spalten: Beschriftung wie auf den offiziellen Bögen, Punkte aus dem Schema
+  const lbl=SHEET_COL_LABEL[fam==="fw"?"fw":"std"];
+  const punkt=p=>fmtPts(p)+" "+(p===1?"Punkt":"Punkte")+(fam==="fw"?"":" (G)");
+  const wmap=SHEET_COL_W[fam];
+  const rest=cols.filter(c=>wmap[c.key]==null);
+  const used=wmap.num+wmap.pts+cols.reduce((s,c)=>s+(wmap[c.key]||0),0);
+  const evenW=rest.length?Math.max(8,(100-used)/rest.length):0;
+  const colgroup=`<colgroup><col style="width:${wmap.num}%">`+
+    cols.map(c=>`<col style="width:${wmap[c.key]!=null?wmap[c.key]:evenW}%">`).join("")+
+    `<col style="width:${wmap.pts}%"></colgroup>`;
+  const heads=`<th class="fnum"></th>`+
+    cols.map(c=>`<th>${esc(lbl[c.key]||c.key)}<span class="p">${punkt(c.pts)}</span></th>`).join("")+
+    `<th class="fpth">Punkte</th>`;
+  const hinweis= fam==="gala"
+    ? `<tr><th class="fhint" colspan="${cols.length+2}">Schreibfehler führen zur Halbierung der Punktezahl</th></tr>` : "";
+
+  const rows=plants.map((p,i)=>
+    `<tr><td class="fnum">${i+1}</td>`+
+    cols.map(c=>`<td${sol?' class="sol"':''}>${sol?esc(p[c.key]||""):""}</td>`).join("")+
+    `<td></td></tr>`).join("");
+
+  // Nur auf der Musterlösung: Zuordnung, Vermerk und Bewertungsschlüssel
+  let solMeta="", solScale="";
+  if(sol){
+    let key,keyLabel;
+    if(scale.mode==="ihk"){
+      key=GRADE.map(g=>g.stufe===6?`6 unter ${thresholdPts(GRADE[4].min,maxP)}`:`${g.stufe} ab ${thresholdPts(g.min,maxP)}`).join(" · ");
+      keyLabel="100-Punkte-Schlüssel";
+    }else{
+      const B=linBands(scale.lin);
+      key=B.map(b=>b.stufe===6?`6 unter ${thresholdPts(B[4].lo,maxP)}`:`${b.stufe} ab ${thresholdPts(b.lo,maxP)}`).join(" · ");
+      keyLabel="linear, Baden-Württemberg";
+    }
+    solMeta=`<div class="sheet-meta">Fachrichtung ${esc(def.fr)} · ${esc(def.niveau)} · Prüfung am ${esc(dateStr)} ·
+      ${plants.length} Pflanzen · max. ${fmtPts(maxP)} Punkte
+      ${norm(settings&&settings.pruefendeNote)?`<span class="solution-note">${esc(settings.pruefendeNote)}</span>`:""}</div>`;
+    solScale=`<div class="fscale">Bewertungsschlüssel (${keyLabel}): ${key}</div>`;
   }
-  const colgroup=`<colgroup><col class="c-num">`+
-    cols.map(c=>`<col${c.key==="familie"?' class="c-fam"':''}>`).join("")+
-    (sol?`<col class="c-score">`:``)+`</colgroup>`;
-  const heads=cols.map(c=>`<th>${esc(FIELD_LABEL[c.key]||c.key)}<span class="p">${fmtPts(c.pts)} P.</span></th>`).join("");
-  const scoreHead = sol ? `<th>Punkte<span class="p">${fmtPts(per)}</span></th>` : "";
-  const feldText = cols.map(c=>FIELD_LABEL[c.key]||c.key).join(", ").replace(/,([^,]*)$/," und$1");
+
+  // Abschlussbereich je Familie (Wortlaut der Vorlagen)
+  const result= fam==="fw"
+    ? `<table class="fres fw"><tr><td class="fspace"></td><td class="flab">Gesamtpunkte</td><td class="fbox"></td></tr></table>
+       <table class="fnote2"><tr><td>Es wurde folgende Note erzielt:</td></tr></table>
+       <table class="fsig"><tr><td><span>Datum / Unterschrift Prüfende</span></td></tr></table>`
+    : `<table class="fres"><tr><td class="fspace"></td><td class="flab">Erreichte Punktzahl:</td><td class="fbox"></td></tr></table>
+       <table class="fsig2"><tr><td class="fnote3">Note:</td><td class="fsigl"><span>Datum / Unterschrift des Prüfers</span></td></tr></table>`;
+
+  const foot=[settings&&settings.stelle1,settings&&settings.stelle2].filter(x=>norm(x)).map(esc).join(" · ");
 
   $("#sheet").innerHTML=`
-    <div class="sheet-head">
-      <div class="title">
-        <h1>${esc((settings&&settings.sheetTitle)||"Pflanzenkenntnisse")}${sol?" — Musterlösung":""}</h1>
-        <div class="st">Abschlussprüfung ${esc(def.niveau)} · Fachrichtung ${esc(def.fr)}</div>
-      </div>
-      <div class="brand">
-        ${[settings&&settings.stelle1, settings&&settings.stelle2].filter(x=>norm(x)).map(esc).join("<br>")}
-        ${sol&&norm(settings&&settings.pruefendeNote)?`<br><span class="solution-note">${esc(settings.pruefendeNote)}</span>`:""}
-      </div>
-    </div>
-    <div class="sheet-meta">
-      <div class="mrow"><span class="k">Prüfling</span><span class="val"></span></div>
-      <div class="mrow"><span class="k">Prüflings-Nr.</span><span class="val"></span></div>
-      <div class="mrow"><span class="k">Datum</span><span class="val">${(ctx.date||!sol)?today:""}</span></div>
-      <div class="mrow"><span class="k">Prüfungsort</span><span class="val"></span></div>
-      <div class="mrow"><span class="k">Ausschuss</span><span class="val"></span></div>
-      <div class="mrow"><span class="k">Bearbeitungszeit</span><span class="val"></span></div>
-    </div>
-    <div class="scheme">
-      <span>Je Pflanze werden ${esc(feldText)} getrennt bewertet.</span>
-      <span class="pts">${plants.length} Pflanzen · max. ${fmtPts(maxP)} Punkte</span>
-    </div>
-    <table class="exam">
+    <h1 class="ftitle${fam==="fw"?" fb":""}">${esc(title)}${sol?" — Musterlösung":""}</h1>
+    ${fam==="fw"?`<div class="fsub">Gartenbaufachwerker/in</div>`:""}
+    ${solMeta}
+    <table class="fname"><tr><td><span class="cap">Auszubildende / Auszubildender&nbsp;&nbsp;·&nbsp;&nbsp;Name, Vorname</span></td></tr></table>
+    <table class="exam${sol?" solved":""}">
       ${colgroup}
-      <thead><tr><th>Nr.</th>${heads}${scoreHead}</tr></thead>
+      <thead><tr>${heads}</tr>${hinweis}</thead>
       <tbody>${rows}</tbody>
     </table>
-    <div class="sheet-scale">Bewertungsschlüssel (${keyLabel}): ${key}</div>
-    <div class="sheet-foot">
-      <div class="sig">Datum, Unterschrift Prüfende</div>
-      <div class="sum">Erreicht: <b>&nbsp;&nbsp;&nbsp;&nbsp;</b> / ${fmtPts(maxP)} Punkte</div>
-    </div>`;
+    ${result}
+    ${solScale}
+    ${foot?`<div class="ffoot">${foot}</div>`:""}`;
 }
 function printSheet(mode){
   if(!selection.length){ toast("Erst Arten auswählen",true); return; }
@@ -928,21 +955,25 @@ function renderPreview(){
    ============================================================ */
 const SETTINGS_KEY = LS_PREFIX+"settings";
 function defaultSettings(){ return {
-  stelle1:"Regierungspräsidium Freiburg",
-  stelle2:"Zuständige Stelle Grüne Berufe",
+  stelle1:"Regierungspräsidien Baden-Württemberg",
+  stelle2:"",
   pruefendeNote:"Nur für Prüfende",
-  sheetTitle:"Pflanzenkenntnisse"
+  sheetTitle:"Abschlussprüfung Pflanzenbestimmung"
 }; }
 function loadSettings(){
   let s=null; try{ const raw=store.get(SETTINGS_KEY); if(raw) s=JSON.parse(raw); }catch(e){}
+  // Migration auf die offiziellen Leerbögen: unverändert gespeicherte alte
+  // Standardwerte gelten als »nicht angepasst« und bekommen die neuen Defaults.
+  const OLD={sheetTitle:"Pflanzenkenntnisse",stelle1:"Regierungspräsidium Freiburg",stelle2:"Zuständige Stelle Grüne Berufe"};
+  if(s&&typeof s==="object") Object.keys(OLD).forEach(k=>{ if(s[k]===OLD[k]) delete s[k]; });
   settings=Object.assign(defaultSettings(), (s&&typeof s==="object")?s:{});
 }
 function saveSettings(){ store.set(SETTINGS_KEY, JSON.stringify(settings)); }
 const SETTINGS_FIELDS=[
-  {key:"sheetTitle",   label:"Titel des Bogens",              ph:"Pflanzenkenntnisse"},
-  {key:"stelle1",      label:"Zuständige Stelle (Zeile 1)",   ph:"z. B. Regierungspräsidium …"},
-  {key:"stelle2",      label:"Zuständige Stelle (Zeile 2)",   ph:"z. B. Zuständige Stelle Grüne Berufe"},
-  {key:"pruefendeNote",label:"Vermerk auf der Musterlösung",  ph:"z. B. Nur für Prüfende"}
+  {key:"sheetTitle",   label:"Titel des Bogens",                        ph:"Abschlussprüfung Pflanzenbestimmung"},
+  {key:"stelle1",      label:"Fußzeile – zuständige Stelle (Zeile 1)",  ph:"z. B. Regierungspräsidien Baden-Württemberg"},
+  {key:"stelle2",      label:"Fußzeile (Zeile 2, optional)",            ph:"z. B. Abteilung / Ort"},
+  {key:"pruefendeNote",label:"Vermerk auf der Musterlösung",            ph:"z. B. Nur für Prüfende"}
 ];
 function toggleSettings(){
   const s=$("#settingsPanel");

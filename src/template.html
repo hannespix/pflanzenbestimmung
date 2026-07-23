@@ -345,41 +345,54 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 }
 @media (prefers-reduced-motion:reduce){*{transition:none !important}}
 
-/* ===================== PRINT ===================== */
+/* ===================== PRINT =====================
+   Nachbau der offiziellen AP-Leerbögen (Regierungspräsidien BW), siehe
+   data/leerboegen/: Arial, schwarze Linien, 10-mm-Schreibzeilen, ohne Raster. */
 @media print{
-  @page{size:A4 portrait; margin:14mm 15mm}
+  @page{size:A4 portrait; margin:8mm 15mm 10mm}
   body{background:#fff; background-image:none}
   .wrap{display:none !important}
   .scrim{display:none !important}
-  #sheet{display:block !important; color:#111; font-family:var(--serif)}
-  .sheet-head{display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #111; padding-bottom:8px; margin-bottom:4px}
-  .sheet-head .title h1{font-size:17pt; margin:0; font-weight:700; letter-spacing:-.01em}
-  .sheet-head .title .st{font-style:italic; font-size:11pt; color:#333; margin-top:2px}
-  .sheet-head .brand{text-align:right; font-family:var(--sans); font-size:8pt; color:#333; line-height:1.35}
-  .sheet-meta{display:grid; grid-template-columns:1fr 1fr 1fr; gap:2px 18px; font-family:var(--sans); font-size:9pt; margin:8px 0 6px}
-  .sheet-meta .mrow{display:flex; gap:6px; align-items:baseline; padding:3px 0; border-bottom:.6pt solid #999}
-  .sheet-meta .mrow .k{color:#444; white-space:nowrap; font-size:8pt; text-transform:uppercase; letter-spacing:.05em}
-  .sheet-meta .mrow .val{flex:1; font-style:italic}
-  .scheme{font-family:var(--sans); font-size:8.5pt; color:#333; margin:2px 0 8px; display:flex; justify-content:space-between; align-items:center}
-  .scheme .pts{font-weight:700; color:#000}
-  table.exam{width:100%; border-collapse:collapse; font-size:10.5pt}
+  .toast{display:none !important}
+  #sheet{display:block !important; color:#000; font-family:Arial,Helvetica,'Liberation Sans',sans-serif; line-height:1.25}
+  .ftitle{font-size:16pt; font-weight:400; text-align:center; margin:0}
+  .ftitle.fb{font-weight:700}
+  .fsub{font-size:16pt; text-align:center; margin:0}
+  .sheet-meta{font-size:9pt; text-align:center; margin:4pt 0 0}
+  .fname{width:100%; border-collapse:collapse; margin:10pt 0 10pt}
+  .fname td{border:.7pt solid #000; height:11mm; vertical-align:top; padding:2pt 5pt}
+  .fname .cap{font-size:8.5pt}
+  table.exam{width:100%; border-collapse:collapse; font-size:10pt}
   table.exam thead{display:table-header-group}
-  table.exam th,table.exam td{border:.8pt solid #111; padding:0; text-align:left; vertical-align:middle}
-  table.exam th{background:#eceee6; font-family:var(--sans); font-size:8.5pt; font-weight:700; padding:5px 7px; letter-spacing:.02em}
-  table.exam th .p{display:block; font-weight:400; color:#333; font-size:7.5pt; font-family:var(--mono); margin-top:1px}
-  table.exam td{height:30px; padding:3px 7px}
-  table.exam td.num{text-align:center; font-family:var(--mono); font-weight:700; width:26px; background:#f4f5ef}
-  table.exam col.c-num{width:26px} table.exam col.c-fam{width:19%} table.exam col.c-score{width:44px}
+  table.exam th,table.exam td{border:.7pt solid #000; text-align:left; vertical-align:middle; padding:2pt 5pt}
+  table.exam th{font-weight:700; font-size:10pt; vertical-align:top; padding-top:3pt}
+  table.exam th .p{display:block; font-weight:400; font-size:9pt; margin-top:1pt}
+  table.exam th.fnum,table.exam th.fpth{vertical-align:middle}
+  table.exam th.fhint{font-weight:400; font-size:9.5pt; text-align:center; height:7mm; vertical-align:middle}
+  table.exam td{height:10mm}
+  table.exam td.fnum{text-align:center}
   table.exam td.sol{font-style:italic}
-  table.exam td.sol .gg{font-style:italic}
-  table.exam td.score{text-align:center; background:#f8f8f4; font-family:var(--mono)}
+  /* Musterlösung: kompakte Zeilen (Antworten stehen drin, keine Schreibhöhe nötig) */
+  table.exam.solved td{height:auto; font-size:9pt; padding:2.5pt 5pt}
   table.exam tr{break-inside:avoid}
-  .sheet-scale{font-family:var(--sans); font-size:8pt; color:#333; margin-top:10px; padding:4px 8px; border:.6pt solid #999; border-radius:3px; background:#f6f7f1; letter-spacing:.01em}
-  .sheet-foot{display:flex; justify-content:space-between; align-items:flex-end; margin-top:10px; font-family:var(--sans); font-size:9pt}
-  .sheet-foot .sig{border-top:.8pt solid #111; padding-top:3px; width:210px; text-align:center; color:#444; font-size:8pt}
-  .sheet-foot .sum{font-family:var(--serif); font-size:11pt}
-  .sheet-foot .sum b{font-size:13pt}
-  .solution-note{font-family:var(--sans); font-size:8pt; color:#b00; border:.8pt solid #b00; padding:2px 7px; border-radius:3px; display:inline-block}
+  .fres{width:100%; border-collapse:collapse; margin-top:4mm}
+  .fres td{height:10mm; vertical-align:middle}
+  .fres .fspace{border:none}
+  .fres .flab{border:.7pt solid #000; width:26%; padding:2pt 6pt}
+  .fres .fbox{border:.7pt solid #000; width:12%}
+  .fres.fw .flab{width:34%} .fres.fw .fbox{width:22%}
+  .fnote2{width:100%; border-collapse:collapse; margin-top:3mm}
+  .fnote2 td{border:.7pt solid #000; height:10.5mm; padding:2pt 6pt; vertical-align:middle; font-size:10.5pt}
+  .fsig{width:100%; border-collapse:collapse; margin-top:3mm}
+  .fsig td{border:.7pt solid #000; height:17mm; vertical-align:top; padding:2pt 5pt}
+  .fsig td span{font-size:8.5pt}
+  .fsig2{width:100%; border-collapse:collapse; margin-top:3mm}
+  .fsig2 td{border:.7pt solid #000; height:12mm; vertical-align:top; padding:2pt 6pt}
+  .fsig2 .fnote3{width:25%; vertical-align:middle; font-size:10.5pt}
+  .fsig2 .fsigl span{font-size:8.5pt}
+  .fscale{font-size:8pt; margin-top:4mm; padding:3pt 6pt; border:.6pt solid #666}
+  .ffoot{position:fixed; bottom:0; left:0; font-size:8pt}
+  .solution-note{font-size:8pt; color:#b00; border:.8pt solid #b00; padding:1pt 6pt; border-radius:2pt; display:inline-block; margin-left:6pt}
 }
 </style>
 </head>
@@ -416,7 +429,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
           <button class="btn" id="btnSchema" title="Prüfungsschema festlegen: welche Spalten (Gattung, Art, Familie, deutscher Name) mit wie vielen Punkten bewertet werden, in welcher Reihenfolge (▲▼) und wie viele Pflanzen je Prüfung. Gilt pro Profil."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 12h16M4 19h16M8 3v4M14 10v4M10 17v4"/></svg>Prüfungsschema</button>
           <button class="btn" id="btnGrade" title="Notenrechner: erreichte Punkte in eine Note umrechnen. Lineare Baden-Württemberg-Skala (Standard) oder IHK-Schlüssel; Notengrenzen einstellbar; zeigt Note, Prozent und Punktschwellen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h14a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 7h8M8 11h3M14 11h2M8 15h3M14 15h2"/></svg>Notenrechner</button>
           <button class="btn" id="btnExams" title="Gespeicherte Prüfungen (nach Prüfungsdatum): aktuelle Auswahl sichern, laden, kopieren (z. B. für den nächsten Prüfungstag), aktualisieren, drucken, als JSON herunterladen, von einem anderen Gerät importieren oder löschen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Prüfungen</button>
-          <button class="btn" id="btnSettings" title="Einstellungen für den Kopf des Bogens: Titel, zuständige Stelle (zwei Zeilen) und Vermerk auf der Musterlösung – so nutzbar für jede zuständige Stelle. Gilt geräteweit."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Einstellungen</button>
+          <button class="btn" id="btnSettings" title="Einstellungen für den Druckbogen: Titel, Fußzeile (zuständige Stelle, zwei Zeilen) und Vermerk auf der Musterlösung – so nutzbar für jede zuständige Stelle. Gilt geräteweit."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Einstellungen</button>
         </div>
       </div>
       <div class="tgroup">
@@ -450,7 +463,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
           <dt>Prüfungsschema</dt><dd>Legt fest, welche Spalten (Gattung, Art, Familie, deutscher Name) mit wie vielen Punkten bewertet werden, in welcher Reihenfolge (▲▼ = Spaltenfolge auf dem Bogen) und wie viele Pflanzen je Prüfung. Punkte dürfen Nachkommastellen haben (z. B. 0,5). Gilt pro Profil.</dd>
           <dt>Notenrechner</dt><dd>Rechnet erreichte Punkte in eine Note um – lineare Baden-Württemberg-Skala (Standard) oder IHK-Schlüssel. Notengrenzen sind einstellbar; angezeigt werden Note, Prozent, Dezimalnote und die Punktschwellen.</dd>
           <dt>Prüfungen</dt><dd>Speichert die gezogene Liste als Momentaufnahme (samt Schema) unter einem <b>Prüfungsdatum</b>. Von dort: laden, <b>kopieren</b> (z. B. für den nächsten Prüfungstag), nach dem Bearbeiten <b>aktualisieren</b>, drucken oder als <b>.json</b> herunterladen. Die .json-Datei lässt sich auf einem <b>anderen Gerät</b> über »Prüfung importieren« (im Prüfungen-Panel) oder »JSON laden« einlesen; beim »Laden« dort fehlende Arten werden automatisch in die Liste übernommen.</dd>
-          <dt>Einstellungen</dt><dd>Passt den Kopf des Bogens an: Titel, <b>zuständige Stelle</b> (zwei Zeilen) und den Vermerk auf der Musterlösung – so ist das Werkzeug für jede zuständige Stelle nutzbar. Gilt geräteweit.</dd>
+          <dt>Einstellungen</dt><dd>Passt den Druckbogen an: Titel, <b>Fußzeile</b> (zuständige Stelle, zwei Zeilen) und den Vermerk auf der Musterlösung – so ist das Werkzeug für jede zuständige Stelle nutzbar. Gilt geräteweit.</dd>
         </dl>
 
         <h4>Liste &amp; Daten</h4>
@@ -463,6 +476,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 
         <h4>Gut zu wissen</h4>
         <ul class="hnotes">
+          <li>Die Druckbögen entsprechen den <b>offiziellen AP-Formularen</b> der Regierungspräsidien Baden-Württemberg – je nach Profil Fachwerker-, GaLaBau- oder Produktions-Formular (Spalten und Punkte aus dem Prüfungsschema).</li>
           <li><b>Gattung</b> = erstes Wort des botanischen Namens, <b>Art</b> = Rest (inkl. <i>var.</i>/<i>ssp.</i>/Sorten).</li>
           <li><b>ZP</b> kennzeichnet für die Zwischenprüfung relevante Arten.</li>
           <li>Für Baden-Württemberg ist die <b>lineare</b> Notenskala Standard (jede Note gleiche Spannweite).</li>
@@ -557,10 +571,10 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
   <section class="grader" id="settingsPanel" hidden>
     <div class="gcard onecol">
       <div class="left noborder">
-        <p class="gtitle">Einstellungen · Kopf des Prüfungsbogens</p>
+        <p class="gtitle">Einstellungen · Titel &amp; Fußzeile des Bogens</p>
         <div class="setgrid" id="setFields"></div>
-        <p class="gnote">Diese Angaben erscheinen auf Prüfungsbogen und Musterlösung – so lässt sich das Werkzeug für jede zuständige Stelle anpassen. Sie gelten geräteweit (im Browser gespeichert) und werden sofort übernommen.</p>
-        <div class="setfoot"><button class="btn ghost" id="setReset" title="Titel, zuständige Stelle und Vermerk auf die Standardwerte (Regierungspräsidium Freiburg) zurücksetzen.">Auf Standard zurücksetzen</button></div>
+        <p class="gnote">Diese Angaben erscheinen auf Prüfungsbogen und Musterlösung (Titel oben, Fußzeile unten) – so lässt sich das Werkzeug für jede zuständige Stelle anpassen. Die Bögen entsprechen den offiziellen AP-Formularen; beim Standardtitel wird der Zusatz »im Gartenbau (GALA)« bzw. die Zeile »Gartenbaufachwerker/in« je nach Profil automatisch ergänzt. Die Einstellungen gelten geräteweit (im Browser gespeichert) und werden sofort übernommen.</p>
+        <div class="setfoot"><button class="btn ghost" id="setReset" title="Titel, Fußzeile und Vermerk auf die Standardwerte der offiziellen Bögen (Regierungspräsidien Baden-Württemberg) zurücksetzen.">Auf Standard zurücksetzen</button></div>
       </div>
     </div>
   </section>
