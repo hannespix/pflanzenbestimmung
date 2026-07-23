@@ -117,8 +117,9 @@ async function main() {
       hasWiki: links.some((h) => /de\.wikipedia\.org/.test(h)),
       hasNatura: links.some((h) => /naturadb\.de/.test(h)),
       hasINat: links.some((h) => /inaturalist\.org/.test(h)),
-      // Baumkunde ist tot (403) → darf NICHT mehr auftauchen
+      // Baumkunde ist tot (403), Gaißmayer ist kommerziell → dürfen NICHT auftauchen
       hasBaumkunde: links.some((h) => /baumkunde\.de/.test(h)),
+      hasGaissmayer: links.some((h) => /gaissmayer\.de/.test(h)),
       hasLoad: !!document.querySelector("#wpLoad"),
       newtab: [...document.querySelectorAll("#infoScrim .srcgrid a")].every((a) => a.target === "_blank"),
     };
@@ -126,8 +127,9 @@ async function main() {
     res.closed = !document.querySelector("#infoScrim");
     return res;
   });
-  assert(info.open && info.n >= 3 && info.hasWiki && info.hasNatura && info.hasINat,
-    "Info-Modal: Deep-Links (Wikipedia + NaturaDB + iNaturalist) fehlen");
+  assert(info.open && info.n === 3 && info.hasWiki && info.hasNatura && info.hasINat,
+    "Info-Modal: genau die neutralen Quellen (Wikipedia + NaturaDB + iNaturalist) erwartet, war n=" + info.n);
+  assert(!info.hasGaissmayer, "Info-Modal: kommerzieller Gaißmayer-Link muss entfernt sein");
   assert(!info.hasBaumkunde, "Info-Modal: defekter Baumkunde-Link (403) muss entfernt sein");
   assert(info.newtab, "Info-Modal: Quell-Links müssen target=_blank (neuer Tab) sein");
   assert(info.hasLoad, "Info-Modal: »Online-Infos laden«-Knopf fehlt");
