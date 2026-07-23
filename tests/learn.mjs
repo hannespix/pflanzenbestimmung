@@ -279,6 +279,34 @@ async function main() {
   assert(pfw.n === 80 && pfw.sub && pfw.fwHeads && pfw.noFam,
     "Druckliste FW: 80 Arten im Fachwerker-Formular erwartet: " + JSON.stringify(pfw));
 
+  // Familien-Steckbriefe: In der Familien-Ansicht öffnet ℹ ein Modal mit
+  // gemeinsamen Merkmalen + Lerntipp; ein Fallback greift für unbekannte Familien
+  const fam = await page.evaluate(() => {
+    document.querySelector('#modeTabs button[data-mode="list"]').click();
+    const lc = document.querySelector("#listControls"); lc.dataset.open = "1"; renderListControls();
+    document.querySelector('.sortbtn[data-sort="familie"]').click();
+    const btns = [...document.querySelectorAll(".cathead-i")];
+    const hasBtns = btns.length > 0;
+    // kuratierte Familie (Asteraceae kommt im Gemüsebau vor)
+    const a = btns.find((b) => /Asteraceae/.test(b.dataset.fam));
+    let curated = null;
+    if (a) { a.click(); const m = document.querySelector("#infoScrim .modal");
+      curated = { title: m.querySelector(".mh-bot").textContent, de: (m.querySelector(".mh-de") || {}).textContent || "",
+        merkmale: /gemeinsam haben/i.test(m.textContent), tipp: /Erkennen/i.test(m.textContent) };
+      closeInfo(); }
+    // Fallback für eine nicht kuratierte Familie
+    openFamilyInfo("Xytestaceae/Testgewächse");
+    const fb = document.querySelector("#infoScrim .modal");
+    const fallback = /kein Steckbrief/i.test(fb.textContent) && /Blütenaufbau/i.test(fb.textContent);
+    closeInfo();
+    return { hasBtns, curated, fallback, gone: !document.querySelector("#infoScrim") };
+  });
+  assert(fam.hasBtns, "Familien-Ansicht: kein ℹ-Steckbrief-Knopf gefunden");
+  assert(fam.curated && /Asteraceae/.test(fam.curated.title) && /Korbblütler/.test(fam.curated.de)
+    && fam.curated.merkmale && fam.curated.tipp, "Familien-Steckbrief (Asteraceae) unvollständig: " + JSON.stringify(fam.curated));
+  assert(fam.fallback, "Familien-Steckbrief: Fallback für unbekannte Familie fehlt");
+  assert(fam.gone, "Familien-Modal schließt nicht");
+
   // Kategorien nach Wuchsform: GaLaBau (aus Quelle ohne Kategorien) ist jetzt
   // nach Nadelgehölze/Laubgehölze/Stauden/… gegliedert
   const wuchs = await page.evaluate(() => {
@@ -332,7 +360,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (kategorisiert/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter), Disclaimer, Mobile ohne Overflow, Quiz, Tippen, Fortschritt-Persistenz.");
+  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (kategorisiert/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter), Familien-Steckbriefe (Modal + Fallback), Disclaimer, Mobile ohne Overflow, Quiz, Tippen, Fortschritt-Persistenz.");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
