@@ -350,8 +350,8 @@ function startHintOnly(){
 
 /* ---------- Liste / Nachschlagen (durchsuchbar, nach Kategorie gruppiert) ---------- */
 const deacc = s => (s==null?"":String(s)).normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-function renderList(){
-  const stage=$("#stage");
+/* Gefilterte Listen-Menge (Kategorie-/ZP-Filter + Suchfeld) \u2013 auch Basis der Druckliste */
+function listFiltered(){
   const raw = $("#listSearch") ? $("#listSearch").value : "";
   const term = deacc(norm(raw)).toLowerCase();
   let p = pool();
@@ -359,6 +359,11 @@ function renderList(){
     const hay = c => deacc(c.g+" "+c.a+" "+c.de+" "+c.fam+" "+c.syn).toLowerCase();
     p = p.filter(c => hay(c).includes(term));
   }
+  return { p, raw, term };
+}
+function renderList(){
+  const stage=$("#stage");
+  const { p, raw, term } = listFiltered();
   if(!p.length){
     stage.innerHTML = `<div class="stage-empty">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -388,6 +393,70 @@ function renderList(){
     li.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openInfo(c); } };
   });
 }
+/* ---------- Druckbare Lernliste ----------
+   Gleiche Form wie die offiziellen Prüfungsbögen (drei Formular-Familien wie im
+   Prüfungswerkzeug): dieselben Spalten, Beschriftungen und Punktangaben je Profil,
+   ausgefüllt wie eine Musterlösung – nach Kategorie gruppiert, plus ZP-Spalte.
+   Gedruckt wird genau die aktuell gefilterte Liste (Kategorie/ZP/Suche). */
+function printFamily(){
+  if(profileId.endsWith("_fachwerker")) return "fw";
+  if(profileId.startsWith("garten_und_landschaftsbau")) return "gala";
+  return "prod";
+}
+const PRINT_COLS={ // [Feld, Beschriftung, Punktangabe] im Wortlaut der Bögen
+  fw:  [["de","Deutscher Name","3 Punkte"],["g","Gattung (botanisch)","0,5 Punkte"],["a","Art (botanisch)","0,5 Punkte"]],
+  gala:[["g","Gattungsname","1 Punkt (G)"],["a","Artname","1 Punkt (G)"],["de","Deutscher Name","2 Punkte (G)"]],
+  prod:[["g","Gattungsname","3 Punkte (G)"],["a","Artname","3 Punkte (G)"],["fam","Familienname","1 Punkt (G)"],["de","Deutscher Name","3 Punkte (G)"]]
+};
+function buildPrintList(){
+  const host=$("#printList"); if(!host) return 0;
+  const fam=printFamily();
+  const cols=PRINT_COLS[fam];
+  const { p, raw, term } = listFiltered();
+  const frLabel=$("#frSelect").selectedOptions[0]?$("#frSelect").selectedOptions[0].textContent:"";
+  const nivLabel=$("#nivSelect").selectedOptions[0]?$("#nivSelect").selectedOptions[0].textContent:"";
+  const title= fam==="gala" ? "Abschlussprüfung Pflanzenbestimmung im Gartenbau GALA"
+             : fam==="prod" ? "Abschlussprüfung Pflanzenbestimmung im Gartenbau"
+             : "Abschlussprüfung Pflanzenbestimmung";
+  const heute=new Date().toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"});
+  const filt=[];
+  if($("#cat").value) filt.push("Kategorie: "+$("#cat").value);
+  if($("#onlyzp").checked) filt.push("nur ZP-relevant");
+  if(term) filt.push("Suche: »"+raw+"«");
+
+  const groups=new Map();
+  p.forEach(c=>{ const k=c.kat||"Ohne Kategorie"; if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(c); });
+  const cats=[...groups.keys()].sort((a,b)=> katRank(a)-katRank(b) || a.localeCompare(b,"de"));
+
+  const heads=`<th class="pnum"></th>`+
+    cols.map(c=>`<th>${esc(c[1])}<span class="pp">${esc(c[2])}</span></th>`).join("")+
+    `<th class="pzp" title="prüfungsrelevant für die Zwischenprüfung">ZP</th>`;
+  let n=0, rows="";
+  for(const cat of cats){
+    const arr=groups.get(cat).slice().sort((a,b)=> norm(a.g+" "+a.a).localeCompare(norm(b.g+" "+b.a),"de"));
+    rows+=`<tr class="pcat"><td colspan="${cols.length+2}">${esc(cat)} · ${arr.length} ${arr.length===1?"Art":"Arten"}</td></tr>`;
+    for(const c of arr){
+      n++;
+      rows+=`<tr><td class="pnum">${n}</td>`+
+        cols.map(k=>`<td class="${k[0]==="g"||k[0]==="a"?"bot":""}">${esc(c[k[0]]||"")}</td>`).join("")+
+        `<td class="pzp">${c.zp?"×":""}</td></tr>`;
+    }
+  }
+  host.innerHTML=`
+    <h1 class="ptitle${fam==="fw"?" pb":""}">${esc(title)} — Lernliste</h1>
+    ${fam==="fw"?`<div class="psub">Gartenbaufachwerker/in</div>`:""}
+    <div class="pmeta">Fachrichtung ${esc(frLabel)} · ${esc(nivLabel)} · ${n} ${n===1?"Art":"Arten"}
+      ${filt.length?` · ${esc(filt.join(" · "))}`:""} · Stand ${esc(heute)}</div>
+    <table class="ptab"><thead><tr>${heads}</tr></thead><tbody>${rows}</tbody></table>
+    <div class="pfoot">Pflanzenkenntnis · Lernliste in der Form des Prüfungsbogens (Spalten und Punkte wie in der Prüfung)</div>`;
+  return n;
+}
+function printList(){
+  const n=buildPrintList();
+  if(!n){ toast("Keine Arten im aktuellen Filter",true); return; }
+  window.print();
+}
+
 /* Modus anwenden: Liste zeigt sofort die Nachschlage-Liste (ohne »Sitzung starten«) */
 function applyMode(){
   const isList = mode==="list";
@@ -575,6 +644,7 @@ function wire(){
   $("#onlyzp").onchange=refreshView;
   $("#richtung").onchange=()=>{ richtung=$("#richtung").value; store.set(LS_PREFIX+"richtung",richtung); refreshView(); };
   $("#listSearch").oninput=()=>{ if(mode==="list") renderList(); };
+  if($("#btnPrintList")) $("#btnPrintList").onclick=printList;
   $("#modeTabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{
     mode=b.dataset.mode; store.set(LS_PREFIX+"mode",mode);
     $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
@@ -613,3 +683,4 @@ window.openInfo=openInfo;
 window.closeInfo=closeInfo;
 window.wikiCandidates=wikiCandidates;
 window.searchName=searchName;
+window.buildPrintList=buildPrintList;

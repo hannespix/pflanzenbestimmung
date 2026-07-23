@@ -203,6 +203,51 @@ async function main() {
   assert(list.backToAll === list.allRows, "Liste: Leeren der Suche stellt nicht alle Zeilen wieder her");
   assert(list.modalOpen, "Liste: Klick auf eine Art öffnet kein Info-Modal");
 
+  // Druckbare Lernliste: Form des Prüfungsbogens (Spalten je Familie), gefüllt,
+  // kategorisiert, ZP-Spalte; respektiert den Suchfilter
+  const plist = await page.evaluate(() => {
+    const n = buildPrintList(); // gemuesebau_gaertner → Produktions-Formular
+    const host = document.querySelector("#printList");
+    const html = host.innerHTML;
+    const dataRows = host.querySelectorAll(".ptab tbody tr:not(.pcat)").length;
+    const catRows = host.querySelectorAll(".ptab tbody tr.pcat").length;
+    const firstCells = [...host.querySelectorAll(".ptab tbody tr:not(.pcat)")[0].children].map((td) => td.textContent.trim());
+    // Suchfilter wirkt auch auf den Druck
+    const s = document.querySelector("#listSearch");
+    s.value = "Allium"; s.dispatchEvent(new Event("input"));
+    const nFiltered = buildPrintList();
+    s.value = ""; s.dispatchEvent(new Event("input")); buildPrintList();
+    return {
+      n, dataRows, catRows, nFiltered,
+      title: /Abschlussprüfung Pflanzenbestimmung im Gartenbau — Lernliste/.test(html),
+      heads: /Gattungsname/.test(html) && /Familienname/.test(html) && /3 Punkte \(G\)/.test(html),
+      zpCol: />ZP<\/th>/.test(html),
+      filled: firstCells[1] !== "" && firstCells[0] === "1",
+      meta: /Fachrichtung Gemüsebau/.test(html) && /148 Arten/.test(html)
+    };
+  });
+  assert(plist.n === 148 && plist.dataRows === 148, "Druckliste: 148 Datenzeilen erwartet, war " + plist.dataRows);
+  assert(plist.catRows >= 1, "Druckliste: Kategorie-Zwischenzeilen fehlen");
+  assert(plist.title && plist.heads, "Druckliste: Titel/Spaltenköpfe entsprechen nicht dem Prüfungsbogen (Produktion)");
+  assert(plist.zpCol, "Druckliste: ZP-Spalte fehlt");
+  assert(plist.filled && plist.meta, "Druckliste: Zeilen nicht gefüllt oder Kopfzeile falsch");
+  assert(plist.nFiltered > 0 && plist.nFiltered < plist.n, "Druckliste: Suchfilter wirkt nicht (" + plist.nFiltered + ")");
+
+  // Druckliste: Fachwerker-Profil nutzt das FW-Formular (Dt. Name zuerst, ohne Familie)
+  const pfw = await page.evaluate(() => {
+    document.querySelector("#nivSelect").value = "fachwerker";
+    document.querySelector("#nivSelect").dispatchEvent(new Event("change"));
+    const n = buildPrintList();
+    const html = document.querySelector("#printList").innerHTML;
+    document.querySelector("#nivSelect").value = "gaertner";
+    document.querySelector("#nivSelect").dispatchEvent(new Event("change"));
+    return { n, sub: /Gartenbaufachwerker\/in/.test(html),
+      fwHeads: /Deutscher Name/.test(html) && /Gattung \(botanisch\)/.test(html) && /0,5 Punkte/.test(html),
+      noFam: !/Familienname/.test(html) };
+  });
+  assert(pfw.n === 80 && pfw.sub && pfw.fwHeads && pfw.noFam,
+    "Druckliste FW: 80 Arten im Fachwerker-Formular erwartet: " + JSON.stringify(pfw));
+
   // Fortschritt-Persistenz über einen Reload
   await page.waitForFunction("localStorage.getItem('pflanzenlernen.progress.gemuesebau_gaertner')!=null", { timeout: 5000 });
   const before = await page.evaluate(() => Object.keys(progress).length);
@@ -216,7 +261,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (kategorisiert/durchsuchbar/klickbar), Quiz, Tippen, Fortschritt-Persistenz.");
+  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (kategorisiert/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter), Quiz, Tippen, Fortschritt-Persistenz.");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
