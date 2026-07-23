@@ -159,7 +159,8 @@ main{margin-top:18px}
 .toast.err{background:var(--madder)}
 
 /* Liste / Nachschlagen (durchsuchbar, kategorisiert) */
-.listsearchrow{display:flex; align-items:center; gap:8px; border:1.4px solid var(--rule-strong); background:#fff; border-radius:6px; padding:0 12px}
+.listsearchrow{display:flex; align-items:stretch; gap:8px; flex-wrap:wrap}
+.searchbox{display:flex; align-items:center; gap:8px; border:1.4px solid var(--rule-strong); background:#fff; border-radius:6px; padding:0 12px; flex:1; min-width:220px}
 .listsearchrow:focus-within{border-color:var(--green)}
 .listsearchrow .lsic{width:17px; height:17px; color:var(--ink-faint); flex:none}
 .listsearch{flex:1; border:none; outline:none; background:transparent; padding:11px 4px; font-size:15px; color:var(--ink)}
@@ -214,6 +215,13 @@ main{margin-top:18px}
   .srcgrid a{font-size:12.5px; padding:7px 10px}
   .hdl{grid-template-columns:1fr; gap:2px 0}
   .hdl dt{margin-top:10px}
+  /* Modus-Tabs: sauberes 2×2-Raster statt zufälligem Umbruch */
+  .modes{display:grid; grid-template-columns:1fr 1fr; width:100%}
+  .modes button{border-right:none; justify-content:center; padding:11px 8px}
+  .modes button:nth-child(odd){border-right:1px solid var(--rule-strong)}
+  .modes button:nth-child(-n+2){border-bottom:1px solid var(--rule-strong)}
+  /* Listen-Suche: Druck-Knopf rutscht in voller Breite unter das Suchfeld */
+  .listsearchrow .printbtn{width:100%; justify-content:center}
 }
 /* ===== Design-Politur: mehr Ruhe, weiche Übergänge, dezente Tiefe ===== */
 html{scroll-behavior:smooth}
@@ -258,6 +266,35 @@ main{margin-top:22px}
 .toast{border-radius:8px}
 
 @media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important; scroll-behavior:auto !important}}
+
+/* ===================== Druckbare Lernliste =====================
+   Nur im Ausdruck sichtbar. Gleiche Form wie die offiziellen Prüfungsbögen
+   (Arial, schwarze Linien, Spaltenbeschriftung mit Punktangaben), aber als
+   ausgefüllte, kategorisierte Nachschlage-Tabelle mit ZP-Spalte. */
+#printList{display:none}
+.listsearchrow .printbtn{flex:none; white-space:nowrap}
+@media print{
+  @page{size:A4 portrait; margin:12mm 14mm}
+  body{background:#fff !important; background-image:none !important}
+  .wrap,.toast,.scrim{display:none !important}
+  #printList{display:block; color:#000; font-family:Arial,Helvetica,'Liberation Sans',sans-serif; line-height:1.3}
+  .ptitle{font-size:15pt; font-weight:400; text-align:center; margin:0}
+  .ptitle.pb{font-weight:700}
+  .psub{font-size:15pt; text-align:center; margin:0}
+  .pmeta{font-size:9pt; text-align:center; margin:4pt 0 8pt}
+  table.ptab{width:100%; border-collapse:collapse; font-size:9pt}
+  table.ptab thead{display:table-header-group}
+  table.ptab th,table.ptab td{border:.7pt solid #000; text-align:left; vertical-align:middle; padding:2.5pt 5pt}
+  table.ptab th{font-weight:700; font-size:9.5pt; vertical-align:top}
+  table.ptab th .pp{display:block; font-weight:400; font-size:8.5pt; margin-top:1pt}
+  table.ptab th.pnum,table.ptab th.pzp{vertical-align:middle}
+  table.ptab td.pnum{text-align:center; width:6%}
+  table.ptab th.pzp,table.ptab td.pzp{text-align:center; width:6%}
+  table.ptab td.bot{font-style:italic}
+  table.ptab tr.pcat td{font-weight:700; font-size:9.5pt; padding:4pt 5pt}
+  table.ptab tr{break-inside:avoid}
+  .pfoot{font-size:8pt; margin-top:6pt}
+}
 </style>
 </head>
 <body>
@@ -302,8 +339,13 @@ main{margin-top:22px}
       <span class="hint" id="startHint"></span>
     </div>
     <div class="listsearchrow" id="listSearchRow" hidden>
-      <svg class="lsic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-      <input id="listSearch" class="listsearch" type="search" autocomplete="off" spellcheck="false" placeholder="Liste durchsuchen – Name, Familie, Synonym …" aria-label="Liste durchsuchen">
+      <div class="searchbox">
+        <svg class="lsic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="listSearch" class="listsearch" type="search" autocomplete="off" spellcheck="false" placeholder="Liste durchsuchen – Name, Familie, Synonym …" aria-label="Liste durchsuchen">
+      </div>
+      <button class="btn printbtn" id="btnPrintList" title="Die aktuell gefilterte Liste drucken – als Tabelle in der Form des Prüfungsbogens (gleiche Spalten, Beschriftung und Punktangaben wie in der Prüfung, nach Kategorie gruppiert, mit ZP-Spalte).">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>Liste drucken
+      </button>
     </div>
   </div>
 
@@ -332,7 +374,10 @@ main{margin-top:22px}
       <dt>Tippen</dt><dd>Antwort selbst eingeben – <b>tippfehler-tolerant</b>; Gattung und Art bzw.
         Synonyme werden getrennt geprüft.</dd>
       <dt>Liste</dt><dd>Alle Arten des Profils zum <b>Nachschlagen</b>, nach Kategorie sortiert und
-        <b>durchsuchbar</b> (Name, Familie, Synonym). Ein Klick öffnet die Info zur Pflanze.</dd>
+        <b>durchsuchbar</b> (Name, Familie, Synonym). Ein Klick öffnet die Info zur Pflanze.
+        Über <b>»Liste drucken«</b> kommt die aktuell gefilterte Liste als Tabelle in der
+        <b>Form des Prüfungsbogens</b> aufs Papier – gleiche Spalten, Beschriftung und
+        Punktangaben wie in der Prüfung, nach Kategorie gruppiert und mit ZP-Spalte.</dd>
     </dl>
 
     <h4>Einstellungen</h4>
@@ -366,6 +411,9 @@ main{margin-top:22px}
     <a class="legal" href="rechtliches.html">Impressum &amp; Datenschutz</a>
   </footer>
 </div>
+
+<!-- Druckbare Lernliste (nur im Ausdruck sichtbar; Form des Prüfungsbogens) -->
+<div id="printList"></div>
 
 <div class="toast" id="toast"></div>
 
@@ -723,8 +771,8 @@ function startHintOnly(){
 
 /* ---------- Liste / Nachschlagen (durchsuchbar, nach Kategorie gruppiert) ---------- */
 const deacc = s => (s==null?"":String(s)).normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-function renderList(){
-  const stage=$("#stage");
+/* Gefilterte Listen-Menge (Kategorie-/ZP-Filter + Suchfeld) \u2013 auch Basis der Druckliste */
+function listFiltered(){
   const raw = $("#listSearch") ? $("#listSearch").value : "";
   const term = deacc(norm(raw)).toLowerCase();
   let p = pool();
@@ -732,6 +780,11 @@ function renderList(){
     const hay = c => deacc(c.g+" "+c.a+" "+c.de+" "+c.fam+" "+c.syn).toLowerCase();
     p = p.filter(c => hay(c).includes(term));
   }
+  return { p, raw, term };
+}
+function renderList(){
+  const stage=$("#stage");
+  const { p, raw, term } = listFiltered();
   if(!p.length){
     stage.innerHTML = `<div class="stage-empty">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -761,6 +814,70 @@ function renderList(){
     li.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openInfo(c); } };
   });
 }
+/* ---------- Druckbare Lernliste ----------
+   Gleiche Form wie die offiziellen Prüfungsbögen (drei Formular-Familien wie im
+   Prüfungswerkzeug): dieselben Spalten, Beschriftungen und Punktangaben je Profil,
+   ausgefüllt wie eine Musterlösung – nach Kategorie gruppiert, plus ZP-Spalte.
+   Gedruckt wird genau die aktuell gefilterte Liste (Kategorie/ZP/Suche). */
+function printFamily(){
+  if(profileId.endsWith("_fachwerker")) return "fw";
+  if(profileId.startsWith("garten_und_landschaftsbau")) return "gala";
+  return "prod";
+}
+const PRINT_COLS={ // [Feld, Beschriftung, Punktangabe] im Wortlaut der Bögen
+  fw:  [["de","Deutscher Name","3 Punkte"],["g","Gattung (botanisch)","0,5 Punkte"],["a","Art (botanisch)","0,5 Punkte"]],
+  gala:[["g","Gattungsname","1 Punkt (G)"],["a","Artname","1 Punkt (G)"],["de","Deutscher Name","2 Punkte (G)"]],
+  prod:[["g","Gattungsname","3 Punkte (G)"],["a","Artname","3 Punkte (G)"],["fam","Familienname","1 Punkt (G)"],["de","Deutscher Name","3 Punkte (G)"]]
+};
+function buildPrintList(){
+  const host=$("#printList"); if(!host) return 0;
+  const fam=printFamily();
+  const cols=PRINT_COLS[fam];
+  const { p, raw, term } = listFiltered();
+  const frLabel=$("#frSelect").selectedOptions[0]?$("#frSelect").selectedOptions[0].textContent:"";
+  const nivLabel=$("#nivSelect").selectedOptions[0]?$("#nivSelect").selectedOptions[0].textContent:"";
+  const title= fam==="gala" ? "Abschlussprüfung Pflanzenbestimmung im Gartenbau GALA"
+             : fam==="prod" ? "Abschlussprüfung Pflanzenbestimmung im Gartenbau"
+             : "Abschlussprüfung Pflanzenbestimmung";
+  const heute=new Date().toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"});
+  const filt=[];
+  if($("#cat").value) filt.push("Kategorie: "+$("#cat").value);
+  if($("#onlyzp").checked) filt.push("nur ZP-relevant");
+  if(term) filt.push("Suche: »"+raw+"«");
+
+  const groups=new Map();
+  p.forEach(c=>{ const k=c.kat||"Ohne Kategorie"; if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(c); });
+  const cats=[...groups.keys()].sort((a,b)=> katRank(a)-katRank(b) || a.localeCompare(b,"de"));
+
+  const heads=`<th class="pnum"></th>`+
+    cols.map(c=>`<th>${esc(c[1])}<span class="pp">${esc(c[2])}</span></th>`).join("")+
+    `<th class="pzp" title="prüfungsrelevant für die Zwischenprüfung">ZP</th>`;
+  let n=0, rows="";
+  for(const cat of cats){
+    const arr=groups.get(cat).slice().sort((a,b)=> norm(a.g+" "+a.a).localeCompare(norm(b.g+" "+b.a),"de"));
+    rows+=`<tr class="pcat"><td colspan="${cols.length+2}">${esc(cat)} · ${arr.length} ${arr.length===1?"Art":"Arten"}</td></tr>`;
+    for(const c of arr){
+      n++;
+      rows+=`<tr><td class="pnum">${n}</td>`+
+        cols.map(k=>`<td class="${k[0]==="g"||k[0]==="a"?"bot":""}">${esc(c[k[0]]||"")}</td>`).join("")+
+        `<td class="pzp">${c.zp?"×":""}</td></tr>`;
+    }
+  }
+  host.innerHTML=`
+    <h1 class="ptitle${fam==="fw"?" pb":""}">${esc(title)} — Lernliste</h1>
+    ${fam==="fw"?`<div class="psub">Gartenbaufachwerker/in</div>`:""}
+    <div class="pmeta">Fachrichtung ${esc(frLabel)} · ${esc(nivLabel)} · ${n} ${n===1?"Art":"Arten"}
+      ${filt.length?` · ${esc(filt.join(" · "))}`:""} · Stand ${esc(heute)}</div>
+    <table class="ptab"><thead><tr>${heads}</tr></thead><tbody>${rows}</tbody></table>
+    <div class="pfoot">Pflanzenkenntnis · Lernliste in der Form des Prüfungsbogens (Spalten und Punkte wie in der Prüfung)</div>`;
+  return n;
+}
+function printList(){
+  const n=buildPrintList();
+  if(!n){ toast("Keine Arten im aktuellen Filter",true); return; }
+  window.print();
+}
+
 /* Modus anwenden: Liste zeigt sofort die Nachschlage-Liste (ohne »Sitzung starten«) */
 function applyMode(){
   const isList = mode==="list";
@@ -948,6 +1065,7 @@ function wire(){
   $("#onlyzp").onchange=refreshView;
   $("#richtung").onchange=()=>{ richtung=$("#richtung").value; store.set(LS_PREFIX+"richtung",richtung); refreshView(); };
   $("#listSearch").oninput=()=>{ if(mode==="list") renderList(); };
+  if($("#btnPrintList")) $("#btnPrintList").onclick=printList;
   $("#modeTabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{
     mode=b.dataset.mode; store.set(LS_PREFIX+"mode",mode);
     $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
@@ -986,6 +1104,7 @@ window.openInfo=openInfo;
 window.closeInfo=closeInfo;
 window.wikiCandidates=wikiCandidates;
 window.searchName=searchName;
+window.buildPrintList=buildPrintList;
 
 </script>
 </body>
