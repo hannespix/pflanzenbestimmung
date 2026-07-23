@@ -132,6 +132,10 @@ async function main() {
   await page.waitForFunction("document.querySelectorAll('#list .row').length===148", { timeout: 10000 })
     .catch(() => { throw new Error("Gemüsebau/Gärtner: erwartete 148 Zeilen nicht erreicht"); });
 
+  // 2b) ZP-Legende erklärt »ZP« über der Liste (Gemüsebau enthält ZP-Arten)
+  const zpLeg = await page.evaluate(() => (document.querySelector("#list .zpnote") || {}).textContent || "");
+  assert(/ZP.*Zwischenprüfung relevant/.test(zpLeg), "Prüfliste: ZP-Legende fehlt: " + zpLeg);
+
   // 3) Profilwechsel: Baumschule/Gärtner → 248 Arten
   await page.select("#frSelect", "baumschule");
   await page.$eval("#frSelect", (e) => e.dispatchEvent(new Event("change")));

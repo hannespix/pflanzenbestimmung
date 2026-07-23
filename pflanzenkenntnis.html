@@ -232,6 +232,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .de{color:var(--ink)}
 .tag{font-family:var(--mono); font-size:10px; letter-spacing:.05em; padding:1px 6px; border-radius:3px; text-transform:uppercase}
 .tag.zp{color:var(--gold); border:1px solid var(--gold); background:#f6efdc}
+.zpnote{display:flex; align-items:center; gap:7px; margin:4px 0 10px 2px; font-size:12px; color:var(--ink-faint); font-family:var(--sans)}
 .tag.bem{color:var(--sepia); border:1px dashed var(--rule-strong)}
 .rowacts{display:flex; gap:2px; opacity:0; transition:opacity .1s}
 .row:hover .rowacts,.row:focus-within .rowacts{opacity:1}
@@ -1287,6 +1288,11 @@ function renderList(){
   if(!items.length){
     const e=el("div","empty"); e.innerHTML="<h2>Keine Treffer</h2><p>Für diese Filter gibt es keine Arten. Suche anpassen oder Kategorie zurücksetzen.</p>";
     host.appendChild(e); return;
+  }
+  if(items.some(p=>p.zp)){
+    const lg=el("div","zpnote");
+    lg.innerHTML=`<span class="tag zp">ZP</span> = für die Zwischenprüfung relevant`;
+    host.appendChild(lg);
   }
   const groups={};
   items.forEach(p=>{ (groups[p.kategorie||"—"] ||= []).push(p); });

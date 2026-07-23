@@ -485,6 +485,7 @@ function renderList(){
       ${(c.de||c.fam)?`<div class="sp-sub">${c.de?esc(c.de):""}${c.de&&c.fam?" · ":""}${c.fam?`<span class="sp-fam">${esc(c.fam)}</span>`:""}</div>`:""}
     </li>`; };
   let html=`<div class="listtop">${p.length} ${p.length===1?"Art":"Arten"}${term?(" · Treffer für »"+esc(raw)+"«"):""} · sortiert nach ${SORT_LABEL[listSort]} · zum Nachschlagen antippen</div>`;
+  if(p.some(c=>c.zp)) html+=`<div class="zpnote"><span class="sp-zp">ZP</span> = für die Zwischenprüfung relevant</div>`;
 
   if(listSort==="bot" || listSort==="de"){
     // flache, alphabetische Liste mit Anfangsbuchstaben-Trennern
@@ -585,13 +586,14 @@ function buildPrintList(){
       for(const c of arr) rows+=rowFor(c);
     }
   }
+  const hasZP = p.some(c=>c.zp);
   host.innerHTML=`
     <h1 class="ptitle${fam==="fw"?" pb":""}">${esc(title)} — Lernliste</h1>
     ${fam==="fw"?`<div class="psub">Gartenbaufachwerker/in</div>`:""}
     <div class="pmeta">Fachrichtung ${esc(frLabel)} · ${esc(nivLabel)} · ${n} ${n===1?"Art":"Arten"}
       · sortiert nach ${esc(SORT_LABEL[listSort]||"Kategorie")}${filt.length?` · ${esc(filt.join(" · "))}`:""} · Stand ${esc(heute)}</div>
     <table class="ptab"><thead><tr>${heads}</tr></thead><tbody>${rows}</tbody></table>
-    <div class="pfoot">Pflanzenkenntnis · Lernliste in der Form des Prüfungsbogens (Spalten und Punkte wie in der Prüfung)</div>`;
+    <div class="pfoot">${hasZP?"ZP = für die Zwischenprüfung relevant · ":""}Pflanzenkenntnis · Lernliste in der Form des Prüfungsbogens (Spalten und Punkte wie in der Prüfung)</div>`;
   return n;
 }
 function printList(){

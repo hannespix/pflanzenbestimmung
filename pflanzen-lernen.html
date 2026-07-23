@@ -212,6 +212,8 @@ main{margin-top:18px}
 .sp-main{display:flex; align-items:center; gap:8px; min-width:0}
 .sp-bot{font-family:var(--serif); font-size:15.5px; color:var(--ink); font-style:italic; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .sp-zp{font-family:var(--mono); font-size:9.5px; letter-spacing:.05em; color:var(--madder); border:1px solid var(--madder-soft); border-radius:3px; padding:0 4px; flex:none}
+.zpnote{display:flex; align-items:center; gap:6px; margin:-6px 2px 14px; font-size:12px; color:var(--ink-faint)}
+.zpnote .sp-zp{font-size:9px}
 .sp-go{font-size:14px; color:var(--green); flex:none}
 .sp-sub{font-size:12.5px; color:var(--ink-soft); margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .sp-fam{color:var(--sepia)}
@@ -969,6 +971,7 @@ function renderList(){
       ${(c.de||c.fam)?`<div class="sp-sub">${c.de?esc(c.de):""}${c.de&&c.fam?" · ":""}${c.fam?`<span class="sp-fam">${esc(c.fam)}</span>`:""}</div>`:""}
     </li>`; };
   let html=`<div class="listtop">${p.length} ${p.length===1?"Art":"Arten"}${term?(" · Treffer für »"+esc(raw)+"«"):""} · sortiert nach ${SORT_LABEL[listSort]} · zum Nachschlagen antippen</div>`;
+  if(p.some(c=>c.zp)) html+=`<div class="zpnote"><span class="sp-zp">ZP</span> = für die Zwischenprüfung relevant</div>`;
 
   if(listSort==="bot" || listSort==="de"){
     // flache, alphabetische Liste mit Anfangsbuchstaben-Trennern
@@ -1069,13 +1072,14 @@ function buildPrintList(){
       for(const c of arr) rows+=rowFor(c);
     }
   }
+  const hasZP = p.some(c=>c.zp);
   host.innerHTML=`
     <h1 class="ptitle${fam==="fw"?" pb":""}">${esc(title)} — Lernliste</h1>
     ${fam==="fw"?`<div class="psub">Gartenbaufachwerker/in</div>`:""}
     <div class="pmeta">Fachrichtung ${esc(frLabel)} · ${esc(nivLabel)} · ${n} ${n===1?"Art":"Arten"}
       · sortiert nach ${esc(SORT_LABEL[listSort]||"Kategorie")}${filt.length?` · ${esc(filt.join(" · "))}`:""} · Stand ${esc(heute)}</div>
     <table class="ptab"><thead><tr>${heads}</tr></thead><tbody>${rows}</tbody></table>
-    <div class="pfoot">Pflanzenkenntnis · Lernliste in der Form des Prüfungsbogens (Spalten und Punkte wie in der Prüfung)</div>`;
+    <div class="pfoot">${hasZP?"ZP = für die Zwischenprüfung relevant · ":""}Pflanzenkenntnis · Lernliste in der Form des Prüfungsbogens (Spalten und Punkte wie in der Prüfung)</div>`;
   return n;
 }
 function printList(){

@@ -510,6 +510,11 @@ function renderList(){
     const e=el("div","empty"); e.innerHTML="<h2>Keine Treffer</h2><p>Für diese Filter gibt es keine Arten. Suche anpassen oder Kategorie zurücksetzen.</p>";
     host.appendChild(e); return;
   }
+  if(items.some(p=>p.zp)){
+    const lg=el("div","zpnote");
+    lg.innerHTML=`<span class="tag zp">ZP</span> = für die Zwischenprüfung relevant`;
+    host.appendChild(lg);
+  }
   const groups={};
   items.forEach(p=>{ (groups[p.kategorie||"—"] ||= []).push(p); });
   Object.keys(groups).sort((a,b)=>katRank(a)-katRank(b)||a.localeCompare(b)).forEach(kat=>{
