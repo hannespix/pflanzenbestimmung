@@ -313,7 +313,7 @@ async function main() {
     const el = document.querySelector(".disclaimer");
     return el ? el.textContent.replace(/\s+/g, " ") : "";
   });
-  assert(/Regierungspräsidien/.test(disc) && /Juli\s*2026/.test(disc) && /generativer\s*KI/.test(disc) && /keine Gewähr/.test(disc),
+  assert(/[Ii]noffiziell/.test(disc) && /Regierungspräsidien/.test(disc) && /Juli\s*2026/.test(disc) && /generativer\s*KI/.test(disc) && /keine Gewähr/.test(disc),
     "Disclaimer im Lern-Tool fehlt oder unvollständig: " + disc);
 
   // Kein horizontaler Overflow im Listenmodus auf schmalem Screen (Responsivität)
