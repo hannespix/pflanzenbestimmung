@@ -42,6 +42,8 @@ input,select{font-family:inherit; color:inherit}
 .profsub{font-family:var(--mono); font-size:12px; color:var(--ink-soft); padding-bottom:9px}
 .examlink{white-space:nowrap; text-decoration:none}
 .mast-right{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.disclaimer{margin:40px 2px 0; padding-top:16px; border-top:1px solid var(--rule); color:var(--ink-faint); font-size:11.5px; line-height:1.6; max-width:760px}
+.disclaimer + .foot{margin-top:14px; padding-top:14px}
 .foot{margin-top:40px; padding-top:18px; border-top:1px solid var(--rule); display:flex; flex-wrap:wrap; gap:8px 16px; justify-content:space-between; align-items:center; color:var(--ink-faint); font-family:var(--mono); font-size:11.5px; letter-spacing:.03em}
 .foot .legal{color:var(--sepia); text-decoration:none; border-bottom:1px solid var(--rule); transition:color .12s,border-color .12s}
 .foot .legal:hover{color:var(--green-deep); border-color:var(--green)}
@@ -247,9 +249,16 @@ main{margin-top:18px}
   .modes button:nth-child(-n+2){border-bottom:1px solid var(--rule-strong)}
   /* Listen-Suche: Druck-Knopf rutscht in voller Breite unter das Suchfeld */
   .listsearchrow .printbtn{width:100%; justify-content:center}
+  /* Setup-Felder: volle Breite, Selects schrumpfen mit (kein Überlauf) */
+  .setrow{gap:12px}
+  .setrow .field{width:100%}
+  .setrow .field select.mini{flex:1; min-width:0}
   /* Sortier-Umschalter: Buttons dürfen umbrechen statt zu überlaufen */
   .sortbtns{flex-wrap:wrap}
   .sortrow{align-items:flex-start}
+  /* Ansicht-/Filter-Panel und Tags bleiben im Rahmen */
+  .cattags{gap:6px}
+  .cattag{font-size:12px; padding:5px 10px}
 }
 /* ===== Design-Politur: mehr Ruhe, weiche Übergänge, dezente Tiefe ===== */
 html{scroll-behavior:smooth}
@@ -440,6 +449,13 @@ main{margin-top:22px}
   <section class="progress" id="progress" hidden></section>
 
   <main id="stage"></main>
+
+  <p class="disclaimer">
+    Die Pflanzenlisten orientieren sich an den öffentlich einsehbaren Prüfungslisten der
+    Regierungspräsidien Baden-Württemberg (Stand&nbsp;Juli&nbsp;2026); maßgeblich sind stets
+    deren aktuelle Fassungen. Die Einteilung in Kategorien (Wuchsformen) wurde teilweise mithilfe
+    generativer&nbsp;KI erstellt. Für Richtigkeit und Vollständigkeit wird keine Gewähr übernommen.
+  </p>
 
   <footer class="foot">
     <span>Pflanzenkenntnis · Lernen · vollständig offline nutzbar</span>
