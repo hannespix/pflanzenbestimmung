@@ -312,6 +312,17 @@ async function main() {
   assert(psort.botOk, "Druckliste (A–Z botanisch): Buchstaben-Bänder/Meta fehlen");
   assert(psort.counts.every((n) => n === 148), "Druckliste: Artenzahl je Ansicht abweichend: " + JSON.stringify(psort.counts));
 
+  // ZP-Legende: erklärt »ZP« auf der Bildschirm-Liste UND (druckbar) in der Druckliste
+  const zpLeg = await page.evaluate(() => {
+    document.querySelector('#modeTabs button[data-mode="list"]').click();
+    const screen = (document.querySelector(".zpnote") || {}).textContent || "";
+    buildPrintList();
+    const print = (document.querySelector("#printList .pfoot") || {}).textContent || "";
+    return { screen, print };
+  });
+  assert(/ZP.*Zwischenprüfung relevant/.test(zpLeg.screen), "Lern-Liste: ZP-Legende (Bildschirm) fehlt: " + zpLeg.screen);
+  assert(/ZP = für die Zwischenprüfung relevant/.test(zpLeg.print), "Druckliste: ZP-Legende (druckbar) fehlt: " + zpLeg.print);
+
   // Familien-Steckbriefe: In der Familien-Ansicht öffnet ℹ ein Modal mit
   // gemeinsamen Merkmalen + Lerntipp; ein Fallback greift für unbekannte Familien
   const fam = await page.evaluate(() => {
