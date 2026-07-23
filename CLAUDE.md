@@ -429,6 +429,17 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Reihenfolge). Verteilung per Puppeteer-PDF (GaLaBau, 8 Seiten) botanisch
       geprüft; `tests/learn.mjs` prüft die Wuchsform-Gliederung.
 
+- [x] **Listen-Ansicht mit Dimensionen + Filter-Akkordion** (Lern-Tool, Modus »Liste«):
+      einklappbares Panel **»Ansicht & Filter«** (`#listControls`, standardmäßig zu, damit
+      es nicht überfrachtet wirkt). **Ansicht** umschaltbar: **A–Z botanisch/deutsch**
+      (flach mit Buchstaben-Trennern – **Standard**), **Wuchsform/Kategorie** oder botanische
+      **Familie**. In den beiden Gruppen-Ansichten erscheinen **Filter-Tags** der jeweiligen
+      Dimension (Mehrfachauswahl, »Alle« = kein Filter, mit Anzahl je Gruppe). Zustand:
+      `listSort` (in `localStorage`), `listCats` (Set, beim Ansichts-/Profilwechsel geleert);
+      `dimKey`/`dimValues`/`groupsView` in `learn.js`; die **Druckliste** nutzt dieselbe
+      gefilterte Menge. `tests/learn.mjs` prüft Standard=A–Z ohne Tags, Umschalten auf
+      Wuchsform zeigt Tags, Tag filtert, Ansichtswechsel setzt Filter zurück.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei

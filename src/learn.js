@@ -52,6 +52,8 @@ let mode = "cards";          // cards | quiz | type
 let richtung = "de2bot";     // de2bot | bot2de | art2fam
 let queue = [], qi = 0, current = null, flipped = false;
 let sess = { total:0, done:0, correct:0, active:false };
+let listCats = new Set();     // aktive Filter-Tags der laufenden Dimension (leer = alle)
+let listSort = "bot";         // Ansicht: bot | de | kategorie | familie (Standard: alphabetisch, ohne Gruppen)
 
 let toastT=null;
 function toast(msg,isErr){ const t=$("#toast"); t.textContent=msg; t.classList.toggle("err",!!isErr); t.classList.add("show");
@@ -351,15 +353,67 @@ function startHintOnly(){
 /* ---------- Liste / Nachschlagen (durchsuchbar, nach Kategorie gruppiert) ---------- */
 const deacc = s => (s==null?"":String(s)).normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 /* Gefilterte Listen-Menge (Kategorie-/ZP-Filter + Suchfeld) \u2013 auch Basis der Druckliste */
+/* Ansichten (Gruppier-/Sortier-Dimensionen). »bot«/»de« sind flach-alphabetisch
+   (keine Filter-Tags); »kategorie«/»familie« gruppieren und bieten Filter-Tags
+   der jeweiligen Dimension. */
+const SORT_LABEL={bot:"A–Z botanisch",de:"A–Z deutsch",kategorie:"Wuchsform/Kategorie",familie:"Familie"};
+const groupsView = () => listSort==="kategorie" || listSort==="familie";
+const dimKey = c => listSort==="familie" ? (c.fam||"Ohne Familie") : (c.kat||"Ohne Kategorie");
+function dimValues(){ // Werte der aktuellen Gruppier-Dimension (+ Anzahl), für die Filter-Tags
+  const zp=$("#onlyzp") && $("#onlyzp").checked;
+  const set=new Map();
+  allCards.forEach(c=>{ if(zp&&!c.zp) return; const k=dimKey(c); set.set(k,(set.get(k)||0)+1); });
+  const byFam=listSort==="familie";
+  return [...set.entries()].sort((a,b)=> byFam ? a[0].localeCompare(b[0],"de") : (katRank(a[0])-katRank(b[0]) || a[0].localeCompare(b[0],"de")));
+}
 function listFiltered(){
   const raw = $("#listSearch") ? $("#listSearch").value : "";
   const term = deacc(norm(raw)).toLowerCase();
-  let p = pool();
+  let p = pool();  // ZP-Filter; in der Liste filtern die Tags der aktuellen Ansicht, nicht das Dropdown
+  if(groupsView() && listCats.size) p = p.filter(c => listCats.has(dimKey(c)));
   if(term){
     const hay = c => deacc(c.g+" "+c.a+" "+c.de+" "+c.fam+" "+c.syn).toLowerCase();
     p = p.filter(c => hay(c).includes(term));
   }
   return { p, raw, term };
+}
+function renderListControls(){
+  const host=$("#listControls"); if(!host) return;
+  const open = host.dataset.open==="1";
+  // Zusammenfassung für die (eingeklappte) Kopfzeile des Akkordions
+  const sub = groupsView()
+    ? (listCats.size ? `${SORT_LABEL[listSort]} · ${listCats.size} ausgewählt` : `${SORT_LABEL[listSort]} · alle`)
+    : SORT_LABEL[listSort];
+  const sorts=Object.keys(SORT_LABEL).map(s=>`<button class="sortbtn${listSort===s?" on":""}" data-sort="${s}">${SORT_LABEL[s]}</button>`).join("");
+  let tags="";
+  if(groupsView()){
+    const vals=dimValues();
+    tags=`<div class="cattags" role="group" aria-label="Filtern">`+
+      `<button class="cattag${listCats.size?"":" on"}" data-cat="" title="Alle anzeigen">Alle</button>`+
+      vals.map(([k,n])=>`<button class="cattag${listCats.has(k)?" on":""}" data-cat="${esc(k)}">${esc(k)}<span class="ct-n">${n}</span></button>`).join("")+
+      `</div>`;
+  }
+  host.innerHTML=`
+    <button class="lc-toggle" id="lcToggle" aria-expanded="${open?"true":"false"}">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+      <span class="lc-title">Ansicht &amp; Filter</span><span class="lc-sub">${esc(sub)}</span>
+      <span class="lc-caret" aria-hidden="true">▾</span>
+    </button>
+    <div class="lc-body"${open?"":" hidden"}>
+      <div class="sortrow"><span class="sortlab">Ansicht</span><div class="sortbtns" role="group" aria-label="Ansicht">${sorts}</div></div>
+      ${tags}
+    </div>`;
+  $("#lcToggle").onclick=()=>{ host.dataset.open = open?"0":"1"; renderListControls(); };
+  host.querySelectorAll(".sortbtn").forEach(b=>b.onclick=()=>{
+    if(listSort!==b.dataset.sort){ listSort=b.dataset.sort; listCats.clear(); store.set(LS_PREFIX+"listsort",listSort); }
+    renderListControls(); renderList();
+  });
+  host.querySelectorAll(".cattag").forEach(b=>b.onclick=()=>{
+    const k=b.dataset.cat;
+    if(!k) listCats.clear();
+    else { if(listCats.has(k)) listCats.delete(k); else listCats.add(k); }
+    renderListControls(); renderList();
+  });
 }
 function renderList(){
   const stage=$("#stage");
@@ -370,21 +424,37 @@ function renderList(){
       <h2>Kein Treffer</h2><p>${term?("Nichts gefunden für »"+esc(raw)+"«."):"Keine Arten im aktuellen Filter."}</p></div>`;
     return;
   }
-  const groups=new Map();
-  p.forEach(c=>{ const k=c.kat||"Ohne Kategorie"; if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(c); });
-  const cats=[...groups.keys()].sort((a,b)=> katRank(a)-katRank(b) || a.localeCompare(b,"de"));
   const flat=[];
-  let html=`<div class="listtop">${p.length} ${p.length===1?"Art":"Arten"}${term?(" · Treffer für »"+esc(raw)+"«"):""} · zum Nachschlagen antippen</div>`;
-  for(const cat of cats){
-    const rows=groups.get(cat).slice().sort((a,b)=> norm(a.g+" "+a.a).localeCompare(norm(b.g+" "+b.a),"de"));
-    html+=`<div class="catblock"><div class="cathead">${esc(cat)}<span class="catn">${rows.length}</span></div><ul class="splist">`;
-    rows.forEach(c=>{ const idx=flat.push(c)-1;
-      html+=`<li class="sprow" data-idx="${idx}" tabindex="0" role="button" aria-label="${esc(norm(c.g+" "+c.a))} – Infos öffnen">
-        <div class="sp-main"><span class="sp-bot">${esc(norm(c.g+" "+c.a))}</span>${c.zp?'<span class="sp-zp" title="prüfungsrelevant (ZP)">ZP</span>':""}<span class="sp-go">ℹ</span></div>
-        ${(c.de||c.fam)?`<div class="sp-sub">${c.de?esc(c.de):""}${c.de&&c.fam?" · ":""}${c.fam?`<span class="sp-fam">${esc(c.fam)}</span>`:""}</div>`:""}
-      </li>`;
-    });
-    html+=`</ul></div>`;
+  const rowHtml=c=>{ const idx=flat.push(c)-1;
+    return `<li class="sprow" data-idx="${idx}" tabindex="0" role="button" aria-label="${esc(norm(c.g+" "+c.a))} – Infos öffnen">
+      <div class="sp-main"><span class="sp-bot">${esc(norm(c.g+" "+c.a))}</span>${c.zp?'<span class="sp-zp" title="prüfungsrelevant (ZP)">ZP</span>':""}<span class="sp-go">ℹ</span></div>
+      ${(c.de||c.fam)?`<div class="sp-sub">${c.de?esc(c.de):""}${c.de&&c.fam?" · ":""}${c.fam?`<span class="sp-fam">${esc(c.fam)}</span>`:""}</div>`:""}
+    </li>`; };
+  let html=`<div class="listtop">${p.length} ${p.length===1?"Art":"Arten"}${term?(" · Treffer für »"+esc(raw)+"«"):""} · sortiert nach ${SORT_LABEL[listSort]} · zum Nachschlagen antippen</div>`;
+
+  if(listSort==="bot" || listSort==="de"){
+    // flache, alphabetische Liste mit Anfangsbuchstaben-Trennern
+    const keyf = listSort==="bot" ? (c=>norm(c.g+" "+c.a)) : (c=>norm(c.de)||norm(c.g+" "+c.a));
+    const arr=p.slice().sort((a,b)=> keyf(a).localeCompare(keyf(b),"de"));
+    let letter="";
+    for(const c of arr){
+      const L=(deacc(keyf(c)).charAt(0)||"·").toUpperCase();
+      if(L!==letter){ if(letter) html+=`</ul></div>`; letter=L; html+=`<div class="catblock"><div class="cathead">${esc(L)}</div><ul class="splist">`; }
+      html+=rowHtml(c);
+    }
+    if(letter) html+=`</ul></div>`;
+  } else {
+    // nach Kategorie oder Familie gruppieren
+    const byFam = listSort==="familie";
+    const groups=new Map();
+    p.forEach(c=>{ const k=(byFam?(c.fam||"Ohne Familie"):(c.kat||"Ohne Kategorie")); if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(c); });
+    const keys=[...groups.keys()].sort((a,b)=> byFam ? a.localeCompare(b,"de") : (katRank(a)-katRank(b) || a.localeCompare(b,"de")));
+    for(const k of keys){
+      const rows=groups.get(k).slice().sort((a,b)=> norm(a.g+" "+a.a).localeCompare(norm(b.g+" "+b.a),"de"));
+      html+=`<div class="catblock"><div class="cathead">${esc(k)}<span class="catn">${rows.length}</span></div><ul class="splist">`;
+      rows.forEach(c=>{ html+=rowHtml(c); });
+      html+=`</ul></div>`;
+    }
   }
   stage.innerHTML=html;
   stage.querySelectorAll(".sprow").forEach(li=>{
@@ -460,10 +530,11 @@ function printList(){
 /* Modus anwenden: Liste zeigt sofort die Nachschlage-Liste (ohne »Sitzung starten«) */
 function applyMode(){
   const isList = mode==="list";
-  const sr=$("#startRow"), lsr=$("#listSearchRow");
+  const sr=$("#startRow"), lsr=$("#listSearchRow"), lc=$("#listControls");
   if(sr) sr.hidden = isList;
   if(lsr) lsr.hidden = !isList;
-  if(isList){ $("#progress").hidden = true; renderList(); }
+  if(lc) lc.hidden = !isList;
+  if(isList){ $("#progress").hidden = true; renderListControls(); renderList(); }
   else { renderProgress(); startHintOnly(); }
 }
 
@@ -615,6 +686,7 @@ function loadProfile(id){
   allCards = cardsFor(id);
   loadProgress();
   if($("#listSearch")) $("#listSearch").value="";   // Suche beim Profilwechsel zurücksetzen
+  listCats.clear();                                  // Kategorie-Tags beim Profilwechsel zurücksetzen
   refreshKat();
   applyMode();                                       // Ansicht passend zum aktuellen Modus (inkl. Liste)
   store.set(LS_PREFIX+"profile", id);
@@ -637,7 +709,7 @@ function applyProfile(){
 
 /* ---------- Verdrahtung ---------- */
 function wire(){
-  const refreshView = ()=>{ if(mode==="list") renderList(); else renderProgress(); };
+  const refreshView = ()=>{ if(mode==="list"){ renderListControls(); renderList(); } else renderProgress(); };
   $("#frSelect").onchange=applyProfile;
   $("#nivSelect").onchange=applyProfile;
   $("#cat").onchange=refreshView;
@@ -664,6 +736,7 @@ function wire(){
     $("#frSelect").innerHTML=FR_LIST.map(f=>`<option value="${slug(f)}">${esc(f)}</option>`).join("");
     $("#nivSelect").innerHTML=NIVEAUS.map(n=>`<option value="${n.key}">${esc(n.label)}</option>`).join("");
     richtung = store.get(LS_PREFIX+"richtung") || "de2bot"; $("#richtung").value=richtung;
+    listSort = store.get(LS_PREFIX+"listsort") || "bot";
     mode = store.get(LS_PREFIX+"mode") || "cards";
     $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.mode===mode));
     let pid = store.get(LS_PREFIX+"profile");
@@ -684,3 +757,4 @@ window.closeInfo=closeInfo;
 window.wikiCandidates=wikiCandidates;
 window.searchName=searchName;
 window.buildPrintList=buildPrintList;
+window.renderListControls=renderListControls;
