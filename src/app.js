@@ -325,7 +325,7 @@ function importJsonFile(){
     try{
       const r=importJsonData(JSON.parse(await f.text()));
       if(r.type==="exam"){
-        if($("#examsPanel").hasAttribute("hidden")) toggleExams();
+        openExams();
         toast(r.dupe
           ? `Diese Prüfung ist bereits gespeichert (${r.count} Pflanzen)`
           : `Prüfung importiert (${r.count} Pflanzen · ${fmtDate(r.date)}) – unten »Laden« drücken`);
@@ -569,6 +569,7 @@ function drawRandom(){
   if(!pool.length){ toast("Keine Arten im aktuellen Filter",true); return; }
   for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
   selection=pool.slice(0,n);
+  loadedExamId=null; syncExamControls(); // frisch gezogene Liste = neue Prüfung
   renderList(); syncSelUI();
   toast(n+" Arten gezogen"+(n<want?" (Pool erschöpft)":""));
 }
@@ -576,7 +577,7 @@ function shuffleSel(){
   for(let i=selection.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [selection[i],selection[j]]=[selection[j],selection[i]]; }
   toast("Reihenfolge neu gemischt");
 }
-function clearSel(){ selection=[]; renderList(); syncSelUI(); }
+function clearSel(){ selection=[]; loadedExamId=null; syncExamControls(); renderList(); syncSelUI(); }
 function syncSelUI(){
   $("#selN").textContent=selection.length;
   $("#selTarget").textContent=$("#drawCount").value||drawTarget();
@@ -589,12 +590,11 @@ function syncSelUI(){
   const has=selection.length>0;
   $("#btnPrint").disabled=!has; $("#btnClear").disabled=!has; $("#btnShuffle").disabled=selection.length<2;
   const sync=$("#gSync"); if(sync) sync.textContent="= "+fmtPts((selection.length||drawTarget())*ptsPer())+" P.";
-  const gr=$("#grader");
-  if(gr && !gr.hasAttribute("hidden")){
+  if(panelOpen("#graderScrim")){
     if(!$("#gMax").dataset.touched){ $("#gMax").value=(selection.length||drawTarget())*ptsPer(); }
     renderGrader();
   }
-  if(!$("#previewPanel").hasAttribute("hidden")) renderPreview();
+  if(panelOpen("#previewScrim")) renderPreview();
 }
 
 /* ---------- Bearbeiten / Hinzufügen / Löschen ---------- */
@@ -740,9 +740,9 @@ function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gesp
     ${solScale}
     ${foot?`<div class="ffoot">${foot}</div>`:""}`;
 }
-function printSheet(mode){
+function printSheet(mode,ex){ // ex optional: soeben gespeicherte/aktualisierte Prüfung (Datum für die Musterlösung)
   if(!selection.length){ toast("Erst Arten auswählen",true); return; }
-  buildSheet(mode);
+  buildSheet(mode, ex?{date:ex.date}:undefined);
   window.print();
 }
 
@@ -760,18 +760,23 @@ function saveExams(){ store.set(EXAMS_KEY, JSON.stringify(exams)); }
 function todayISO(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function fmtDate(iso){ if(!iso) return ""; const d=new Date(iso+"T00:00:00"); return isNaN(d)?iso:d.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"}); }
 
+function examSnapshot(){
+  return selectedPlants().map(p=>({gattung:p.gattung,art:p.art,familie:p.familie,
+    deutscher_name:p.deutscher_name,kategorie:p.kategorie,zp:p.zp?1:0}));
+}
+function saveExamData(date,label){ // Kern, auch vom Druck-Dialog genutzt
+  if(!selection.length) return null;
+  const def=PROFILE_DEFS[profileId];
+  const exam={ id:"ex"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),
+    savedAt:new Date().toISOString(), date:date||todayISO(), profileId, fr:def.fr, niveau:def.niveau,
+    label:norm(label||""), plants:examSnapshot(), schema:cloneSchema(schema) };
+  exams.unshift(exam); saveExams(); loadedExamId=exam.id; renderExams(); syncExamControls();
+  return exam;
+}
 function saveExam(){
   if(!selection.length){ toast("Erst Arten auswählen oder ziehen",true); return; }
-  const date=$("#exDate").value || todayISO();
-  const label=norm($("#exLabel").value);
-  const def=PROFILE_DEFS[profileId];
-  const plants=selectedPlants().map(p=>({gattung:p.gattung,art:p.art,familie:p.familie,
-    deutscher_name:p.deutscher_name,kategorie:p.kategorie,zp:p.zp?1:0}));
-  const exam={ id:"ex"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),
-    savedAt:new Date().toISOString(), date, profileId, fr:def.fr, niveau:def.niveau,
-    label, plants, schema:cloneSchema(schema) };
-  exams.unshift(exam); saveExams(); loadedExamId=exam.id; renderExams(); syncExamControls();
-  toast(`Prüfung gespeichert (${plants.length} Pflanzen · ${fmtDate(date)})`);
+  const ex=saveExamData($("#exDate").value, $("#exLabel").value);
+  if(ex) toast(`Prüfung gespeichert (${ex.plants.length} Pflanzen · ${fmtDate(ex.date)})`);
 }
 function copyExam(id){
   const ex=exams.find(e=>e.id===id); if(!ex) return;
@@ -783,19 +788,23 @@ function copyExam(id){
   exams.unshift(copy); saveExams(); renderExams();
   toast("Prüfung kopiert – mit heutigem Datum, jetzt bearbeitbar (»Laden«)");
 }
-function updateLoadedExam(){
+function updateExamData(date,label){ // Kern, auch vom Druck-Dialog genutzt
   const ex=exams.find(e=>e.id===loadedExamId);
-  if(!ex){ toast("Keine geladene Prüfung zum Aktualisieren",true); return; }
-  if(!selection.length){ toast("Auswahl ist leer",true); return; }
+  if(!ex||!selection.length) return null;
   const def=PROFILE_DEFS[profileId];
-  ex.date=$("#exDate").value||ex.date;
-  ex.label=norm($("#exLabel").value);
+  ex.date=date||ex.date;
+  ex.label=norm(label!=null?label:ex.label);
   ex.profileId=profileId; ex.fr=def.fr; ex.niveau=def.niveau;
-  ex.plants=selectedPlants().map(p=>({gattung:p.gattung,art:p.art,familie:p.familie,
-    deutscher_name:p.deutscher_name,kategorie:p.kategorie,zp:p.zp?1:0}));
+  ex.plants=examSnapshot();
   ex.schema=cloneSchema(schema); ex.savedAt=new Date().toISOString();
   saveExams(); renderExams(); syncExamControls();
-  toast(`Prüfung aktualisiert (${ex.plants.length} Pflanzen · ${fmtDate(ex.date)})`);
+  return ex;
+}
+function updateLoadedExam(){
+  if(!exams.find(e=>e.id===loadedExamId)){ toast("Keine geladene Prüfung zum Aktualisieren",true); return; }
+  if(!selection.length){ toast("Auswahl ist leer",true); return; }
+  const ex=updateExamData($("#exDate").value, $("#exLabel").value);
+  if(ex) toast(`Prüfung aktualisiert (${ex.plants.length} Pflanzen · ${fmtDate(ex.date)})`);
 }
 function syncExamControls(){
   const btn=$("#exUpdate"); if(!btn) return;
@@ -831,7 +840,8 @@ function loadExam(id){
   });
   selection=ids; loadedExamId=ex.id;
   if(neu){ refresh(); markDirty(); }
-  if(!$("#examsPanel").hasAttribute("hidden")){ $("#exDate").value=ex.date||todayISO(); $("#exLabel").value=ex.label||""; }
+  $("#exDate").value=ex.date||todayISO(); $("#exLabel").value=ex.label||"";
+  closePanel("#examsScrim"); // Modal zu – die geladene Auswahl ist jetzt direkt sichtbar
   renderList(); syncSelUI(); syncExamControls();
   if(neu) toast(`${ids.length} Arten geladen – ${neu} davon neu in die Liste übernommen`);
   else toast(`${ids.length} Arten geladen – jetzt bearbeitbar, dann »Aktualisieren« oder neu speichern`);
@@ -848,11 +858,10 @@ function delExam(id){
   exams=exams.filter(e=>e.id!==id); saveExams(); renderExams(); syncExamControls();
   toast("Prüfung gelöscht");
 }
-function toggleExams(){
-  const s=$("#examsPanel");
-  if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); if(!$("#exDate").value) $("#exDate").value=todayISO(); renderExams(); syncExamControls(); }
-  else s.setAttribute("hidden","");
-  syncPanelButtons();
+function openExams(){
+  if(!$("#exDate").value) $("#exDate").value=todayISO();
+  renderExams(); syncExamControls();
+  $("#examsScrim").classList.add("open"); syncPanelButtons();
 }
 function renderExams(){
   const host=$("#examList"); host.innerHTML="";
@@ -888,11 +897,9 @@ function renderExams(){
    ergänzen und entfernen – eine Vorschau dessen, was auf den Bogen kommt.
    ============================================================ */
 let selectNewAfterSave=false;
-function togglePreview(){
-  const s=$("#previewPanel");
-  if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); renderPreview(); s.scrollIntoView({block:"nearest"}); }
-  else s.setAttribute("hidden","");
-  syncPanelButtons();
+function openPreview(){
+  renderPreview();
+  $("#previewScrim").classList.add("open"); syncPanelButtons();
 }
 function movePreview(idx,dir){
   const j=idx+dir; if(j<0||j>=selection.length) return;
@@ -975,11 +982,9 @@ const SETTINGS_FIELDS=[
   {key:"stelle2",      label:"Fußzeile (Zeile 2, optional)",            ph:"z. B. Abteilung / Ort"},
   {key:"pruefendeNote",label:"Vermerk auf der Musterlösung",            ph:"z. B. Nur für Prüfende"}
 ];
-function toggleSettings(){
-  const s=$("#settingsPanel");
-  if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); renderSettings(); }
-  else s.setAttribute("hidden","");
-  syncPanelButtons();
+function openSettings(){
+  renderSettings();
+  $("#settingsScrim").classList.add("open"); syncPanelButtons();
 }
 function renderSettings(){
   const host=$("#setFields"); host.innerHTML="";
@@ -1006,15 +1011,11 @@ function resetSettings(){
 /* ============================================================
    Notenrechner
    ============================================================ */
-function toggleGrader(){
-  const g=$("#grader");
-  const show=g.hasAttribute("hidden");
-  if(show){
-    g.removeAttribute("hidden");
-    if(!$("#gMax").dataset.touched) $("#gMax").value=(selection.length||drawTarget())*ptsPer();
-    renderGrader(); setTimeout(()=>$("#gPts").focus(),50);
-  }else g.setAttribute("hidden","");
-  syncPanelButtons();
+function openGrader(){
+  if(!$("#gMax").dataset.touched) $("#gMax").value=(selection.length||drawTarget())*ptsPer();
+  renderGrader();
+  $("#graderScrim").classList.add("open"); syncPanelButtons();
+  setTimeout(()=>$("#gPts").focus(),60);
 }
 function renderGrader(){
   const max=Math.max(1, Math.round(parseFloat($("#gMax").value)||0));
@@ -1085,7 +1086,7 @@ function renderGrader(){
 function wire(){
   $("#btnImport").onclick=pickExcel;
   $("#btnAdd").onclick=()=>openEdit(null);
-  $("#btnGrade").onclick=toggleGrader;
+  $("#btnGrade").onclick=openGrader;
   $("#gPts").addEventListener("input",renderGrader);
   $("#gMax").addEventListener("input",()=>{ $("#gMax").dataset.touched="1"; renderGrader(); });
   $("#gSync").onclick=()=>{ $("#gMax").value=(selection.length||drawTarget())*ptsPer(); delete $("#gMax").dataset.touched; renderGrader(); };
@@ -1101,25 +1102,25 @@ function wire(){
   $("#btnClear").onclick=clearSel;
   $("#btnPrint").onclick=()=>askPrintMode();
   // Auswahl-/Bogen-Vorschau
-  $("#btnPreview").onclick=togglePreview;
+  $("#btnPreview").onclick=openPreview;
   $("#pvAddBtn").onclick=pvAddExisting;
   $("#pvAdd").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); pvAddExisting(); } });
   $("#pvAddNew").onclick=pvAddNew;
   $("#pvPrint").onclick=()=>askPrintMode();
   // Gespeicherte Prüfungen
-  $("#btnExams").onclick=toggleExams;
+  $("#btnExams").onclick=openExams;
   $("#exSave").onclick=saveExam;
   $("#exUpdate").onclick=updateLoadedExam;
   $("#exImport").onclick=importJsonFile;
   // Einstellungen
-  $("#btnSettings").onclick=toggleSettings;
+  $("#btnSettings").onclick=openSettings;
   $("#setReset").onclick=resetSettings;
   // Hilfe
-  $("#btnHelp").onclick=toggleHelp;
+  $("#btnHelp").onclick=openHelp;
   // Profil-Auswahl
   $("#frSelect").addEventListener("change",()=>applyProfileSelect());
   $("#nivSelect").addEventListener("change",()=>applyProfileSelect());
-  $("#btnSchema").onclick=toggleSchema;
+  $("#btnSchema").onclick=openSchema;
 
   // Import-Dialog
   $("#importCancel").onclick=()=>{ $("#importScrim").classList.remove("open"); pendingImport=null; };
@@ -1128,51 +1129,80 @@ function wire(){
     document.querySelectorAll("#importChoice .rcard").forEach(c=>c.classList.remove("sel"));
     e.target.closest(".rcard").classList.add("sel");
   }));
-  // Druck-Dialog
-  $("#printBlank").onclick=()=>{ $("#printScrim").classList.remove("open"); if(printChoose) printChoose("blank"); };
-  $("#printSolution").onclick=()=>{ $("#printScrim").classList.remove("open"); if(printChoose) printChoose("solution"); };
+  // Druck-Dialog (mit »Als Prüfung speichern«)
+  $("#printBlank").onclick=()=>{ const ex=maybeSaveFromPrint(); $("#printScrim").classList.remove("open"); if(printChoose) printChoose("blank",ex); };
+  $("#printSolution").onclick=()=>{ const ex=maybeSaveFromPrint(); $("#printScrim").classList.remove("open"); if(printChoose) printChoose("solution",ex); };
   $("#printCancel").onclick=()=>$("#printScrim").classList.remove("open");
   // Edit-Dialog
   $("#editCancel").onclick=()=>{ selectNewAfterSave=false; $("#editScrim").classList.remove("open"); };
   $("#editSave").onclick=saveEdit;
-  // Scrim-Klick schließt
-  document.querySelectorAll(".scrim").forEach(s=>s.addEventListener("mousedown",e=>{ if(e.target===s) s.classList.remove("open"); }));
-  document.addEventListener("keydown",e=>{ if(e.key==="Escape") document.querySelectorAll(".scrim.open").forEach(s=>s.classList.remove("open")); });
+  // ×-Knopf der Modul-Modals
+  document.querySelectorAll(".pclose").forEach(b=>b.onclick=()=>{ b.closest(".scrim").classList.remove("open"); syncPanelButtons(); });
+  // Scrim-Klick schließt das jeweilige Modal
+  document.querySelectorAll(".scrim").forEach(s=>s.addEventListener("mousedown",e=>{ if(e.target===s){ s.classList.remove("open"); syncPanelButtons(); } }));
+  // Escape schließt nur das oberste offene Modal
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="Escape") return;
+    const open=[...document.querySelectorAll(".scrim.open")];
+    if(open.length){ open[open.length-1].classList.remove("open"); syncPanelButtons(); }
+  });
 }
 
-/* Druck-Dialog (Prüfungsbogen / Musterlösung) mit Callback statt window.prompt */
+/* Druck-Dialog (Prüfungsbogen / Musterlösung) mit Callback statt window.prompt.
+   Beim Druck der aktuellen Auswahl (ohne cb) kann sie direkt als Prüfung
+   gespeichert werden; eine geladene Prüfung wird stattdessen aktualisiert. */
 let printChoose=null;
 function askPrintMode(cb){
-  printChoose = cb || ((m)=>printSheet(m));
+  printChoose = cb || ((m,ex)=>printSheet(m,ex));
+  const row=$("#prSaveRow");
+  if(row){
+    const forSelection=!cb; // cb gesetzt = Druck einer gespeicherten Prüfung (Snapshot)
+    row.hidden=!forSelection||!selection.length;
+    if(!row.hidden){
+      const ex=exams.find(e=>e.id===loadedExamId);
+      $("#prDate").value = ex ? (ex.date||todayISO()) : todayISO();
+      $("#prLabel").value = ex ? (ex.label||"") : "";
+      $("#prSaveLbl").textContent = ex ? `Geladene Prüfung (${fmtDate(ex.date)}) aktualisieren` : "Als Prüfung speichern";
+      $("#prSaveChk").checked = true;
+    }
+  }
   $("#printScrim").classList.add("open");
 }
+function maybeSaveFromPrint(){
+  const row=$("#prSaveRow");
+  if(!row||row.hidden||!$("#prSaveChk").checked||!selection.length) return null;
+  const date=$("#prDate").value||todayISO(), label=$("#prLabel").value;
+  const hatte=!!exams.find(e=>e.id===loadedExamId);
+  const ex=hatte?updateExamData(date,label):saveExamData(date,label);
+  if(ex) toast(hatte?`Prüfung aktualisiert (${fmtDate(ex.date)})`:`Als Prüfung gespeichert (${fmtDate(ex.date)})`);
+  return ex||null;
+}
 
-/* Sichtbares Feedback: welche Modul-Panels gerade geöffnet sind */
+/* Modul-Panels öffnen als Modal-Fenster (Scrim); Buttons zeigen den Zustand */
 const PANEL_BUTTONS=[
-  ["#btnHelp","#helpPanel"],["#btnGrade","#grader"],["#btnSchema","#schemaPanel"],
-  ["#btnExams","#examsPanel"],["#btnSettings","#settingsPanel"],["#btnPreview","#previewPanel"]
+  ["#btnHelp","#helpScrim"],["#btnGrade","#graderScrim"],["#btnSchema","#schemaScrim"],
+  ["#btnExams","#examsScrim"],["#btnSettings","#settingsScrim"],["#btnPreview","#previewScrim"]
 ];
-function toggleHelp(){
-  const s=$("#helpPanel");
-  if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); s.scrollIntoView({block:"nearest"}); }
-  else s.setAttribute("hidden","");
-  syncPanelButtons();
+function panelOpen(sel){ const s=$(sel); return !!s&&s.classList.contains("open"); }
+function closePanel(sel){ const s=$(sel); if(s) s.classList.remove("open"); syncPanelButtons(); }
+function openHelp(){
+  $("#helpScrim").classList.add("open"); syncPanelButtons();
 }
 function syncPanelButtons(){
   PANEL_BUTTONS.forEach(([b,p])=>{
     const btn=$(b), pan=$(p); if(!btn||!pan) return;
-    const open=!pan.hasAttribute("hidden");
+    const open=pan.classList.contains("open");
     btn.classList.toggle("active",open);
     btn.setAttribute("aria-pressed",open?"true":"false");
   });
 }
 function renderAll(){
   syncProfileUI(); refreshKatList(); renderList(); syncSelUI();
-  if(!$("#grader").hasAttribute("hidden")) renderGrader();
-  if(!$("#schemaPanel").hasAttribute("hidden")) renderSchema();
-  if(!$("#examsPanel").hasAttribute("hidden")){ renderExams(); syncExamControls(); }
-  if(!$("#settingsPanel").hasAttribute("hidden")) renderSettings();
-  if(!$("#previewPanel").hasAttribute("hidden")) renderPreview();
+  if(panelOpen("#graderScrim")) renderGrader();
+  if(panelOpen("#schemaScrim")) renderSchema();
+  if(panelOpen("#examsScrim")){ renderExams(); syncExamControls(); }
+  if(panelOpen("#settingsScrim")) renderSettings();
+  if(panelOpen("#previewScrim")) renderPreview();
   syncPanelButtons();
 }
 
@@ -1193,9 +1223,9 @@ function applyProfileSelect(){
 function applyDrawDefault(){ $("#drawCount").value=drawTarget(); $("#selTarget").textContent=drawTarget(); }
 
 /* ---------- Prüfungsschema (Spalten/Punkte/Anzahl) ---------- */
-function toggleSchema(){
-  const s=$("#schemaPanel"); if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); renderSchema(); } else s.setAttribute("hidden","");
-  syncPanelButtons();
+function openSchema(){
+  renderSchema();
+  $("#schemaScrim").classList.add("open"); syncPanelButtons();
 }
 /* Editor-Reihenfolge: erst bewertete Spalten (cols-Reihenfolge = Spaltenfolge auf
    dem Bogen), dann die restlichen Felder (0 Punkte) in Standardreihenfolge. */
@@ -1247,7 +1277,7 @@ function updateSchema(){
   if(!cols.length){ toast("Mindestens ein Bewertungsfeld mit Punkten nötig",true); renderSchema(); return; }
   schema.anzahl=anzahl; schema.cols=cols; scaleCfg=schema.scale;
   markDirty(); applyDrawDefault(); renderSchema(); syncProfileUI(); renderList(); syncSelUI();
-  if(!$("#grader").hasAttribute("hidden")) renderGrader();
+  if(panelOpen("#graderScrim")) renderGrader();
 }
 
 /* ---------- Start ---------- */
