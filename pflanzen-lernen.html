@@ -391,7 +391,7 @@ main{margin-top:22px}
         <svg class="lsic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
         <input id="listSearch" class="listsearch" type="search" autocomplete="off" spellcheck="false" placeholder="Liste durchsuchen – Name, Familie, Synonym …" aria-label="Liste durchsuchen">
       </div>
-      <button class="btn printbtn" id="btnPrintList" title="Die aktuell gefilterte Liste drucken – als Tabelle in der Form des Prüfungsbogens (gleiche Spalten, Beschriftung und Punktangaben wie in der Prüfung, nach Kategorie gruppiert, mit ZP-Spalte).">
+      <button class="btn printbtn" id="btnPrintList" title="Die aktuell gefilterte Liste drucken – als Tabelle in der Form des Prüfungsbogens (gleiche Spalten, Beschriftung und Punktangaben wie in der Prüfung, in der gewählten Ansicht sortiert: Wuchsform, Familie oder A–Z, mit ZP-Spalte).">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>Liste drucken
       </button>
     </div>
@@ -1008,8 +1008,9 @@ function renderList(){
 /* ---------- Druckbare Lernliste ----------
    Gleiche Form wie die offiziellen Prüfungsbögen (drei Formular-Familien wie im
    Prüfungswerkzeug): dieselben Spalten, Beschriftungen und Punktangaben je Profil,
-   ausgefüllt wie eine Musterlösung – nach Kategorie gruppiert, plus ZP-Spalte.
-   Gedruckt wird genau die aktuell gefilterte Liste (Kategorie/ZP/Suche). */
+   ausgefüllt wie eine Musterlösung, plus ZP-Spalte. Gruppierung/Reihenfolge folgen
+   der in der Liste gewählten Ansicht (Wuchsform/Familie mit Gruppen-Bändern, A–Z
+   flach mit Buchstaben-Bändern); gedruckt wird genau die gefilterte Menge. */
 function printFamily(){
   if(profileId.endsWith("_fachwerker")) return "fw";
   if(profileId.startsWith("garten_und_landschaftsbau")) return "gala";
@@ -1032,33 +1033,47 @@ function buildPrintList(){
              : "Abschlussprüfung Pflanzenbestimmung";
   const heute=new Date().toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"});
   const filt=[];
-  if($("#cat").value) filt.push("Kategorie: "+$("#cat").value);
+  if(groupsView() && listCats.size) filt.push((listSort==="familie"?"Familie: ":"Kategorie: ")+[...listCats].join(", "));
   if($("#onlyzp").checked) filt.push("nur ZP-relevant");
   if(term) filt.push("Suche: »"+raw+"«");
-
-  const groups=new Map();
-  p.forEach(c=>{ const k=c.kat||"Ohne Kategorie"; if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(c); });
-  const cats=[...groups.keys()].sort((a,b)=> katRank(a)-katRank(b) || a.localeCompare(b,"de"));
 
   const heads=`<th class="pnum"></th>`+
     cols.map(c=>`<th>${esc(c[1])}<span class="pp">${esc(c[2])}</span></th>`).join("")+
     `<th class="pzp" title="prüfungsrelevant für die Zwischenprüfung">ZP</th>`;
   let n=0, rows="";
-  for(const cat of cats){
-    const arr=groups.get(cat).slice().sort((a,b)=> norm(a.g+" "+a.a).localeCompare(norm(b.g+" "+b.a),"de"));
-    rows+=`<tr class="pcat"><td colspan="${cols.length+2}">${esc(cat)} · ${arr.length} ${arr.length===1?"Art":"Arten"}</td></tr>`;
+  const band = label => `<tr class="pcat"><td colspan="${cols.length+2}">${esc(label)}</td></tr>`;
+  const rowFor = c => { n++; return `<tr><td class="pnum">${n}</td>`+
+    cols.map(k=>`<td class="${k[0]==="g"||k[0]==="a"?"bot":""}">${esc(c[k[0]]||"")}</td>`).join("")+
+    `<td class="pzp">${c.zp?"×":""}</td></tr>`; };
+
+  // Gruppierung/Reihenfolge folgt der in der Liste gewählten Ansicht (listSort)
+  if(listSort==="bot" || listSort==="de"){
+    // flach, alphabetisch, mit Anfangsbuchstaben-Bändern
+    const keyf = listSort==="bot" ? (c=>norm(c.g+" "+c.a)) : (c=>norm(c.de)||norm(c.g+" "+c.a));
+    const arr=p.slice().sort((a,b)=> keyf(a).localeCompare(keyf(b),"de"));
+    let letter="";
     for(const c of arr){
-      n++;
-      rows+=`<tr><td class="pnum">${n}</td>`+
-        cols.map(k=>`<td class="${k[0]==="g"||k[0]==="a"?"bot":""}">${esc(c[k[0]]||"")}</td>`).join("")+
-        `<td class="pzp">${c.zp?"×":""}</td></tr>`;
+      const L=(deacc(keyf(c)).charAt(0)||"·").toUpperCase();
+      if(L!==letter){ letter=L; rows+=band(L); }
+      rows+=rowFor(c);
+    }
+  } else {
+    // nach Wuchsform/Kategorie oder botanischer Familie gruppieren
+    const byFam=listSort==="familie";
+    const groups=new Map();
+    p.forEach(c=>{ const k=dimKey(c); if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(c); });
+    const keys=[...groups.keys()].sort((a,b)=> byFam ? a.localeCompare(b,"de") : (katRank(a)-katRank(b) || a.localeCompare(b,"de")));
+    for(const k of keys){
+      const arr=groups.get(k).slice().sort((a,b)=> norm(a.g+" "+a.a).localeCompare(norm(b.g+" "+b.a),"de"));
+      rows+=band(`${k} · ${arr.length} ${arr.length===1?"Art":"Arten"}`);
+      for(const c of arr) rows+=rowFor(c);
     }
   }
   host.innerHTML=`
     <h1 class="ptitle${fam==="fw"?" pb":""}">${esc(title)} — Lernliste</h1>
     ${fam==="fw"?`<div class="psub">Gartenbaufachwerker/in</div>`:""}
     <div class="pmeta">Fachrichtung ${esc(frLabel)} · ${esc(nivLabel)} · ${n} ${n===1?"Art":"Arten"}
-      ${filt.length?` · ${esc(filt.join(" · "))}`:""} · Stand ${esc(heute)}</div>
+      · sortiert nach ${esc(SORT_LABEL[listSort]||"Kategorie")}${filt.length?` · ${esc(filt.join(" · "))}`:""} · Stand ${esc(heute)}</div>
     <table class="ptab"><thead><tr>${heads}</tr></thead><tbody>${rows}</tbody></table>
     <div class="pfoot">Pflanzenkenntnis · Lernliste in der Form des Prüfungsbogens (Spalten und Punkte wie in der Prüfung)</div>`;
   return n;

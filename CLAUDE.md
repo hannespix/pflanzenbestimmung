@@ -411,12 +411,15 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       **Form des Prüfungsbogens** — gleiche Spalten, Beschriftungen und Punkt-
       angaben je Formular-Familie (`printFamily()`/`PRINT_COLS` in `learn.js`,
       FW/GaLa/Produktion wie im Prüfungswerkzeug), gefüllt wie eine Musterlösung,
-      nach Kategorie gruppiert (Zwischenzeilen mit Zähler), fortlaufend nummeriert,
-      botanische Namen kursiv, schmale **ZP-Spalte**, Tabellenkopf wiederholt je
-      Seite (`thead{display:table-header-group}`). `#printList` + `@media print`
-      in `learn.html` (Bildschirm-UI wird ausgeblendet); `buildPrintList()` ist
-      für Tests exponiert, `tests/learn.mjs` prüft Produktions- und FW-Familie,
-      Zeilenzahl, ZP-Spalte und Suchfilter-Wirkung.
+      fortlaufend nummeriert, botanische Namen kursiv, schmale **ZP-Spalte**,
+      Tabellenkopf wiederholt je Seite (`thead{display:table-header-group}`).
+      **Gruppierung/Reihenfolge folgen der gewählten Listen-Ansicht** (`listSort`):
+      Wuchsform/Kategorie oder botanische Familie mit Gruppen-Bändern (Name · Anzahl),
+      A–Z botanisch/deutsch flach mit Buchstaben-Bändern; die Kopfzeile nennt
+      »sortiert nach …«. `#printList` + `@media print` in `learn.html` (Bildschirm-UI
+      wird ausgeblendet); `buildPrintList()` ist für Tests exponiert, `tests/learn.mjs`
+      prüft Produktions- und FW-Familie, Zeilenzahl, ZP-Spalte, Suchfilter und die
+      vier Ansichts-Sortierungen (Wuchsform/Familie/A–Z-Bänder).
 
 - [x] **Kategorien nach Wuchsform** für die 10 Profile, die aus den Quell-Excel
       keine Kategorien mitbrachten (Baumschule, GaLaBau, Staudengärtnerei,
