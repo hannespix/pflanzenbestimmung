@@ -159,7 +159,8 @@ main{margin-top:18px}
 .toast.err{background:var(--madder)}
 
 /* Liste / Nachschlagen (durchsuchbar, kategorisiert) */
-.listsearchrow{display:flex; align-items:center; gap:8px; border:1.4px solid var(--rule-strong); background:#fff; border-radius:6px; padding:0 12px}
+.listsearchrow{display:flex; align-items:stretch; gap:8px; flex-wrap:wrap}
+.searchbox{display:flex; align-items:center; gap:8px; border:1.4px solid var(--rule-strong); background:#fff; border-radius:6px; padding:0 12px; flex:1; min-width:220px}
 .listsearchrow:focus-within{border-color:var(--green)}
 .listsearchrow .lsic{width:17px; height:17px; color:var(--ink-faint); flex:none}
 .listsearch{flex:1; border:none; outline:none; background:transparent; padding:11px 4px; font-size:15px; color:var(--ink)}
@@ -214,6 +215,13 @@ main{margin-top:18px}
   .srcgrid a{font-size:12.5px; padding:7px 10px}
   .hdl{grid-template-columns:1fr; gap:2px 0}
   .hdl dt{margin-top:10px}
+  /* Modus-Tabs: sauberes 2×2-Raster statt zufälligem Umbruch */
+  .modes{display:grid; grid-template-columns:1fr 1fr; width:100%}
+  .modes button{border-right:none; justify-content:center; padding:11px 8px}
+  .modes button:nth-child(odd){border-right:1px solid var(--rule-strong)}
+  .modes button:nth-child(-n+2){border-bottom:1px solid var(--rule-strong)}
+  /* Listen-Suche: Druck-Knopf rutscht in voller Breite unter das Suchfeld */
+  .listsearchrow .printbtn{width:100%; justify-content:center}
 }
 /* ===== Design-Politur: mehr Ruhe, weiche Übergänge, dezente Tiefe ===== */
 html{scroll-behavior:smooth}
@@ -331,8 +339,10 @@ main{margin-top:22px}
       <span class="hint" id="startHint"></span>
     </div>
     <div class="listsearchrow" id="listSearchRow" hidden>
-      <svg class="lsic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-      <input id="listSearch" class="listsearch" type="search" autocomplete="off" spellcheck="false" placeholder="Liste durchsuchen – Name, Familie, Synonym …" aria-label="Liste durchsuchen">
+      <div class="searchbox">
+        <svg class="lsic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="listSearch" class="listsearch" type="search" autocomplete="off" spellcheck="false" placeholder="Liste durchsuchen – Name, Familie, Synonym …" aria-label="Liste durchsuchen">
+      </div>
       <button class="btn printbtn" id="btnPrintList" title="Die aktuell gefilterte Liste drucken – als Tabelle in der Form des Prüfungsbogens (gleiche Spalten, Beschriftung und Punktangaben wie in der Prüfung, nach Kategorie gruppiert, mit ZP-Spalte).">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>Liste drucken
       </button>
