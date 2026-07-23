@@ -453,6 +453,17 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       `tests/smoke.mjs` sichert die Trennung ab (Musterlösung = sol-look + kursive Botanik,
       Leerbogen = kein sol-look).
 
+- [x] **Familien-Steckbriefe im Lern-Tool** (Listen-Ansicht »Familie«): neben jedem
+      Familiennamen ein **ℹ**, das ein Modal mit kuratiertem Kurztext öffnet – *was die
+      Arten der Familie gemeinsam haben* (Bauplan, Blüte, Blatt, Frucht) plus ein
+      praktischer **Lerntipp** zum Erkennen. `FAM_INFO` in `learn.js` (~45 häufigste
+      Familien, `{de,m,t}`), Normalisierung `famLatin()`/`famGerman()` (lat. Teil vor
+      »/«); `openFamilyInfo()` baut das Modal (dasselbe `.scrim`/`.modal`-System wie das
+      Pflanzen-Info-Modal, Titel nicht-kursiv via `.mh-bot.fam`). Für nicht kuratierte
+      Familien greift ein Fallback mit allgemeinem Bestimmungstipp. Offline-rein (kein
+      Netzabruf). `tests/learn.mjs` prüft ℹ-Knopf, kuratierten Steckbrief (Asteraceae)
+      und Fallback.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei
