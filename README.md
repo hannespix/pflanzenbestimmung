@@ -51,7 +51,10 @@ Arbeitsanweisungen für die Weiterentwicklung mit Claude Code stehen in
   wieder **laden**, **kopieren** (z. B. für den nächsten Prüfungstag), nach dem
   Bearbeiten **aktualisieren**, erneut **drucken** (Bogen/Musterlösung) oder als
   **`.json` herunterladen**. Bleibt exakt reproduzierbar, auch wenn die
-  Profil-Liste später geändert wird.
+  Profil-Liste später geändert wird. Die `.json` lässt sich auf einem **anderen
+  Gerät importieren** (»Prüfung importieren« im Prüfungen-Panel oder »JSON
+  laden«); beim **Laden** dort fehlende Arten werden automatisch in die
+  Profil-Liste übernommen – die Prüfung ist damit überall vollständig nutzbar.
 - **Prüfungsschema** einstellbar: welche Felder mit wie vielen Punkten (auch
   Nachkommastellen wie 0,5) bewertet werden, in **welcher Reihenfolge** (▲▼ –
   bestimmt die Spaltenfolge auf dem Bogen) und wie viele Pflanzen je Prüfung.
@@ -59,9 +62,12 @@ Arbeitsanweisungen für die Weiterentwicklung mit Claude Code stehen in
   Notengrenzen editierbar; zeigt Note, Prozent, Dezimalnote und die Punktschwellen.
 - **Browser-Speicher** (localStorage) je Profil, **Sicherung als `.json`**
   (enthält die Profilliste **sowie die gespeicherten Prüfungen und die
-  Einstellungen** – »Sicherung laden« stellt alles wieder her),
-  **Zurücksetzen** auf die hinterlegte Liste. In Kiosk-/Sandbox-Umgebungen ohne
-  localStorage bleiben Änderungen wenigstens für die laufende Sitzung erhalten.
+  Einstellungen**). **»JSON laden« erkennt den Dateityp automatisch:** eine
+  Gesamt-Sicherung wird komplett wiederhergestellt (inkl. Wechsel zum
+  gesicherten Profil), eine einzelne Prüfungs-`.json` wird nur den gespeicherten
+  Prüfungen hinzugefügt. **Zurücksetzen** auf die hinterlegte Liste. In
+  Kiosk-/Sandbox-Umgebungen ohne localStorage bleiben Änderungen wenigstens für
+  die laufende Sitzung erhalten.
 - **Hilfe & Tooltips:** eingebaute Kurzanleitung (Button »Hilfe«) mit Erklärung
   jeder Funktion; nahezu jede Schaltfläche und jedes Feld hat einen erklärenden
   Tooltip.

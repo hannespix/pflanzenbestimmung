@@ -343,6 +343,20 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       → `rechtliches.html`) erreichbar; im Prüfungsbogen-Druck ausgeblendet (Fußzeile
       liegt in `.wrap`). `build.py` baut die Seite; CI (Offline-Check) und Pages-Deploy
       erfassen sie; `tests/start.mjs` klickt den Fußzeilen-Link durch und prüft Inhalt.
+- [x] **Prüfungs-JSON importierbar + Gerätewechsel-Flow** (`importJsonData` in
+      `app.js`): »JSON laden« (früher »Sicherung laden«) erkennt den Dateityp
+      automatisch — Gesamt-Sicherung (`v`/`profile`) vs. einzelne Prüfungs-JSON
+      (`plants`+`date`+`schema`, `isExamJson`). Eine Prüfungs-JSON wird als
+      gespeicherte Prüfung übernommen (`importExamData`; gleiche `id` → kein
+      Duplikat) und ersetzt **nicht** mehr die Pflanzenliste (früherer Bug: sie
+      fiel in `applyBackup`, weil sie auch `plants` hat; Snapshot-Arten ohne `id`
+      machten die Auswahl kaputt). Zusätzlicher Button »Prüfung importieren
+      (.json)« im Prüfungen-Panel (`#exImport`). `loadExam` ergänzt Snapshot-
+      Arten, die in der Profil-Liste fehlen (Gerätewechsel/geänderte Liste),
+      automatisch in die Liste (mit neuer id, `markDirty`) statt sie zu
+      verwerfen. Sicherungs-Import wechselt zum im Backup gespeicherten Profil
+      statt still das aktive zu überschreiben. Abgedeckt in `tests/smoke.mjs`
+      (7g Gerätewechsel, 7h Profilwechsel).
 
 ## Offene Aufgaben (TODO)
 
