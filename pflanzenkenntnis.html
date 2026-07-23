@@ -413,6 +413,26 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
   .fscale{font-size:8pt; margin-top:4mm; padding:3pt 6pt; border:.6pt solid #666}
   .ffoot{position:fixed; bottom:0; left:0; font-size:8pt}
   .solution-note{font-size:8pt; color:#b00; border:.8pt solid #b00; padding:1pt 6pt; border-radius:2pt; display:inline-block; margin-left:6pt}
+
+  /* ---- Musterlösung: schöneres, gut lesbares Layout (nicht der amtliche Leerbogen) ---- */
+  #sheet.sol-look{font-family:'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua',Georgia,serif; color:#22352b; line-height:1.3}
+  #sheet.sol-look .ftitle{color:#2b4f38; font-weight:600; letter-spacing:-.01em}
+  #sheet.sol-look .sheet-meta{font-family:'Segoe UI',system-ui,sans-serif; color:#56604f; margin:5pt 0 9pt}
+  #sheet.sol-look .solution-note{color:#9c3b2e; border-color:#9c3b2e; border-radius:10pt; font-family:'Segoe UI',system-ui,sans-serif}
+  #sheet.sol-look .fname{display:none}                    /* Namensfeld auf dem Lösungsschlüssel entfällt */
+  #sheet.sol-look table.exam{font-size:9.5pt; border:none; box-shadow:none}
+  #sheet.sol-look table.exam th,#sheet.sol-look table.exam td{border:.5pt solid #cdd0c0}
+  #sheet.sol-look table.exam thead th{background:#2b4f38; color:#f4f7f1; font-family:'Segoe UI',system-ui,sans-serif; font-weight:600; border-color:#2b4f38}
+  #sheet.sol-look table.exam thead th .p{color:#c9d8c4; font-weight:400}
+  #sheet.sol-look table.exam tbody tr:nth-child(even) td{background:#eef3ec}   /* Zebrastreifen */
+  #sheet.sol-look table.exam td{height:auto; padding:3pt 6pt}
+  #sheet.sol-look table.exam td.fnum{color:#7a6a4f; font-family:'Segoe UI',system-ui,sans-serif; font-weight:600; background:#f6f7f1}
+  #sheet.sol-look table.exam td.sol{font-style:normal}
+  #sheet.sol-look table.exam td.bot{font-style:italic}    /* botanische Spalten kursiv */
+  #sheet.sol-look .fres td,#sheet.sol-look .fnote2 td,#sheet.sol-look .fsig2 td{border-color:#a9ad98}
+  #sheet.sol-look .fres .flab,#sheet.sol-look .fsig2 .fnote3{font-family:'Segoe UI',system-ui,sans-serif}
+  #sheet.sol-look .fscale{border-color:#a9ad98; background:#f6f7f1; border-radius:4pt; font-family:'Segoe UI',system-ui,sans-serif; color:#56604f}
+  #sheet.sol-look .ffoot{color:#7a6a4f; font-family:'Segoe UI',system-ui,sans-serif}
 }
 </style>
 </head>
@@ -1453,7 +1473,8 @@ function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gesp
 
   const rows=plants.map((p,i)=>
     `<tr><td class="fnum">${i+1}</td>`+
-    cols.map(c=>`<td${sol?' class="sol"':''}>${sol?esc(p[c.key]||""):""}</td>`).join("")+
+    cols.map(c=>{ const isBot=(c.key==="gattung"||c.key==="art"); // botanische Spalten kursiv (Musterlösung)
+      return `<td${sol?` class="sol${isBot?" bot":""}"`:''}>${sol?esc(p[c.key]||""):""}</td>`; }).join("")+
     `<td></td></tr>`).join("");
 
   // Nur auf der Musterlösung: Zuordnung, Vermerk und Bewertungsschlüssel
@@ -1484,6 +1505,9 @@ function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gesp
 
   const foot=[settings&&settings.stelle1,settings&&settings.stelle2].filter(x=>norm(x)).map(esc).join(" · ");
 
+  // Der leere Prüfungsbogen bleibt im offiziellen Arial-Look; die Musterlösung
+  // bekommt ein schöneres, gut lesbares Layout (Serif, Zebra, grüner Kopf).
+  $("#sheet").className = sol ? "sol-look" : "";
   $("#sheet").innerHTML=`
     <h1 class="ftitle${fam==="fw"?" fb":""}">${esc(title)}${sol?" — Musterlösung":""}</h1>
     ${fam==="fw"?`<div class="fsub">Gartenbaufachwerker/in</div>`:""}

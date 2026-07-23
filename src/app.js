@@ -695,7 +695,8 @@ function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gesp
 
   const rows=plants.map((p,i)=>
     `<tr><td class="fnum">${i+1}</td>`+
-    cols.map(c=>`<td${sol?' class="sol"':''}>${sol?esc(p[c.key]||""):""}</td>`).join("")+
+    cols.map(c=>{ const isBot=(c.key==="gattung"||c.key==="art"); // botanische Spalten kursiv (Musterlösung)
+      return `<td${sol?` class="sol${isBot?" bot":""}"`:''}>${sol?esc(p[c.key]||""):""}</td>`; }).join("")+
     `<td></td></tr>`).join("");
 
   // Nur auf der Musterlösung: Zuordnung, Vermerk und Bewertungsschlüssel
@@ -726,6 +727,9 @@ function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gesp
 
   const foot=[settings&&settings.stelle1,settings&&settings.stelle2].filter(x=>norm(x)).map(esc).join(" · ");
 
+  // Der leere Prüfungsbogen bleibt im offiziellen Arial-Look; die Musterlösung
+  // bekommt ein schöneres, gut lesbares Layout (Serif, Zebra, grüner Kopf).
+  $("#sheet").className = sol ? "sol-look" : "";
   $("#sheet").innerHTML=`
     <h1 class="ftitle${fam==="fw"?" fb":""}">${esc(title)}${sol?" — Musterlösung":""}</h1>
     ${fam==="fw"?`<div class="fsub">Gartenbaufachwerker/in</div>`:""}
