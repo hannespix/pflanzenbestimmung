@@ -115,6 +115,10 @@ async function main() {
       open: !!document.querySelector("#infoScrim"),
       n: links.length,
       hasWiki: links.some((h) => /de\.wikipedia\.org/.test(h)),
+      hasNatura: links.some((h) => /naturadb\.de/.test(h)),
+      hasINat: links.some((h) => /inaturalist\.org/.test(h)),
+      // Baumkunde ist tot (403) → darf NICHT mehr auftauchen
+      hasBaumkunde: links.some((h) => /baumkunde\.de/.test(h)),
       hasLoad: !!document.querySelector("#wpLoad"),
       newtab: [...document.querySelectorAll("#infoScrim .srcgrid a")].every((a) => a.target === "_blank"),
     };
@@ -122,7 +126,9 @@ async function main() {
     res.closed = !document.querySelector("#infoScrim");
     return res;
   });
-  assert(info.open && info.n >= 3 && info.hasWiki, "Info-Modal: Deep-Links (inkl. Wikipedia) fehlen");
+  assert(info.open && info.n >= 3 && info.hasWiki && info.hasNatura && info.hasINat,
+    "Info-Modal: Deep-Links (Wikipedia + NaturaDB + iNaturalist) fehlen");
+  assert(!info.hasBaumkunde, "Info-Modal: defekter Baumkunde-Link (403) muss entfernt sein");
   assert(info.newtab, "Info-Modal: Quell-Links müssen target=_blank (neuer Tab) sein");
   assert(info.hasLoad, "Info-Modal: »Online-Infos laden«-Knopf fehlt");
   assert(info.closed, "Info-Modal schließt nicht");

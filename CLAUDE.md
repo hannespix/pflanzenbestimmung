@@ -317,13 +317,16 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       `src/learn.js`; `build.py` baut beide Dateien; Smoke-Test `tests/learn.mjs`;
       CI und Pages-Deploy erfassen beide Dateien.
 - [x] **Pflanzen-Info-Modal im Lern-Tool** (»ℹ Mehr zur Pflanze«): kuratierte
-      Deep-Links je Art (Wikipedia/NaturaDB/Baumkunde/Gaißmayer/iNaturalist).
+      Deep-Links je Art. **Geprüfte Quellen:** Wikipedia (immer), NaturaDB (immer;
+      deckt auch Gehölze gut ab), iNaturalist (immer), Gaißmayer (nur Stauden).
       **Granularität differenziert:** Wikipedia sucht **fein** (voller Name inkl.
       Sorte/Unterart – löst sauber auf, 404t nie); die anderen Quellen **grob** mit dem
       reinen Binom via `searchName()` (Sorten-/Gruppen-Zusatz weglassen, sonst 0 Treffer;
-      mehrere Treffer dort ok). Gaißmayer = Shop-Suche, nicht `?s=`; InfoFlora bewusst raus
-      (nur CH-Wildflora, 404 für Kulturen); Zusatzquellen nach Fachrichtung; öffnen neuen Tab →
-      offline-rein) plus **opt-in** »Online-Infos laden« via **Wikipedia-JSONP**
+      mehrere Treffer dort ok). Gaißmayer = Shop-Suche, nicht `?s=`. **Bewusst entfernt:**
+      Baumkunde (konstant HTTP 403 »Zugriff verweigert«, auch im Nutzer-Browser),
+      InfoFlora (nur CH-Wildflora, keine GET-Suche). iNaturalist bleibt (funktioniert im
+      echten Browser; die 403 im CI-Rechenzentrum sind nur ein Bot-Block). Öffnen neuen
+      Tab → offline-rein; plus **opt-in** »Online-Infos laden« via **Wikipedia-JSONP**
       (deutscher Kurztext + Vorschaubild direkt im Modal, funktioniert auch als lokale
       Datei, Cache je Art, Offline-/Nicht-gefunden-Fallback mit »Erneut versuchen«,
       Quelle CC BY-SA). Trigger in Karteikarte/Quiz/Tippen. `check_offline.py` bleibt

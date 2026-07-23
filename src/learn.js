@@ -613,18 +613,19 @@ function deepLinks(c){
   const full = encodeURIComponent(norm(c.g+" "+c.a));  // Wikipedia: FEIN – exakter Name inkl. Sorte/Unterart (Wikipedia löst das auf und 404t nie)
   const q = encodeURIComponent(searchName(c));          // andere Quellen: GROB – reines Binom (zu fein → oft 0 Treffer/404; mehrere Treffer sind hier ok)
   const kat = (c.kat||"").toLowerCase();
-  // Zusatzquellen nach Fachrichtung (Kategorie-Bezeichnungen sind je Liste uneinheitlich)
-  const woody   = /baumschule|landschaftsbau|obstbau/.test(profileId) || /gehölz|baum|strauch|obst/.test(kat);
   const stauden = /stauden/.test(profileId) || /staude/.test(kat);
-  const list = [{ n:"Wikipedia", u:"https://de.wikipedia.org/wiki/Spezial:Suche?search="+full }];
-  if(woody)   list.push({ n:"Baumkunde", u:"https://www.baumkunde.de/Suche/"+q+"/" });
+  // Geprüfte, funktionierende Quellen. Wikipedia (immer, fein) und NaturaDB (immer,
+  // deckt auch Gehölze gut ab); Gaißmayer nur bei Stauden; iNaturalist immer.
+  const list = [
+    { n:"Wikipedia", u:"https://de.wikipedia.org/wiki/Spezial:Suche?search="+full },
+    { n:"NaturaDB",  u:"https://www.naturadb.de/suche/?q="+q }
+  ];
   // Gaißmayer: echte Shop-Suche (die alte ?s=-URL leitete nur auf die Startseite um)
   if(stauden) list.push({ n:"Gaißmayer", u:"https://www.gaissmayer.de/web/shop/suche/produkte/?filter%5Bartikel%5D%5Btext_suche%5D%5Bwerte%5D%5B%5D="+q });
-  list.push({ n:"NaturaDB",    u:"https://www.naturadb.de/suche/?q="+q });
   list.push({ n:"iNaturalist", u:"https://www.inaturalist.org/taxa/search?q="+q+"&locale=de" });
   return list;
-  // InfoFlora bewusst entfernt: nur Schweizer Wildflora (404 für Zierpflanzen/Kulturen),
-  // keine per GET ansteuerbare Artensuche – ließ sich nicht verlässlich verlinken.
+  // Baumkunde bewusst entfernt: liefert konstant HTTP 403 »Zugriff verweigert« (auch im
+  // Browser des Nutzers). InfoFlora bewusst raus (nur CH-Wildflora, keine GET-Suche).
 }
 const wikiCache = new Map();   // card.key -> {title,extract,thumb,url} | null (nicht gefunden)
 let __wpN = 0;
