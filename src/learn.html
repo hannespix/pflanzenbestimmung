@@ -59,6 +59,33 @@ input,select{font-family:inherit; color:inherit}
 .hdl dt{font-weight:600; color:var(--green-deep)} .hdl dd{margin:0; color:var(--ink-soft)}
 .hnotes{margin:0; padding-left:20px; font-size:14px; line-height:1.6; color:var(--ink-soft)} .hnotes li{margin:5px 0}
 
+/* Lernduell: eingehende Herausforderung, Teilen-Block, Vergleich */
+.duelbanner{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:14px; padding:13px 16px;
+  background:linear-gradient(180deg,var(--green-tint),var(--surface)); border:1px solid var(--green);
+  border-left:5px solid var(--green); border-radius:6px; box-shadow:0 1px 0 var(--shadow)}
+.duel-ic{font-size:26px; line-height:1}
+.duel-txt{flex:1 1 220px; min-width:190px}
+.duel-title{margin:0 0 2px; font-family:var(--serif); font-weight:600; font-size:17px; color:var(--green-deep)}
+.duel-meta{margin:0; font-size:12.5px; color:var(--ink-soft)}
+.duel-cta{display:flex; gap:8px; flex-wrap:wrap}
+.shareblock{margin:16px auto 0; max-width:430px; padding:16px; border:1px dashed var(--green); border-radius:8px;
+  background:var(--surface); text-align:left}
+.share-h{margin:0 0 3px; font-family:var(--serif); font-weight:600; font-size:16px; color:var(--green-deep)}
+.share-sub{margin:0 0 10px; font-size:12.5px; color:var(--ink-soft); line-height:1.5}
+.duel-name{width:100%; border:1.3px solid var(--rule-strong); border-radius:5px; padding:9px 11px; font-size:14px;
+  margin-bottom:10px; background:#fff}
+.duel-name:focus{border-color:var(--green); outline:none}
+.share-btns{display:flex; gap:8px; flex-wrap:wrap; justify-content:center}
+.duel-result{margin:14px auto 0; max-width:340px; border:1px solid var(--rule-strong); border-radius:8px;
+  overflow:hidden; background:var(--surface)}
+.duel-row{display:flex; align-items:center; gap:10px; padding:9px 14px; font-size:14px}
+.duel-row+.duel-row{border-top:1px solid var(--rule)}
+.duel-row span:first-child{flex:1; text-align:left; font-weight:600; color:var(--green-deep)}
+.duel-pct{font-family:var(--mono); font-size:16px; font-weight:600}
+.duel-raw{font-family:var(--mono); font-size:12px; color:var(--ink-faint); min-width:44px; text-align:right}
+.duel-verdict{margin:0; padding:10px 14px; text-align:center; background:var(--green-tint); font-size:14.5px}
+.duel-win{color:var(--green-deep)} .duel-lose{color:var(--madder)}
+
 /* Buttons */
 .btn{border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); padding:8px 13px; border-radius:3px; font-size:13.5px; font-weight:500; display:inline-flex; align-items:center; gap:7px; transition:background .12s,border-color .12s,transform .04s; text-decoration:none}
 .btn:hover{background:#fff; border-color:var(--green)}
@@ -367,6 +394,8 @@ main{margin-top:22px}
     </div>
   </header>
 
+  <div class="duelbanner" id="duelBanner" hidden></div>
+
   <div class="setup">
     <div class="setrow">
       <div class="field"><label for="cat">Kategorie</label><select id="cat" class="mini" title="Lernstoff auf eine Kategorie eingrenzen (z. B. Gehölze, Stauden, Gemüsepflanzen). »alle Kategorien« = keine Einschränkung."><option value="">alle</option></select></div>
@@ -451,6 +480,10 @@ main{margin-top:22px}
       <li><b>ℹ Mehr zur Pflanze</b> öffnet Quellen-Links (Wikipedia, NaturaDB u. a.) und – optional, nur
         auf Knopfdruck – einen deutschen Kurztext samt Bild von Wikipedia. Der Kern funktioniert komplett
         ohne Internet.</li>
+      <li><b>Lernduell:</b> Nach einer Quiz- oder Tipp-Sitzung kannst du dein Ergebnis <b>teilen</b> und
+        Kollegen <b>herausfordern</b> – per WhatsApp/Teilen-Knopf oder Link. Der Link enthält genau
+        dieselben Karten und Fragen; wer ihn öffnet, versucht deine Trefferquote zu schlagen und kann dir
+        sein Ergebnis zurückschicken.</li>
       <li>Dein Fortschritt bleibt im Browser gespeichert (je Profil getrennt). Anderer Browser oder
         anderes Gerät = eigener Fortschritt.</li>
       <li>Fast jedes Feld hat einen <b>Tooltip</b> – kurz mit der Maus darüber verweilen.</li>

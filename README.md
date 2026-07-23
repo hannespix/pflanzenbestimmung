@@ -110,6 +110,14 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
   Optional holt »Online-Infos laden« per Wikipedia einen deutschen Kurztext samt
   Vorschaubild direkt ins Modal (nur online; funktioniert auch als lokale Datei, da
   ohne CORS-Umweg geladen wird; Quelle CC BY-SA).
+- **Lernduell – teilen & herausfordern:** Nach einer **Quiz-** oder **Tipp-Sitzung**
+  lässt sich das Ergebnis mit einem Klick **teilen** und Kollegen **herausfordern** –
+  per **Teilen-Knopf** (Web-Share, mobil inkl. WhatsApp), **WhatsApp** direkt oder
+  **Link kopieren**. Der Link enthält **genau dieselbe Lektion** (gleiche Karten,
+  gleiche Fragen) samt Trefferquote; wer ihn öffnet, sieht ein Herausforderungs-Banner,
+  spielt exakt dieselben Karten und bekommt am Ende einen **Vergleich** (wer liegt
+  vorn?) mit »Ergebnis zurückschicken« für die Revanche. Alles **offline** – der Link
+  trägt die Lektion selbst; es wird nichts nachgeladen.
 - **Hilfe & Tooltips:** eingebauter »Hilfe«-Knopf mit Kurzanleitung und Erklärung
   aller Modi und Einstellungen; nahezu jedes Feld hat einen erklärenden Tooltip.
 - Gleiche Leitplanken: **vollständig offline** (der Lernkern braucht **nie** Internet;

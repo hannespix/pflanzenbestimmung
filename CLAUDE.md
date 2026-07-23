@@ -471,6 +471,25 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Netzabruf). `tests/learn.mjs` prüft ℹ-Knopf, kuratierten Steckbrief (Asteraceae)
       und Fallback.
 
+- [x] **Lernduell – Ergebnis teilen & Kollegen herausfordern** (Lern-Tool, nach
+      Quiz/Tippen): Auf dem Abschluss-Screen ein **Teilen-Block** (»Ergebnis teilen ·
+      herausfordern«) mit **Web-Share** (`navigator.share`, mobil inkl. WhatsApp),
+      **WhatsApp-Deeplink** (`https://wa.me/?text=…`, neuer Tab) und **Link kopieren**
+      (`navigator.clipboard`, Textarea-Fallback). Der Link kodiert die Sitzung
+      **base64-URL-safe im `#c=`-Fragment**: `{v,p:profil,m:modus,r:richtung,i:[Indizes
+      in cardsFor],s:richtig,t:gestellt,n:name}` – also die **exakte Lektion** (gleiche
+      Karten/Fragen, reproduzierbar unabhängig vom Leitner-Stand des Empfängers) plus
+      Trefferquote und optionaler Name. Wer den Link öffnet, sieht beim Boot ein
+      **Herausforderungs-Banner** (`#duelBanner`, übernimmt Profil/Modus/Richtung),
+      nimmt an (`startChallenge` spielt genau die kodierten Karten) und bekommt am Ende
+      einen **Vergleich** (Du % ↔ Herausforderer %, gewonnen/verloren/Gleichstand) mit
+      **»Ergebnis zurückschicken«** (Revanche = gleiche Lektion, eigenes Ergebnis).
+      Nur in Quiz/Tippen (echte Trefferquote); Karteikarten = keine Punkte, kein Duell.
+      **Offline-rein** (kein `fetch`/CDN – nur `<a>`/`window.open`/Web-Share/Clipboard);
+      `check_offline.py` bleibt grün. Kurznotiz im Hilfe-Panel. `tests/learn.mjs` prüft
+      Teilen-Block, Link-Kodierung (exakte Indizes/Ergebnis/Name), Banner-Übernahme,
+      Annehmen der exakten Karten und den Sieg-Vergleich.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei

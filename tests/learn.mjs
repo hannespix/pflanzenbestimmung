@@ -399,12 +399,85 @@ async function main() {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   assert(overflow <= 1, "Listenmodus läuft mobil horizontal über (Überhang " + overflow + "px)");
 
+  // Lernduell: Ergebnis teilen + Herausforderung (Share-Link, Banner, Vergleich)
+  await page.setViewport({ width: 1000, height: 900, isMobile: false });
+  // 1) Quiz-Sitzung zu Ende spielen → Teilen-Block erscheint, Link kodiert die exakte Lektion
+  const duelShare = await page.evaluate(() => {
+    localStorage.clear();
+    $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    richtung = "de2bot"; $("#richtung").value = "de2bot";
+    document.querySelector('#modeTabs button[data-mode="quiz"]').click();
+    $("#sessLen").value = "4"; startSession();
+    let guard = 0;                                   // alle Fragen korrekt → kein Requeue → Abschluss
+    while (document.querySelector("#opts") && guard++ < 60) {
+      const correct = answerText(current).toLowerCase();
+      const opt = [...document.querySelectorAll("#opts .opt")].find((b) => b.querySelector("span:last-child").textContent.toLowerCase() === correct);
+      if (!opt) break; opt.click();
+      const wt = document.querySelector("#wt"); if (wt) wt.click();
+    }
+    const finished = /Sitzung geschafft/.test(document.querySelector("#stage").textContent);
+    const hasShare = !!document.querySelector("#shareBlock #btnShare");
+    const hasWa = !!document.querySelector("#btnWa");
+    const hasCopy = !!document.querySelector("#btnCopy");
+    const nameInp = document.querySelector("#duelName"); nameInp.value = "Testine"; nameInp.dispatchEvent(new Event("input"));
+    const url = challengeURL();
+    return { finished, hasShare, hasWa, hasCopy, url, dec: b64urlDec(url.split("#c=")[1]), correct: sess.correct, done: sess.done };
+  });
+  assert(duelShare.finished, "Lernduell: Quiz-Sitzung erreicht den Abschluss-Screen nicht");
+  assert(duelShare.hasShare && duelShare.hasWa && duelShare.hasCopy, "Lernduell: Teilen-Block (Teilen/WhatsApp/Kopieren) fehlt");
+  assert(duelShare.dec && duelShare.dec.p === "gemuesebau_gaertner" && duelShare.dec.m === "quiz" && duelShare.dec.r === "de2bot",
+    "Lernduell-Link kodiert Profil/Modus/Richtung nicht: " + JSON.stringify(duelShare.dec));
+  assert(Array.isArray(duelShare.dec.i) && duelShare.dec.i.length === duelShare.done && duelShare.dec.i.every((n) => Number.isInteger(n) && n >= 0),
+    "Lernduell-Link kodiert die exakte Kartenauswahl (Indizes) nicht: " + JSON.stringify(duelShare.dec.i));
+  assert(duelShare.dec.n === "Testine" && duelShare.dec.s === duelShare.correct && duelShare.dec.t === duelShare.done,
+    "Lernduell-Link kodiert Name/Ergebnis nicht: " + JSON.stringify(duelShare.dec));
+
+  // 2) Eingehende Herausforderung (#c=…): Banner erscheint, übernimmt Profil/Modus/Richtung
+  const b64 = await page.evaluate((idx) => b64urlEnc({ v: 1, p: "gemuesebau_gaertner", m: "quiz", r: "de2bot", i: idx, s: 1, t: 4, n: "Kollege" }), duelShare.dec.i);
+  await page.goto("about:blank");                   // erzwingt echten Reload (Hash-Wechsel allein lädt nicht neu)
+  await page.goto(FILE + "#c=" + b64, { waitUntil: "load" });
+  await page.waitForFunction("window.startChallenge!=null", { timeout: 10000 });
+  const duelIn = await page.evaluate(() => {
+    const banner = document.querySelector("#duelBanner");
+    return { shown: banner && !banner.hidden, txt: banner ? banner.textContent : "",
+      hasAccept: !!document.querySelector("#btnAcceptDuel"), prof: profileId, mode, richtung };
+  });
+  assert(duelIn.shown && duelIn.hasAccept, "Lernduell: Banner/Annehmen-Knopf erscheint nicht bei #c=-Link");
+  assert(/Kollege/.test(duelIn.txt) && /fordert dich heraus/.test(duelIn.txt), "Lernduell-Banner nennt Herausforderer/Text nicht: " + duelIn.txt);
+  assert(duelIn.prof === "gemuesebau_gaertner" && duelIn.mode === "quiz" && duelIn.richtung === "de2bot",
+    "Lernduell: Profil/Modus/Richtung nicht aus dem Link übernommen: " + JSON.stringify(duelIn));
+
+  // Annehmen spielt EXAKT die kodierten Karten; alle richtig → Sieg + Zurückschicken-Knopf
+  const duelPlay = await page.evaluate((idx) => {
+    document.querySelector("#btnAcceptDuel").click();
+    const started = sess.cards.map((c) => allCards.indexOf(c));
+    const sameSet = started.length === idx.length && started.every((v, k) => v === idx[k]);
+    let guard = 0;
+    while (document.querySelector("#opts") && guard++ < 60) {
+      const correct = answerText(current).toLowerCase();
+      const opt = [...document.querySelectorAll("#opts .opt")].find((b) => b.querySelector("span:last-child").textContent.toLowerCase() === correct);
+      if (!opt) break; opt.click();
+      const wt = document.querySelector("#wt"); if (wt) wt.click();
+    }
+    const txt = document.querySelector("#stage").textContent;
+    return { sameSet, hasResult: !!document.querySelector(".duel-result"), win: /gewonnen/i.test(txt),
+      backLabel: (document.querySelector("#btnShare") || {}).textContent || "" };
+  }, duelShare.dec.i);
+  assert(duelPlay.sameSet, "Lernduell: Annehmen spielt nicht exakt die kodierten Karten");
+  assert(duelPlay.hasResult && duelPlay.win, "Lernduell: Vergleich/Sieg wird nicht angezeigt");
+  assert(/zurückschicken/i.test(duelPlay.backLabel), "Lernduell: Revanche-/Zurückschicken-Knopf fehlt");
+
+  // Zurück auf sauberen Zustand für die Aufräum-Schritte
+  await page.goto("about:blank");
+  await page.goto(FILE, { waitUntil: "load" });
+  await page.waitForFunction("window.startSession!=null", { timeout: 10000 });
+
   // aufräumen
   await page.evaluate(() => { localStorage.removeItem("pflanzenlernen.progress.gemuesebau_gaertner"); });
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (kategorisiert/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Wuchsform/Familie/A–Z), Familien-Steckbriefe (Modal + Fallback), Disclaimer, Mobile ohne Overflow, Quiz, Tippen, Fortschritt-Persistenz.");
+  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (kategorisiert/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Wuchsform/Familie/A–Z), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Vergleich/Sieg + Zurückschicken), Disclaimer, Mobile ohne Overflow, Quiz, Tippen, Fortschritt-Persistenz.");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
