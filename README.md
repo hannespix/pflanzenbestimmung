@@ -102,8 +102,8 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
 - **Fortschritt bleibt erhalten** (localStorage, je Profil getrennt, Namensraum
   `pflanzenlernen.`) – die Leitner-Boxen und Fälligkeiten überleben das Schließen.
 - **Mehr zur Pflanze (ℹ):** Zu jeder Art öffnet ein Info-Modal kuratierte Links zu
-  geprüften Pflanzenquellen (Wikipedia, NaturaDB, iNaturalist und – bei Stauden –
-  Gaißmayer; öffnen in neuem Tab, also offline-rein).
+  geprüften, neutralen Pflanzenquellen (Wikipedia, NaturaDB, iNaturalist;
+  öffnen in neuem Tab, also offline-rein).
   **Wikipedia** sucht **fein** (voller Name inkl. Sorte/Unterart – Wikipedia löst das
   sauber auf); die **anderen** Quellen suchen **grob** mit dem reinen Binom (Gattung +
   Art), weil sie bei zu feiner Suche oft nichts finden (mehrere Treffer sind dort ok).
