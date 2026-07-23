@@ -148,21 +148,27 @@ async function main() {
     return {
       rows: document.querySelectorAll("#sheet table.exam tbody tr").length,
       hasSolutionNote: /Nur für Prüfende/.test(document.querySelector("#sheet").innerHTML),
-      title: (document.querySelector("#sheet h1") || {}).textContent || ""
+      title: (document.querySelector("#sheet h1") || {}).textContent || "",
+      solLook: document.querySelector("#sheet").classList.contains("sol-look"),
+      botItalic: document.querySelectorAll("#sheet table.exam td.bot").length > 0
     };
   });
   assert(sheet.rows === 20, "Druckbogen sollte 20 Zeilen haben, war " + sheet.rows);
   assert(sheet.hasSolutionNote, "Musterlösung sollte 'Nur für Prüfende' zeigen");
   assert(/Musterlösung/.test(sheet.title), "Musterlösungs-Titel fehlt: " + sheet.title);
+  assert(sheet.solLook && sheet.botItalic, "Musterlösung sollte das schöne Layout (sol-look, kursive Botanik) tragen");
 
-  // 6) Prüfungsbogen (leer) baut ohne Fehler und ohne 'Nur für Prüfende'
+  // 6) Prüfungsbogen (leer) baut ohne Fehler, ohne 'Nur für Prüfende' und im
+  //    offiziellen Arial-Look (KEIN sol-look – der amtliche Bogen bleibt unverändert)
   const blank = await page.evaluate(() => {
     buildSheet("blank");
     return { rows: document.querySelectorAll("#sheet table.exam tbody tr").length,
-             note: /Nur für Prüfende/.test(document.querySelector("#sheet").innerHTML) };
+             note: /Nur für Prüfende/.test(document.querySelector("#sheet").innerHTML),
+             solLook: document.querySelector("#sheet").classList.contains("sol-look") };
   });
   assert(blank.rows === 20, "Prüfungsbogen sollte 20 Zeilen haben, war " + blank.rows);
   assert(!blank.note, "Leerer Prüfungsbogen darf 'Nur für Prüfende' nicht zeigen");
+  assert(!blank.solLook, "Leerer Prüfungsbogen muss im amtlichen Arial-Look bleiben (kein sol-look)");
 
   // 6a) Druck-Dialog (ersetzt window.prompt): öffnet, wählt Variante, schließt
   const printDlg = await page.evaluate(() => {

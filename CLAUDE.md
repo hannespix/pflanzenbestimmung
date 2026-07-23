@@ -440,6 +440,19 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       gefilterte Menge. `tests/learn.mjs` prüft Standard=A–Z ohne Tags, Umschalten auf
       Wuchsform zeigt Tags, Tag filtert, Ansichtswechsel setzt Filter zurück.
 
+- [x] **Musterlösung & Lernliste im Herbarium-Look** (schöner als der amtliche Bogen):
+      Der **leere Prüfungsbogen bleibt strikt im offiziellen Arial-Layout** (amtliches
+      Formular). Nur die **Musterlösung** (`buildSheet`, `#sheet.sol-look` – gesetzt bei
+      `mode==="solution"`) und die **druckbare Lernliste** (`buildPrintList`, `.ptab`)
+      bekommen ein gut lesbares, lernfreundliches Print-Design: Serif-Typo, grüner
+      Tabellenkopf (weiße Schrift), **Zebrastreifen**, kursive botanische Namen (Spalten
+      `td.bot`), dezent grüne Kategorie-Bänder (Lernliste), grüner Titel; Namensfeld auf
+      der Musterlösung entfällt. Weiterhin mehrseitig sauber (Kopf-Wiederholung). Print-CSS
+      in `template.html` (`#sheet.sol-look …`) bzw. `learn.html` (`@media print .ptab`).
+      Per Puppeteer-PDF geprüft (Musterlösung, Lernliste, **Leerbogen unverändert**);
+      `tests/smoke.mjs` sichert die Trennung ab (Musterlösung = sol-look + kursive Botanik,
+      Leerbogen = kein sol-look).
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei
