@@ -105,6 +105,26 @@ async function main() {
   assert(help.tips, "Nicht alle wichtigen Buttons haben einen (aussagekräftigen) Tooltip");
   assert(help.favicon, "Inline-Favicon (data:image/svg+xml) fehlt");
 
+  // 1d) Aufgeräumter Kopf: nur Prüfungen/Notenrechner/Verwaltung sichtbar,
+  //     die selteneren Funktionen liegen im aufklappbaren »Verwaltung«-Bereich
+  const adminUI = await page.evaluate(() => {
+    const bar = $("#adminBar"), btn = $("#btnAdmin");
+    const hiddenFirst = bar.hasAttribute("hidden");
+    btn.click();
+    const openState = { shown: !bar.hasAttribute("hidden"), active: btn.classList.contains("active"),
+      expanded: btn.getAttribute("aria-expanded"),
+      hasAll: ["#btnImport", "#btnAdd", "#btnSchema", "#btnSettings", "#btnOpen", "#btnSave", "#btnReset"]
+        .every((s) => bar.contains(document.querySelector(s))) };
+    btn.click();
+    const closedAgain = bar.hasAttribute("hidden");
+    return { hiddenFirst, openState, closedAgain };
+  });
+  assert(adminUI.hiddenFirst, "Verwaltungs-Bereich sollte anfangs eingeklappt sein");
+  assert(adminUI.openState.shown && adminUI.openState.active && adminUI.openState.expanded === "true",
+    "»Verwaltung« klappt nicht auf bzw. markiert den Button nicht");
+  assert(adminUI.openState.hasAll, "Verwaltungs-Bereich enthält nicht alle selteneren Funktionen");
+  assert(adminUI.closedAgain, "»Verwaltung« klappt nicht wieder zu");
+
   // 2) Standardprofil gemuesebau_gaertner: 148 Arten in der Liste sichtbar
   await page.select("#frSelect", "gemuesebau");
   await page.select("#nivSelect", "gaertner");

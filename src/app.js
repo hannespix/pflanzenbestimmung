@@ -1084,6 +1084,13 @@ function renderGrader(){
    Verdrahtung
    ============================================================ */
 function wire(){
+  // »Verwaltung«: seltene Funktionen (Liste/Schema/Einstellungen/Sicherung) auf-/zuklappen
+  $("#btnAdmin").onclick=()=>{
+    const bar=$("#adminBar"), open=bar.hidden;
+    bar.hidden=!open;
+    $("#btnAdmin").classList.toggle("active",open);
+    $("#btnAdmin").setAttribute("aria-expanded",String(open));
+  };
   $("#btnImport").onclick=pickExcel;
   $("#btnAdd").onclick=()=>openEdit(null);
   $("#btnGrade").onclick=openGrader;
