@@ -285,6 +285,31 @@ async function main() {
   assert(pfw.n === 80 && pfw.sub && pfw.fwHeads && pfw.noFam,
     "Druckliste FW: 80 Arten im Fachwerker-Formular erwartet: " + JSON.stringify(pfw));
 
+  // Druckliste folgt der gewählten Ansicht: Wuchsform / Familie / A–Z
+  const psort = await page.evaluate(() => {
+    document.querySelector('#modeTabs button[data-mode="list"]').click();
+    const lc = document.querySelector("#listControls"); lc.dataset.open = "1"; renderListControls();
+    const bandsFor = (sort) => {
+      document.querySelector(`.sortbtn[data-sort="${sort}"]`).click();
+      const n = buildPrintList();
+      const bands = [...document.querySelectorAll("#printList .pcat td")].map((td) => td.textContent.trim());
+      const meta = document.querySelector("#printList .pmeta").textContent.replace(/\s+/g, " ");
+      return { n, bands, meta };
+    };
+    const kat = bandsFor("kategorie"), fam = bandsFor("familie"), bot = bandsFor("bot");
+    document.querySelector('.sortbtn[data-sort="kategorie"]').click(); buildPrintList(); // zurücksetzen
+    return {
+      katOk: kat.bands.some((t) => /Gemüsepflanzen/.test(t)) && /sortiert nach Wuchsform/.test(kat.meta),
+      famOk: fam.bands.some((t) => /Asteraceae/.test(t)) && /sortiert nach Familie/.test(fam.meta),
+      botOk: bot.bands.some((t) => /^A$/.test(t)) && bot.bands.every((t) => /^[A-ZÄÖÜ·]$/.test(t)) && /sortiert nach A–Z botanisch/.test(bot.meta),
+      counts: [kat.n, fam.n, bot.n],
+    };
+  });
+  assert(psort.katOk, "Druckliste (Wuchsform): Kategorie-Band/Meta fehlt");
+  assert(psort.famOk, "Druckliste (Familie): Familien-Band (Asteraceae)/Meta fehlt");
+  assert(psort.botOk, "Druckliste (A–Z botanisch): Buchstaben-Bänder/Meta fehlen");
+  assert(psort.counts.every((n) => n === 148), "Druckliste: Artenzahl je Ansicht abweichend: " + JSON.stringify(psort.counts));
+
   // Familien-Steckbriefe: In der Familien-Ansicht öffnet ℹ ein Modal mit
   // gemeinsamen Merkmalen + Lerntipp; ein Fallback greift für unbekannte Familien
   const fam = await page.evaluate(() => {
@@ -366,7 +391,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (kategorisiert/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter), Familien-Steckbriefe (Modal + Fallback), Disclaimer, Mobile ohne Overflow, Quiz, Tippen, Fortschritt-Persistenz.");
+  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (kategorisiert/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Wuchsform/Familie/A–Z), Familien-Steckbriefe (Modal + Fallback), Disclaimer, Mobile ohne Overflow, Quiz, Tippen, Fortschritt-Persistenz.");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
