@@ -165,7 +165,32 @@ main{margin-top:18px}
 .listsearchrow .lsic{width:17px; height:17px; color:var(--ink-faint); flex:none}
 .listsearch{flex:1; border:none; outline:none; background:transparent; padding:11px 4px; font-size:15px; color:var(--ink)}
 .listsearch::-webkit-search-cancel-button{cursor:pointer}
-.listtop{font-family:var(--mono); font-size:11.5px; color:var(--ink-soft); margin:2px 2px 14px; letter-spacing:.02em}
+/* Listen-Steuerung: einklappbares Akkordion mit Ansicht (Wuchsform/Familie/A–Z) + Filter-Tags */
+.listcontrols{margin-top:12px}
+.listcontrols[hidden]{display:none}
+.lc-toggle{display:flex; align-items:center; gap:10px; width:100%; text-align:left; border:1.3px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); border-radius:8px; padding:9px 13px; cursor:pointer; font-family:var(--sans); font-size:13.5px; transition:border-color .12s,background .12s}
+.lc-toggle:hover{border-color:var(--green); background:#fff}
+.lc-toggle .ic{width:16px; height:16px; color:var(--sepia); flex:none}
+.lc-title{font-weight:600}
+.lc-sub{font-family:var(--mono); font-size:11px; color:var(--sepia); margin-left:2px}
+.lc-caret{margin-left:auto; color:var(--ink-faint); transition:transform .15s}
+.lc-toggle[aria-expanded="true"] .lc-caret{transform:rotate(180deg)}
+.lc-body{display:flex; flex-direction:column; gap:12px; padding:13px 4px 4px}
+.lc-body[hidden]{display:none}
+.cattags{display:flex; flex-wrap:wrap; gap:7px}
+.cattag{font-family:var(--sans); font-size:12.5px; border:1.3px solid var(--rule-strong); background:var(--surface-2); color:var(--ink-soft); border-radius:16px; padding:5px 12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:background .12s,border-color .12s,color .12s}
+.cattag:hover{border-color:var(--green); color:var(--green-deep)}
+.cattag.on{background:var(--green); border-color:var(--green-deep); color:#f4f7f1; font-weight:600}
+.cattag .ct-n{font-family:var(--mono); font-size:10.5px; opacity:.7}
+.cattag.on .ct-n{opacity:.85}
+.sortrow{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.sortlab{font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--sepia)}
+.sortbtns{display:inline-flex; border:1.3px solid var(--rule-strong); border-radius:6px; overflow:hidden}
+.sortbtn{font-family:var(--sans); font-size:12.5px; border:none; border-right:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink-soft); padding:6px 12px; cursor:pointer; transition:background .12s,color .12s}
+.sortbtn:last-child{border-right:none}
+.sortbtn:hover{background:#fff; color:var(--green-deep)}
+.sortbtn.on{background:var(--green); color:#f4f7f1; font-weight:600}
+.listtop{font-family:var(--mono); font-size:11.5px; color:var(--ink-soft); margin:14px 2px 14px; letter-spacing:.02em}
 .catblock{margin-bottom:22px}
 .cathead{display:flex; align-items:center; gap:10px; font-family:var(--serif); font-size:18px; font-weight:600; color:var(--green-deep); padding-bottom:6px; margin-bottom:10px; border-bottom:1.5px solid var(--rule)}
 .catn{font-family:var(--mono); font-size:11px; font-weight:400; color:var(--sepia); background:var(--surface-2); border:1px solid var(--rule); border-radius:10px; padding:1px 8px}
@@ -222,6 +247,9 @@ main{margin-top:18px}
   .modes button:nth-child(-n+2){border-bottom:1px solid var(--rule-strong)}
   /* Listen-Suche: Druck-Knopf rutscht in voller Breite unter das Suchfeld */
   .listsearchrow .printbtn{width:100%; justify-content:center}
+  /* Sortier-Umschalter: Buttons dürfen umbrechen statt zu überlaufen */
+  .sortbtns{flex-wrap:wrap}
+  .sortrow{align-items:flex-start}
 }
 /* ===== Design-Politur: mehr Ruhe, weiche Übergänge, dezente Tiefe ===== */
 html{scroll-behavior:smooth}
@@ -347,6 +375,7 @@ main{margin-top:22px}
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>Liste drucken
       </button>
     </div>
+    <div class="listcontrols" id="listControls" hidden></div>
   </div>
 
   <section class="helppanel" id="helpPanel" hidden>
@@ -373,11 +402,14 @@ main{margin-top:22px}
         bevorzugt aus derselben Kategorie/Familie.</dd>
       <dt>Tippen</dt><dd>Antwort selbst eingeben – <b>tippfehler-tolerant</b>; Gattung und Art bzw.
         Synonyme werden getrennt geprüft.</dd>
-      <dt>Liste</dt><dd>Alle Arten des Profils zum <b>Nachschlagen</b>, nach Kategorie sortiert und
-        <b>durchsuchbar</b> (Name, Familie, Synonym). Ein Klick öffnet die Info zur Pflanze.
-        Über <b>»Liste drucken«</b> kommt die aktuell gefilterte Liste als Tabelle in der
-        <b>Form des Prüfungsbogens</b> aufs Papier – gleiche Spalten, Beschriftung und
-        Punktangaben wie in der Prüfung, nach Kategorie gruppiert und mit ZP-Spalte.</dd>
+      <dt>Liste</dt><dd>Alle Arten des Profils zum <b>Nachschlagen</b> und <b>durchsuchbar</b>
+        (Name, Familie, Synonym) – standardmäßig alphabetisch, damit es übersichtlich bleibt. Unter
+        <b>»Ansicht &amp; Filter«</b> (aufklappen) lässt sich die <b>Ansicht</b> umschalten:
+        <b>A–Z</b> (botanisch/deutsch), nach <b>Wuchsform</b> (Gehölze, Stauden, Gräser …) oder nach
+        botanischer <b>Familie</b>. In den beiden Gruppen-Ansichten erscheinen <b>Filter-Tags</b>, mit
+        denen sich die Liste auf einzelne Gruppen eingrenzen lässt (mehrere gleichzeitig; »Alle« hebt
+        den Filter auf). Ein Klick auf eine Art öffnet die Info. Über <b>»Liste drucken«</b> kommt die
+        aktuell gefilterte Liste als Tabelle in der <b>Form des Prüfungsbogens</b> aufs Papier.</dd>
     </dl>
 
     <h4>Einstellungen</h4>

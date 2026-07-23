@@ -203,6 +203,37 @@ async function main() {
   assert(list.backToAll === list.allRows, "Liste: Leeren der Suche stellt nicht alle Zeilen wieder her");
   assert(list.modalOpen, "Liste: Klick auf eine Art öffnet kein Info-Modal");
 
+  // Ansicht & Filter (Akkordion): Standard ist A–Z (flach, keine Filter-Tags);
+  // Umschalten auf »Wuchsform« zeigt Filter-Tags, ein Tag filtert die Liste
+  const tagsort = await page.evaluate(() => {
+    const total = document.querySelectorAll("#stage .sprow").length;
+    // Standard: alphabetisch → Buchstaben-Header, keine Kategorie-Tags
+    const botHeads = [...document.querySelectorAll("#stage .cathead")].map((e) => e.textContent.trim());
+    const alphabetical = botHeads.length >= 2 && botHeads.every((h) => h.length === 1);
+    const noTagsDefault = document.querySelectorAll("#listControls .cattag").length === 0;
+    // auf Wuchsform/Kategorie umschalten → Filter-Tags erscheinen
+    document.querySelector('#listControls .sortbtn[data-sort="kategorie"]').click();
+    const tagEls = [...document.querySelectorAll("#listControls .cattag")].filter((b) => b.dataset.cat);
+    const hasTags = tagEls.length >= 1;
+    tagEls[0].click();
+    const afterFilter = document.querySelectorAll("#stage .sprow").length;
+    const onlyOneGroup = document.querySelectorAll("#stage .catblock").length === 1;
+    // Familie-Ansicht: Tags wechseln zur Dimension Familie, Filter wird zurückgesetzt
+    document.querySelector('#listControls .sortbtn[data-sort="familie"]').click();
+    const famReset = document.querySelectorAll("#stage .sprow").length === total;
+    // zurück auf Standard (alle)
+    document.querySelector('#listControls .sortbtn[data-sort="bot"]').click();
+    const backAll = document.querySelectorAll("#stage .sprow").length;
+    return { total, alphabetical, noTagsDefault, hasTags, afterFilter, onlyOneGroup, famReset, backAll };
+  });
+  assert(tagsort.alphabetical && tagsort.noTagsDefault,
+    "Standard-Listenansicht sollte alphabetisch (Buchstaben-Header) und ohne Filter-Tags sein: " + JSON.stringify(tagsort));
+  assert(tagsort.hasTags, "Umschalten auf Wuchsform zeigt keine Filter-Tags");
+  assert(tagsort.afterFilter > 0 && tagsort.afterFilter < tagsort.total && tagsort.onlyOneGroup,
+    "Kategorie-Tag filtert die Liste nicht auf eine Kategorie: " + JSON.stringify(tagsort));
+  assert(tagsort.famReset, "Wechsel der Ansicht setzt den Filter nicht zurück");
+  assert(tagsort.backAll === tagsort.total, "Zurück auf A–Z stellt nicht alle Arten wieder her");
+
   // Druckbare Lernliste: Form des Prüfungsbogens (Spalten je Familie), gefüllt,
   // kategorisiert, ZP-Spalte; respektiert den Suchfilter
   const plist = await page.evaluate(() => {
@@ -255,6 +286,8 @@ async function main() {
     document.querySelector("#frSelect").dispatchEvent(new Event("change"));
     document.querySelector("#nivSelect").value = "gaertner";
     document.querySelector("#nivSelect").dispatchEvent(new Event("change"));
+    // Ansicht auf Wuchsform/Kategorie schalten (Standard ist alphabetisch)
+    document.querySelector('#listControls .sortbtn[data-sort="kategorie"]').click();
     const cats = [...document.querySelectorAll("#stage .cathead")].map((e) => e.childNodes[0].textContent.trim());
     return { cats, hasNadel: cats.includes("Nadelgehölze"), hasLaub: cats.includes("Laubgehölze"),
       hasStaude: cats.includes("Stauden"), n: cats.length };
