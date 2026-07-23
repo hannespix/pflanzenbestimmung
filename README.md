@@ -81,22 +81,29 @@ Für Auszubildende zum **Üben** derselben Pflanzenlisten — ohne Prüfungslist
 Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (dieselben
 14 Profile und Listen wie im Prüfungswerkzeug); ein Link führt zur Prüfungsversion.
 
+- **Feste, prüfungsnahe Lernrichtung:** Wie in der Abschlussprüfung erkennt man die
+  Pflanze (der greifbarste bildlose Anker ist ihr **deutscher Name**) und nennt die
+  **botanische Identität**: **Gattung, Art, Familie**. Genau diese Richtung üben alle
+  Modi – kein verwirrendes Richtungs-Dropdown.
 - **Drei Lernmodi:**
-  - **Karteikarten** mit **Spaced-Repetition (Leitner-Boxen 1–5).** Karte umdrehen,
-    dann selbst einschätzen: »Nochmal« (heute nochmal) · »Unsicher« (bald) · »Gewusst«
-    (in einigen Tagen). Jede Bewertung plant die Karte sofort neu ein – Intervalle
-    1/3/7/16/35 Tage, und **jeder Knopf zeigt an, wann die Karte wiederkommt**.
-    »Nochmal« bringt sie zusätzlich in derselben Sitzung erneut; »sitzt« ab Box 4.
-  - **Multiple-Choice-Quiz** – eine richtige Antwort unter plausiblen Ablenkern
-    (bevorzugt aus derselben Kategorie bzw. Familie).
-  - **Tippen** – Antwort selbst eingeben; tippfehlertolerant (kleine Abweichungen
-    zählen als richtig), Gattung/Art bzw. Synonyme werden getrennt geprüft.
+  - **Karteikarten** mit **Spaced-Repetition (Leitner-Boxen 1–5).** **Vorne nur der
+    deutsche Name**; nach dem Umdrehen zeigt die **Rückseite** den botanischen Namen
+    (kursiv) und – klar beschriftet – **Gattung · Art · Familie** (mit deutschem
+    Familiennamen) sowie Synonyme. Dann selbst einschätzen: »Nochmal« (heute nochmal) ·
+    »Unsicher« (bald) · »Gewusst« (in einigen Tagen). Jede Bewertung plant die Karte
+    sofort neu ein – Intervalle 1/3/7/16/35 Tage, und **jeder Knopf zeigt an, wann die
+    Karte wiederkommt**. »Nochmal« bringt sie zusätzlich in derselben Sitzung erneut;
+    »sitzt« ab Box 4.
+  - **Multiple-Choice-Quiz** – zum deutschen Namen den richtigen **botanischen Namen**
+    unter plausiblen Ablenkern (bevorzugt aus derselben Kategorie).
+  - **Tippen** – zum deutschen Namen den **botanischen Namen** selbst eingeben;
+    tippfehlertolerant (kleine Abweichungen zählen als richtig), Gattung und Art werden
+    getrennt geprüft.
 - **Liste / Nachschlagen:** ein vierter Tab zeigt **alle** Arten des Profils nach
   Kategorie gruppiert (wie im Prüfungswerkzeug) und **durchsuchbar** (Name, Familie,
   Synonym; akzent-tolerant). Ein Klick auf eine Art öffnet direkt das Info-Modal
-  (Quellen-Links + optionale Online-Infos).
-- **Abfragerichtung wählbar:** Deutsch → Botanisch, Botanisch → Deutsch oder
-  Art → Familie.
+  (Quellen-Links + optionale Online-Infos). Familien lassen sich hier zusätzlich über
+  die Familien-Steckbriefe (ℹ) vertiefen.
 - **Lernstoff eingrenzen:** nach Kategorie und optional nur **ZP-relevante** Arten;
   Sitzungslänge einstellbar.
 - **Fortschritt bleibt erhalten** (localStorage, je Profil getrennt, Namensraum
