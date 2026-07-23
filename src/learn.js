@@ -108,6 +108,7 @@ let queue = [], qi = 0, current = null, flipped = false;
 let sess = { total:0, done:0, correct:0, active:false };
 let listCats = new Set();     // aktive Filter-Tags der laufenden Dimension (leer = alle)
 let listSort = "bot";         // Ansicht: bot | de | kategorie | familie (Standard: alphabetisch, ohne Gruppen)
+let pendingChallenge = null;  // aus der URL (#c=…) dekodierte, noch nicht angenommene Herausforderung
 
 let toastT=null;
 function toast(msg,isErr){ const t=$("#toast"); t.textContent=msg; t.classList.toggle("err",!!isErr); t.classList.add("show");
@@ -259,10 +260,117 @@ function renderProgress(){
   $("#btnStart").disabled = !p.length;
 }
 
+/* ---------- Ergebnis teilen · Lernduell (Herausforderung) ----------
+   Eine abgeschlossene Quiz-/Tipp-Sitzung lässt sich als Herausforderung teilen:
+   Profil, Modus, Abfragerichtung und die EXAKTE Kartenauswahl (als Indizes in
+   cardsFor(profil)) plus das erreichte Ergebnis werden kompakt base64-kodiert an
+   die URL gehängt (#c=…). Wer den Link öffnet, bekommt genau dieselben Karten und
+   Fragen und versucht, die Trefferquote zu schlagen. Alles offline – kein Netz-
+   abruf; geteilt wird per Web-Share (mobil inkl. WhatsApp), WhatsApp-Deeplink
+   (wa.me, neuer Tab) oder Link-Kopieren. */
+function b64urlEnc(obj){
+  const s = btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+  return s.replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+function b64urlDec(s){
+  try{ s=String(s).replace(/-/g,"+").replace(/_/g,"/"); while(s.length%4) s+="=";
+    return JSON.parse(decodeURIComponent(escape(atob(s)))); }catch(e){ return null; }
+}
+function duelName(v){                    // Name des Herausforderers (optional, im Browser gemerkt)
+  if(v!=null) store.set(LS_PREFIX+"name", String(v).slice(0,40));
+  return store.get(LS_PREFIX+"name") || "";
+}
+function sessAcc(){ return sess.done ? Math.round(sess.correct/sess.done*100) : 0; }
+function scoreable(){ return mode==="quiz" || mode==="type"; }   // nur Modi mit echter Trefferquote
+function frNameOf(pid){ const s=(pid.match(/^(.*)_(gaertner|fachwerker)$/)||[])[1]; return FR_LIST.find(f=>slug(f)===s)||""; }
+function nivNameOf(pid){ return /_fachwerker$/.test(pid)?"Fachwerker/in":"Gärtner/in"; }
+
+function challengeURL(){                  // aktuelle Sitzung als Herausforderungs-Link kodieren
+  const idx = (sess.cards||[]).map(c=>allCards.indexOf(c)).filter(i=>i>=0);
+  const payload = { v:1, p:profileId, m:mode, r:richtung, i:idx, s:sess.correct, t:sess.done, n:duelName() };
+  return location.href.split("#")[0] + "#c=" + b64urlEnc(payload);
+}
+function duelMessage(url){
+  const who = duelName().trim();
+  const modeLabel = mode==="quiz" ? "Quiz" : "Tippen";
+  const fr = frNameOf(profileId);
+  return `🌱 Pflanzen-Lernduell (${modeLabel}${fr?" · "+fr:""})\n`+
+    `${who?who+" hat":"Ich habe"} ${sess.correct} von ${sess.done} richtig (${sessAcc()} %). Schaffst du mehr?\n`+
+    `Gleiche Karten, gleiche Fragen – tippe den Link:\n${url}`;
+}
+function shareChallenge(){
+  const url = challengeURL(), msg = duelMessage(url);
+  if(navigator.share){ navigator.share({ title:"Pflanzen-Lernduell", text:msg }).catch(()=>{}); return; }
+  whatsappChallenge(url, msg);            // kein Web-Share (Desktop): WhatsApp-Deeplink öffnen
+}
+function whatsappChallenge(url, msg){
+  url = url || challengeURL(); msg = msg || duelMessage(url);
+  window.open("https://wa.me/?text="+encodeURIComponent(msg), "_blank", "noopener");
+}
+function copyChallengeLink(){
+  const url = challengeURL();
+  const done = ()=>toast("Link kopiert – jetzt an Kollegen schicken");
+  if(navigator.clipboard && navigator.clipboard.writeText)
+    navigator.clipboard.writeText(url).then(done, ()=>fallbackCopy(url,done));
+  else fallbackCopy(url,done);
+}
+function fallbackCopy(text, done){
+  try{ const ta=el("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand("copy"); ta.remove(); done&&done(); }
+  catch(e){ toast("Kopieren nicht möglich – Link manuell markieren",true); }
+}
+function shareBlockHTML(primaryLabel){
+  const name = esc(duelName());
+  return `<div class="shareblock" id="shareBlock">
+    <p class="share-h">Fordere Azubi-Kollegen heraus</p>
+    <p class="share-sub">Verschick genau diese Lektion – gleiche Karten, gleiche Fragen. Wer den Link öffnet, versucht deine Trefferquote zu schlagen und kann dir sein Ergebnis zurückschicken.</p>
+    <input id="duelName" class="duel-name" type="text" maxlength="40" placeholder="Dein Name (optional)" value="${name}" aria-label="Dein Name für die Herausforderung">
+    <div class="share-btns">
+      <button class="btn primary" id="btnShare">${esc(primaryLabel)}</button>
+      <button class="btn" id="btnWa" title="Herausforderung per WhatsApp schicken">WhatsApp</button>
+      <button class="btn ghost" id="btnCopy" title="Link in die Zwischenablage kopieren">Link kopieren</button>
+    </div></div>`;
+}
+function wireShareBlock(){
+  const n=$("#duelName"); if(n) n.oninput=()=>duelName(n.value);
+  const s=$("#btnShare"); if(s) s.onclick=shareChallenge;
+  const w=$("#btnWa");    if(w) w.onclick=()=>whatsappChallenge();
+  const c=$("#btnCopy");  if(c) c.onclick=copyChallengeLink;
+}
+function showChallengeBanner(ch){
+  const b=$("#duelBanner"); if(!b) return;
+  const who=(ch.n||"").trim();
+  const theirAcc = ch.t ? Math.round(ch.s/ch.t*100) : 0;
+  const modeLabel = ch.m==="quiz" ? "Quiz" : "Tippen";
+  const n=(ch.i||[]).length;
+  b.innerHTML = `<div class="duel-ic" aria-hidden="true">🌱</div>
+    <div class="duel-txt">
+      <p class="duel-title">${who?esc(who)+" fordert dich heraus!":"Lernduell – Herausforderung"}</p>
+      <p class="duel-meta">${modeLabel} · ${esc(frNameOf(ch.p))} · ${esc(nivNameOf(ch.p))} · ${n} Karten · Zielwert <b>${theirAcc} %</b> (${ch.s}/${ch.t} richtig)</p>
+    </div>
+    <div class="duel-cta">
+      <button class="btn primary" id="btnAcceptDuel">Herausforderung annehmen</button>
+      <button class="btn ghost" id="btnDeclineDuel" title="Herausforderung schließen und normal weiterlernen">schließen</button>
+    </div>`;
+  b.hidden=false;
+  $("#btnAcceptDuel").onclick=startChallenge;
+  $("#btnDeclineDuel").onclick=()=>{ b.hidden=true; };
+}
+function startChallenge(){                // genau die Karten der Herausforderung, in kodierter Reihenfolge
+  const ch = pendingChallenge;
+  if(!ch){ return startSession(); }
+  const cards = (ch.i||[]).map(i=>allCards[i]).filter(Boolean);
+  if(!cards.length){ toast("Karten dieser Herausforderung nicht gefunden",true); return; }
+  const b=$("#duelBanner"); if(b) b.hidden=true;
+  queue = cards.slice(); qi = 0;
+  sess = { total:queue.length, done:0, correct:0, active:true, cards:cards.slice(), challenge:ch };
+  nextCard();
+}
+
 /* ---------- Sitzung / Bühne ---------- */
 function startSession(){
   queue = buildQueue(); qi = 0;
-  sess = { total:queue.length, done:0, correct:0, active:true };
+  sess = { total:queue.length, done:0, correct:0, active:true, cards:queue.slice(), challenge:null };
   if(!queue.length){ toast("Keine Arten im aktuellen Filter",true); return; }
   nextCard();
 }
@@ -287,15 +395,32 @@ function requeueCurrent(){ // "Nochmal"/falsch: Karte in dieser Sitzung später 
 
 function finishSession(){
   sess.active=false;
-  const acc = sess.total? Math.round(sess.correct/Math.max(1,sess.done)*100):0;
+  const acc = sessAcc();
+  const ch = sess.challenge;                     // angenommene Herausforderung (falls vorhanden)
+  let extra = "";
+  if(ch){                                        // Vergleich Du ↔ Herausforderer
+    const theirAcc = ch.t ? Math.round(ch.s/ch.t*100) : 0;
+    const who = (ch.n||"").trim() || "Herausforderer";
+    const verdict = acc>theirAcc ? `<b class="duel-win">Du hast gewonnen! 🎉</b>`
+      : acc<theirAcc ? `<b class="duel-lose">Knapp – ${esc(who)} liegt vorn. Nochmal versuchen?</b>`
+      : `<b>Gleichstand!</b>`;
+    extra = `<div class="duel-result">
+      <div class="duel-row"><span>Du</span><span class="duel-pct">${acc} %</span><span class="duel-raw">${sess.correct}/${sess.done}</span></div>
+      <div class="duel-row"><span>${esc(who)}</span><span class="duel-pct">${theirAcc} %</span><span class="duel-raw">${ch.s}/${ch.t}</span></div>
+      <p class="duel-verdict">${verdict}</p></div>`;
+  }
+  const share = scoreable() ? shareBlockHTML(ch ? "Mein Ergebnis zurückschicken" : "Ergebnis teilen · herausfordern") : "";
   const stage=$("#stage");
   stage.innerHTML = `<div class="stage-empty">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6L9 17l-5-5"/></svg>
     <h2>Sitzung geschafft</h2>
-    <p>${sess.done} Karten gelernt${mode!=="cards"?` · ${sess.correct} richtig (${acc}%)`:""}.</p>
-    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:6px">
+    <p>${sess.done} Karten gelernt${mode!=="cards"?` · ${sess.correct} richtig (${acc} %)`:""}.</p>
+    ${extra}
+    ${share}
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px">
       <button class="btn primary" id="againBtn">Weiter lernen</button>
     </div></div>`;
+  wireShareBlock();
   const a=$("#againBtn"); if(a) a.onclick=startSession;
   renderProgress();
 }
@@ -835,16 +960,26 @@ function wire(){
   try{
     $("#frSelect").innerHTML=FR_LIST.map(f=>`<option value="${slug(f)}">${esc(f)}</option>`).join("");
     $("#nivSelect").innerHTML=NIVEAUS.map(n=>`<option value="${n.key}">${esc(n.label)}</option>`).join("");
-    richtung = store.get(LS_PREFIX+"richtung") || "de2bot"; $("#richtung").value=richtung;
+    richtung = store.get(LS_PREFIX+"richtung") || "de2bot";
     listSort = store.get(LS_PREFIX+"listsort") || "bot";
     mode = store.get(LS_PREFIX+"mode") || "cards";
-    $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.mode===mode));
     let pid = store.get(LS_PREFIX+"profile");
     if(!(typeof SEEDS!=="undefined" && SEEDS[pid])) pid="gemuesebau_gaertner";
+    // Eingehende Herausforderung (#c=…) übernimmt Profil, Modus und Abfragerichtung
+    const cm = (location.hash||"").match(/[#&]c=([^&]+)/);
+    const ch = cm ? b64urlDec(cm[1]) : null;
+    if(ch && ch.p && Array.isArray(ch.i) && ch.i.length && (typeof SEEDS!=="undefined" && SEEDS[ch.p])){
+      pendingChallenge = ch; pid = ch.p;
+      if(ch.m==="quiz"||ch.m==="type") mode = ch.m;
+      if(ch.r) richtung = ch.r;
+    }
+    $("#richtung").value=richtung;
+    $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.mode===mode));
     const parts = pid.match(/^(.*)_(gaertner|fachwerker)$/);
     if(parts){ $("#frSelect").value=parts[1]; $("#nivSelect").value=parts[2]; }
     wire();
     loadProfile(pid); profSub();
+    if(pendingChallenge) showChallengeBanner(pendingChallenge);
   }catch(e){
     document.body.innerHTML='<div style="max-width:640px;margin:80px auto;font-family:sans-serif;color:#22352b">'+
       '<h2>Start fehlgeschlagen</h2><pre>'+esc(e.message)+'</pre></div>';
@@ -859,3 +994,9 @@ window.searchName=searchName;
 window.buildPrintList=buildPrintList;
 window.renderListControls=renderListControls;
 window.openFamilyInfo=openFamilyInfo;
+window.shareChallenge=shareChallenge;
+window.startChallenge=startChallenge;
+window.challengeURL=challengeURL;
+window.showChallengeBanner=showChallengeBanner;
+window.b64urlEnc=b64urlEnc;
+window.b64urlDec=b64urlDec;
