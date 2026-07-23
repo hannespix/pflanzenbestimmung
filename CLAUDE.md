@@ -367,6 +367,19 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       statt still das aktive zu überschreiben. Abgedeckt in `tests/smoke.mjs`
       (7g Gerätewechsel, 7h Profilwechsel).
 
+- [x] **Modul-Panels als Modal-Fenster** (`.pscrim`-Wrapper um die sechs Sections
+      Hilfe/Notenrechner/Schema/Prüfungen/Einstellungen/Vorschau): öffnen über
+      `openHelp()/openGrader()/openSchema()/openExams()/openSettings()/openPreview()`,
+      schließen per ×-Knopf (`.pclose`), Esc (nur oberstes Modal) oder Scrim-Klick;
+      Zustandsprüfung `panelOpen("#…Scrim")`, `closePanel()`. `loadExam` schließt
+      das Prüfungen-Modal, damit die geladene Auswahl sichtbar ist. **Prüfung
+      direkt beim Drucken speichern:** Druck-Dialog hat vorbelegtes Häkchen
+      »Als Prüfung speichern« + Datum/Bezeichnung (`#prSaveRow`,
+      `maybeSaveFromPrint`); bei geladener Prüfung wird aktualisiert statt
+      dupliziert (Kernfunktionen `saveExamData`/`updateExamData`).
+      `drawRandom`/`clearSel` setzen `loadedExamId` zurück (frische Liste = neue
+      Prüfung). Musterlösung übernimmt das gewählte Prüfungsdatum
+      (`printSheet(mode, ex)`). Smoke: 1b/1c (Modals), 6a2 (Druck-Speichern).
 - [x] **Offizielle Leerbögen als Druck-Layout** (`buildSheet` neu): Nachbau der drei
       AP-Formulare (FW_neu / Gärtner_GALA_ab_S26 / Gärtner_Produktion, Quellen in
       `data/leerboegen/`). Familie je Profil (`sheetFamily`), Spaltenbreiten aus den

@@ -247,6 +247,19 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 /* ---------- Modal ---------- */
 .scrim{position:fixed; inset:0; background:rgba(28,42,34,.42); backdrop-filter:blur(2px); display:none; align-items:center; justify-content:center; padding:20px; z-index:50}
 .scrim.open{display:flex}
+/* Modul-Panels (Hilfe, Notenrechner, Schema, Prüfungen, Einstellungen, Vorschau)
+   öffnen als Modal-Fenster statt untereinander im Body – weniger Scrollen. */
+.pscrim{align-items:flex-start; overflow-y:auto; padding:4vh 18px 6vh}
+.pscrim > .grader{margin:0 auto; width:100%; max-width:920px; position:relative}
+.pscrim .gcard{box-shadow:0 18px 50px rgba(28,42,34,.30)}
+.pclose{position:absolute; top:7px; right:7px; z-index:1; border:1px solid var(--rule-strong); background:var(--surface); color:var(--ink-soft); width:28px; height:28px; border-radius:4px; font-size:17px; line-height:1; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; padding:0}
+.pclose:hover{border-color:var(--madder); color:var(--madder); background:#fff}
+/* Druck-Dialog: Auswahl direkt als Prüfung speichern */
+.prsave{display:flex; flex-direction:column; gap:9px; margin-top:14px; padding-top:13px; border-top:1px solid var(--rule)}
+.prsave .prfields{display:flex; gap:8px; flex-wrap:wrap}
+.prsave input[type="date"],.prsave input[type="text"]{border:1px solid var(--rule-strong); border-radius:3px; padding:7px 9px; font-size:13.5px; background:#fff}
+.prsave input[type="text"]{flex:1; min-width:160px}
+.prsave[hidden]{display:none}
 .modal{background:var(--surface); border:1px solid var(--rule-strong); border-radius:6px; max-width:520px; width:100%; box-shadow:0 18px 50px rgba(28,42,34,.28); overflow:hidden}
 .modal header{padding:18px 22px 14px; border-bottom:1px solid var(--rule); background:var(--surface-2)}
 .modal header h3{font-family:var(--serif); font-size:19px; margin:0; font-weight:600}
@@ -342,6 +355,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
      Überschrift nicht überlagert */
   .mast-top{flex-direction:column; align-items:stretch}
   .mast-right{width:100%; justify-content:space-between; margin-top:2px}
+  .pscrim{padding:10px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none !important}}
 
@@ -406,7 +420,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       </div>
       <div class="mast-right">
         <a class="btn ghost" href="pflanzen-lernen.html" title="Zum Lern-Tool für Azubis (Karteikarten, Quiz, Tippen – ohne Prüfungslisten und Noten)">Lernversion&nbsp;→</a>
-        <button class="btn ghost" id="btnHelp" title="Kurzanleitung und Erklärung aller Funktionen ein- oder ausblenden"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5"/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/></svg>Hilfe</button>
+        <button class="btn ghost" id="btnHelp" title="Kurzanleitung und Erklärung aller Funktionen öffnen (Fenster; Schließen mit ×, Esc oder Klick daneben)"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5"/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/></svg>Hilfe</button>
         <span class="dbstatus" title="Speicherstatus dieser Liste im Browser: hinterlegte Standardliste oder im Browser gespeicherte Änderungen"><span class="dot" id="dbdot"></span><span id="dbname">Standardliste</span></span>
       </div>
     </div>
@@ -443,7 +457,9 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
     </div>
   </header>
 
-  <section class="grader" id="helpPanel" hidden>
+  <div class="scrim pscrim" id="helpScrim">
+  <section class="grader" id="helpPanel">
+    <button class="pclose" title="Schließen (auch Esc oder Klick daneben)" aria-label="Schließen">×</button>
     <div class="gcard onecol">
       <div class="left noborder help">
         <p class="gtitle">Hilfe · Kurzanleitung &amp; alle Funktionen</p>
@@ -455,14 +471,17 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
           <li>Bei Bedarf die Liste <b>durchsuchen und filtern</b> – Suche, Kategorie oder „nur ZP-relevant".</li>
           <li><b>Anzahl</b> festlegen und <b>Zufällig ziehen</b> – oder Arten in der Liste unten einzeln anhaken.</li>
           <li><b>Vorschau · bearbeiten</b>: Reihenfolge per ▲▼ ändern, Arten bearbeiten, ergänzen oder entfernen.</li>
-          <li><b>Bogen drucken</b>: im Dialog Prüfungsbogen (leer) oder Musterlösung (mit Antworten) wählen.</li>
+          <li><b>Bogen drucken</b>: im Dialog Prüfungsbogen (leer) oder Musterlösung (mit Antworten) wählen.
+            Dort ist <b>»Als Prüfung speichern«</b> bereits angehakt – die Auswahl wird beim Drucken automatisch
+            unter dem Prüfungsdatum abgelegt (Panel »Prüfungen«); eine geladene Prüfung wird stattdessen aktualisiert.</li>
         </ol>
 
         <h4>Werkzeuge (Kopfzeile)</h4>
         <dl class="hdl">
           <dt>Prüfungsschema</dt><dd>Legt fest, welche Spalten (Gattung, Art, Familie, deutscher Name) mit wie vielen Punkten bewertet werden, in welcher Reihenfolge (▲▼ = Spaltenfolge auf dem Bogen) und wie viele Pflanzen je Prüfung. Punkte dürfen Nachkommastellen haben (z. B. 0,5). Gilt pro Profil.</dd>
           <dt>Notenrechner</dt><dd>Rechnet erreichte Punkte in eine Note um – lineare Baden-Württemberg-Skala (Standard) oder IHK-Schlüssel. Notengrenzen sind einstellbar; angezeigt werden Note, Prozent, Dezimalnote und die Punktschwellen.</dd>
-          <dt>Prüfungen</dt><dd>Speichert die gezogene Liste als Momentaufnahme (samt Schema) unter einem <b>Prüfungsdatum</b>. Von dort: laden, <b>kopieren</b> (z. B. für den nächsten Prüfungstag), nach dem Bearbeiten <b>aktualisieren</b>, drucken oder als <b>.json</b> herunterladen. Die .json-Datei lässt sich auf einem <b>anderen Gerät</b> über »Prüfung importieren« (im Prüfungen-Panel) oder »JSON laden« einlesen; beim »Laden« dort fehlende Arten werden automatisch in die Liste übernommen.</dd>
+          <dt>Prüfungen</dt><dd>Speichert die gezogene Liste als Momentaufnahme (samt Schema) unter einem <b>Prüfungsdatum</b>.
+            Am schnellsten geht das direkt beim <b>Drucken</b> (Häkchen »Als Prüfung speichern« im Druck-Dialog). Von dort: laden, <b>kopieren</b> (z. B. für den nächsten Prüfungstag), nach dem Bearbeiten <b>aktualisieren</b>, drucken oder als <b>.json</b> herunterladen. Die .json-Datei lässt sich auf einem <b>anderen Gerät</b> über »Prüfung importieren« (im Prüfungen-Panel) oder »JSON laden« einlesen; beim »Laden« dort fehlende Arten werden automatisch in die Liste übernommen.</dd>
           <dt>Einstellungen</dt><dd>Passt den Druckbogen an: Titel, <b>Fußzeile</b> (zuständige Stelle, zwei Zeilen) und den Vermerk auf der Musterlösung – so ist das Werkzeug für jede zuständige Stelle nutzbar. Gilt geräteweit.</dd>
         </dl>
 
@@ -476,6 +495,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 
         <h4>Gut zu wissen</h4>
         <ul class="hnotes">
+          <li>Alle Werkzeuge öffnen als <b>Fenster</b> über der Liste – Schließen mit <b>×</b>, <b>Esc</b> oder Klick auf den abgedunkelten Hintergrund.</li>
           <li>Die Druckbögen entsprechen den <b>offiziellen AP-Formularen</b> der Regierungspräsidien Baden-Württemberg – je nach Profil Fachwerker-, GaLaBau- oder Produktions-Formular (Spalten und Punkte aus dem Prüfungsschema).</li>
           <li><b>Gattung</b> = erstes Wort des botanischen Namens, <b>Art</b> = Rest (inkl. <i>var.</i>/<i>ssp.</i>/Sorten).</li>
           <li><b>ZP</b> kennzeichnet für die Zwischenprüfung relevante Arten.</li>
@@ -486,6 +506,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       </div>
     </div>
   </section>
+  </div>
 
   <div class="controls">
     <div class="field search">
@@ -515,7 +536,9 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
     </div>
   </div>
 
-  <section class="grader" id="grader" hidden>
+  <div class="scrim pscrim" id="graderScrim">
+  <section class="grader" id="grader">
+    <button class="pclose" title="Schließen (auch Esc oder Klick daneben)" aria-label="Schließen">×</button>
     <div class="gcard">
       <div class="left">
         <p class="gtitle">Notenrechner</p>
@@ -536,8 +559,11 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       </div>
     </div>
   </section>
+  </div>
 
-  <section class="grader" id="schemaPanel" hidden>
+  <div class="scrim pscrim" id="schemaScrim">
+  <section class="grader" id="schemaPanel">
+    <button class="pclose" title="Schließen (auch Esc oder Klick daneben)" aria-label="Schließen">×</button>
     <div class="gcard onecol">
       <div class="left noborder">
         <p class="gtitle">Prüfungsschema · Spalten, Punkte &amp; Anzahl</p>
@@ -550,8 +576,11 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       </div>
     </div>
   </section>
+  </div>
 
-  <section class="grader" id="examsPanel" hidden>
+  <div class="scrim pscrim" id="examsScrim">
+  <section class="grader" id="examsPanel">
+    <button class="pclose" title="Schließen (auch Esc oder Klick daneben)" aria-label="Schließen">×</button>
     <div class="gcard onecol">
       <div class="left noborder">
         <p class="gtitle">Gespeicherte Prüfungen · nach Prüfungsdatum</p>
@@ -567,8 +596,11 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       </div>
     </div>
   </section>
+  </div>
 
-  <section class="grader" id="settingsPanel" hidden>
+  <div class="scrim pscrim" id="settingsScrim">
+  <section class="grader" id="settingsPanel">
+    <button class="pclose" title="Schließen (auch Esc oder Klick daneben)" aria-label="Schließen">×</button>
     <div class="gcard onecol">
       <div class="left noborder">
         <p class="gtitle">Einstellungen · Titel &amp; Fußzeile des Bogens</p>
@@ -578,8 +610,11 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       </div>
     </div>
   </section>
+  </div>
 
-  <section class="grader" id="previewPanel" hidden>
+  <div class="scrim pscrim" id="previewScrim">
+  <section class="grader" id="previewPanel">
+    <button class="pclose" title="Schließen (auch Esc oder Klick daneben)" aria-label="Schließen">×</button>
     <div class="gcard onecol">
       <div class="left noborder">
         <p class="gtitle">Auswahl · Bogen-Vorschau — <span id="pvCount">0</span> Pflanzen · max. <span id="pvPts">0</span> P.</p>
@@ -596,6 +631,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       </div>
     </div>
   </section>
+  </div>
 
   <main id="list"></main>
 
@@ -667,6 +703,13 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
           <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
           <div><b>Musterlösung</b><span>Mit Antworten und Punktespalte — nur für Prüfende.</span></div>
         </button>
+      </div>
+      <div class="prsave" id="prSaveRow">
+        <label class="switch" title="Beim Drucken die aktuelle Auswahl automatisch unter dem Prüfungsdatum ablegen (Panel »Prüfungen«). Ist bereits eine gespeicherte Prüfung geladen, wird sie stattdessen aktualisiert – es entsteht kein Duplikat."><input type="checkbox" id="prSaveChk" checked><span class="track"></span><span id="prSaveLbl">Als Prüfung speichern</span></label>
+        <div class="prfields">
+          <input type="date" id="prDate" title="Prüfungsdatum, unter dem die Auswahl gespeichert wird (Vorgabe: heute bzw. Datum der geladenen Prüfung).">
+          <input type="text" id="prLabel" placeholder="Bezeichnung (optional)" title="Freie Bezeichnung zur Unterscheidung, z. B. Ausschuss oder Uhrzeit – optional.">
+        </div>
       </div>
     </div>
     <footer><button class="btn ghost" id="printCancel">Abbrechen</button></footer>
@@ -1027,7 +1070,7 @@ function importJsonFile(){
     try{
       const r=importJsonData(JSON.parse(await f.text()));
       if(r.type==="exam"){
-        if($("#examsPanel").hasAttribute("hidden")) toggleExams();
+        openExams();
         toast(r.dupe
           ? `Diese Prüfung ist bereits gespeichert (${r.count} Pflanzen)`
           : `Prüfung importiert (${r.count} Pflanzen · ${fmtDate(r.date)}) – unten »Laden« drücken`);
@@ -1271,6 +1314,7 @@ function drawRandom(){
   if(!pool.length){ toast("Keine Arten im aktuellen Filter",true); return; }
   for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
   selection=pool.slice(0,n);
+  loadedExamId=null; syncExamControls(); // frisch gezogene Liste = neue Prüfung
   renderList(); syncSelUI();
   toast(n+" Arten gezogen"+(n<want?" (Pool erschöpft)":""));
 }
@@ -1278,7 +1322,7 @@ function shuffleSel(){
   for(let i=selection.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [selection[i],selection[j]]=[selection[j],selection[i]]; }
   toast("Reihenfolge neu gemischt");
 }
-function clearSel(){ selection=[]; renderList(); syncSelUI(); }
+function clearSel(){ selection=[]; loadedExamId=null; syncExamControls(); renderList(); syncSelUI(); }
 function syncSelUI(){
   $("#selN").textContent=selection.length;
   $("#selTarget").textContent=$("#drawCount").value||drawTarget();
@@ -1291,12 +1335,11 @@ function syncSelUI(){
   const has=selection.length>0;
   $("#btnPrint").disabled=!has; $("#btnClear").disabled=!has; $("#btnShuffle").disabled=selection.length<2;
   const sync=$("#gSync"); if(sync) sync.textContent="= "+fmtPts((selection.length||drawTarget())*ptsPer())+" P.";
-  const gr=$("#grader");
-  if(gr && !gr.hasAttribute("hidden")){
+  if(panelOpen("#graderScrim")){
     if(!$("#gMax").dataset.touched){ $("#gMax").value=(selection.length||drawTarget())*ptsPer(); }
     renderGrader();
   }
-  if(!$("#previewPanel").hasAttribute("hidden")) renderPreview();
+  if(panelOpen("#previewScrim")) renderPreview();
 }
 
 /* ---------- Bearbeiten / Hinzufügen / Löschen ---------- */
@@ -1442,9 +1485,9 @@ function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gesp
     ${solScale}
     ${foot?`<div class="ffoot">${foot}</div>`:""}`;
 }
-function printSheet(mode){
+function printSheet(mode,ex){ // ex optional: soeben gespeicherte/aktualisierte Prüfung (Datum für die Musterlösung)
   if(!selection.length){ toast("Erst Arten auswählen",true); return; }
-  buildSheet(mode);
+  buildSheet(mode, ex?{date:ex.date}:undefined);
   window.print();
 }
 
@@ -1462,18 +1505,23 @@ function saveExams(){ store.set(EXAMS_KEY, JSON.stringify(exams)); }
 function todayISO(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function fmtDate(iso){ if(!iso) return ""; const d=new Date(iso+"T00:00:00"); return isNaN(d)?iso:d.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"}); }
 
+function examSnapshot(){
+  return selectedPlants().map(p=>({gattung:p.gattung,art:p.art,familie:p.familie,
+    deutscher_name:p.deutscher_name,kategorie:p.kategorie,zp:p.zp?1:0}));
+}
+function saveExamData(date,label){ // Kern, auch vom Druck-Dialog genutzt
+  if(!selection.length) return null;
+  const def=PROFILE_DEFS[profileId];
+  const exam={ id:"ex"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),
+    savedAt:new Date().toISOString(), date:date||todayISO(), profileId, fr:def.fr, niveau:def.niveau,
+    label:norm(label||""), plants:examSnapshot(), schema:cloneSchema(schema) };
+  exams.unshift(exam); saveExams(); loadedExamId=exam.id; renderExams(); syncExamControls();
+  return exam;
+}
 function saveExam(){
   if(!selection.length){ toast("Erst Arten auswählen oder ziehen",true); return; }
-  const date=$("#exDate").value || todayISO();
-  const label=norm($("#exLabel").value);
-  const def=PROFILE_DEFS[profileId];
-  const plants=selectedPlants().map(p=>({gattung:p.gattung,art:p.art,familie:p.familie,
-    deutscher_name:p.deutscher_name,kategorie:p.kategorie,zp:p.zp?1:0}));
-  const exam={ id:"ex"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36),
-    savedAt:new Date().toISOString(), date, profileId, fr:def.fr, niveau:def.niveau,
-    label, plants, schema:cloneSchema(schema) };
-  exams.unshift(exam); saveExams(); loadedExamId=exam.id; renderExams(); syncExamControls();
-  toast(`Prüfung gespeichert (${plants.length} Pflanzen · ${fmtDate(date)})`);
+  const ex=saveExamData($("#exDate").value, $("#exLabel").value);
+  if(ex) toast(`Prüfung gespeichert (${ex.plants.length} Pflanzen · ${fmtDate(ex.date)})`);
 }
 function copyExam(id){
   const ex=exams.find(e=>e.id===id); if(!ex) return;
@@ -1485,19 +1533,23 @@ function copyExam(id){
   exams.unshift(copy); saveExams(); renderExams();
   toast("Prüfung kopiert – mit heutigem Datum, jetzt bearbeitbar (»Laden«)");
 }
-function updateLoadedExam(){
+function updateExamData(date,label){ // Kern, auch vom Druck-Dialog genutzt
   const ex=exams.find(e=>e.id===loadedExamId);
-  if(!ex){ toast("Keine geladene Prüfung zum Aktualisieren",true); return; }
-  if(!selection.length){ toast("Auswahl ist leer",true); return; }
+  if(!ex||!selection.length) return null;
   const def=PROFILE_DEFS[profileId];
-  ex.date=$("#exDate").value||ex.date;
-  ex.label=norm($("#exLabel").value);
+  ex.date=date||ex.date;
+  ex.label=norm(label!=null?label:ex.label);
   ex.profileId=profileId; ex.fr=def.fr; ex.niveau=def.niveau;
-  ex.plants=selectedPlants().map(p=>({gattung:p.gattung,art:p.art,familie:p.familie,
-    deutscher_name:p.deutscher_name,kategorie:p.kategorie,zp:p.zp?1:0}));
+  ex.plants=examSnapshot();
   ex.schema=cloneSchema(schema); ex.savedAt=new Date().toISOString();
   saveExams(); renderExams(); syncExamControls();
-  toast(`Prüfung aktualisiert (${ex.plants.length} Pflanzen · ${fmtDate(ex.date)})`);
+  return ex;
+}
+function updateLoadedExam(){
+  if(!exams.find(e=>e.id===loadedExamId)){ toast("Keine geladene Prüfung zum Aktualisieren",true); return; }
+  if(!selection.length){ toast("Auswahl ist leer",true); return; }
+  const ex=updateExamData($("#exDate").value, $("#exLabel").value);
+  if(ex) toast(`Prüfung aktualisiert (${ex.plants.length} Pflanzen · ${fmtDate(ex.date)})`);
 }
 function syncExamControls(){
   const btn=$("#exUpdate"); if(!btn) return;
@@ -1533,7 +1585,8 @@ function loadExam(id){
   });
   selection=ids; loadedExamId=ex.id;
   if(neu){ refresh(); markDirty(); }
-  if(!$("#examsPanel").hasAttribute("hidden")){ $("#exDate").value=ex.date||todayISO(); $("#exLabel").value=ex.label||""; }
+  $("#exDate").value=ex.date||todayISO(); $("#exLabel").value=ex.label||"";
+  closePanel("#examsScrim"); // Modal zu – die geladene Auswahl ist jetzt direkt sichtbar
   renderList(); syncSelUI(); syncExamControls();
   if(neu) toast(`${ids.length} Arten geladen – ${neu} davon neu in die Liste übernommen`);
   else toast(`${ids.length} Arten geladen – jetzt bearbeitbar, dann »Aktualisieren« oder neu speichern`);
@@ -1550,11 +1603,10 @@ function delExam(id){
   exams=exams.filter(e=>e.id!==id); saveExams(); renderExams(); syncExamControls();
   toast("Prüfung gelöscht");
 }
-function toggleExams(){
-  const s=$("#examsPanel");
-  if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); if(!$("#exDate").value) $("#exDate").value=todayISO(); renderExams(); syncExamControls(); }
-  else s.setAttribute("hidden","");
-  syncPanelButtons();
+function openExams(){
+  if(!$("#exDate").value) $("#exDate").value=todayISO();
+  renderExams(); syncExamControls();
+  $("#examsScrim").classList.add("open"); syncPanelButtons();
 }
 function renderExams(){
   const host=$("#examList"); host.innerHTML="";
@@ -1590,11 +1642,9 @@ function renderExams(){
    ergänzen und entfernen – eine Vorschau dessen, was auf den Bogen kommt.
    ============================================================ */
 let selectNewAfterSave=false;
-function togglePreview(){
-  const s=$("#previewPanel");
-  if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); renderPreview(); s.scrollIntoView({block:"nearest"}); }
-  else s.setAttribute("hidden","");
-  syncPanelButtons();
+function openPreview(){
+  renderPreview();
+  $("#previewScrim").classList.add("open"); syncPanelButtons();
 }
 function movePreview(idx,dir){
   const j=idx+dir; if(j<0||j>=selection.length) return;
@@ -1677,11 +1727,9 @@ const SETTINGS_FIELDS=[
   {key:"stelle2",      label:"Fußzeile (Zeile 2, optional)",            ph:"z. B. Abteilung / Ort"},
   {key:"pruefendeNote",label:"Vermerk auf der Musterlösung",            ph:"z. B. Nur für Prüfende"}
 ];
-function toggleSettings(){
-  const s=$("#settingsPanel");
-  if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); renderSettings(); }
-  else s.setAttribute("hidden","");
-  syncPanelButtons();
+function openSettings(){
+  renderSettings();
+  $("#settingsScrim").classList.add("open"); syncPanelButtons();
 }
 function renderSettings(){
   const host=$("#setFields"); host.innerHTML="";
@@ -1708,15 +1756,11 @@ function resetSettings(){
 /* ============================================================
    Notenrechner
    ============================================================ */
-function toggleGrader(){
-  const g=$("#grader");
-  const show=g.hasAttribute("hidden");
-  if(show){
-    g.removeAttribute("hidden");
-    if(!$("#gMax").dataset.touched) $("#gMax").value=(selection.length||drawTarget())*ptsPer();
-    renderGrader(); setTimeout(()=>$("#gPts").focus(),50);
-  }else g.setAttribute("hidden","");
-  syncPanelButtons();
+function openGrader(){
+  if(!$("#gMax").dataset.touched) $("#gMax").value=(selection.length||drawTarget())*ptsPer();
+  renderGrader();
+  $("#graderScrim").classList.add("open"); syncPanelButtons();
+  setTimeout(()=>$("#gPts").focus(),60);
 }
 function renderGrader(){
   const max=Math.max(1, Math.round(parseFloat($("#gMax").value)||0));
@@ -1787,7 +1831,7 @@ function renderGrader(){
 function wire(){
   $("#btnImport").onclick=pickExcel;
   $("#btnAdd").onclick=()=>openEdit(null);
-  $("#btnGrade").onclick=toggleGrader;
+  $("#btnGrade").onclick=openGrader;
   $("#gPts").addEventListener("input",renderGrader);
   $("#gMax").addEventListener("input",()=>{ $("#gMax").dataset.touched="1"; renderGrader(); });
   $("#gSync").onclick=()=>{ $("#gMax").value=(selection.length||drawTarget())*ptsPer(); delete $("#gMax").dataset.touched; renderGrader(); };
@@ -1803,25 +1847,25 @@ function wire(){
   $("#btnClear").onclick=clearSel;
   $("#btnPrint").onclick=()=>askPrintMode();
   // Auswahl-/Bogen-Vorschau
-  $("#btnPreview").onclick=togglePreview;
+  $("#btnPreview").onclick=openPreview;
   $("#pvAddBtn").onclick=pvAddExisting;
   $("#pvAdd").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); pvAddExisting(); } });
   $("#pvAddNew").onclick=pvAddNew;
   $("#pvPrint").onclick=()=>askPrintMode();
   // Gespeicherte Prüfungen
-  $("#btnExams").onclick=toggleExams;
+  $("#btnExams").onclick=openExams;
   $("#exSave").onclick=saveExam;
   $("#exUpdate").onclick=updateLoadedExam;
   $("#exImport").onclick=importJsonFile;
   // Einstellungen
-  $("#btnSettings").onclick=toggleSettings;
+  $("#btnSettings").onclick=openSettings;
   $("#setReset").onclick=resetSettings;
   // Hilfe
-  $("#btnHelp").onclick=toggleHelp;
+  $("#btnHelp").onclick=openHelp;
   // Profil-Auswahl
   $("#frSelect").addEventListener("change",()=>applyProfileSelect());
   $("#nivSelect").addEventListener("change",()=>applyProfileSelect());
-  $("#btnSchema").onclick=toggleSchema;
+  $("#btnSchema").onclick=openSchema;
 
   // Import-Dialog
   $("#importCancel").onclick=()=>{ $("#importScrim").classList.remove("open"); pendingImport=null; };
@@ -1830,51 +1874,80 @@ function wire(){
     document.querySelectorAll("#importChoice .rcard").forEach(c=>c.classList.remove("sel"));
     e.target.closest(".rcard").classList.add("sel");
   }));
-  // Druck-Dialog
-  $("#printBlank").onclick=()=>{ $("#printScrim").classList.remove("open"); if(printChoose) printChoose("blank"); };
-  $("#printSolution").onclick=()=>{ $("#printScrim").classList.remove("open"); if(printChoose) printChoose("solution"); };
+  // Druck-Dialog (mit »Als Prüfung speichern«)
+  $("#printBlank").onclick=()=>{ const ex=maybeSaveFromPrint(); $("#printScrim").classList.remove("open"); if(printChoose) printChoose("blank",ex); };
+  $("#printSolution").onclick=()=>{ const ex=maybeSaveFromPrint(); $("#printScrim").classList.remove("open"); if(printChoose) printChoose("solution",ex); };
   $("#printCancel").onclick=()=>$("#printScrim").classList.remove("open");
   // Edit-Dialog
   $("#editCancel").onclick=()=>{ selectNewAfterSave=false; $("#editScrim").classList.remove("open"); };
   $("#editSave").onclick=saveEdit;
-  // Scrim-Klick schließt
-  document.querySelectorAll(".scrim").forEach(s=>s.addEventListener("mousedown",e=>{ if(e.target===s) s.classList.remove("open"); }));
-  document.addEventListener("keydown",e=>{ if(e.key==="Escape") document.querySelectorAll(".scrim.open").forEach(s=>s.classList.remove("open")); });
+  // ×-Knopf der Modul-Modals
+  document.querySelectorAll(".pclose").forEach(b=>b.onclick=()=>{ b.closest(".scrim").classList.remove("open"); syncPanelButtons(); });
+  // Scrim-Klick schließt das jeweilige Modal
+  document.querySelectorAll(".scrim").forEach(s=>s.addEventListener("mousedown",e=>{ if(e.target===s){ s.classList.remove("open"); syncPanelButtons(); } }));
+  // Escape schließt nur das oberste offene Modal
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="Escape") return;
+    const open=[...document.querySelectorAll(".scrim.open")];
+    if(open.length){ open[open.length-1].classList.remove("open"); syncPanelButtons(); }
+  });
 }
 
-/* Druck-Dialog (Prüfungsbogen / Musterlösung) mit Callback statt window.prompt */
+/* Druck-Dialog (Prüfungsbogen / Musterlösung) mit Callback statt window.prompt.
+   Beim Druck der aktuellen Auswahl (ohne cb) kann sie direkt als Prüfung
+   gespeichert werden; eine geladene Prüfung wird stattdessen aktualisiert. */
 let printChoose=null;
 function askPrintMode(cb){
-  printChoose = cb || ((m)=>printSheet(m));
+  printChoose = cb || ((m,ex)=>printSheet(m,ex));
+  const row=$("#prSaveRow");
+  if(row){
+    const forSelection=!cb; // cb gesetzt = Druck einer gespeicherten Prüfung (Snapshot)
+    row.hidden=!forSelection||!selection.length;
+    if(!row.hidden){
+      const ex=exams.find(e=>e.id===loadedExamId);
+      $("#prDate").value = ex ? (ex.date||todayISO()) : todayISO();
+      $("#prLabel").value = ex ? (ex.label||"") : "";
+      $("#prSaveLbl").textContent = ex ? `Geladene Prüfung (${fmtDate(ex.date)}) aktualisieren` : "Als Prüfung speichern";
+      $("#prSaveChk").checked = true;
+    }
+  }
   $("#printScrim").classList.add("open");
 }
+function maybeSaveFromPrint(){
+  const row=$("#prSaveRow");
+  if(!row||row.hidden||!$("#prSaveChk").checked||!selection.length) return null;
+  const date=$("#prDate").value||todayISO(), label=$("#prLabel").value;
+  const hatte=!!exams.find(e=>e.id===loadedExamId);
+  const ex=hatte?updateExamData(date,label):saveExamData(date,label);
+  if(ex) toast(hatte?`Prüfung aktualisiert (${fmtDate(ex.date)})`:`Als Prüfung gespeichert (${fmtDate(ex.date)})`);
+  return ex||null;
+}
 
-/* Sichtbares Feedback: welche Modul-Panels gerade geöffnet sind */
+/* Modul-Panels öffnen als Modal-Fenster (Scrim); Buttons zeigen den Zustand */
 const PANEL_BUTTONS=[
-  ["#btnHelp","#helpPanel"],["#btnGrade","#grader"],["#btnSchema","#schemaPanel"],
-  ["#btnExams","#examsPanel"],["#btnSettings","#settingsPanel"],["#btnPreview","#previewPanel"]
+  ["#btnHelp","#helpScrim"],["#btnGrade","#graderScrim"],["#btnSchema","#schemaScrim"],
+  ["#btnExams","#examsScrim"],["#btnSettings","#settingsScrim"],["#btnPreview","#previewScrim"]
 ];
-function toggleHelp(){
-  const s=$("#helpPanel");
-  if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); s.scrollIntoView({block:"nearest"}); }
-  else s.setAttribute("hidden","");
-  syncPanelButtons();
+function panelOpen(sel){ const s=$(sel); return !!s&&s.classList.contains("open"); }
+function closePanel(sel){ const s=$(sel); if(s) s.classList.remove("open"); syncPanelButtons(); }
+function openHelp(){
+  $("#helpScrim").classList.add("open"); syncPanelButtons();
 }
 function syncPanelButtons(){
   PANEL_BUTTONS.forEach(([b,p])=>{
     const btn=$(b), pan=$(p); if(!btn||!pan) return;
-    const open=!pan.hasAttribute("hidden");
+    const open=pan.classList.contains("open");
     btn.classList.toggle("active",open);
     btn.setAttribute("aria-pressed",open?"true":"false");
   });
 }
 function renderAll(){
   syncProfileUI(); refreshKatList(); renderList(); syncSelUI();
-  if(!$("#grader").hasAttribute("hidden")) renderGrader();
-  if(!$("#schemaPanel").hasAttribute("hidden")) renderSchema();
-  if(!$("#examsPanel").hasAttribute("hidden")){ renderExams(); syncExamControls(); }
-  if(!$("#settingsPanel").hasAttribute("hidden")) renderSettings();
-  if(!$("#previewPanel").hasAttribute("hidden")) renderPreview();
+  if(panelOpen("#graderScrim")) renderGrader();
+  if(panelOpen("#schemaScrim")) renderSchema();
+  if(panelOpen("#examsScrim")){ renderExams(); syncExamControls(); }
+  if(panelOpen("#settingsScrim")) renderSettings();
+  if(panelOpen("#previewScrim")) renderPreview();
   syncPanelButtons();
 }
 
@@ -1895,9 +1968,9 @@ function applyProfileSelect(){
 function applyDrawDefault(){ $("#drawCount").value=drawTarget(); $("#selTarget").textContent=drawTarget(); }
 
 /* ---------- Prüfungsschema (Spalten/Punkte/Anzahl) ---------- */
-function toggleSchema(){
-  const s=$("#schemaPanel"); if(s.hasAttribute("hidden")){ s.removeAttribute("hidden"); renderSchema(); } else s.setAttribute("hidden","");
-  syncPanelButtons();
+function openSchema(){
+  renderSchema();
+  $("#schemaScrim").classList.add("open"); syncPanelButtons();
 }
 /* Editor-Reihenfolge: erst bewertete Spalten (cols-Reihenfolge = Spaltenfolge auf
    dem Bogen), dann die restlichen Felder (0 Punkte) in Standardreihenfolge. */
@@ -1949,7 +2022,7 @@ function updateSchema(){
   if(!cols.length){ toast("Mindestens ein Bewertungsfeld mit Punkten nötig",true); renderSchema(); return; }
   schema.anzahl=anzahl; schema.cols=cols; scaleCfg=schema.scale;
   markDirty(); applyDrawDefault(); renderSchema(); syncProfileUI(); renderList(); syncSelUI();
-  if(!$("#grader").hasAttribute("hidden")) renderGrader();
+  if(panelOpen("#graderScrim")) renderGrader();
 }
 
 /* ---------- Start ---------- */

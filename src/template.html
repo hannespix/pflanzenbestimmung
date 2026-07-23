@@ -247,6 +247,19 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 /* ---------- Modal ---------- */
 .scrim{position:fixed; inset:0; background:rgba(28,42,34,.42); backdrop-filter:blur(2px); display:none; align-items:center; justify-content:center; padding:20px; z-index:50}
 .scrim.open{display:flex}
+/* Modul-Panels (Hilfe, Notenrechner, Schema, Prüfungen, Einstellungen, Vorschau)
+   öffnen als Modal-Fenster statt untereinander im Body – weniger Scrollen. */
+.pscrim{align-items:flex-start; overflow-y:auto; padding:4vh 18px 6vh}
+.pscrim > .grader{margin:0 auto; width:100%; max-width:920px; position:relative}
+.pscrim .gcard{box-shadow:0 18px 50px rgba(28,42,34,.30)}
+.pclose{position:absolute; top:7px; right:7px; z-index:1; border:1px solid var(--rule-strong); background:var(--surface); color:var(--ink-soft); width:28px; height:28px; border-radius:4px; font-size:17px; line-height:1; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; padding:0}
+.pclose:hover{border-color:var(--madder); color:var(--madder); background:#fff}
+/* Druck-Dialog: Auswahl direkt als Prüfung speichern */
+.prsave{display:flex; flex-direction:column; gap:9px; margin-top:14px; padding-top:13px; border-top:1px solid var(--rule)}
+.prsave .prfields{display:flex; gap:8px; flex-wrap:wrap}
+.prsave input[type="date"],.prsave input[type="text"]{border:1px solid var(--rule-strong); border-radius:3px; padding:7px 9px; font-size:13.5px; background:#fff}
+.prsave input[type="text"]{flex:1; min-width:160px}
+.prsave[hidden]{display:none}
 .modal{background:var(--surface); border:1px solid var(--rule-strong); border-radius:6px; max-width:520px; width:100%; box-shadow:0 18px 50px rgba(28,42,34,.28); overflow:hidden}
 .modal header{padding:18px 22px 14px; border-bottom:1px solid var(--rule); background:var(--surface-2)}
 .modal header h3{font-family:var(--serif); font-size:19px; margin:0; font-weight:600}
@@ -342,6 +355,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
      Überschrift nicht überlagert */
   .mast-top{flex-direction:column; align-items:stretch}
   .mast-right{width:100%; justify-content:space-between; margin-top:2px}
+  .pscrim{padding:10px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none !important}}
 
@@ -406,7 +420,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       </div>
       <div class="mast-right">
         <a class="btn ghost" href="pflanzen-lernen.html" title="Zum Lern-Tool für Azubis (Karteikarten, Quiz, Tippen – ohne Prüfungslisten und Noten)">Lernversion&nbsp;→</a>
-        <button class="btn ghost" id="btnHelp" title="Kurzanleitung und Erklärung aller Funktionen ein- oder ausblenden"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5"/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/></svg>Hilfe</button>
+        <button class="btn ghost" id="btnHelp" title="Kurzanleitung und Erklärung aller Funktionen öffnen (Fenster; Schließen mit ×, Esc oder Klick daneben)"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5"/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/></svg>Hilfe</button>
         <span class="dbstatus" title="Speicherstatus dieser Liste im Browser: hinterlegte Standardliste oder im Browser gespeicherte Änderungen"><span class="dot" id="dbdot"></span><span id="dbname">Standardliste</span></span>
       </div>
     </div>
@@ -443,7 +457,9 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
     </div>
   </header>
 
-  <section class="grader" id="helpPanel" hidden>
+  <div class="scrim pscrim" id="helpScrim">
+  <section class="grader" id="helpPanel">
+    <button class="pclose" title="Schließen (auch Esc oder Klick daneben)" aria-label="Schließen">×</button>
     <div class="gcard onecol">
       <div class="left noborder help">
         <p class="gtitle">Hilfe · Kurzanleitung &amp; alle Funktionen</p>
@@ -455,14 +471,17 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
           <li>Bei Bedarf die Liste <b>durchsuchen und filtern</b> – Suche, Kategorie oder „nur ZP-relevant".</li>
           <li><b>Anzahl</b> festlegen und <b>Zufällig ziehen</b> – oder Arten in der Liste unten einzeln anhaken.</li>
           <li><b>Vorschau · bearbeiten</b>: Reihenfolge per ▲▼ ändern, Arten bearbeiten, ergänzen oder entfernen.</li>
-          <li><b>Bogen drucken</b>: im Dialog Prüfungsbogen (leer) oder Musterlösung (mit Antworten) wählen.</li>
+          <li><b>Bogen drucken</b>: im Dialog Prüfungsbogen (leer) oder Musterlösung (mit Antworten) wählen.
+            Dort ist <b>»Als Prüfung speichern«</b> bereits angehakt – die Auswahl wird beim Drucken automatisch
+            unter dem Prüfungsdatum abgelegt (Panel »Prüfungen«); eine geladene Prüfung wird stattdessen aktualisiert.</li>
         </ol>
 
         <h4>Werkzeuge (Kopfzeile)</h4>
         <dl class="hdl">
           <dt>Prüfungsschema</dt><dd>Legt fest, welche Spalten (Gattung, Art, Familie, deutscher Name) mit wie vielen Punkten bewertet werden, in welcher Reihenfolge (▲▼ = Spaltenfolge auf dem Bogen) und wie viele Pflanzen je Prüfung. Punkte dürfen Nachkommastellen haben (z. B. 0,5). Gilt pro Profil.</dd>
           <dt>Notenrechner</dt><dd>Rechnet erreichte Punkte in eine Note um – lineare Baden-Württemberg-Skala (Standard) oder IHK-Schlüssel. Notengrenzen sind einstellbar; angezeigt werden Note, Prozent, Dezimalnote und die Punktschwellen.</dd>
-          <dt>Prüfungen</dt><dd>Speichert die gezogene Liste als Momentaufnahme (samt Schema) unter einem <b>Prüfungsdatum</b>. Von dort: laden, <b>kopieren</b> (z. B. für den nächsten Prüfungstag), nach dem Bearbeiten <b>aktualisieren</b>, drucken oder als <b>.json</b> herunterladen. Die .json-Datei lässt sich auf einem <b>anderen Gerät</b> über »Prüfung importieren« (im Prüfungen-Panel) oder »JSON laden« einlesen; beim »Laden« dort fehlende Arten werden automatisch in die Liste übernommen.</dd>
+          <dt>Prüfungen</dt><dd>Speichert die gezogene Liste als Momentaufnahme (samt Schema) unter einem <b>Prüfungsdatum</b>.
+            Am schnellsten geht das direkt beim <b>Drucken</b> (Häkchen »Als Prüfung speichern« im Druck-Dialog). Von dort: laden, <b>kopieren</b> (z. B. für den nächsten Prüfungstag), nach dem Bearbeiten <b>aktualisieren</b>, drucken oder als <b>.json</b> herunterladen. Die .json-Datei lässt sich auf einem <b>anderen Gerät</b> über »Prüfung importieren« (im Prüfungen-Panel) oder »JSON laden« einlesen; beim »Laden« dort fehlende Arten werden automatisch in die Liste übernommen.</dd>
           <dt>Einstellungen</dt><dd>Passt den Druckbogen an: Titel, <b>Fußzeile</b> (zuständige Stelle, zwei Zeilen) und den Vermerk auf der Musterlösung – so ist das Werkzeug für jede zuständige Stelle nutzbar. Gilt geräteweit.</dd>
         </dl>
 
@@ -476,6 +495,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 
         <h4>Gut zu wissen</h4>
         <ul class="hnotes">
+          <li>Alle Werkzeuge öffnen als <b>Fenster</b> über der Liste – Schließen mit <b>×</b>, <b>Esc</b> oder Klick auf den abgedunkelten Hintergrund.</li>
           <li>Die Druckbögen entsprechen den <b>offiziellen AP-Formularen</b> der Regierungspräsidien Baden-Württemberg – je nach Profil Fachwerker-, GaLaBau- oder Produktions-Formular (Spalten und Punkte aus dem Prüfungsschema).</li>
           <li><b>Gattung</b> = erstes Wort des botanischen Namens, <b>Art</b> = Rest (inkl. <i>var.</i>/<i>ssp.</i>/Sorten).</li>
           <li><b>ZP</b> kennzeichnet für die Zwischenprüfung relevante Arten.</li>
@@ -486,6 +506,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       </div>
     </div>
   </section>
+  </div>
 
   <div class="controls">
     <div class="field search">
@@ -515,7 +536,9 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
     </div>
   </div>
 
-  <section class="grader" id="grader" hidden>
+  <div class="scrim pscrim" id="graderScrim">
+  <section class="grader" id="grader">
+    <button class="pclose" title="Schließen (auch Esc oder Klick daneben)" aria-label="Schließen">×</button>
     <div class="gcard">
       <div class="left">
         <p class="gtitle">Notenrechner</p>
@@ -536,8 +559,11 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       </div>
     </div>
   </section>
+  </div>
 
-  <section class="grader" id="schemaPanel" hidden>
+  <div class="scrim pscrim" id="schemaScrim">
+  <section class="grader" id="schemaPanel">
+    <button class="pclose" title="Schließen (auch Esc oder Klick daneben)" aria-label="Schließen">×</button>
     <div class="gcard onecol">
       <div class="left noborder">
         <p class="gtitle">Prüfungsschema · Spalten, Punkte &amp; Anzahl</p>
@@ -550,8 +576,11 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       </div>
     </div>
   </section>
+  </div>
 
-  <section class="grader" id="examsPanel" hidden>
+  <div class="scrim pscrim" id="examsScrim">
+  <section class="grader" id="examsPanel">
+    <button class="pclose" title="Schließen (auch Esc oder Klick daneben)" aria-label="Schließen">×</button>
     <div class="gcard onecol">
       <div class="left noborder">
         <p class="gtitle">Gespeicherte Prüfungen · nach Prüfungsdatum</p>
@@ -567,8 +596,11 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       </div>
     </div>
   </section>
+  </div>
 
-  <section class="grader" id="settingsPanel" hidden>
+  <div class="scrim pscrim" id="settingsScrim">
+  <section class="grader" id="settingsPanel">
+    <button class="pclose" title="Schließen (auch Esc oder Klick daneben)" aria-label="Schließen">×</button>
     <div class="gcard onecol">
       <div class="left noborder">
         <p class="gtitle">Einstellungen · Titel &amp; Fußzeile des Bogens</p>
@@ -578,8 +610,11 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       </div>
     </div>
   </section>
+  </div>
 
-  <section class="grader" id="previewPanel" hidden>
+  <div class="scrim pscrim" id="previewScrim">
+  <section class="grader" id="previewPanel">
+    <button class="pclose" title="Schließen (auch Esc oder Klick daneben)" aria-label="Schließen">×</button>
     <div class="gcard onecol">
       <div class="left noborder">
         <p class="gtitle">Auswahl · Bogen-Vorschau — <span id="pvCount">0</span> Pflanzen · max. <span id="pvPts">0</span> P.</p>
@@ -596,6 +631,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       </div>
     </div>
   </section>
+  </div>
 
   <main id="list"></main>
 
@@ -667,6 +703,13 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
           <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
           <div><b>Musterlösung</b><span>Mit Antworten und Punktespalte — nur für Prüfende.</span></div>
         </button>
+      </div>
+      <div class="prsave" id="prSaveRow">
+        <label class="switch" title="Beim Drucken die aktuelle Auswahl automatisch unter dem Prüfungsdatum ablegen (Panel »Prüfungen«). Ist bereits eine gespeicherte Prüfung geladen, wird sie stattdessen aktualisiert – es entsteht kein Duplikat."><input type="checkbox" id="prSaveChk" checked><span class="track"></span><span id="prSaveLbl">Als Prüfung speichern</span></label>
+        <div class="prfields">
+          <input type="date" id="prDate" title="Prüfungsdatum, unter dem die Auswahl gespeichert wird (Vorgabe: heute bzw. Datum der geladenen Prüfung).">
+          <input type="text" id="prLabel" placeholder="Bezeichnung (optional)" title="Freie Bezeichnung zur Unterscheidung, z. B. Ausschuss oder Uhrzeit – optional.">
+        </div>
       </div>
     </div>
     <footer><button class="btn ghost" id="printCancel">Abbrechen</button></footer>

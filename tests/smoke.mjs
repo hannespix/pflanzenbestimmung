@@ -67,35 +67,41 @@ async function main() {
   // 1) Boot ohne Konsolenfehler
   assert(errs.length === 0, "Konsolenfehler beim Boot: " + errs.join(" | "));
 
-  // 1b) Aktiver Zustand: geöffnetes Modul-Panel markiert seinen Button
+  // 1b) Modul als Modal: Öffnen markiert den Button, ×/Esc/Scrim-Klick schließen
   const active = await page.evaluate(() => {
     const btn = document.querySelector("#btnGrade");
     const wasActive = btn.classList.contains("active");
-    toggleGrader();
-    const openState = { active: btn.classList.contains("active"), pressed: btn.getAttribute("aria-pressed") };
-    toggleGrader();
-    const closedState = { active: btn.classList.contains("active"), pressed: btn.getAttribute("aria-pressed") };
-    return { wasActive, openState, closedState };
+    openGrader();
+    const openState = { open: $("#graderScrim").classList.contains("open"),
+      active: btn.classList.contains("active"), pressed: btn.getAttribute("aria-pressed") };
+    document.querySelector("#graderScrim .pclose").click(); // ×-Knopf
+    const afterClose = { open: $("#graderScrim").classList.contains("open"),
+      active: btn.classList.contains("active"), pressed: btn.getAttribute("aria-pressed") };
+    openGrader();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })); // Esc
+    const afterEsc = $("#graderScrim").classList.contains("open");
+    return { wasActive, openState, afterClose, afterEsc };
   });
-  assert(!active.wasActive && active.openState.active && active.openState.pressed === "true",
-    "Modul-Button wird beim Öffnen nicht als aktiv markiert");
-  assert(!active.closedState.active && active.closedState.pressed === "false",
-    "Modul-Button bleibt nach dem Schließen aktiv");
+  assert(!active.wasActive && active.openState.open && active.openState.active && active.openState.pressed === "true",
+    "Modul-Modal öffnet nicht bzw. Button wird nicht als aktiv markiert");
+  assert(!active.afterClose.open && !active.afterClose.active && active.afterClose.pressed === "false",
+    "×-Knopf schließt das Modul-Modal nicht (oder Button bleibt aktiv)");
+  assert(!active.afterEsc, "Esc schließt das Modul-Modal nicht");
 
-  // 1c) Hilfe-Panel öffnet mit Inhalt und markiert seinen Button; Tooltips vorhanden
+  // 1c) Hilfe-Modal öffnet mit Inhalt und markiert seinen Button; Tooltips vorhanden
   const help = await page.evaluate(() => {
-    toggleHelp();
-    const open = { vis: !$("#helpPanel").hasAttribute("hidden"), active: $("#btnHelp").classList.contains("active"),
+    openHelp();
+    const open = { vis: $("#helpScrim").classList.contains("open"), active: $("#btnHelp").classList.contains("active"),
       hasContent: /In fünf Schritten/.test($("#helpPanel").textContent) };
-    toggleHelp();
+    closePanel("#helpScrim");
     const tips = ["#btnImport", "#btnDraw", "#btnPrint", "#btnHelp", "#btnSchema", "#btnSettings"]
       .every((s) => (document.querySelector(s).getAttribute("title") || "").length > 15);
     const icon = document.querySelector('link[rel="icon"]');
     const favicon = !!icon && /^data:image\/svg\+xml,/.test(icon.getAttribute("href") || "");
-    return { open, hiddenAfter: $("#helpPanel").hasAttribute("hidden"), tips, favicon };
+    return { open, closedAfter: !$("#helpScrim").classList.contains("open"), tips, favicon };
   });
-  assert(help.open.vis && help.open.active && help.open.hasContent, "Hilfe-Panel öffnet nicht korrekt");
-  assert(help.hiddenAfter, "Hilfe-Panel schließt nicht");
+  assert(help.open.vis && help.open.active && help.open.hasContent, "Hilfe-Modal öffnet nicht korrekt");
+  assert(help.closedAfter, "Hilfe-Modal schließt nicht");
   assert(help.tips, "Nicht alle wichtigen Buttons haben einen (aussagekräftigen) Tooltip");
   assert(help.favicon, "Inline-Favicon (data:image/svg+xml) fehlt");
 
@@ -149,6 +155,33 @@ async function main() {
   assert(printDlg.opened, "Druck-Dialog öffnet nicht");
   assert(printDlg.closed && printDlg.picked === "solution", "Druck-Dialog liefert die gewählte Variante nicht");
 
+  // 6a2) Druck-Dialog speichert die Auswahl als Prüfung; erneutes Drucken
+  //      aktualisiert die geladene Prüfung statt ein Duplikat anzulegen
+  const printSave = await page.evaluate(() => {
+    window.print = () => {}; // im Test wirkungslos halten
+    const n0 = exams.length;
+    askPrintMode(); // Druck der aktuellen Auswahl (ohne cb)
+    const rowVisible = !$("#prSaveRow").hidden && $("#prSaveChk").checked;
+    $("#prDate").value = "2026-09-01"; $("#prLabel").value = "Smoke-Druck";
+    $("#printBlank").click(); // druckt und speichert
+    const first = { count: exams.length, date: exams[0] && exams[0].date,
+      label: exams[0] && exams[0].label, loaded: loadedExamId === (exams[0] && exams[0].id) };
+    askPrintMode();
+    const relabel = $("#prSaveLbl").textContent;
+    $("#printSolution").click(); // zweiter Druck → aktualisieren, kein Duplikat
+    const second = exams.length;
+    // aufräumen, damit spätere Prüfungs-Tests bei 0 starten
+    exams = exams.filter((e) => e.id !== loadedExamId); saveExams();
+    loadedExamId = null; syncExamControls();
+    return { n0, rowVisible, first, relabel, second };
+  });
+  assert(printSave.rowVisible, "Druck-Dialog: »Als Prüfung speichern« fehlt oder ist nicht vorbelegt");
+  assert(printSave.first.count === printSave.n0 + 1 && printSave.first.date === "2026-09-01"
+    && printSave.first.label === "Smoke-Druck" && printSave.first.loaded,
+    "Drucken speichert die Auswahl nicht als Prüfung: " + JSON.stringify(printSave.first));
+  assert(/aktualisieren/.test(printSave.relabel), "Zweiter Druck müsste »aktualisieren« anbieten, war: " + printSave.relabel);
+  assert(printSave.second === printSave.n0 + 1, "Zweiter Druck darf kein Duplikat anlegen (exams=" + printSave.second + ")");
+
   // 6b) GaLaBau-Schema-Overrides: Fachwerker Deutscher Name (3) zuerst, Gattung/Art je 0,5
   await page.select("#frSelect", "garten_und_landschaftsbau");
   await page.select("#nivSelect", "fachwerker");
@@ -170,7 +203,7 @@ async function main() {
 
   // 6c) Spaltenreihenfolge editierbar: erstes Feld nach unten schieben ändert cols-Reihenfolge
   const reordered = await page.evaluate(() => {
-    if ($("#schemaPanel").hasAttribute("hidden")) toggleSchema();
+    openSchema();
     const before = schema.cols.map((c) => c.key).join(",");
     moveSchemaField(0, "down");
     return { before, after: schema.cols.map((c) => c.key).join(",") };
@@ -260,7 +293,7 @@ async function main() {
   const exam = await page.evaluate(() => {
     drawRandom();
     const drawn = selection.length;
-    if ($("#examsPanel").hasAttribute("hidden")) toggleExams();
+    openExams();
     $("#exDate").value = "2026-06-15";
     $("#exLabel").value = "Smoke";
     saveExam();
@@ -291,7 +324,7 @@ async function main() {
 
   // 7c) Einstellungen: zuständige Stelle editierbar und in der Bogen-Fußzeile sichtbar
   const settingsCheck = await page.evaluate(() => {
-    if ($("#settingsPanel").hasAttribute("hidden")) toggleSettings();
+    openSettings();
     $("#set_stelle1").value = "Landwirtschaftskammer Musterland";
     $("#set_stelle1").onchange();
     drawRandom(); buildSheet("blank");
@@ -305,7 +338,7 @@ async function main() {
   // 7d) Vorschau: Reihenfolge ändern, Bearbeiten schreibt in die DB zurück, Entfernen
   const preview = await page.evaluate(() => {
     drawRandom();
-    if ($("#previewPanel").hasAttribute("hidden")) togglePreview();
+    openPreview();
     const before = selection.slice(0, 2).join(",");
     movePreview(0, 1);
     const reordered = selection.slice(0, 2).join(",") !== before;
@@ -322,7 +355,7 @@ async function main() {
   // 7e) Prüfung kopieren + geladene Prüfung nach Änderung aktualisieren
   const copyUpd = await page.evaluate(() => {
     drawRandom();
-    if ($("#examsPanel").hasAttribute("hidden")) toggleExams();
+    openExams();
     $("#exDate").value = "2026-05-02"; saveExam();
     const base = exams.length;
     copyExam(exams.find((e) => e.date === "2026-05-02").id);
@@ -339,7 +372,7 @@ async function main() {
   // 7f) Sicherung enthält Prüfungen und Einstellungen und stellt sie wieder her
   const backup = await page.evaluate(() => {
     // Ausgangszustand: mind. eine Prüfung und eine angepasste zuständige Stelle
-    if (!exams.length) { drawRandom(); if ($("#examsPanel").hasAttribute("hidden")) toggleExams(); $("#exDate").value = "2026-04-01"; saveExam(); }
+    if (!exams.length) { drawRandom(); openExams(); $("#exDate").value = "2026-04-01"; saveExam(); }
     settings.stelle1 = "Prüfstelle Backup"; saveSettings();
     const data = JSON.parse(JSON.stringify(backupData()));
     const inBackup = { exams: Array.isArray(data.exams) ? data.exams.length : -1, stelle1: data.settings && data.settings.stelle1 };
@@ -359,7 +392,7 @@ async function main() {
   //     nicht auswählbar. Jetzt: Import landet als gespeicherte Prüfung, die
   //     Liste bleibt unberührt, »Laden« ergänzt fehlende Arten automatisch.
   const xdev = await page.evaluate(() => {
-    if ($("#examsPanel").hasAttribute("hidden")) toggleExams();
+    openExams();
     drawRandom(); $("#exDate").value = "2026-07-01"; $("#exLabel").value = "Gerätetest"; saveExam();
     const file = JSON.parse(JSON.stringify(exams[0])); // wie downloadExam (»JSON«)
     return { file, drawn: file.plants.length };
@@ -377,7 +410,7 @@ async function main() {
     ex.plants[0] = { gattung: "Importia", art: "peregrina", familie: "Testaceae",
       deutscher_name: "Import-Testpflanze", kategorie: ex.plants[0].kategorie, zp: 0 };
     saveExams();
-    if ($("#examsPanel").hasAttribute("hidden")) toggleExams();
+    openExams();
     document.querySelector('#examList .exrow [data-act="load"]').click();
     const added = cache.length === before + 1;
     const neu = cache.find((p) => p.gattung === "Importia");
@@ -427,7 +460,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Smoke-Test OK – Boot, aktiver Panel-Zustand, Hilfe + Tooltips, Profilwechsel (148/248), Schema-Matrix, Ziehen, Bogen, Prüfungen (speichern/laden/kopieren/aktualisieren), Prüfungs-JSON-Import (Gerätewechsel, fehlende Arten ergänzt), Sicherung mit Profilwechsel, Einstellungen, Vorschau, Persistenz, Mobile-Kopf.");
+  console.log("Smoke-Test OK – Boot, Modul-Modals (öffnen/×/Esc, aktive Buttons), Hilfe + Tooltips, Profilwechsel (148/248), Schema-Matrix, Ziehen, Bogen (offizielle Formulare), Druck-Dialog speichert/aktualisiert Prüfung, Prüfungen (speichern/laden/kopieren/aktualisieren), Prüfungs-JSON-Import (Gerätewechsel), Sicherung mit Profilwechsel, Einstellungen, Vorschau, Persistenz, Mobile-Kopf.");
 }
 
 main().catch((e) => { console.error("Smoke-Test FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
