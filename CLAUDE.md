@@ -367,6 +367,16 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       statt still das aktive zu überschreiben. Abgedeckt in `tests/smoke.mjs`
       (7g Gerätewechsel, 7h Profilwechsel).
 
+- [x] **Kopf entschlackt** (Prüfungswerkzeug): sichtbar nur noch die häufigen
+      Werkzeuge **Prüfungen** und **Notenrechner** plus ein Knopf **»Verwaltung ▾«**
+      (`#btnAdmin`), der eine abgesetzte Leiste `#adminBar` auf-/zuklappt mit den
+      Gruppen Liste (Excel-Import, Art hinzufügen), Anpassen (Prüfungsschema,
+      Einstellungen) und Sicherung (JSON laden, Sichern, Standardliste). Button-IDs
+      unverändert; Panels/Handler bleiben. Smoke 1d prüft Toggle + Vollständigkeit.
+- [x] **Lern-Tool mobil aufgeräumt**: Modus-Tabs (Karteikarten/Quiz/Tippen/Liste)
+      als 2×2-Raster mit Trennlinien statt zufälligem Umbruch; Listen-Suche in
+      `.searchbox` + separater »Liste drucken«-Knopf, der mobil in voller Breite
+      darunter rutscht (`@media (max-width:640px)` in `learn.html`).
 - [x] **Modul-Panels als Modal-Fenster** (`.pscrim`-Wrapper um die sechs Sections
       Hilfe/Notenrechner/Schema/Prüfungen/Einstellungen/Vorschau): öffnen über
       `openHelp()/openGrader()/openSchema()/openExams()/openSettings()/openPreview()`,

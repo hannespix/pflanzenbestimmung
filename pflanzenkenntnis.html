@@ -122,8 +122,14 @@ input,select{font-family:inherit; color:inherit}
 .hdl dt{font-family:var(--serif); font-weight:600; color:var(--green-deep)}
 .hdl dd{margin:0; color:var(--ink-soft)}
 @media (max-width:640px){ .hdl{grid-template-columns:1fr; gap:2px 0} .hdl dd{margin:0 0 8px} }
-/* Gruppierte Werkzeugleiste (Liste · Werkzeuge · Sicherung) */
-.masthead .tools{display:flex; flex-wrap:wrap; gap:14px 22px; margin:16px 0 0 8px; align-items:flex-start}
+/* Werkzeugleiste: nur die häufigen Funktionen sichtbar (Prüfungen, Notenrechner),
+   alles Seltene aufgeräumt im aufklappbaren »Verwaltung«-Bereich darunter. */
+.masthead .tools{display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 0 8px; align-items:center}
+.tools .caret{font-size:10px; margin-left:2px; transition:transform .15s}
+#btnAdmin.active .caret{transform:rotate(180deg)}
+#btnAdmin.active::before{content:none} /* kein Punkt-Indikator – der Pfeil zeigt den Zustand */
+.admbar{display:flex; flex-wrap:wrap; gap:14px 26px; margin:12px 0 0 8px; padding:13px 16px; background:var(--surface-2); border:1px solid var(--rule); border-radius:5px; align-items:flex-start}
+.admbar[hidden]{display:none}
 .tgroup{display:flex; flex-direction:column; gap:6px}
 .tgroup .glabel{font-family:var(--mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--sepia); padding-left:2px}
 .tgroup .grow{display:flex; flex-wrap:wrap; gap:8px}
@@ -430,6 +436,11 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       <span class="profsub" id="profSub" title="Vorgabe dieses Profils: Anzahl Pflanzen je Prüfung und Höchstpunktzahl"></span>
     </div>
     <div class="tools">
+      <button class="btn" id="btnExams" title="Gespeicherte Prüfungen (nach Prüfungsdatum): aktuelle Auswahl sichern, laden, kopieren (z. B. für den nächsten Prüfungstag), aktualisieren, drucken, als JSON herunterladen, von einem anderen Gerät importieren oder löschen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Prüfungen</button>
+      <button class="btn" id="btnGrade" title="Notenrechner: erreichte Punkte in eine Note umrechnen. Lineare Baden-Württemberg-Skala (Standard) oder IHK-Schlüssel; Notengrenzen einstellbar; zeigt Note, Prozent und Punktschwellen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h14a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 7h8M8 11h3M14 11h2M8 15h3M14 15h2"/></svg>Notenrechner</button>
+      <button class="btn ghost" id="btnAdmin" aria-expanded="false" title="Verwaltung ein-/ausblenden: Liste bearbeiten (Excel-Import, Art hinzufügen), Prüfungsschema, Einstellungen und Sicherung (JSON laden, Sichern, Standardliste)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Verwaltung <span class="caret" aria-hidden="true">▾</span></button>
+    </div>
+    <div class="admbar" id="adminBar" hidden>
       <div class="tgroup">
         <span class="glabel">Liste</span>
         <div class="grow">
@@ -438,11 +449,9 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
         </div>
       </div>
       <div class="tgroup">
-        <span class="glabel">Werkzeuge</span>
+        <span class="glabel">Anpassen</span>
         <div class="grow">
           <button class="btn" id="btnSchema" title="Prüfungsschema festlegen: welche Spalten (Gattung, Art, Familie, deutscher Name) mit wie vielen Punkten bewertet werden, in welcher Reihenfolge (▲▼) und wie viele Pflanzen je Prüfung. Gilt pro Profil."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 12h16M4 19h16M8 3v4M14 10v4M10 17v4"/></svg>Prüfungsschema</button>
-          <button class="btn" id="btnGrade" title="Notenrechner: erreichte Punkte in eine Note umrechnen. Lineare Baden-Württemberg-Skala (Standard) oder IHK-Schlüssel; Notengrenzen einstellbar; zeigt Note, Prozent und Punktschwellen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h14a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 7h8M8 11h3M14 11h2M8 15h3M14 15h2"/></svg>Notenrechner</button>
-          <button class="btn" id="btnExams" title="Gespeicherte Prüfungen (nach Prüfungsdatum): aktuelle Auswahl sichern, laden, kopieren (z. B. für den nächsten Prüfungstag), aktualisieren, drucken, als JSON herunterladen, von einem anderen Gerät importieren oder löschen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Prüfungen</button>
           <button class="btn" id="btnSettings" title="Einstellungen für den Druckbogen: Titel, Fußzeile (zuständige Stelle, zwei Zeilen) und Vermerk auf der Musterlösung – so nutzbar für jede zuständige Stelle. Gilt geräteweit."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Einstellungen</button>
         </div>
       </div>
@@ -477,6 +486,10 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
         </ol>
 
         <h4>Werkzeuge (Kopfzeile)</h4>
+        <p class="hlead">Direkt sichtbar sind die beiden häufigsten Werkzeuge – <b>Prüfungen</b> und
+          <b>Notenrechner</b>. Alles Seltenere (Excel-Import, Art hinzufügen, Prüfungsschema,
+          Einstellungen, Sicherung) liegt aufgeräumt hinter dem Knopf <b>»Verwaltung«</b> und
+          klappt darunter auf.</p>
         <dl class="hdl">
           <dt>Prüfungsschema</dt><dd>Legt fest, welche Spalten (Gattung, Art, Familie, deutscher Name) mit wie vielen Punkten bewertet werden, in welcher Reihenfolge (▲▼ = Spaltenfolge auf dem Bogen) und wie viele Pflanzen je Prüfung. Punkte dürfen Nachkommastellen haben (z. B. 0,5). Gilt pro Profil.</dd>
           <dt>Notenrechner</dt><dd>Rechnet erreichte Punkte in eine Note um – lineare Baden-Württemberg-Skala (Standard) oder IHK-Schlüssel. Notengrenzen sind einstellbar; angezeigt werden Note, Prozent, Dezimalnote und die Punktschwellen.</dd>
@@ -1829,6 +1842,13 @@ function renderGrader(){
    Verdrahtung
    ============================================================ */
 function wire(){
+  // »Verwaltung«: seltene Funktionen (Liste/Schema/Einstellungen/Sicherung) auf-/zuklappen
+  $("#btnAdmin").onclick=()=>{
+    const bar=$("#adminBar"), open=bar.hidden;
+    bar.hidden=!open;
+    $("#btnAdmin").classList.toggle("active",open);
+    $("#btnAdmin").setAttribute("aria-expanded",String(open));
+  };
   $("#btnImport").onclick=pickExcel;
   $("#btnAdd").onclick=()=>openEdit(null);
   $("#btnGrade").onclick=openGrader;
