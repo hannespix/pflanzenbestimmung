@@ -61,21 +61,31 @@ async function main() {
   });
   assert(setup.cards === 148, "Gemüsebau/Gärtner: 148 Arten erwartet, war " + setup.cards);
 
-  // Karteikarten: Sitzung starten, umdrehen, »Gewusst« bewerten
+  // Karteikarten: Vorderseite NUR deutscher Name; Rückseite Gattung/Art/Familie; »Gewusst« bewerten
   const cards = await page.evaluate(() => {
-    richtung = "de2bot"; $("#richtung").value = "de2bot";
     document.querySelector('#modeTabs button[data-mode="cards"]').click();
     $("#sessLen").value = "8"; startSession();
     const hasCard = !!document.querySelector("#card");
-    const key = current.key;
+    const c = current, key = c.key;
+    // Vorderseite: nur der deutsche Name (kein botanischer Name, kein Familienhinweis)
+    const frontPrompt = (document.querySelector("#card .prompt") || {}).textContent || "";
+    const frontOnlyDe = frontPrompt.trim() === (c.de || "").trim()
+      && !/class="sub"/.test(document.querySelector("#card").innerHTML);
     document.querySelector("#card").click();               // umdrehen
-    const flippedShown = /class="answer"/.test(document.querySelector("#card").innerHTML);
+    const backHtml = document.querySelector("#card").innerHTML;
+    const flippedShown = /class="answer"/.test(backHtml);
+    const labels = [...document.querySelectorAll("#card .answer .meta .mf b")].map((b) => b.textContent);
+    const bigBinom = (document.querySelector("#card .answer .big") || {}).textContent || "";
     document.querySelector(".rate .r-good").click();        // bewerten -> Box hoch, advance
-    return { hasCard, flippedShown, box: (progress[key] || {}).box || 0,
-             due: (progress[key] || {}).due || "", today: todayISO(), doneAfter: sess.done };
+    return { hasCard, frontOnlyDe, flippedShown, labels, bigBinom, gAndA: (c.g + " " + c.a).trim(),
+             box: (progress[key] || {}).box || 0, due: (progress[key] || {}).due || "", today: todayISO(), doneAfter: sess.done };
   });
   assert(cards.hasCard, "Karteikarte wird nicht angezeigt");
+  assert(cards.frontOnlyDe, "Karteikarten-Vorderseite muss NUR den deutschen Namen zeigen (kein botanischer Name/Hinweis)");
   assert(cards.flippedShown, "Karteikarte zeigt nach dem Umdrehen keine Antwort");
+  assert(cards.bigBinom.trim() === cards.gAndA, "Karteikarten-Rückseite: botanischer Name (Gattung + Art) fehlt/prominent");
+  assert(cards.labels.includes("Gattung") && cards.labels.includes("Art") && cards.labels.includes("Familie"),
+    "Karteikarten-Rückseite muss Gattung, Art und Familie getrennt ausweisen (war: " + JSON.stringify(cards.labels) + ")");
   assert(cards.doneAfter === 1, "Fortschritt (sess.done) stimmt nach einer Bewertung nicht");
   assert(cards.box >= 2 && cards.due > cards.today,
     "»Gewusst« muss eine neue Karte in Box ≥2 heben und in die Zukunft planen (war Box " + cards.box + ", fällig " + cards.due + ")");
@@ -366,6 +376,15 @@ async function main() {
   });
   assert(wuchs.hasNadel && wuchs.hasLaub && wuchs.hasStaude && wuchs.n >= 5,
     "GaLaBau sollte nach Wuchsform gegliedert sein (Nadel-/Laubgehölze, Stauden …): " + JSON.stringify(wuchs.cats));
+
+  // Familienname auf der Kartenrückseite: Latein · Deutsch, ohne Dopplung –
+  // egal ob die Quelle "Fabaceae" oder "Fabaceae/Schmetterlingsblütler" liefert
+  const fn = await page.evaluate(() => ({
+    gala: famName("Fabaceae/Schmetterlingsblütler"), gemuese: famName("Fabaceae"), plain: famName("Aizoaceae"),
+  }));
+  assert(fn.gala === "Fabaceae · Schmetterlingsblütler" && fn.gemuese === "Fabaceae · Schmetterlingsblütler",
+    "famName darf den deutschen Familiennamen nicht doppeln: " + JSON.stringify(fn));
+  assert(fn.plain === "Aizoaceae", "famName ohne dt. Namen soll nur den lateinischen zeigen: " + fn.plain);
   // zurück auf Standardprofil
   await page.evaluate(() => {
     document.querySelector("#frSelect").value = "gemuesebau";
@@ -405,7 +424,6 @@ async function main() {
   const duelShare = await page.evaluate(() => {
     localStorage.clear();
     $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
-    richtung = "de2bot"; $("#richtung").value = "de2bot";
     document.querySelector('#modeTabs button[data-mode="quiz"]').click();
     $("#sessLen").value = "4"; startSession();
     let guard = 0;                                   // alle Fragen korrekt → kein Requeue → Abschluss
@@ -425,27 +443,27 @@ async function main() {
   });
   assert(duelShare.finished, "Lernduell: Quiz-Sitzung erreicht den Abschluss-Screen nicht");
   assert(duelShare.hasShare && duelShare.hasWa && duelShare.hasCopy, "Lernduell: Teilen-Block (Teilen/WhatsApp/Kopieren) fehlt");
-  assert(duelShare.dec && duelShare.dec.p === "gemuesebau_gaertner" && duelShare.dec.m === "quiz" && duelShare.dec.r === "de2bot",
-    "Lernduell-Link kodiert Profil/Modus/Richtung nicht: " + JSON.stringify(duelShare.dec));
+  assert(duelShare.dec && duelShare.dec.p === "gemuesebau_gaertner" && duelShare.dec.m === "quiz",
+    "Lernduell-Link kodiert Profil/Modus nicht: " + JSON.stringify(duelShare.dec));
   assert(Array.isArray(duelShare.dec.i) && duelShare.dec.i.length === duelShare.done && duelShare.dec.i.every((n) => Number.isInteger(n) && n >= 0),
     "Lernduell-Link kodiert die exakte Kartenauswahl (Indizes) nicht: " + JSON.stringify(duelShare.dec.i));
   assert(duelShare.dec.n === "Testine" && duelShare.dec.s === duelShare.correct && duelShare.dec.t === duelShare.done,
     "Lernduell-Link kodiert Name/Ergebnis nicht: " + JSON.stringify(duelShare.dec));
 
-  // 2) Eingehende Herausforderung (#c=…): Banner erscheint, übernimmt Profil/Modus/Richtung
-  const b64 = await page.evaluate((idx) => b64urlEnc({ v: 1, p: "gemuesebau_gaertner", m: "quiz", r: "de2bot", i: idx, s: 1, t: 4, n: "Kollege" }), duelShare.dec.i);
+  // 2) Eingehende Herausforderung (#c=…): Banner erscheint, übernimmt Profil/Modus
+  const b64 = await page.evaluate((idx) => b64urlEnc({ v: 1, p: "gemuesebau_gaertner", m: "quiz", i: idx, s: 1, t: 4, n: "Kollege" }), duelShare.dec.i);
   await page.goto("about:blank");                   // erzwingt echten Reload (Hash-Wechsel allein lädt nicht neu)
   await page.goto(FILE + "#c=" + b64, { waitUntil: "load" });
   await page.waitForFunction("window.startChallenge!=null", { timeout: 10000 });
   const duelIn = await page.evaluate(() => {
     const banner = document.querySelector("#duelBanner");
     return { shown: banner && !banner.hidden, txt: banner ? banner.textContent : "",
-      hasAccept: !!document.querySelector("#btnAcceptDuel"), prof: profileId, mode, richtung };
+      hasAccept: !!document.querySelector("#btnAcceptDuel"), prof: profileId, mode };
   });
   assert(duelIn.shown && duelIn.hasAccept, "Lernduell: Banner/Annehmen-Knopf erscheint nicht bei #c=-Link");
   assert(/Kollege/.test(duelIn.txt) && /fordert dich heraus/.test(duelIn.txt), "Lernduell-Banner nennt Herausforderer/Text nicht: " + duelIn.txt);
-  assert(duelIn.prof === "gemuesebau_gaertner" && duelIn.mode === "quiz" && duelIn.richtung === "de2bot",
-    "Lernduell: Profil/Modus/Richtung nicht aus dem Link übernommen: " + JSON.stringify(duelIn));
+  assert(duelIn.prof === "gemuesebau_gaertner" && duelIn.mode === "quiz",
+    "Lernduell: Profil/Modus nicht aus dem Link übernommen: " + JSON.stringify(duelIn));
 
   // Annehmen spielt EXAKT die kodierten Karten; alle richtig → Sieg + Zurückschicken-Knopf
   const duelPlay = await page.evaluate((idx) => {

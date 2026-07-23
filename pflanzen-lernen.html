@@ -149,8 +149,11 @@ main{margin-top:18px}
 .card .prompt .a{font-style:italic; color:var(--ink-soft)}
 .card .sub{margin-top:8px; font-size:14px; color:var(--green-deep); font-family:var(--serif)}
 .card .answer{margin-top:16px; padding-top:16px; border-top:1px solid var(--rule); width:100%}
-.card .answer .big{font-family:var(--serif); font-size:clamp(20px,3.6vw,26px); color:var(--green-deep); font-weight:600}
-.card .answer .meta{margin-top:6px; font-size:13.5px; color:var(--ink-soft)}
+.card .answer .big{font-family:var(--serif); font-size:clamp(20px,3.6vw,26px); color:var(--green-deep); font-weight:600; font-style:italic}
+.card .answer .meta{margin:12px auto 0; max-width:360px; display:flex; flex-direction:column; gap:5px; text-align:left}
+.card .answer .meta .mf{font-size:14.5px; color:var(--ink); display:flex; gap:9px; align-items:baseline}
+.card .answer .meta .mf b{flex:none; min-width:66px; color:var(--sepia); font-family:var(--mono); font-size:10px; letter-spacing:.09em; text-transform:uppercase; font-weight:600}
+.card .answer .meta .mf i{font-style:italic}
 .card .flip-hint{margin-top:16px; font-size:12.5px; color:var(--ink-faint); font-style:italic}
 .rate{display:flex; gap:10px; margin-top:14px; justify-content:center; flex-wrap:wrap}
 .rate button{flex:1; min-width:120px; border:1px solid var(--rule-strong); background:#fff; border-radius:5px; padding:11px 12px; font-size:14px; font-weight:600; display:flex; flex-direction:column; align-items:center; gap:2px}
@@ -167,6 +170,7 @@ main{margin-top:18px}
 .opt{border:1px solid var(--rule-strong); background:var(--surface); border-radius:6px; padding:13px 16px; font-size:15px; font-family:var(--serif); text-align:left; display:flex; align-items:center; gap:10px}
 .opt:hover:not(:disabled){border-color:var(--green); background:#fff}
 .opt .k{font-family:var(--mono); font-size:12px; color:var(--sepia); border:1px solid var(--rule); border-radius:4px; padding:1px 7px; flex:none}
+.opt span:last-child{font-style:italic}   /* Antwortoptionen sind botanische Namen */
 .opt.correct{border-color:var(--green); background:var(--green-tint)}
 .opt.wrong{border-color:var(--madder-soft); background:var(--madder-tint)}
 .opt:disabled{cursor:default}
@@ -400,11 +404,6 @@ main{margin-top:22px}
     <div class="setrow">
       <div class="field"><label for="cat">Kategorie</label><select id="cat" class="mini" title="Lernstoff auf eine Kategorie eingrenzen (z. B. Gehölze, Stauden, Gemüsepflanzen). »alle Kategorien« = keine Einschränkung."><option value="">alle</option></select></div>
       <label class="switch" title="Nur die für die Zwischenprüfung (ZP) markierten Arten üben."><input type="checkbox" id="onlyzp"><span class="track"></span>nur ZP-relevant</label>
-      <div class="field"><label for="richtung">Abfrage</label><select id="richtung" class="mini" title="Abfragerichtung: was auf der Vorderseite steht und was du nennen musst – Deutscher Name → botanisch, botanisch → Deutscher Name, oder Art → Familie.">
-        <option value="de2bot">Deutscher Name → botanisch</option>
-        <option value="bot2de">botanisch → Deutscher Name</option>
-        <option value="art2fam">Art → Familie</option>
-      </select></div>
       <div class="field"><label for="sessLen">Karten/Sitzung</label><input id="sessLen" class="mini" type="number" min="5" max="100" value="20" title="Wie viele Karten (5–100) eine Sitzung umfasst. Neue und fällige Karten kommen zuerst."></div>
     </div>
     <div class="modes" id="modeTabs">
@@ -438,21 +437,26 @@ main{margin-top:22px}
     <h4>In drei Schritten</h4>
     <ol class="hsteps">
       <li><b>Fachrichtung &amp; Ausbildung</b> oben wählen – das bestimmt deinen Lernstoff.</li>
-      <li><b>Modus</b> und <b>Abfragerichtung</b> wählen; bei Bedarf per Kategorie oder „nur ZP-relevant"
+      <li><b>Modus</b> wählen; bei Bedarf per Kategorie oder „nur ZP-relevant"
         eingrenzen und die Sitzungslänge einstellen.</li>
       <li><b>Sitzung starten</b> und losüben. Deine Bewertungen steuern, welche Karten wann wiederkommen.</li>
     </ol>
 
+    <p class="hlead" style="margin-top:14px">Gelernt wird durchgehend in <b>Prüfungsrichtung</b>: vorne der
+      <b>deutsche Name</b> der Pflanze, gesucht ist die <b>botanische Identität</b> – <b>Gattung, Art</b> und
+      <b>Familie</b>. Genau das musst du in der Prüfung zur vorgelegten Pflanze schreiben.</p>
+
     <h4>Die vier Modi</h4>
     <dl class="hdl">
-      <dt>Karteikarten</dt><dd>Frage ansehen, zum <b>Umdrehen</b> tippen, dann ehrlich bewerten:
+      <dt>Karteikarten</dt><dd>Vorne steht der <b>deutsche Name</b>; zum <b>Umdrehen</b> tippen und die
+        Rückseite mit <b>Gattung, Art und Familie</b> prüfen, dann ehrlich bewerten:
         <b>Nochmal</b> (heute nochmal) · <b>Unsicher</b> (bald wieder) · <b>Gewusst</b> (in einigen Tagen).
         Das ist <b>Spaced Repetition</b> (Leitner-Boxen 1–5): Was sitzt, kommt seltener; was wackelt, öfter.
         Jeder Knopf zeigt, wann die Karte wiederkommt.</dd>
-      <dt>Quiz</dt><dd>Multiple Choice – die richtige aus vier Möglichkeiten. Die Ablenker stammen
-        bevorzugt aus derselben Kategorie/Familie.</dd>
-      <dt>Tippen</dt><dd>Antwort selbst eingeben – <b>tippfehler-tolerant</b>; Gattung und Art bzw.
-        Synonyme werden getrennt geprüft.</dd>
+      <dt>Quiz</dt><dd>Zum deutschen Namen den richtigen <b>botanischen Namen</b> aus vier Möglichkeiten
+        wählen. Die Ablenker stammen bevorzugt aus derselben Kategorie.</dd>
+      <dt>Tippen</dt><dd>Zum deutschen Namen den <b>botanischen Namen</b> selbst eingeben –
+        <b>tippfehler-tolerant</b>; Gattung und Art werden getrennt geprüft.</dd>
       <dt>Liste</dt><dd>Alle Arten des Profils zum <b>Nachschlagen</b> und <b>durchsuchbar</b>
         (Name, Familie, Synonym) – standardmäßig alphabetisch, damit es übersichtlich bleibt. Unter
         <b>»Ansicht &amp; Filter«</b> (aufklappen) lässt sich die <b>Ansicht</b> umschalten:
@@ -467,8 +471,6 @@ main{margin-top:22px}
 
     <h4>Einstellungen</h4>
     <dl class="hdl">
-      <dt>Abfrage</dt><dd>Was gefragt wird: Deutscher Name → botanisch, botanisch → Deutscher Name
-        oder Art → Familie.</dd>
       <dt>Kategorie · nur ZP</dt><dd>Grenzt den Lernstoff ein – z. B. nur Gehölze, oder nur die für die
         Zwischenprüfung markierten Arten.</dd>
       <dt>Karten/Sitzung</dt><dd>Wie viele Karten eine Sitzung umfasst.</dd>
@@ -621,8 +623,7 @@ function cardsFor(id){
 let profileId = "gemuesebau_gaertner";
 let allCards = [];           // alle Arten des Profils
 let progress = {};           // key -> {box(1..5), due(YYYY-MM-DD), seen, correct, wrong}
-let mode = "cards";          // cards | quiz | type
-let richtung = "de2bot";     // de2bot | bot2de | art2fam
+let mode = "cards";          // cards | quiz | type | list
 let queue = [], qi = 0, current = null, flipped = false;
 let sess = { total:0, done:0, correct:0, active:false };
 let listCats = new Set();     // aktive Filter-Tags der laufenden Dimension (leer = alle)
@@ -683,38 +684,40 @@ function buildQueue(){
   return arr.slice(0,len).map(x=>x.c);
 }
 
-/* ---------- Abfrage-Richtung: Prompt & Antwort ---------- */
-function promptHTML(c){
-  if(richtung==="bot2de" || richtung==="art2fam")
-    return `<span class="g">${esc(c.g)}</span> <span class="a">${esc(c.a)}</span>`;
-  return esc(c.de||"—");
+/* ---------- Lernrichtung: Deutscher Name → botanische Identität ----------
+   Lern-didaktisch sinnvoll ist genau die Prüfungssituation: Man erkennt die
+   Pflanze (der greifbarste Anker ohne Bild ist ihr deutscher Name) und muss
+   Gattung, Art und Familie nennen. Deshalb fragt das Tool durchgängig in dieser
+   einen Richtung – Vorderseite deutscher Name, Rückseite die vollständige
+   botanische Identität. (Botanisch→Deutsch und Art→Familie sind fachlich nicht
+   sinnvoll und wurden entfernt.) Die Familie ist Teil der Rückseite; zusätzlich
+   lässt sie sich über Liste + Familien-Steckbriefe vertiefen. */
+function famName(f){                              // "Fabaceae · Schmetterlingsblütler" (dt. Name aus Daten oder FAM_INFO)
+  const lat=famLatin(f); if(!lat) return f||"";
+  const de=famGerman(f) || (FAM_INFO[lat] && FAM_INFO[lat].de) || "";
+  return de ? lat+" · "+de : lat;
 }
-function promptSub(c){
-  if(richtung==="de2bot") return c.fam?("Familie: "+c.fam):"";
-  if(richtung==="bot2de") return c.fam?("Familie: "+c.fam):"";
-  return c.de?("Deutscher Name: "+c.de):"";  // art2fam
-}
-function answerText(c){
-  if(richtung==="de2bot") return norm(c.g+" "+c.a);
-  if(richtung==="bot2de") return c.de||"";
-  return c.fam||"";                            // art2fam
-}
-function answerLabel(){ return richtung==="de2bot"?"Botanischer Name":(richtung==="bot2de"?"Deutscher Name":"Familie"); }
-function promptLabel(){ return richtung==="de2bot"?"Deutscher Name":(richtung==="bot2de"?"Botanischer Name":"Botanischer Name"); }
+function promptHTML(c){ return esc(c.de||"—"); }                 // Vorderseite: nur deutscher Name
+function promptSub(c){ return ""; }                              // kein Hinweis vorne (nur der Name)
+function answerText(c){ return norm(c.g+" "+c.a); }              // gesucht: botanischer Name (Gattung + Art)
+function answerLabel(){ return "Botanischer Name"; }
+function promptLabel(){ return "Deutscher Name"; }
+/* Rückseite: Gattung, Art und Familie klar getrennt (wie im Prüfungsbogen bewertet).
+   Botanische Werte kursiv (Gattung/Art/Synonyme), Familiennamen aufrecht. */
 function answerMeta(c){
+  const row=(lab,val,it)=>`<span class="mf"><b>${lab}</b>${it?"<i>"+esc(val)+"</i>":esc(val)}</span>`;
   const bits=[];
-  if(richtung!=="de2bot" && c.g) bits.push("<i>"+esc(c.g+" "+c.a)+"</i>");
-  if(richtung!=="art2fam" && c.fam) bits.push("Familie: "+esc(c.fam));
-  if(richtung==="art2fam" && c.de) bits.push(esc(c.de));
-  if(c.syn) bits.push("Syn.: "+esc(c.syn));
-  return bits.join(" · ");
+  if(c.g)   bits.push(row("Gattung", c.g, true));
+  if(c.a)   bits.push(row("Art", c.a, true));
+  if(c.fam) bits.push(row("Familie", famName(c.fam), false));
+  if(c.syn) bits.push(row("Syn.", c.syn, true));
+  return bits.join("");
 }
 
 /* ---------- Distraktoren fürs Quiz ---------- */
 function distractors(c, n){
   const want = answerText(c).toLowerCase();
-  const same = allCards.filter(x=>x.key!==c.key && answerText(x).toLowerCase()!==want &&
-    (richtung==="art2fam" ? x.fam : x.kat) === (richtung==="art2fam" ? c.fam : c.kat));
+  const same = allCards.filter(x=>x.key!==c.key && answerText(x).toLowerCase()!==want && x.kat===c.kat);
   const rest = allCards.filter(x=>x.key!==c.key && answerText(x).toLowerCase()!==want);
   const picks=[]; const seen=new Set([want]);
   for(const src of [shuffle(same.slice()), shuffle(rest.slice())]){
@@ -736,17 +739,12 @@ function closeEnough(input, target){
   return lev(a,b)<=tol;
 }
 function checkTyped(input, c){
-  if(richtung==="de2bot"){ // Gattung + Art getrennt prüfen
-    const parts=clean(input).split(" ");
-    const gi=parts.shift()||""; const ai=parts.join(" ");
-    const gOk=closeEnough(gi, c.g);
-    const aOk = !norm(c.a) || closeEnough(ai, c.a) || (c.a.toLowerCase().indexOf(ai)===0 && ai.length>=3);
-    return gOk && aOk;
-  }
-  // bot2de / art2fam: gegen alle Varianten (Komma/Semikolon-getrennt) prüfen
-  const target = richtung==="art2fam" ? c.fam : c.de;
-  const variants = (target||"").split(/[,;/]/).map(clean).filter(Boolean);
-  return variants.some(v=>closeEnough(input, v));
+  // Gattung + Art getrennt prüfen (tippfehlertolerant)
+  const parts=clean(input).split(" ");
+  const gi=parts.shift()||""; const ai=parts.join(" ");
+  const gOk=closeEnough(gi, c.g);
+  const aOk = !norm(c.a) || closeEnough(ai, c.a) || (c.a.toLowerCase().indexOf(ai)===0 && ai.length>=3);
+  return gOk && aOk;
 }
 
 /* ---------- Fortschritts-Anzeige ---------- */
@@ -781,7 +779,7 @@ function renderProgress(){
 
 /* ---------- Ergebnis teilen · Lernduell (Herausforderung) ----------
    Eine abgeschlossene Quiz-/Tipp-Sitzung lässt sich als Herausforderung teilen:
-   Profil, Modus, Abfragerichtung und die EXAKTE Kartenauswahl (als Indizes in
+   Profil, Modus und die EXAKTE Kartenauswahl (als Indizes in
    cardsFor(profil)) plus das erreichte Ergebnis werden kompakt base64-kodiert an
    die URL gehängt (#c=…). Wer den Link öffnet, bekommt genau dieselben Karten und
    Fragen und versucht, die Trefferquote zu schlagen. Alles offline – kein Netz-
@@ -806,7 +804,7 @@ function nivNameOf(pid){ return /_fachwerker$/.test(pid)?"Fachwerker/in":"Gärtn
 
 function challengeURL(){                  // aktuelle Sitzung als Herausforderungs-Link kodieren
   const idx = (sess.cards||[]).map(c=>allCards.indexOf(c)).filter(i=>i>=0);
-  const payload = { v:1, p:profileId, m:mode, r:richtung, i:idx, s:sess.correct, t:sess.done, n:duelName() };
+  const payload = { v:1, p:profileId, m:mode, i:idx, s:sess.correct, t:sess.done, n:duelName() };
   return location.href.split("#")[0] + "#c=" + b64urlEnc(payload);
 }
 function duelMessage(url){
@@ -1044,7 +1042,7 @@ function startHintOnly(){
   $("#stage").innerHTML = `<div class="stage-empty">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22V8M12 8C12 8 7 3 4 4c-1 3 4 8 8 8zM12 8c0 0 5-5 8-4 1 3-4 8-8 8z"/></svg>
     <h2>Bereit zum Lernen</h2>
-    <p>Wähle Fachrichtung, Modus und Richtung, dann »Sitzung starten«. Dein Fortschritt wird je Profil im Browser gespeichert und steuert, welche Arten wann drankommen. Beim Lernen führt »ℹ Mehr zur Pflanze« zu Quellen und – optional online – zu Kurztext und Bild.</p>
+    <p>Wähle Fachrichtung und Modus, dann »Sitzung starten«. Gefragt wird stets vom deutschen Namen zur botanischen Identität (Gattung, Art, Familie) – wie in der Prüfung. Dein Fortschritt wird je Profil im Browser gespeichert und steuert, welche Arten wann drankommen. Beim Lernen führt »ℹ Mehr zur Pflanze« zu Quellen und – optional online – zu Kurztext und Bild.</p>
   </div>`;
 }
 
@@ -1458,7 +1456,6 @@ function wire(){
   $("#nivSelect").onchange=applyProfile;
   $("#cat").onchange=refreshView;
   $("#onlyzp").onchange=refreshView;
-  $("#richtung").onchange=()=>{ richtung=$("#richtung").value; store.set(LS_PREFIX+"richtung",richtung); refreshView(); };
   $("#listSearch").oninput=()=>{ if(mode==="list") renderList(); };
   if($("#btnPrintList")) $("#btnPrintList").onclick=printList;
   $("#modeTabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{
@@ -1479,20 +1476,17 @@ function wire(){
   try{
     $("#frSelect").innerHTML=FR_LIST.map(f=>`<option value="${slug(f)}">${esc(f)}</option>`).join("");
     $("#nivSelect").innerHTML=NIVEAUS.map(n=>`<option value="${n.key}">${esc(n.label)}</option>`).join("");
-    richtung = store.get(LS_PREFIX+"richtung") || "de2bot";
     listSort = store.get(LS_PREFIX+"listsort") || "bot";
     mode = store.get(LS_PREFIX+"mode") || "cards";
     let pid = store.get(LS_PREFIX+"profile");
     if(!(typeof SEEDS!=="undefined" && SEEDS[pid])) pid="gemuesebau_gaertner";
-    // Eingehende Herausforderung (#c=…) übernimmt Profil, Modus und Abfragerichtung
+    // Eingehende Herausforderung (#c=…) übernimmt Profil und Modus
     const cm = (location.hash||"").match(/[#&]c=([^&]+)/);
     const ch = cm ? b64urlDec(cm[1]) : null;
     if(ch && ch.p && Array.isArray(ch.i) && ch.i.length && (typeof SEEDS!=="undefined" && SEEDS[ch.p])){
       pendingChallenge = ch; pid = ch.p;
       if(ch.m==="quiz"||ch.m==="type") mode = ch.m;
-      if(ch.r) richtung = ch.r;
     }
-    $("#richtung").value=richtung;
     $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.mode===mode));
     const parts = pid.match(/^(.*)_(gaertner|fachwerker)$/);
     if(parts){ $("#frSelect").value=parts[1]; $("#nivSelect").value=parts[2]; }
@@ -1519,6 +1513,7 @@ window.challengeURL=challengeURL;
 window.showChallengeBanner=showChallengeBanner;
 window.b64urlEnc=b64urlEnc;
 window.b64urlDec=b64urlDec;
+window.famName=famName;
 
 </script>
 </body>

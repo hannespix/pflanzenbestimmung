@@ -309,10 +309,10 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       1/3/7/16/35 Tage; Selbsteinschätzung Nochmal/Unsicher/Gewusst plant je Box
       unterschiedlich ein und aktualisiert den Fortschritt live, »Nochmal« zeigt die
       Karte in derselben Sitzung erneut), **Multiple-Choice-Quiz**
-      (Ablenker bevorzugt aus gleicher Kategorie/Familie) und **Tippen**
-      (tippfehlertolerant, Gattung/Art bzw. Synonyme getrennt geprüft).
-      Abfragerichtung de→bot / bot→de / Art→Familie, Filter Kategorie/ZP,
-      Sitzungslänge. Fortschritt je Profil im `localStorage` (Namensraum
+      (Ablenker bevorzugt aus gleicher Kategorie) und **Tippen**
+      (tippfehlertolerant, Gattung/Art getrennt geprüft). **Eine feste, prüfungs-
+      nahe Lernrichtung** (deutscher Name → botanische Identität; siehe unten),
+      Filter Kategorie/ZP, Sitzungslänge. Fortschritt je Profil im `localStorage` (Namensraum
       `pflanzenlernen.`), Link zurück zur Prüfungsversion. `src/learn.html` +
       `src/learn.js`; `build.py` baut beide Dateien; Smoke-Test `tests/learn.mjs`;
       CI und Pages-Deploy erfassen beide Dateien.
@@ -489,6 +489,23 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       `check_offline.py` bleibt grün. Kurznotiz im Hilfe-Panel. `tests/learn.mjs` prüft
       Teilen-Block, Link-Kodierung (exakte Indizes/Ergebnis/Name), Banner-Übernahme,
       Annehmen der exakten Karten und den Sieg-Vergleich.
+
+- [x] **Karteikarten lern-didaktisch geschärft** (Lern-Tool): Statt dreier
+      Abfragerichtungen (de→bot / bot→de / Art→Familie) **eine feste, prüfungsnahe
+      Richtung** – wie in der AP: man erkennt die Pflanze (greifbarster bildloser
+      Anker = **deutscher Name**) und nennt **Gattung, Art, Familie**. Karteikarte:
+      **vorne nur der deutsche Name**, **hinten** der botanische Name (kursiv) plus
+      eine klar **beschriftete Aufschlüsselung Gattung · Art · Familie** (Familie
+      aufrecht, deutscher Familienname aus Daten oder `FAM_INFO` via `famName()`,
+      ohne Dopplung bei »Latein/Deutsch«-Quellen) und Synonyme. Quiz: dt. Name →
+      richtigen botanischen Namen wählen (Ablenker aus gleicher Kategorie); Tippen:
+      dt. Name → botanischen Namen tippen (Gattung/Art getrennt, tippfehlertolerant).
+      **Botanisch→Deutsch und Art→Familie entfernt** (fachlich nicht sinnvoll), das
+      »Abfrage«-Dropdown ganz raus (weniger Bedienelemente); die Familie ist nun Teil
+      der Rückseite und bleibt über Liste + Familien-Steckbriefe vertiefbar.
+      `richtung`-Zustand und `#c=r`-Feld im Lernduell entfallen (Link kodiert nur noch
+      Profil/Modus/Karten/Ergebnis). `tests/learn.mjs` prüft: Vorderseite = nur dt.
+      Name, Rückseite weist Gattung/Art/Familie getrennt aus, `famName` doppelt nicht.
 
 ## Offene Aufgaben (TODO)
 

@@ -149,8 +149,11 @@ main{margin-top:18px}
 .card .prompt .a{font-style:italic; color:var(--ink-soft)}
 .card .sub{margin-top:8px; font-size:14px; color:var(--green-deep); font-family:var(--serif)}
 .card .answer{margin-top:16px; padding-top:16px; border-top:1px solid var(--rule); width:100%}
-.card .answer .big{font-family:var(--serif); font-size:clamp(20px,3.6vw,26px); color:var(--green-deep); font-weight:600}
-.card .answer .meta{margin-top:6px; font-size:13.5px; color:var(--ink-soft)}
+.card .answer .big{font-family:var(--serif); font-size:clamp(20px,3.6vw,26px); color:var(--green-deep); font-weight:600; font-style:italic}
+.card .answer .meta{margin:12px auto 0; max-width:360px; display:flex; flex-direction:column; gap:5px; text-align:left}
+.card .answer .meta .mf{font-size:14.5px; color:var(--ink); display:flex; gap:9px; align-items:baseline}
+.card .answer .meta .mf b{flex:none; min-width:66px; color:var(--sepia); font-family:var(--mono); font-size:10px; letter-spacing:.09em; text-transform:uppercase; font-weight:600}
+.card .answer .meta .mf i{font-style:italic}
 .card .flip-hint{margin-top:16px; font-size:12.5px; color:var(--ink-faint); font-style:italic}
 .rate{display:flex; gap:10px; margin-top:14px; justify-content:center; flex-wrap:wrap}
 .rate button{flex:1; min-width:120px; border:1px solid var(--rule-strong); background:#fff; border-radius:5px; padding:11px 12px; font-size:14px; font-weight:600; display:flex; flex-direction:column; align-items:center; gap:2px}
@@ -167,6 +170,7 @@ main{margin-top:18px}
 .opt{border:1px solid var(--rule-strong); background:var(--surface); border-radius:6px; padding:13px 16px; font-size:15px; font-family:var(--serif); text-align:left; display:flex; align-items:center; gap:10px}
 .opt:hover:not(:disabled){border-color:var(--green); background:#fff}
 .opt .k{font-family:var(--mono); font-size:12px; color:var(--sepia); border:1px solid var(--rule); border-radius:4px; padding:1px 7px; flex:none}
+.opt span:last-child{font-style:italic}   /* Antwortoptionen sind botanische Namen */
 .opt.correct{border-color:var(--green); background:var(--green-tint)}
 .opt.wrong{border-color:var(--madder-soft); background:var(--madder-tint)}
 .opt:disabled{cursor:default}
@@ -400,11 +404,6 @@ main{margin-top:22px}
     <div class="setrow">
       <div class="field"><label for="cat">Kategorie</label><select id="cat" class="mini" title="Lernstoff auf eine Kategorie eingrenzen (z. B. Gehölze, Stauden, Gemüsepflanzen). »alle Kategorien« = keine Einschränkung."><option value="">alle</option></select></div>
       <label class="switch" title="Nur die für die Zwischenprüfung (ZP) markierten Arten üben."><input type="checkbox" id="onlyzp"><span class="track"></span>nur ZP-relevant</label>
-      <div class="field"><label for="richtung">Abfrage</label><select id="richtung" class="mini" title="Abfragerichtung: was auf der Vorderseite steht und was du nennen musst – Deutscher Name → botanisch, botanisch → Deutscher Name, oder Art → Familie.">
-        <option value="de2bot">Deutscher Name → botanisch</option>
-        <option value="bot2de">botanisch → Deutscher Name</option>
-        <option value="art2fam">Art → Familie</option>
-      </select></div>
       <div class="field"><label for="sessLen">Karten/Sitzung</label><input id="sessLen" class="mini" type="number" min="5" max="100" value="20" title="Wie viele Karten (5–100) eine Sitzung umfasst. Neue und fällige Karten kommen zuerst."></div>
     </div>
     <div class="modes" id="modeTabs">
@@ -438,21 +437,26 @@ main{margin-top:22px}
     <h4>In drei Schritten</h4>
     <ol class="hsteps">
       <li><b>Fachrichtung &amp; Ausbildung</b> oben wählen – das bestimmt deinen Lernstoff.</li>
-      <li><b>Modus</b> und <b>Abfragerichtung</b> wählen; bei Bedarf per Kategorie oder „nur ZP-relevant"
+      <li><b>Modus</b> wählen; bei Bedarf per Kategorie oder „nur ZP-relevant"
         eingrenzen und die Sitzungslänge einstellen.</li>
       <li><b>Sitzung starten</b> und losüben. Deine Bewertungen steuern, welche Karten wann wiederkommen.</li>
     </ol>
 
+    <p class="hlead" style="margin-top:14px">Gelernt wird durchgehend in <b>Prüfungsrichtung</b>: vorne der
+      <b>deutsche Name</b> der Pflanze, gesucht ist die <b>botanische Identität</b> – <b>Gattung, Art</b> und
+      <b>Familie</b>. Genau das musst du in der Prüfung zur vorgelegten Pflanze schreiben.</p>
+
     <h4>Die vier Modi</h4>
     <dl class="hdl">
-      <dt>Karteikarten</dt><dd>Frage ansehen, zum <b>Umdrehen</b> tippen, dann ehrlich bewerten:
+      <dt>Karteikarten</dt><dd>Vorne steht der <b>deutsche Name</b>; zum <b>Umdrehen</b> tippen und die
+        Rückseite mit <b>Gattung, Art und Familie</b> prüfen, dann ehrlich bewerten:
         <b>Nochmal</b> (heute nochmal) · <b>Unsicher</b> (bald wieder) · <b>Gewusst</b> (in einigen Tagen).
         Das ist <b>Spaced Repetition</b> (Leitner-Boxen 1–5): Was sitzt, kommt seltener; was wackelt, öfter.
         Jeder Knopf zeigt, wann die Karte wiederkommt.</dd>
-      <dt>Quiz</dt><dd>Multiple Choice – die richtige aus vier Möglichkeiten. Die Ablenker stammen
-        bevorzugt aus derselben Kategorie/Familie.</dd>
-      <dt>Tippen</dt><dd>Antwort selbst eingeben – <b>tippfehler-tolerant</b>; Gattung und Art bzw.
-        Synonyme werden getrennt geprüft.</dd>
+      <dt>Quiz</dt><dd>Zum deutschen Namen den richtigen <b>botanischen Namen</b> aus vier Möglichkeiten
+        wählen. Die Ablenker stammen bevorzugt aus derselben Kategorie.</dd>
+      <dt>Tippen</dt><dd>Zum deutschen Namen den <b>botanischen Namen</b> selbst eingeben –
+        <b>tippfehler-tolerant</b>; Gattung und Art werden getrennt geprüft.</dd>
       <dt>Liste</dt><dd>Alle Arten des Profils zum <b>Nachschlagen</b> und <b>durchsuchbar</b>
         (Name, Familie, Synonym) – standardmäßig alphabetisch, damit es übersichtlich bleibt. Unter
         <b>»Ansicht &amp; Filter«</b> (aufklappen) lässt sich die <b>Ansicht</b> umschalten:
@@ -467,8 +471,6 @@ main{margin-top:22px}
 
     <h4>Einstellungen</h4>
     <dl class="hdl">
-      <dt>Abfrage</dt><dd>Was gefragt wird: Deutscher Name → botanisch, botanisch → Deutscher Name
-        oder Art → Familie.</dd>
       <dt>Kategorie · nur ZP</dt><dd>Grenzt den Lernstoff ein – z. B. nur Gehölze, oder nur die für die
         Zwischenprüfung markierten Arten.</dd>
       <dt>Karten/Sitzung</dt><dd>Wie viele Karten eine Sitzung umfasst.</dd>
