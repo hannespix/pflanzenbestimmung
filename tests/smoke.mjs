@@ -67,6 +67,24 @@ async function main() {
   // 1) Boot ohne Konsolenfehler
   assert(errs.length === 0, "Konsolenfehler beim Boot: " + errs.join(" | "));
 
+  // 1a) Entschlackt: Filter (Suche/Kategorie/ZP) steckt in einer standardmäßig zugeklappten
+  //     »Filter«-Klappe; ein aktiver Filter bleibt in der Zusammenfassung sichtbar (nicht unbemerkt aktiv)
+  const filt = await page.evaluate(() => {
+    const d = document.querySelector("#filterOpts");
+    const holds = d ? ["#q", "#cat", "#onlyzp"].every((s) => d.querySelector(s)) : false;
+    const closed = d && !d.open;
+    const z = document.querySelector("#onlyzp"); z.checked = true; z.dispatchEvent(new Event("change"));
+    const sub = (document.querySelector("#filterOpts .fb-sub") || {}).textContent || "";
+    const flagged = document.querySelector("#filterOpts").classList.contains("filter-on");
+    z.checked = false; z.dispatchEvent(new Event("change"));
+    const subReset = (document.querySelector("#filterOpts .fb-sub") || {}).textContent || "";
+    return { isDetails: d && d.tagName === "DETAILS", closed, holds, sub, flagged, subReset };
+  });
+  assert(filt.isDetails && filt.closed, "Filter sollte in einer standardmäßig zugeklappten Klappe stecken");
+  assert(filt.holds, "Die Filter-Klappe muss Suche, Kategorie und ZP-Schalter enthalten");
+  assert(/nur ZP/.test(filt.sub) && filt.flagged, "Aktiver Filter muss in der Zusammenfassung sichtbar/markiert sein: " + filt.sub);
+  assert(/Suche · Kategorie · nur ZP/.test(filt.subReset), "Nach Rücknahme muss die Zusammenfassung zurückgesetzt werden: " + filt.subReset);
+
   // 1b) Modul als Modal: Öffnen markiert den Button, ×/Esc/Scrim-Klick schließen
   const active = await page.evaluate(() => {
     const btn = document.querySelector("#btnGrade");

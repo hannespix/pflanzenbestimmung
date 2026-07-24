@@ -42,7 +42,7 @@ input,select{font-family:inherit; color:inherit}
 /* ---------- Kopf ---------- */
 .masthead{
   background:var(--surface); border:1px solid var(--rule-strong);
-  border-radius:4px; padding:22px 24px 20px; box-shadow:0 1px 0 var(--shadow);
+  border-radius:4px; padding:20px 24px 16px; box-shadow:0 1px 0 var(--shadow);
   position:relative; overflow:hidden;
 }
 .masthead::before{
@@ -142,8 +142,8 @@ input,select{font-family:inherit; color:inherit}
 .tgroup .glabel{font-family:var(--mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--sepia); padding-left:2px}
 .tgroup .grow{display:flex; flex-wrap:wrap; gap:8px}
 .spacer{flex:1 1 auto}
-.dbstatus{font-family:var(--mono); font-size:12px; color:var(--ink-soft); display:flex; align-items:center; gap:7px; white-space:nowrap; background:var(--surface-2); border:1px solid var(--rule); border-radius:20px; padding:5px 12px}
-.dot{width:8px; height:8px; border-radius:50%; background:var(--rule-strong)}
+.dbstatus{font-family:var(--mono); font-size:11px; color:var(--ink-soft); display:flex; align-items:center; gap:6px; white-space:nowrap; background:var(--surface-2); border:1px solid var(--rule); border-radius:20px; padding:4px 10px}
+.dot{width:7px; height:7px; border-radius:50%; background:var(--rule-strong)}
 .dot.saved{background:var(--green)} .dot.dirty{background:var(--madder)}
 
 /* ---------- Buttons ---------- */
@@ -169,11 +169,19 @@ input,select{font-family:inherit; color:inherit}
 .btn:focus-visible,input:focus-visible,select:focus-visible,.chk:focus-visible{outline:2px solid var(--madder); outline-offset:2px}
 
 /* ---------- Steuerleiste ---------- */
-.controls{
-  display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center;
-  background:var(--surface); border:1px solid var(--rule-strong); border-top:none;
-  border-radius:0 0 4px 4px; padding:14px 18px; margin-top:-1px;
-}
+/* Filter (einklappbar) – ruhige Startansicht; aktiver Filter bleibt in der Zusammenfassung sichtbar */
+.filterbar{border:1px solid var(--rule-strong); border-radius:4px; background:var(--surface); overflow:hidden; margin-top:14px}
+.filterbar>summary{list-style:none; cursor:pointer; display:flex; align-items:center; gap:9px; padding:10px 16px; font-size:13px; color:var(--ink-soft); user-select:none}
+.filterbar>summary::-webkit-details-marker{display:none}
+.filterbar>summary .ic{width:15px; height:15px; flex:none; color:var(--sepia)}
+.fb-title{font-weight:600; color:var(--ink)}
+.fb-sub{color:var(--ink-faint); font-size:12px}
+.fb-caret{margin-left:auto; color:var(--ink-faint); transition:transform .15s}
+.filterbar>summary:hover{background:var(--surface-2)}
+.filterbar[open]>summary{border-bottom:1px solid var(--rule)}
+.filterbar[open]>summary .fb-caret{transform:rotate(180deg)}
+.filterbar.filter-on>summary .fb-title,.filterbar.filter-on>summary .fb-sub{color:var(--green-deep)}
+.controls{display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center; padding:13px 16px; background:var(--surface)}
 .field{display:flex; align-items:center; gap:7px}
 .field label{font-size:12px; color:var(--sepia); font-family:var(--mono); letter-spacing:.04em}
 .search{position:relative}
@@ -193,10 +201,11 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 
 /* ---------- Auswahl-Bar ---------- */
 .selbar{
-  display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:18px 0 12px;
+  display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:14px 0 12px;
   padding:12px 16px; border:1px solid var(--rule-strong); border-radius:4px;
-  background:linear-gradient(180deg,var(--surface),var(--surface-2));
+  background:var(--surface);
 }
+.selacts{padding-left:14px; border-left:1px solid var(--rule)}   /* »Bearbeiten/Drucken« sichtbar von »Ziehen« abgesetzt */
 .count{font-family:var(--serif); display:flex; align-items:baseline; gap:8px}
 .count .n{font-size:30px; font-weight:600; color:var(--green-deep); line-height:1; font-variant-numeric:tabular-nums}
 .count .of{font-size:14px; color:var(--ink-soft)}
@@ -363,6 +372,9 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 
 @media (max-width:640px){
   .search input{width:100%}
+  /* Auswahl-Bar bricht mobil um – die senkrechten Trenner würden frei stehen */
+  .draw{border-right:none; padding-right:0}
+  .selacts{border-left:none; padding-left:0}
   .row{grid-template-columns:24px 1fr; gap:10px}
   .rowacts{grid-column:1/-1; opacity:1; justify-content:flex-end}
   .modal .grid2{grid-template-columns:1fr}
@@ -506,7 +518,8 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
         <h4>In fünf Schritten zur Prüfung</h4>
         <ol class="hsteps">
           <li><b>Fachrichtung &amp; Ausbildung</b> oben wählen (z. B. Gemüsebau · Gärtner/in). Jedes der 14 Profile hat eine eigene Liste, ein eigenes Bewertungsschema und einen eigenen Notenschlüssel.</li>
-          <li>Bei Bedarf die Liste <b>durchsuchen und filtern</b> – Suche, Kategorie oder „nur ZP-relevant".</li>
+          <li>Bei Bedarf unter <b>»Filter«</b> (aufklappen) die Liste <b>durchsuchen und filtern</b> –
+            Suche, Kategorie oder „nur ZP-relevant". Ein aktiver Filter bleibt in der Filter-Zeile sichtbar.</li>
           <li><b>Anzahl</b> festlegen und <b>Zufällig ziehen</b> – oder Arten in der Liste unten einzeln anhaken.</li>
           <li><b>Vorschau · bearbeiten</b>: Reihenfolge per ▲▼ ändern, Arten bearbeiten, ergänzen oder entfernen.</li>
           <li><b>Bogen drucken</b>: im Dialog Prüfungsbogen (leer) oder Musterlösung (mit Antworten) wählen.
@@ -550,17 +563,24 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
   </section>
   </div>
 
-  <div class="controls">
-    <div class="field search">
-      <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
-      <input id="q" type="search" placeholder="Suche: Gattung, Art, Familie, Name …" autocomplete="off" title="Live-Suche in Gattung, Art, Familie, deutschem Namen und Synonymen. Wirkt auch auf das Zufalls-Ziehen (nur Treffer werden gezogen).">
+  <details class="filterbar" id="filterOpts">
+    <summary title="Liste durchsuchen und filtern – wirkt auch auf das Zufalls-Ziehen (nur Treffer werden gezogen)">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
+      <span class="fb-title">Filter</span><span class="fb-sub">Suche · Kategorie · nur ZP</span>
+      <span class="fb-caret" aria-hidden="true">▾</span>
+    </summary>
+    <div class="controls">
+      <div class="field search">
+        <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+        <input id="q" type="search" placeholder="Suche: Gattung, Art, Familie, Name …" autocomplete="off" title="Live-Suche in Gattung, Art, Familie, deutschem Namen und Synonymen. Wirkt auch auf das Zufalls-Ziehen (nur Treffer werden gezogen).">
+      </div>
+      <div class="field">
+        <label for="cat">Kategorie</label>
+        <select id="cat" title="Liste auf eine Kategorie einschränken (z. B. Gemüsepflanzen, Gehölze, Stauden …). Wirkt auch auf das Zufalls-Ziehen."><option value="">alle</option></select>
+      </div>
+      <label class="switch" title="Nur ZP-relevante Arten anzeigen (für die Zwischenprüfung gekennzeichnet)."><input type="checkbox" id="onlyzp"><span class="track"></span>nur ZP-relevant</label>
     </div>
-    <div class="field">
-      <label for="cat">Kategorie</label>
-      <select id="cat" title="Liste auf eine Kategorie einschränken (z. B. Gemüsepflanzen, Gehölze, Stauden …). Wirkt auch auf das Zufalls-Ziehen."><option value="">alle</option></select>
-    </div>
-    <label class="switch" title="Nur ZP-relevante Arten anzeigen (für die Zwischenprüfung gekennzeichnet)."><input type="checkbox" id="onlyzp"><span class="track"></span>nur ZP-relevant</label>
-  </div>
+  </details>
 
   <div class="selbar">
     <div class="draw">

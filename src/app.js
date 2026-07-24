@@ -502,6 +502,20 @@ function currentFilter(){
 }
 function katRank(k){ const i=KAT_ORDER.indexOf(k); return i<0?99:i; }
 
+/* Filter-Klappe: aktiven Filter in der Zusammenfassung zeigen, damit er nicht
+   unbemerkt eingeklappt aktiv bleibt (»Filter · nur ZP«, hervorgehoben). */
+function syncFilterSummary(){
+  const d=$("#filterOpts"); if(!d) return;
+  const q=norm($("#q").value), cat=$("#cat").value, zp=$("#onlyzp").checked;
+  const bits=[];
+  if(q) bits.push("Suche: "+q);
+  if(cat) bits.push(cat);
+  if(zp) bits.push("nur ZP");
+  const sub=d.querySelector(".fb-sub");
+  if(sub) sub.textContent = bits.length ? bits.join(" · ") : "Suche · Kategorie · nur ZP";
+  d.classList.toggle("filter-on", bits.length>0);
+}
+
 function renderList(){
   const host=$("#list"); host.innerHTML="";
   if(!cache.length){ host.appendChild(emptyState()); return; }
@@ -1109,9 +1123,9 @@ function wire(){
   $("#btnOpen").onclick=importJsonFile;
   $("#btnSave").onclick=exportBackup;
   $("#btnReset").onclick=resetToDefault;
-  $("#q").addEventListener("input",()=>{ renderList(); syncSelUI(); });
-  $("#cat").addEventListener("change",()=>{ renderList(); syncSelUI(); });
-  $("#onlyzp").addEventListener("change",()=>{ renderList(); syncSelUI(); });
+  $("#q").addEventListener("input",()=>{ renderList(); syncSelUI(); syncFilterSummary(); });
+  $("#cat").addEventListener("change",()=>{ renderList(); syncSelUI(); syncFilterSummary(); });
+  $("#onlyzp").addEventListener("change",()=>{ renderList(); syncSelUI(); syncFilterSummary(); });
   $("#drawCount").addEventListener("input",()=>{ $("#selTarget").textContent=$("#drawCount").value||drawTarget(); });
   $("#btnDraw").onclick=drawRandom;
   $("#btnShuffle").onclick=shuffleSel;
@@ -1213,7 +1227,7 @@ function syncPanelButtons(){
   });
 }
 function renderAll(){
-  syncProfileUI(); refreshKatList(); renderList(); syncSelUI();
+  syncProfileUI(); refreshKatList(); renderList(); syncSelUI(); syncFilterSummary();
   if(panelOpen("#graderScrim")) renderGrader();
   if(panelOpen("#schemaScrim")) renderSchema();
   if(panelOpen("#examsScrim")){ renderExams(); syncExamControls(); }

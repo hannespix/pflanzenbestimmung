@@ -562,6 +562,19 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Sitzungslänge, Modi + Start ohne Aufklappen sichtbar. (Erster Schritt eines
       Aufräum-Durchgangs; Prüfungswerkzeug folgt separat.)
 
+- [x] **Prüfungswerkzeug entschlackt (Schritt 2 des Aufräum-Durchgangs)**: Drei
+      ruhigere Bausteine, alle Funktionen erhalten. (1) **Filterleiste einklappbar** –
+      Suche/Kategorie/„nur ZP" stecken in einer standardmäßig zugeklappten
+      `<details class="filterbar">`-Klappe (native, kein JS); ein **aktiver Filter bleibt
+      sichtbar** (`syncFilterSummary()` schreibt ihn in die Zusammenfassung, z. B.
+      »Filter · nur ZP«, grün hervorgehoben – wird an die `#q`/`#cat`/`#onlyzp`-Handler
+      und `renderAll` gehängt). (2) **Auswahl-Bar beruhigt** – flacher Hintergrund statt
+      Verlauf, engerer Abstand, »Bearbeiten/Drucken« (`.selacts`) mit dezentem Trenner
+      von »Ziehen« abgesetzt (mobil ohne Trenner, da umbrechend). (3) **Kopf verschlankt**
+      – kompaktere Speicherstatus-Pille, engere Masthead-Abstände. `check_offline.py`
+      bleibt grün; `tests/smoke.mjs` prüft: Filter-Klappe zugeklappt und enthält
+      Suche/Kategorie/ZP, aktiver Filter in der Zusammenfassung sichtbar/markiert, Rücknahme.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei
