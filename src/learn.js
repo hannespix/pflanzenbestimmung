@@ -262,9 +262,6 @@ function renderProgress(){
          <i class="b-lern" style="background:var(--gold)"></i>${lern} am Lernen</span>
        <span title="Noch nie bewertet.">
          <i class="b-neu" style="background:var(--rule-strong)"></i>${neu} neu</span>
-     </div>
-     <div class="plegend" style="width:100%;color:var(--ink-faint)">
-       <span>Deine Bewertung legt fest, wann eine Karte wiederkommt: Nochmal → heute · Unsicher → bald · Gewusst → in einigen Tagen. »sitzt« ab Box 4 von 5.</span>
      </div>`;
   const due = p.filter(c=>{ const pr=pget(c.key); return !pr.box || !pr.due || pr.due<=todayISO(); }).length;
   $("#startHint").textContent = p.length ? `${due} Karten heute dran · ${answerLabel()} gefragt` : "Keine Arten im aktuellen Filter.";
@@ -536,7 +533,7 @@ function startHintOnly(){
   $("#stage").innerHTML = `<div class="stage-empty">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22V8M12 8C12 8 7 3 4 4c-1 3 4 8 8 8zM12 8c0 0 5-5 8-4 1 3-4 8-8 8z"/></svg>
     <h2>Bereit zum Lernen</h2>
-    <p>Wähle Fachrichtung und Modus, dann »Sitzung starten«. Gefragt wird stets vom deutschen Namen zur botanischen Identität (Gattung, Art, Familie) – wie in der Prüfung. Dein Fortschritt wird je Profil im Browser gespeichert und steuert, welche Arten wann drankommen. Beim Lernen führt »ℹ Mehr zur Pflanze« zu Quellen und – optional online – zu Kurztext und Bild.</p>
+    <p>Modus wählen und »Sitzung starten«. Gefragt wird der <b>deutsche Name → botanische Identität</b> (Gattung, Art, Familie), wie in der Prüfung. Details unter <b>Hilfe</b>.</p>
   </div>`;
 }
 

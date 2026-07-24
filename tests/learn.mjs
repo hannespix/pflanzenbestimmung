@@ -61,6 +61,19 @@ async function main() {
   });
   assert(setup.cards === 148, "Gemüsebau/Gärtner: 148 Arten erwartet, war " + setup.cards);
 
+  // Entschlackte Startansicht: Feineinstellungen stecken in einer standardmäßig
+  // zugeklappten »Optionen«-Klappe (Kategorie/ZP/Sitzungslänge), Modi + Start bleiben sichtbar
+  const declutter = await page.evaluate(() => {
+    const d = document.querySelector("#setOpts");
+    return { isDetails: d && d.tagName === "DETAILS", closed: d && !d.open,
+      holdsControls: d ? ["#cat", "#onlyzp", "#sessLen"].every((s) => d.querySelector(s)) : false,
+      modesVisible: !document.querySelector("#modeTabs").hidden,
+      startVisible: !document.querySelector("#startRow").hidden };
+  });
+  assert(declutter.isDetails && declutter.closed, "Optionen sollten in einer standardmäßig zugeklappten Klappe stecken");
+  assert(declutter.holdsControls, "Die Optionen-Klappe muss Kategorie, ZP und Sitzungslänge enthalten");
+  assert(declutter.modesVisible && declutter.startVisible, "Modi und »Sitzung starten« müssen ohne Aufklappen sichtbar sein");
+
   // Karteikarten: Vorderseite NUR deutscher Name; Rückseite Gattung/Art/Familie; »Gewusst« bewerten
   const cards = await page.evaluate(() => {
     document.querySelector('#modeTabs button[data-mode="cards"]').click();
