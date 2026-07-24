@@ -575,6 +575,19 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       bleibt grün; `tests/smoke.mjs` prüft: Filter-Klappe zugeklappt und enthält
       Suche/Kategorie/ZP, aktiver Filter in der Zusammenfassung sichtbar/markiert, Rücknahme.
 
+- [x] **Familien-Steckbriefe vervollständigt** (Lern-Tool): `FAM_INFO` von ~45 auf
+      **~160 Familien** erweitert (Object.assign-Block nach der Erstdefinition), sodass
+      **praktisch jede in den Listen vorkommende Pflanzenfamilie** einen kuratierten
+      Kurztext (`{de,m,t}`) hat – nur die beiden Nicht-Gefäßpflanzen (Cladoniaceae/
+      Flechte, Sphagnaceae/Torfmoos) behalten bewusst den Fallback. Zusätzlich eine
+      **`FAM_ALIAS`-Tabelle** für offensichtliche Tippfehler/alte Schreibweisen in den
+      Quelldaten (z. B. `lridaceae`→Iridaceae, `Asteraceae.`, `Malvacea`, `Saxifrasgaceae`,
+      `Caesalpinaceae`→Fabaceae); `famKey()` löst sie auf und wird in `famName()` und
+      `openFamilyInfo()` genutzt (korrigiert auch den angezeigten lateinischen Namen).
+      `tests/learn.mjs` prüft: ergänzte Familie (Papaveraceae→Mohngewächse) kuratiert,
+      Tippfehler-Alias (`lridaceae`→Iridaceae) führt auf den richtigen Steckbrief,
+      Fallback für echte Unbekannte bleibt.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei

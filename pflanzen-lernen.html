@@ -643,6 +643,137 @@ const FAM_INFO = {
 function famLatin(f){ return norm(String(f||"").split("/")[0]); }        // lateinischer Teil vor dem »/«
 function famGerman(f){ const p=String(f||"").split("/"); return p.length>1?norm(p.slice(1).join("/")):""; }
 
+/* Weitere Familien-Steckbriefe (ergänzen FAM_INFO), damit möglichst jede in den
+   Listen vorkommende Familie einen kuratierten Kurztext hat. */
+Object.assign(FAM_INFO, {
+  Scrophulariaceae:{de:"Braunwurzgewächse",m:"Kräuter und Sträucher mit meist zweiseitig-symmetrischen (lippigen) Blüten und Kapselfrüchten; nach neuer Gliederung enger gefasst.",t:"Lippenblüten, aber runder Stängel und Kapseln (anders als bei Lippenblütlern). Königskerze, Sommerflieder, Braunwurz."},
+  Papaveraceae:{de:"Mohngewächse",m:"Oft mit weißem oder gefärbtem Milchsaft; 2 früh abfallende Kelch- und meist 4 große, zerknittert wirkende Kronblätter; Kapselfrüchte.",t:"Milchsaft + knittrige Blütenblätter. Klatschmohn, Schöllkraut, Lerchensporn."},
+  Viburnaceae:{de:"Schneeballgewächse",m:"Sträucher mit gegenständigen Blättern und Blüten in Trugdolden, oft mit auffälligen sterilen Randblüten; Steinfrüchte.",t:"Gegenständig, doldig, Beeren/Steinfrüchte. Schneeball (Viburnum). Oft zu den Moschuskrautgewächsen gestellt."},
+  Begoniaceae:{de:"Schiefblattgewächse",m:"Saftige Kräuter und Zimmerpflanzen mit auffällig unsymmetrischen (schiefen) Blättern; männliche und weibliche Blüten getrennt; oft geflügelte Kapseln.",t:"Schiefes, oft glänzendes Blatt und saftiger Stängel. Begonie."},
+  Moraceae:{de:"Maulbeergewächse",m:"Gehölze mit Milchsaft; winzige Blüten in dichten Ständen, die zu Fruchtverbänden verwachsen.",t:"Milchsaft + Sammelfrucht. Feige (ein hohler Blütenstand), Maulbeere."},
+  Grossulariaceae:{de:"Stachelbeergewächse",m:"Sträucher, oft mit Dornen; meist handförmig gelappte Blätter; Blüten in Trauben, Früchte Beeren.",t:"Gelapptes Blatt, Beeren in Träubchen, teils bestachelt. Johannisbeere, Stachelbeere (Ribes)."},
+  Vitaceae:{de:"Weinrebengewächse",m:"Kletterpflanzen mit Ranken, die den Blättern gegenüberstehen; handförmiges Laub; Beeren.",t:"Ranke gegenüber dem Blatt. Weinrebe, Wilder Wein."},
+  Taxaceae:{de:"Eibengewächse",m:"Immergrüne Nadelgehölze ohne Harz und ohne Zapfen; Samen von rotem, fleischigem Mantel umgeben; stark giftig.",t:"Weiche flache Nadeln, rote »Beeren«, kein Zapfen – alles außer dem Fruchtfleisch giftig. Eibe."},
+  Onagraceae:{de:"Nachtkerzengewächse",m:"Blütenteile meist 4-zählig, mit unterständigem Fruchtknoten (Blüte auf langem »Griffel«); Kapseln.",t:"4-zählige Blüte + langer Fruchtknoten unter der Blüte. Nachtkerze, Fuchsie, Weidenröschen."},
+  Salicaceae:{de:"Weidengewächse",m:"Laubgehölze, zweihäusig; Blüten in Kätzchen; Samen mit Haarschopf (Wollflug).",t:"Kätzchen + fliegende Wollsamen. Weide, Pappel."},
+  Aquifoliaceae:{de:"Stechpalmengewächse",m:"Meist immergrüne Gehölze mit oft dornig gezähnten, ledrigen Blättern; zweihäusig; rote Beeren.",t:"Ledriges, oft stacheliges Immergrün mit roten Beeren. Stechpalme (Ilex)."},
+  Magnoliaceae:{de:"Magnoliengewächse",m:"Ursprüngliche Gehölze mit großen Einzelblüten; Blütenhülle nicht in Kelch und Krone getrennt; viele Staub- und Fruchtblätter spiralig.",t:"Große, urtümliche Blüten oft vor dem Laubaustrieb. Magnolie, Tulpenbaum."},
+  Polemoniaceae:{de:"Sperrkrautgewächse",m:"Meist Stauden und Einjährige mit fünfzähligen, verwachsenen Blüten in dichten Ständen.",t:"Bekannt als Beet-/Polsterstauden: Phlox (Flammenblume), Himmelsleiter."},
+  Euphorbiaceae:{de:"Wolfsmilchgewächse",m:"Sehr formenreich (Kräuter bis Sukkulente) mit meist ätzendem weißem Milchsaft; oft unscheinbare Blüten in Scheinblüten.",t:"Weißer, reizender Milchsaft. Wolfsmilch, Weihnachtsstern, Christusdorn."},
+  Balsaminaceae:{de:"Balsaminengewächse",m:"Saftige Kräuter mit durchscheinenden Stängeln; gespornte Blüten; reife Kapseln schleudern die Samen fort.",t:"Reife Kapsel schnellt bei Berührung auf (»Rührmichnichtan«). Springkraut, Fleißiges Lieschen (Impatiens)."},
+  Convolvulaceae:{de:"Windengewächse",m:"Meist windende Kletterpflanzen mit trichterförmigen Blüten; oft mit Milchsaft.",t:"Trichterblüte + windender Stängel. Winde, Prunkwinde, Süßkartoffel."},
+  Asphodelaceae:{de:"Affodillgewächse",m:"Stauden und Sukkulente, oft mit grundständigen, fleischigen oder grasartigen Blättern; Blüten meist in Trauben/Kerzen.",t:"Vielgestaltig: Taglilie, Fackellilie (Kniphofia), Aloe."},
+  Polypodiaceae:{de:"Tüpfelfarngewächse",m:"Farne – Vermehrung über Sporen; Sporenhäufchen als runde »Tüpfel« ohne Schleier auf der Blattunterseite.",t:"Runde Sporenpunkte an der Blattunterseite, ohne Häutchen. Tüpfelfarn."},
+  Violaceae:{de:"Veilchengewächse",m:"Blüten zweiseitig-symmetrisch mit gespornter Unterlippe; Blätter oft herzförmig; Kapseln.",t:"Gespornte, »gesichtige« Blüte. Veilchen, Stiefmütterchen (Viola)."},
+  Verbenaceae:{de:"Eisenkrautgewächse",m:"Kräuter und Sträucher mit oft vierkantigem Stängel und Blüten in Ähren oder Dolden.",t:"Beet-/Balkonpflanze mit doldigen Blütenständen. Eisenkraut, Verbene."},
+  Juglandaceae:{de:"Walnussgewächse",m:"Laubbäume mit großen, gefiederten, aromatischen Blättern; männliche Blüten in Kätzchen; Frucht eine Nuss/Steinfrucht.",t:"Gefiedertes Duftlaub + Nuss. Walnuss, Flügelnuss."},
+  Hamamelidaceae:{de:"Zaubernussgewächse",m:"Sträucher und Bäume; Blüten mit schmalen, bandförmigen Kronblättern, oft im Winter.",t:"Fädige Blütenblätter, Winterblüher. Zaubernuss (Hamamelis)."},
+  Plumbaginaceae:{de:"Bleiwurzgewächse",m:"Stauden salz- oder trockenheitsertragender Standorte; kleine Blüten in Köpfchen/Rispen, oft mit trockenhäutigem Kelch.",t:"Polster/Rispen an Küste und Steingarten. Grasnelke (Armeria), Strandflieder."},
+  Gentianaceae:{de:"Enziangewächse",m:"Meist Stauden mit gegenständigen Blättern und radförmigen, oft leuchtend blauen, verwachsenen Blüten.",t:"Kräftig blaue Trichter-/Sternblüten, gegenständig. Enzian."},
+  Paeoniaceae:{de:"Pfingstrosengewächse",m:"Stauden und Halbsträucher mit großen Blüten, vielen Staubblättern und Balgfrüchten.",t:"Große Frühsommerblüte mit vielen Staubblättern. Pfingstrose (Paeonie)."},
+  Adoxaceae:{de:"Moschuskrautgewächse",m:"Meist Gehölze mit gegenständigen Blättern und kleinen Blüten in Trugdolden; Beeren/Steinfrüchte.",t:"Holunder und Schneeball gehören hierher – gegenständig, doldig, Beeren."},
+  Alismataceae:{de:"Froschlöffelgewächse",m:"Sumpf- und Wasserpflanzen mit grundständigen, oft pfeilförmigen Blättern; dreizählige Blüten in Quirlen.",t:"Uferstaude mit pfeilförmigem Blatt und 3-zähliger Blüte. Froschlöffel, Pfeilkraut."},
+  Nymphaeaceae:{de:"Seerosengewächse",m:"Wasserpflanzen mit rundlichen Schwimmblättern und großen Einzelblüten mit vielen Blütenblättern.",t:"Schwimmblatt + große Wasserblüte. Seerose."},
+  Hypericaceae:{de:"Hartheugewächse",m:"Kräuter und Sträucher mit gegenständigen Blättern voller durchscheinender Drüsen; gelbe Blüten mit vielen Staubblättern.",t:"Blatt gegen Licht: helle Punkte; gelbe Blüte färbt zerdrückt rot. Johanniskraut."},
+  Gesneriaceae:{de:"Gesneriengewächse",m:"Zimmerpflanzen mit oft samtigen Blättern und lippigen, farbigen Blüten.",t:"Weiche, behaarte Blätter, farbenfrohe Zimmerblüher. Usambaraveilchen, Gloxinie."},
+  Hyacinthaceae:{de:"Hyazinthengewächse",m:"Zwiebelpflanzen mit grundständigen Blättern und Blüten in Trauben, oft duftend (heute meist zu den Spargelgewächsen).",t:"Zwiebel + Blütentraube. Hyazinthe, Traubenhyazinthe, Blaustern."},
+  Rubiaceae:{de:"Rötegewächse",m:"Blätter gegenständig oder quirlig mit Nebenblättern; kleine, oft vierzählige Blüten. Weltweit riesige Familie.",t:"Quirlständige Blätter mit »Kletthaaren«. Labkraut, Waldmeister; auch Kaffee."},
+  Equisetaceae:{de:"Schachtelhalmgewächse",m:"Uralte Sporenpflanzen mit gegliederten, hohlen, quirlig verzweigten Stängeln; Sporen in endständigen Zapfen; kein echtes Laub.",t:"Gliederstängel mit Quirlästen, »schachtelbar«. Schachtelhalm (Zinnkraut)."},
+  Actinidiaceae:{de:"Strahlengriffelgewächse",m:"Verholzende Kletterpflanzen; Blüten mit strahlig ausgebreiteten Griffeln; Beeren.",t:"Rankendes Gehölz mit haarigen Beeren. Kiwi (Actinidia)."},
+  Elaeagnaceae:{de:"Ölweidengewächse",m:"Gehölze mit silbrig-schülferigen Blättern/Trieben, oft dornig; wurzeln mit Stickstoff-Knöllchen.",t:"Silbrig schimmerndes Laub. Ölweide, Sanddorn."},
+  Bignoniaceae:{de:"Trompetenbaumgewächse",m:"Bäume und Kletterer mit großen, trompetenförmigen Blüten und langen Kapseln.",t:"Große Trichter-/Trompetenblüten, bohnenartige Kapseln. Trompetenbaum (Catalpa)."},
+  Ginkgoaceae:{de:"Ginkgogewächse",m:"Lebendes Fossil; Baum mit fächerförmigen, gegabelt genervten Blättern; zweihäusig, Samen mit fleischiger, streng riechender Hülle.",t:"Fächerblatt mit Gabeladern – einmalig. Ginkgo."},
+  Anacardiaceae:{de:"Sumachgewächse",m:"Gehölze mit meist gefiederten Blättern und Harzkanälen; teils hautreizend; oft leuchtende Herbstfärbung.",t:"Gefiedert, prächtige Herbstfarbe, kolbige Fruchtstände. Essigbaum/Sumach (Rhus)."},
+  Lythraceae:{de:"Blutweiderichgewächse",m:"Kräuter und Gehölze feuchter Standorte; Blüten oft 6-zählig; Blätter meist gegenständig.",t:"Feuchtezeiger mit ährigen Blütenständen. Blutweiderich; auch Lagerstroemie."},
+  Myrtaceae:{de:"Myrtengewächse",m:"Immergrüne, aromatische Gehölze mit ledrigen, öldrüsigen Blättern und meist vielen auffälligen Staubblättern.",t:"Blatt duftet beim Zerreiben; Blüten wie Puderquasten. Myrte, Eukalyptus."},
+  Arecaceae:{de:"Palmengewächse",m:"Palmen: unverzweigter Stamm mit Schopf großer, gefiederter oder gefächerter Blätter.",t:"Stamm + Blattschopf, fieder- oder fächerförmig. Palme."},
+  Bromeliaceae:{de:"Bromeliengewächse",m:"Meist Rosettenpflanzen, viele aufsitzend (epiphytisch); Blätter oft mit Saugschuppen, Rosette als Wasserspeicher; leuchtende Hochblätter.",t:"Trichterrosette, oft aufsitzend. Ananas, Zimmerbromelien."},
+  Orchidaceae:{de:"Orchideen",m:"Hoch spezialisierte Blüten mit abweichend gestalteter »Lippe« und verdrehtem Fruchtknoten; staubfeine Samen.",t:"Blüte mit auffälliger Lippe. Orchidee."},
+  Linaceae:{de:"Leingewächse",m:"Zarte Kräuter mit schmalen Blättern und fünfzähligen, oft blauen, rasch abfallenden Blüten.",t:"Feines Laub, himmelblaue »Eintagsblüten«. Lein (Flachs)."},
+  Juncaceae:{de:"Binsengewächse",m:"Grasähnliche Sumpfpflanzen mit rundlichen, markgefüllten Stängeln und unscheinbaren, aber echten dreizähligen Blüten.",t:"»Binsen sind rund« – runder, markiger Halm ohne Knoten. Binse, Simse."},
+  Typhaceae:{de:"Rohrkolbengewächse",m:"Hohe Uferpflanzen mit langen, schwertförmigen Blättern und dem braunen, zigarrenförmigen Blütenkolben.",t:"Der braune »Zigarren«-Kolben ist unverkennbar. Rohrkolben."},
+  Lauraceae:{de:"Lorbeergewächse",m:"Meist immergrüne, aromatische Gehölze mit ledrigen, öldrüsigen Blättern; Beeren/Steinfrüchte.",t:"Ledriges, würzig duftendes Immergrün. Lorbeer, Zimt, Avocado."},
+  Aristolochiaceae:{de:"Osterluzeigewächse",m:"Kletter- und Stauden mit oft herzförmigen Blättern und eigenartig gebogenen, pfeifenförmigen Fallenblüten.",t:"Pfeifenförmige Blüte + herzförmiges Blatt. Pfeifenwinde, Haselwurz."},
+  Butomaceae:{de:"Schwanenblumengewächse",m:"Uferstaude mit schmalen, dreikantigen Blättern und rosa Blüten in lockerer Dolde.",t:"Einzige Art: die Schwanenblume – rosa Doldenblüten am Wasser."},
+  Agavaceae:{de:"Agavengewächse",m:"Sukkulente Rosettenpflanzen mit steifen, oft dornig gespitzten Blättern; blühen spät und meist nur einmal (heute zu den Spargelgewächsen).",t:"Steife Blattrosette mit Endstachel. Agave, Yucca."},
+  Garryaceae:{de:"Becherkätzchengewächse",m:"Immergrüne Gehölze mit gegenständigen Blättern; unscheinbare Blüten, bei Aucuba rote Beeren.",t:"Immergrün, gegenständig; Aucuba mit gelb geflecktem Laub."},
+  Altingiaceae:{de:"Amberbaumgewächse",m:"Laubbäume mit ahornähnlich gelappten, aromatischen, aber wechselständigen Blättern; kugelige, stachelige Fruchtstände; prächtige Herbstfarbe.",t:"Ahornähnliches Blatt, aber wechselständig, mit Duft. Amberbaum (Liquidambar)."},
+  Platanaceae:{de:"Platanengewächse",m:"Große Bäume mit charakteristisch abblätternder Borke und handförmig gelappten Blättern; kugelige Fruchtstände.",t:"Fleckige, abplatzende Rinde + Kugelfrüchte. Platane."},
+  Ulmaceae:{de:"Ulmengewächse",m:"Laubbäume mit meist asymmetrischer Blattbasis und doppelt gesägtem Rand; geflügelte Nussfrüchte.",t:"Blattgrund schief (eine Seite höher), Flügelnüsse. Ulme."},
+  Acanthaceae:{de:"Akanthusgewächse",m:"Kräuter und Stauden mit oft großen, gelappten Blättern und lippenförmigen Blüten mit auffälligen Tragblättern.",t:"Namensgeber der antiken Säulen-Ornamente. Akanthus, Bärenklaublatt (Zierpflanze)."},
+  Cannaceae:{de:"Blumenrohrgewächse",m:"Kräftige Stauden mit großen, bananenähnlichen Blättern und auffälligen, asymmetrischen Blüten aus umgebildeten Staubblättern.",t:"Große Blätter + leuchtende Sommerblüten. Blumenrohr (Canna)."},
+  Cactaceae:{de:"Kakteengewächse",m:"Sukkulenten mit fleischigem, oft blattlosem Sprosskörper; Dornen und Blüten entspringen speziellen Polstern (Areolen).",t:"Dornen aus Areolen – das unterscheidet Kakteen von anderen Sukkulenten."},
+  Aizoaceae:{de:"Mittagsblumengewächse",m:"Sukkulente Pflanzen trockener/salziger Standorte; leuchtende, strahlenförmige Blüten, die sich meist in der Sonne öffnen.",t:"Fleischige Blätter, »Gänseblümchen«-Blüten öffnen mittags. Mittagsblume."},
+  Buddlejaceae:{de:"Sommerfliedergewächse",m:"Sträucher mit langen, gegenständigen Blättern und dichten, duftenden Blütenrispen (heute meist zu den Braunwurzgewächsen).",t:"Große Blütenrispe, ein Schmetterlingsmagnet. Sommerflieder (Buddleja)."},
+  Tiliaceae:{de:"Lindengewächse",m:"Laubbäume mit schief-herzförmigen Blättern und einem zungenförmigen Flügel-Hochblatt am Blütenstand (heute zu den Malvengewächsen).",t:"Herzblatt + flügelartiges Tragblatt am Blütenstand. Linde."},
+  Convallariaceae:{de:"Maiglöckchengewächse",m:"Rhizomstauden des Schattens mit glockigen Blüten und Beeren (heute zu den Spargelgewächsen); oft giftig.",t:"Waldschattenstauden mit Glöckchen. Maiglöckchen, Salomonssiegel."},
+  Dryopteridaceae:{de:"Wurmfarngewächse",m:"Farne mit meist trichterförmig stehenden, mehrfach gefiederten Wedeln; Sporenhäufchen mit nierenförmigem Schleier.",t:"Kräftige Wedeltrichter, runde Sori mit Häutchen. Wurmfarn, Schildfarn."},
+  Hemerocallidaceae:{de:"Tagliliengewächse",m:"Horststauden mit grasartigen Blättern und trichterförmigen Blüten, die meist nur einen Tag halten (heute zu den Affodillgewächsen).",t:"Jede Blüte hält nur einen Tag. Taglilie (Hemerocallis)."},
+  Hippuridaceae:{de:"Tannenwedelgewächse",m:"Wasserpflanze mit quirlig stehenden, schmalen Blättern am aufrechten Trieb – wie ein kleiner Tannenwedel.",t:"Quirlblätter am Wassertrieb, tannenwedelartig. Tannenwedel (Hippuris)."},
+  Menyanthaceae:{de:"Fieberkleegewächse",m:"Wasser- und Sumpfpflanzen mit gefransten oder kleeartigen Blättern und meist gefransten Blütenblättern.",t:"Fransige Blütenränder am/im Wasser. Fieberklee, Seekanne."},
+  Osmundaceae:{de:"Rispenfarngewächse",m:"Große, urtümliche Farne; sporentragende Wedelteile weichen deutlich von den grünen ab (Zweigestaltigkeit).",t:"Getrennte grüne und braun-sporige Wedelteile. Königsfarn (Osmunda)."},
+  Araucariaceae:{de:"Araukariengewächse",m:"Immergrüne Nadelbäume der Südhalbkugel mit steifen, schuppen- bis pfriemförmigen Blättern in regelmäßigen Etagen.",t:"Steife, symmetrische »Etagen« – wie gebaut. Andentanne, Zimmertanne (Araucaria)."},
+  Calycanthaceae:{de:"Gewürzstrauchgewächse",m:"Sträucher mit gegenständigen, aromatischen Blättern; Blüten mit vielen gleichartigen, oft bräunlich-roten Blütenblättern.",t:"Zerriebenes Holz/Laub duftet würzig. Gewürzstrauch (Calycanthus)."},
+  Cercidiphyllaceae:{de:"Kuchenbaumgewächse",m:"Bäume mit rundlich-herzförmigen, gegenständigen Blättern; das welkende Herbstlaub duftet nach Karamell.",t:"Herbstlaub riecht nach Lebkuchen. Kuchenbaum/Katsurabaum (Cercidiphyllum)."},
+  Thymelaeaceae:{de:"Seidelbastgewächse",m:"Sträucher mit zäher, faseriger Rinde und duftenden, meist vierzähligen Röhrenblüten; oft giftige Beeren.",t:"Rinde extrem zäh (kaum zu brechen), Blüten oft vor dem Laub. Seidelbast."},
+  Paulowniaceae:{de:"Blauglockenbaumgewächse",m:"Schnellwüchsige Bäume mit sehr großen, herzförmigen Blättern und blauvioletten, fingerhutähnlichen Blüten vor dem Laub.",t:"Riesenblätter + blaue Glockenblüten. Blauglockenbaum (Paulownia)."},
+  Tamaricaceae:{de:"Tamariskengewächse",m:"Sträucher trockener/salziger Standorte mit schuppenförmigen Blättchen und rosa Blüten in feinen Rispen.",t:"Federleichtes, schuppiges Laub, rosa »Schleier«. Tamariske."},
+  Pteridaceae:{de:"Saumfarngewächse",m:"Farne mit oft fein gefiederten Wedeln; Sporenhäufchen liegen am umgerollten Blattrand (Saum).",t:"Sori am eingerollten Blattrand. Frauenhaarfarn (Adiantum)."},
+  Alliaceae:{de:"Lauchgewächse",m:"Zwiebelpflanzen, die beim Zerreiben nach Zwiebel/Knoblauch riechen; Blüten in Dolden mit Hüllblatt (heute zu den Amaryllisgewächsen).",t:"Zwiebelgeruch + kugelige Blütendolde. Zwiebel, Knoblauch, Zierlauch (Allium)."},
+  Cistaceae:{de:"Zistrosengewächse",m:"Sträucher und Halbsträucher trockener, sonniger Standorte; Blüten mit 5 zerknittert wirkenden, rasch abfallenden Kronblättern.",t:"Mediterran, »Eintagsblüten« wie zerknittertes Seidenpapier. Zistrose, Sonnenröschen."},
+  Ebenaceae:{de:"Ebenholzgewächse",m:"Gehölze mit hartem, dunklem Holz; Blüten meist getrenntgeschlechtig; Beeren mit bleibendem Kelch.",t:"Bekannt durch Frucht und Holz: Kaki/Dattelpflaume (Diospyros)."},
+  Oxalidaceae:{de:"Sauerkleegewächse",m:"Kräuter mit meist dreizähligen, kleeartigen Blättern, die sich nachts falten; saurer Geschmack; Kapseln.",t:"Kleeblatt, das »schläft«, schmeckt sauer. Sauerklee (Oxalis)."},
+  Alstroemeriaceae:{de:"Inkaliliengewächse",m:"Knollen-/Rhizomstauden mit gedrehten Blättern (Unterseite oben) und lilienartigen, oft gefleckten Blüten.",t:"Beliebte Schnittblume, Blätter »verdreht«. Inkalilie (Alstroemeria)."},
+  Marantaceae:{de:"Pfeilwurzgewächse",m:"Blattschöne Zimmerpflanzen mit auffällig gemusterten Blättern, die sich abends aufrichten.",t:"Gemustertes Laub klappt zur Nacht hoch. Korbmarante (Maranta/Calathea)."},
+  Calceolariaceae:{de:"Pantoffelblumengewächse",m:"Kräuter mit auffällig aufgeblasener, pantoffel-/beutelförmiger Unterlippe der Blüte.",t:"Blüte wie ein kleiner Pantoffel/Beutel. Pantoffelblume (Calceolaria)."},
+  Montiaceae:{de:"Quellkrautgewächse",m:"Zarte, oft sukkulente Kräuter mit fleischigen Blättern; kleine, meist fünfzählige Blüten (früher bei den Portulakgewächsen).",t:"Fleischige kleine Salatkräuter. Postelein/Winterportulak (Claytonia)."},
+  Portulacaceae:{de:"Portulakgewächse",m:"Sukkulente Kräuter mit fleischigen Blättern; Blüten öffnen sich in der Sonne; Deckelkapseln.",t:"Dickfleischige Blätter, Sonnenanbeter. Portulak, Portulakröschen."},
+  Punicaceae:{de:"Granatapfelgewächse",m:"Sträucher/Bäumchen mit leuchtend roten Blüten und der bekannten vielsamigen Frucht mit lederiger Schale (heute zu den Blutweiderichgewächsen).",t:"Rote Blüte + Granatapfel-Frucht. Granatapfel (Punica)."},
+  Woodsiaceae:{de:"Wimperfarngewächse",m:"Kleine bis mittelgroße Farne felsiger oder frischer Standorte mit gefiederten Wedeln.",t:"Zarte Fels- und Waldfarne. Wimperfarn, Frauenfarn-Verwandte."},
+  Blechnaceae:{de:"Rippenfarngewächse",m:"Farne mit oft zweigestaltigen Wedeln; die sporentragenden Fiedern sind schmaler als die grünen.",t:"Getrennt schmale Sporenwedel. Rippenfarn (Blechnum)."},
+  Fumariaceae:{de:"Erdrauchgewächse",m:"Zarte Kräuter mit fein zerteilten Blättern und gespornten, oft zweiseitig-symmetrischen Blüten (heute zu den Mohngewächsen).",t:"Feines Laub + gespornte Blütchen. Erdrauch, Lerchensporn, Tränendes Herz."},
+  Globulariaceae:{de:"Kugelblumengewächse",m:"Niedrige Stauden und Polster mit kleinen Blüten in kugeligen, meist blauen Köpfchen.",t:"Blaue Blütenkugeln im Steingarten. Kugelblume (Globularia)."},
+  Hostaceae:{de:"Funkiengewächse",m:"Schattenstauden mit breiten, dekorativen Blatthorsten und trichterförmigen Blüten an aufrechten Stielen (heute zu den Spargelgewächsen).",t:"Blattschmuckstaude für den Schatten. Funkie (Hosta)."},
+  Clusiaceae:{de:"Klusiengewächse",m:"Meist tropische Gehölze mit gegenständigen, ledrigen Blättern und gelbem Harz/Milchsaft.",t:"Ledriges Immergrün mit gelbem Saft. Clusia (Johanniskraut-Verwandte)."},
+  Dipsacaceae:{de:"Kardengewächse",m:"Stauden mit dicht in Köpfchen stehenden Blüten, oft mit stacheligen Hüllblättern (heute zu den Geißblattgewächsen).",t:"Igelige Blütenköpfe. Karde, Skabiose, Witwenblume."},
+  Cannabaceae:{de:"Hanfgewächse",m:"Kräuter und Schlingpflanzen mit meist handförmig geteilten oder rauen Blättern; zweihäusig, mit Drüsen.",t:"Handförmiges bzw. rau-lappiges Laub, zweihäusig. Hopfen, Hanf."},
+  Nothofagaceae:{de:"Scheinbuchengewächse",m:"Buchenähnliche Gehölze der Südhalbkugel mit kleinen, oft immergrünen Blättern.",t:"Wie kleine Buchen, aus Südamerika/Neuseeland. Scheinbuche (Nothofagus)."},
+  Sciadopityaceae:{de:"Schirmtannengewächse",m:"Immergrüner Nadelbaum; die »Nadeln« (verwachsene Kurztriebe) stehen schirmartig quirlig – ein lebendes Fossil.",t:"Dicke, schirmartig gestellte Doppelnadeln. Schirmtanne (Sciadopitys)."},
+  Pittosporaceae:{de:"Klebsamengewächse",m:"Immergrüne Sträucher mit ledrigen Blättern und duftenden Blüten; Samen von klebrigem Harz umhüllt.",t:"Ledriges Immergrün, duftende Blüten, klebrige Samen. Klebsame (Pittosporum)."},
+  Pontederiaceae:{de:"Wasserhyazinthengewächse",m:"Schwimmende oder Sumpf-Wasserpflanzen mit oft aufgeblasenen Blattstielen und blauen Blüten in Ähren.",t:"Schwimmblattrosette mit blauen Blüten. Wasserhyazinthe."},
+  Hydrocharitaceae:{de:"Froschbissgewächse",m:"Untergetauchte oder schwimmende Wasserpflanzen mit unscheinbaren Blüten; häufig in Teich und Aquarium.",t:"Typische Teich-/Aquarienpflanzen. Froschbiss, Wasserpest."},
+  Annonaceae:{de:"Annonengewächse",m:"Meist tropische Gehölze mit aromatischen Blättern und fleischigen, dreizähligen Blüten; große Sammelfrüchte.",t:"Tropenobst mit »schuppiger« Sammelfrucht. Cherimoya, Pawpaw (Asimina)."},
+  Musaceae:{de:"Bananengewächse",m:"Riesige Stauden mit »Scheinstamm« aus Blattscheiden und sehr großen Blättern; Blüten mit Hochblättern, Beeren.",t:"Scheinstamm + Riesenblatt. Banane (Musa)."},
+  Dracaenaceae:{de:"Drachenbaumgewächse",m:"Baumartige Zimmerpflanzen mit Blattschöpfen an verholzenden Stämmen (heute zu den Spargelgewächsen).",t:"Stamm mit Blattschopf als Zimmerpflanze. Drachenbaum (Dracaena)."},
+  Nyctaginaceae:{de:"Wunderblumengewächse",m:"Kräuter und Kletterer mit gegenständigen Blättern; auffällige, oft farbige Hochblätter umgeben die trichterförmigen Blüten.",t:"Farbige »Blüten« sind oft Hochblätter. Wunderblume, Drillingsblume (Bougainvillea)."},
+  Theaceae:{de:"Teestrauchgewächse",m:"Immergrüne Gehölze mit ledrigen, glänzenden Blättern und großen, schalenförmigen Blüten mit vielen Staubblättern.",t:"Glänzendes Immergrün, kamelienartige Blüte. Kamelie, Teestrauch."},
+  Cleomaceae:{de:"Spinnenpflanzengewächse",m:"Kräuter mit handförmig geteilten Blättern und Blüten mit auffällig langen Staubblättern; nahe den Kreuzblütlern.",t:"Blüten mit langen »Spinnenbeinen«. Spinnenpflanze (Cleome)."},
+  Cycadaceae:{de:"Palmfarngewächse",m:"Urtümliche, palmenähnliche Nacktsamer mit steifem Schopf gefiederter Blätter; zweihäusig, mit Zapfen; sehr langsam.",t:"»Palme« mit Zapfen – aber kein Farn und keine Palme. Palmfarn (Cycas)."},
+  Melastomataceae:{de:"Schwarzmundgewächse",m:"Tropische Kräuter und Sträucher mit auffällig bogig-längsnervigen Blättern.",t:"Blatt mit mehreren bogigen Längsnerven – gutes Merkmal. Medinille."},
+  Passifloraceae:{de:"Passionsblumengewächse",m:"Kletterpflanzen mit Ranken und aufwendig gebauten Blüten mit einem Kranz fädiger Nebenkrone.",t:"Ranken + »Uhrwerk«-Blüte mit Strahlenkranz. Passionsblume."},
+  Piperaceae:{de:"Pfeffergewächse",m:"Kräuter und Kletterer mit oft fleischigen Blättern und winzigen Blüten in dichten Kolben/Ähren; würzig.",t:"Winzige Blüten am Kolben, fleischige Blätter. Pfeffer, Zwergpfeffer (Peperomie)."},
+  Goodeniaceae:{de:"Fächerblumengewächse",m:"Kräuter mit einseitig »aufgefächerten« Blüten (alle Kronzipfel auf einer Seite).",t:"Blüte wie ein halber Fächer. Fächerblume (Scaevola)."},
+  Strelitziaceae:{de:"Strelitziengewächse",m:"Große Stauden mit bananenähnlichen Blättern und auffälligen, vogelkopfartigen Blüten in einem Hochblatt-»Kahn«.",t:"Blüte wie ein bunter Vogelkopf. Paradiesvogelblume (Strelitzie)."},
+  Linderniaceae:{de:"Büchsenkrautgewächse",m:"Kleine Kräuter feuchter Standorte mit lippenförmigen Blüten (aus den Braunwurzgewächsen ausgegliedert).",t:"Winzige Beet-/Sumpfkräuter mit Lippenblüten. Bacopa, Büchsenkraut."},
+  Commelinaceae:{de:"Commelinengewächse",m:"Saftige Kräuter mit geschlossenen Blattscheiden und meist dreizähligen, oft blauen, zarten Blüten.",t:"Saftiger, geknieter Stängel, blaue »Eintagsblüten«. Dreimasterblume (Tradescantia)."},
+  Tropaeolaceae:{de:"Kapuzinerkressengewächse",m:"Saftige, kletternde oder kriechende Kräuter mit schildförmigen Blättern und gespornten, leuchtenden Blüten; scharf schmeckend.",t:"Schildblatt + gespornte Blüte, pfeffrig. Kapuzinerkresse."},
+  Acoraceae:{de:"Kalmusgewächse",m:"Sumpfpflanzen mit schwertförmigen, aromatischen Blättern und einem seitlichen Blütenkolben ohne auffälliges Hüllblatt.",t:"Iris-ähnliches Blatt, aber würzig duftend, mit Kolben. Kalmus (Acorus)."},
+  Anthericaceae:{de:"Grasliliengewächse",m:"Horststauden mit grasartigen Blättern und sternförmigen weißen Blüten in Trauben (heute zu den Spargelgewächsen).",t:"Graslaub + weiße Sternblüten. Graslilie (Anthericum)."},
+  Aceraceae:{de:"Ahorngewächse",m:"Laubgehölze mit gegenständigen, meist handförmig gelappten Blättern und geflügelten Spaltfrüchten (heute zu den Seifenbaumgewächsen).",t:"Gegenständig + »Nasenzwicker«-Flügelfrüchte. Ahorn."},
+  Simaroubaceae:{de:"Bittereschengewächse",m:"Bäume und Sträucher mit gefiederten Blättern und bitteren Rinden-/Holzstoffen; geflügelte Früchte.",t:"Gefiedert, bitter, schnellwüchsig und ausschlagfreudig. Götterbaum (Ailanthus)."},
+  Cephalotaxaceae:{de:"Kopfeibengewächse",m:"Immergrüne, eibenähnliche Nadelgehölze mit größeren, pflaumenartig umhüllten Samen.",t:"Wie eine Eibe, aber mit größerem, »pflaumigem« Samen. Kopfeibe (Cephalotaxus)."},
+  Podocarpaceae:{de:"Steineibengewächse",m:"Immergrüne Nadelgehölze der Südhalbkugel; Samen auf einem oft fleischigen, farbigen Fruchtträger.",t:"Südliche »Eiben« mit fleischigem Samenstiel. Steineibe (Podocarpus)."}
+});
+/* Tippfehler/alte Schreibweisen aus den Quelldaten auf die richtige Familie führen,
+   damit auch dort der passende Steckbrief erscheint. */
+const FAM_ALIAS = {
+  "lridaceae":"Iridaceae", "Malvacea":"Malvaceae", "Asteraceae.":"Asteraceae",
+  "Saxifrasgaceae":"Saxifragaceae", "Brasslcaceae":"Brassicaceae", "Ericacea":"Ericaceae",
+  "Scophulariaceae":"Scrophulariaceae", "Portulaceae":"Portulacaceae", "Thymelaceae":"Thymelaeaceae",
+  "Pittosperaceae":"Pittosporaceae", "Sciadopityacaea":"Sciadopityaceae", "Caesalpinaceae":"Fabaceae"
+};
+function famKey(f){ const k=famLatin(f); return FAM_ALIAS[k]||k; }        // normalisierter Familien-Schlüssel
+
 /* Seed-Zeile: [gattung, art, familie, deutscher_name, kategorie, zp, synonyme] */
 function cardsFor(id){
   const rows = (typeof SEEDS!=="undefined" && SEEDS[id]) || [];
@@ -739,7 +870,7 @@ function buildQueue(){
    sinnvoll und wurden entfernt.) Die Familie ist Teil der Rückseite; zusätzlich
    lässt sie sich über Liste + Familien-Steckbriefe vertiefen. */
 function famName(f){                              // "Fabaceae · Schmetterlingsblütler" (dt. Name aus Daten oder FAM_INFO)
-  const lat=famLatin(f); if(!lat) return f||"";
+  const lat=famKey(f); if(!lat) return f||"";
   const de=famGerman(f) || (FAM_INFO[lat] && FAM_INFO[lat].de) || "";
   return de ? lat+" · "+de : lat;
 }
@@ -1447,7 +1578,7 @@ function wireInfoBtn(){ const b=$("#infoBtn"); if(b) b.onclick=e=>{ e.stopPropag
 /* Familien-Steckbrief als Modal (offline, kuratiert) – gemeinsame Merkmale + Lerntipp */
 function openFamilyInfo(famStr){
   closeInfo();
-  const lat = famLatin(famStr), info = FAM_INFO[lat], de = (info&&info.de) || famGerman(famStr);
+  const lat = famKey(famStr), info = FAM_INFO[lat], de = (info&&info.de) || famGerman(famStr);
   const body = info
     ? `<div class="fam-sec"><h4>Was die Arten gemeinsam haben</h4><p>${esc(info.m)}</p></div>
        <div class="fam-sec"><h4>Erkennen &amp; merken</h4><p>${esc(info.t)}</p></div>`
