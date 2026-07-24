@@ -41,13 +41,17 @@ jobs:
         run: python3 tools/check_offline.py dist/pflanzen-lernen.html
       - name: Offline-Check Impressum/Datenschutz (kein CDN, keine externen Ressourcen)
         run: python3 tools/check_offline.py dist/rechtliches.html
-      - name: Seite vorbereiten (Startseite + beide Werkzeuge + Rechtliches)
+      - name: Seite vorbereiten (Startseite + beide Werkzeuge + Rechtliches + PWA)
         run: |
           mkdir -p _site
           cp dist/index.html _site/index.html
           cp dist/pflanzenkenntnis.html _site/pflanzenkenntnis.html
           cp dist/pflanzen-lernen.html _site/pflanzen-lernen.html
           cp dist/rechtliches.html _site/rechtliches.html
+          # PWA: Manifest, Service Worker und Icons (Installation + Offline-Cache)
+          cp dist/manifest.webmanifest _site/manifest.webmanifest
+          cp dist/sw.js _site/sw.js
+          cp dist/icon-192.png dist/icon-512.png dist/icon-maskable.png dist/apple-touch-icon.png _site/
       - name: Pages konfigurieren
         uses: actions/configure-pages@v5
         with:

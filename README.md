@@ -151,6 +151,16 @@ Verzweigung der Startseite und den Fußzeilen-Link zu `rechtliches.html`
 gebaut liegen sie auch unter `dist/`. Änderungen bzw. Lernfortschritt bleiben im
 Browser gespeichert.
 
+**Als App installieren (PWA):** Auf der veröffentlichten Seite lässt sich das
+Werkzeug **zum Home-Bildschirm hinzufügen** und startet danach wie eine App –
+**auch ohne Internet**. Möglich machen das ein *Web App Manifest* und ein
+*Service Worker*, der die vier Seiten beim ersten Besuch lokal zwischenspeichert
+(reiner Datei-Cache, keine personenbezogenen Daten, nur diese Website). Auf Android/
+Chrome erscheint dazu ein „Installieren“-Hinweis; auf iOS/Safari über *Teilen →
+Zum Home-Bildschirm*. Die Installation ist freiwillig – der Kern funktioniert ohnehin
+offline. Diese Assets (`manifest.webmanifest`, `sw.js`, `icon-*.png`) erzeugt
+`build.py` nach `dist/`; beim lokalen `file://`-Aufruf sind sie ohne Belang.
+
 ## Build
 
 ```bash
@@ -162,6 +172,7 @@ python3 tools/check_offline.py dist/rechtliches.html
 node tests/start.mjs                               # Puppeteer-Smoke Startseite (Verzweigung + Rechtliches)
 node tests/smoke.mjs                               # Puppeteer-Smoke Prüfungswerkzeug
 node tests/learn.mjs                               # Puppeteer-Smoke Lern-Tool
+node tests/pwa.mjs                                 # PWA: Manifest + Service Worker + Offline-Cache
 ```
 
 Neue/aktualisierte Fachrichtungsliste einbauen:

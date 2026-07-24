@@ -1,0 +1,36 @@
+{
+  "name": "Pflanzenkenntnis – Lernen & Prüfen",
+  "short_name": "Pflanzenkenntnis",
+  "description": "Pflanzenkenntnis-Prüfung der grünen Berufe (Baden-Württemberg): Lernen mit Karteikarten, Quiz und Tippen sowie das Prüfungswerkzeug – vollständig offline nutzbar.",
+  "lang": "de",
+  "dir": "ltr",
+  "start_url": "index.html",
+  "scope": "./",
+  "id": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#eceee6",
+  "theme_color": "#2b4f38",
+  "categories": ["education"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Lernen (Azubis)",
+      "short_name": "Lernen",
+      "description": "Karteikarten, Quiz und Tippen",
+      "url": "pflanzen-lernen.html",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Prüfen (Prüfende)",
+      "short_name": "Prüfen",
+      "description": "Prüfungslisten ziehen, Bögen drucken, Noten rechnen",
+      "url": "pflanzenkenntnis.html",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

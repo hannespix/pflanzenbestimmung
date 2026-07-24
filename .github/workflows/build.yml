@@ -38,6 +38,8 @@ jobs:
         run: node tests/smoke.mjs
       - name: Puppeteer-Smoke-Test Lern-Tool (gegen dist/)
         run: node tests/learn.mjs
+      - name: PWA-Test (Manifest, Service Worker, Offline-Cache)
+        run: node tests/pwa.mjs
       - name: Artefakte hochladen
         uses: actions/upload-artifact@v4
         with:
