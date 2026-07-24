@@ -112,7 +112,20 @@ bash tools/rebuild_seeds.sh            # alle Seeds aus data/<id>.<ext> neu erze
 node tests/start.mjs                    # Puppeteer-Smoke Startseite (Verzweigung)
 node tests/smoke.mjs                    # Puppeteer-Smoke Prüfungswerkzeug (npm test)
 node tests/learn.mjs                    # Puppeteer-Smoke Lern-Tool
+node tests/pwa.mjs                      # PWA: Manifest + Service Worker + Offline-Cache
+node tools/make_icons.mjs               # PWA-Icons einmalig neu erzeugen (Ergebnis committen)
 ```
+
+**PWA (installierbar + offline):** `build.py` legt zusätzlich `dist/manifest.webmanifest`,
+`dist/sw.js` (Service Worker; Cache-Version = Inhalts-Hash) und die `dist/icon-*.png` ab.
+Quellen: `src/manifest.webmanifest`, `src/sw.js`, `icons/*.png` (einmalig via
+`tools/make_icons.mjs` erzeugt). Der Head-Snippet (Manifest-Link, apple-touch-icon,
+SW-Registrierung) steckt in allen vier `src/*.html`. Diese Assets liegen **nur in `dist/`**
+(Deploy-Basis; `dist/` ist gitignored) – der Pages-Workflow kopiert sie nach `_site/`.
+Beim lokalen `file://`-Aufruf sind sie ohne Belang (der Kern ist ohnehin offline). Der
+Service Worker behandelt **ausschließlich same-origin**-Anfragen; die opt-in Wikipedia-
+Anreicherung bleibt unberührt. `check_offline.py` bleibt grün (nur relative Links, kein
+`fetch("http`, kein `<script src>`).
 
 Der Smoke-Test nutzt `puppeteer` oder `puppeteer-core` und findet Chromium über
 `PUPPETEER_EXECUTABLE_PATH` bzw. ein vorinstalliertes Playwright-Chromium.
@@ -506,6 +519,23 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       `richtung`-Zustand und `#c=r`-Feld im Lernduell entfallen (Link kodiert nur noch
       Profil/Modus/Karten/Ergebnis). `tests/learn.mjs` prüft: Vorderseite = nur dt.
       Name, Rückseite weist Gattung/Art/Familie getrennt aus, `famName` doppelt nicht.
+
+- [x] **PWA – installierbar + offline-fest** (alle Seiten): Das Werkzeug lässt sich
+      zum Home-Bildschirm hinzufügen und startet ohne Netz. **Manifest**
+      (`src/manifest.webmanifest`: Name, `start_url=index.html`, `scope="./"`,
+      `display=standalone`, Theme/Background, Icons 192/512/maskable, Shortcuts
+      Lernen/Prüfen), **Service Worker** (`src/sw.js`: precached die vier HTML-Seiten +
+      Manifest + Icons; **cache-first**, Offline-Navigation fällt auf `index.html` zurück;
+      behandelt **nur same-origin** → Wikipedia-JSONP unberührt; `skipWaiting`+`clients.claim`;
+      Cache-Version = Inhalts-Hash aus `build.py` → Auto-Update), **Icons**
+      (`icons/*.png`, Herbarium-Blatt, via `tools/make_icons.mjs`) und ein **Head-Snippet**
+      (Manifest-Link, apple-touch-icon, iOS-Metas, SW-Registrierung) in allen vier
+      `src/*.html`. `build.py` schreibt die Assets nach `dist/`; `pages.yml` kopiert sie
+      nach `_site/`; `build.yml` fährt `tests/pwa.mjs`. **Offline-rein:** kein `fetch("http`,
+      keine externen Ressourcen – `check_offline.py` bleibt grün. Datenschutz-Seite um einen
+      Abschnitt »Installation & Offline-Cache (PWA)« ergänzt. `tests/pwa.mjs` prüft über einen
+      lokalen HTTP-Server: Manifest valide (192/512/maskable), SW aktiv, vier Seiten im Cache,
+      **Offline-Reload + Boot aus dem Cache**, zweite Seite offline erreichbar.
 
 ## Offene Aufgaben (TODO)
 

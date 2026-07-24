@@ -6,6 +6,14 @@
 <title>Impressum &amp; Datenschutz · Pflanzenkenntnis</title>
 <meta name="description" content="Impressum und Datenschutzerklärung für das Pflanzenkenntnis-Werkzeug (Lernen &amp; Prüfen) der grünen Berufe.">
 <meta name="theme-color" content="#2b4f38">
+<!-- PWA: installierbar + offline (Service Worker), ausschließlich eigene Herkunft -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Pflanzenkenntnis">
+<meta name="mobile-web-app-capable" content="yes">
+<script>if("serviceWorker" in navigator)addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});</script>
 <meta name="robots" content="noindex">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232b4f38'/%3E%3Cpath d='M9 23 C 9 12 16 7 23 9 C 23 20 16 25 9 23 Z' fill='%23a8c9ac'/%3E%3Cpath d='M11 21 C 15 16 19 12 22 10' stroke='%232b4f38' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
@@ -111,6 +119,14 @@ ul{margin:6px 0; padding-left:20px} li{margin:5px 0}
       <span class="hint">pflanzenkenntnis.</span> im Prüfungswerkzeug). Diese Daten verbleiben ausschließlich
       auf deinem Gerät, sind für mich nicht einsehbar und können jederzeit über die Einstellungen deines
       Browsers gelöscht werden. Ein anderer Browser oder ein anderes Gerät hat einen eigenen, getrennten Stand.</p>
+
+    <h3>Installation & Offline-Cache (PWA)</h3>
+    <p>Die Seiten lassen sich als <b>App zum Home-Bildschirm hinzufügen</b> (Progressive Web App). Dazu legt ein
+      <b>Service Worker</b> die Programmdateien (die vier HTML-Seiten, das Manifest und die Icons) im lokalen
+      <b>Cache</b> deines Browsers ab, damit das Werkzeug auch ohne Internet startet. Dabei werden ausschließlich
+      Dateien dieser Website gespeichert – <b>keine</b> personenbezogenen Daten und keine Inhalte fremder Server.
+      Der Cache verbleibt auf deinem Gerät und lässt sich über die Browser-Einstellungen (Websitedaten löschen)
+      jederzeit entfernen. Die Installation ist freiwillig; das Werkzeug funktioniert auch ohne sie.</p>
 
     <h3>Optionale Online-Funktion (nur im Lern-Tool)</h3>
     <p>Im Lern-Tool kannst du im Fenster »ℹ Mehr zur Pflanze« <b>freiwillig</b> auf »Online-Infos laden« tippen.

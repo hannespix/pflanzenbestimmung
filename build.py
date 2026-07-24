@@ -11,7 +11,7 @@ Ergebnisse:
   dist/rechtliches.html        Impressum & Datenschutz (statisch)
   + versionierte Verteilkopien aller Dateien im Repo-Root
 """
-import pathlib, json, sys
+import pathlib, json, sys, hashlib, shutil
 
 ROOT = pathlib.Path(__file__).parent
 
@@ -57,19 +57,46 @@ def write_out(out, name):
     kb = round(len(out.encode("utf-8")) / 1024)
     print(f"OK  dist/{name}  ({kb} KB)")
 
+def emit_pwa(outputs):
+    """PWA-Assets nach dist/ schreiben: Icons, Manifest und den Service Worker
+    (mit Inhalts-Hash als Cache-Version). dist/ ist die Ausliefer-/Deploy-Basis;
+    für den lokalen Datei-Aufruf (file://) sind diese Assets ohne Belang."""
+    if not ((ROOT / "src/manifest.webmanifest").exists() and (ROOT / "src/sw.js").exists()):
+        return
+    dist = ROOT / "dist"; dist.mkdir(exist_ok=True)
+    icons = sorted((ROOT / "icons").glob("*.png"))
+    for ic in icons:
+        shutil.copyfile(ic, dist / ic.name)
+    manifest = read("src/manifest.webmanifest")
+    (dist / "manifest.webmanifest").write_text(manifest, encoding="utf-8")
+    # Cache-Version = Hash über die ausgelieferten Inhalte → ändert sich der Inhalt,
+    # erneuert der Service Worker den Cache automatisch.
+    h = hashlib.sha256()
+    for o in outputs:
+        h.update(o.encode("utf-8"))
+    h.update(manifest.encode("utf-8"))
+    for ic in icons:
+        h.update(ic.read_bytes())
+    version = h.hexdigest()[:12]
+    sw = read("src/sw.js").replace("/*__SW_VERSION__*/dev", version)
+    (dist / "sw.js").write_text(sw, encoding="utf-8")
+    print(f"OK  dist/manifest.webmanifest · dist/sw.js (v{version}) · {len(icons)} Icons")
+
+
 def main():
     seeds = load_seeds()
     seeds_json = json.dumps(seeds, ensure_ascii=False, separators=(",", ":"))
+    outputs = []
 
     # Prüfungswerkzeug (inkl. SheetJS für den Excel-Import)
     exam = render(read("src/template.html"), read("src/app.js"), seeds_json,
                   xlsx=read("lib/xlsx.full.min.js"))
-    write_out(exam, "pflanzenkenntnis.html")
+    write_out(exam, "pflanzenkenntnis.html"); outputs.append(exam)
 
     # Lern-Tool (kein Excel-Import → ohne SheetJS)
     if (ROOT / "src/learn.html").exists() and (ROOT / "src/learn.js").exists():
         learn = render(read("src/learn.html"), read("src/learn.js"), seeds_json)
-        write_out(learn, "pflanzen-lernen.html")
+        write_out(learn, "pflanzen-lernen.html"); outputs.append(learn)
 
     total = sum(len(v) for v in seeds.values())
 
@@ -77,11 +104,15 @@ def main():
     if (ROOT / "src/start.html").exists():
         stats = f"{len(seeds)} Profile · {total} Arten"
         landing = render_landing(read("src/start.html"), stats)
-        write_out(landing, "index.html")
+        write_out(landing, "index.html"); outputs.append(landing)
 
     # Impressum & Datenschutz (statische Seite, keine Seeds/JS)
     if (ROOT / "src/recht.html").exists():
-        write_out(read("src/recht.html"), "rechtliches.html")
+        recht = read("src/recht.html")
+        write_out(recht, "rechtliches.html"); outputs.append(recht)
+
+    # PWA: Manifest, Icons und Service Worker (Installation + Offline-Cache)
+    emit_pwa(outputs)
 
     print(f"Profile mit Seed: {len(seeds)}  ·  Arten gesamt: {total}")
     for pid, arr in seeds.items():
