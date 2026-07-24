@@ -537,6 +537,19 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       lokalen HTTP-Server: Manifest valide (192/512/maskable), SW aktiv, vier Seiten im Cache,
       **Offline-Reload + Boot aus dem Cache**, zweite Seite offline erreichbar.
 
+- [x] **»nur Prüfungsstoff« für Fachwerker** (Lern-Tool, opt-in): Zusätzlicher
+      Schalter im Setup, **nur bei Fachwerker-Profilen sichtbar** (`#examOnlyWrap`,
+      per `syncExamOnlyUI()`). Aktiv blendet er in **Karteikarten** (`answerMeta`) und
+      **Liste** (`.sp-fam`) alles außer **Deutscher Name, Gattung, Art** aus – Familie
+      und Synonyme entfallen, weil die Fachwerker-Abschlussprüfung (Dt. Name 3 /
+      Gattung 0,5 / Art 0,5) nur diese Felder bewertet. Die **Familien-Ansicht** der
+      Liste wird ausgeblendet (`normalizeSort()` verlässt sie); die **Info-Links (ℹ)**
+      und die Online-Anreicherung bleiben unberührt. Zustand global im `localStorage`
+      (`pflanzenlernen.examonly`), greift aber nur bei Fachwerkern (`examOnlyActive()`).
+      Quiz/Tippen fragen ohnehin nur den botanischen Namen. `tests/learn.mjs` prüft:
+      Schalter bei Gärtner unsichtbar / bei Fachwerker sichtbar, Kartenrückseite ohne
+      Familie/Synonyme, Liste ohne `.sp-fam` und ohne »Familie«-Ansicht, Rücknahme.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei

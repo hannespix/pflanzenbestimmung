@@ -106,6 +106,11 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
   die Familien-Steckbriefe (ℹ) vertiefen.
 - **Lernstoff eingrenzen:** nach Kategorie und optional nur **ZP-relevante** Arten;
   Sitzungslänge einstellbar.
+- **»nur Prüfungsstoff« (Fachwerker):** ein optionaler Schalter, der **nur bei
+  Fachwerker-Profilen** erscheint. Ist er an, zeigen Karteikarten und Liste nur
+  **Deutscher Name, Gattung und Art** – **Familie und Synonyme werden ausgeblendet**,
+  weil die Fachwerker-Abschlussprüfung genau diese Felder abfragt. Das reduziert die
+  Informationsflut aufs Prüfungsrelevante; die Info-Links (ℹ) bleiben erhalten.
 - **Fortschritt bleibt erhalten** (localStorage, je Profil getrennt, Namensraum
   `pflanzenlernen.`) – die Leitner-Boxen und Fälligkeiten überleben das Schließen.
 - **Mehr zur Pflanze (ℹ):** Zu jeder Art öffnet ein Info-Modal kuratierte Links zu
