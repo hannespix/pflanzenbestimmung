@@ -550,6 +550,18 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Schalter bei Gärtner unsichtbar / bei Fachwerker sichtbar, Kartenrückseite ohne
       Familie/Synonyme, Liste ohne `.sp-fam` und ohne »Familie«-Ansicht, Rücknahme.
 
+- [x] **Lern-Tool entschlackt (Startansicht)**: Die Feineinstellungen (Kategorie,
+      „nur ZP-relevant", „nur Prüfungsstoff", Karten/Sitzung) stecken jetzt in einer
+      **standardmäßig zugeklappten `<details class="setopts">`-Klappe »Optionen«** –
+      die Startansicht zeigt nur noch **Profil → Modi → »Sitzung starten«**, alle
+      Funktionen bleiben einen Klick entfernt. Zusätzlich die **Fortschritts-Box**
+      entschlackt (der lange Erklärsatz entfällt; die Box-Legende + Knopf-Beschriftung
+      erklären es ohnehin) und der **»Bereit zum Lernen«**-Text gekürzt (Details unter
+      Hilfe). Native `<details>` – kein JS, tastaturbedienbar, offline-rein. Hilfe-Schritt
+      angepasst. `tests/learn.mjs` prüft: Optionen zugeklappt und enthält Kategorie/ZP/
+      Sitzungslänge, Modi + Start ohne Aufklappen sichtbar. (Erster Schritt eines
+      Aufräum-Durchgangs; Prüfungswerkzeug folgt separat.)
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei
