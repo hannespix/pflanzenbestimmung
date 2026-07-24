@@ -361,16 +361,31 @@ async function main() {
       curated = { title: m.querySelector(".mh-bot").textContent, de: (m.querySelector(".mh-de") || {}).textContent || "",
         merkmale: /gemeinsam haben/i.test(m.textContent), tipp: /Erkennen/i.test(m.textContent) };
       closeInfo(); }
+    // Neu ergänzte Familie hat jetzt einen Steckbrief …
+    openFamilyInfo("Papaveraceae");
+    const nm = document.querySelector("#infoScrim .modal");
+    const added = { title: nm.querySelector(".mh-bot").textContent, de: (nm.querySelector(".mh-de") || {}).textContent || "",
+      curated: /gemeinsam haben/i.test(nm.textContent) };
+    closeInfo();
+    // … und ein Tippfehler in den Quelldaten führt auf die richtige Familie (lridaceae → Iridaceae)
+    openFamilyInfo("lridaceae");
+    const am = document.querySelector("#infoScrim .modal");
+    const alias = { title: am.querySelector(".mh-bot").textContent, curated: /gemeinsam haben/i.test(am.textContent) };
+    closeInfo();
     // Fallback für eine nicht kuratierte Familie
     openFamilyInfo("Xytestaceae/Testgewächse");
     const fb = document.querySelector("#infoScrim .modal");
     const fallback = /kein Steckbrief/i.test(fb.textContent) && /Blütenaufbau/i.test(fb.textContent);
     closeInfo();
-    return { hasBtns, curated, fallback, gone: !document.querySelector("#infoScrim") };
+    return { hasBtns, curated, added, alias, fallback, gone: !document.querySelector("#infoScrim") };
   });
   assert(fam.hasBtns, "Familien-Ansicht: kein ℹ-Steckbrief-Knopf gefunden");
   assert(fam.curated && /Asteraceae/.test(fam.curated.title) && /Korbblütler/.test(fam.curated.de)
     && fam.curated.merkmale && fam.curated.tipp, "Familien-Steckbrief (Asteraceae) unvollständig: " + JSON.stringify(fam.curated));
+  assert(fam.added && /Papaveraceae/.test(fam.added.title) && /Mohngewächse/.test(fam.added.de) && fam.added.curated,
+    "Ergänzter Familien-Steckbrief (Papaveraceae → Mohngewächse) fehlt: " + JSON.stringify(fam.added));
+  assert(fam.alias && /Iridaceae/.test(fam.alias.title) && fam.alias.curated,
+    "Tippfehler-Familie »lridaceae« sollte auf Iridaceae mit Steckbrief führen: " + JSON.stringify(fam.alias));
   assert(fam.fallback, "Familien-Steckbrief: Fallback für unbekannte Familie fehlt");
   assert(fam.gone, "Familien-Modal schließt nicht");
 
@@ -393,11 +408,11 @@ async function main() {
   // Familienname auf der Kartenrückseite: Latein · Deutsch, ohne Dopplung –
   // egal ob die Quelle "Fabaceae" oder "Fabaceae/Schmetterlingsblütler" liefert
   const fn = await page.evaluate(() => ({
-    gala: famName("Fabaceae/Schmetterlingsblütler"), gemuese: famName("Fabaceae"), plain: famName("Aizoaceae"),
+    gala: famName("Fabaceae/Schmetterlingsblütler"), gemuese: famName("Fabaceae"), plain: famName("Xytestaceae"),
   }));
   assert(fn.gala === "Fabaceae · Schmetterlingsblütler" && fn.gemuese === "Fabaceae · Schmetterlingsblütler",
     "famName darf den deutschen Familiennamen nicht doppeln: " + JSON.stringify(fn));
-  assert(fn.plain === "Aizoaceae", "famName ohne dt. Namen soll nur den lateinischen zeigen: " + fn.plain);
+  assert(fn.plain === "Xytestaceae", "famName ohne dt. Namen soll nur den lateinischen zeigen: " + fn.plain);
 
   // »nur Prüfungsstoff« (Fachwerker): optionaler Schalter blendet Familie/Synonyme aus
   const exo = await page.evaluate(() => {
