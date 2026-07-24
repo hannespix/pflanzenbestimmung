@@ -108,6 +108,19 @@ let sess = { total:0, done:0, correct:0, active:false };
 let listCats = new Set();     // aktive Filter-Tags der laufenden Dimension (leer = alle)
 let listSort = "bot";         // Ansicht: bot | de | kategorie | familie (Standard: alphabetisch, ohne Gruppen)
 let pendingChallenge = null;  // aus der URL (#c=…) dekodierte, noch nicht angenommene Herausforderung
+let examOnly = false;         // opt-in: nur Prüfungsstoff (Fachwerker) – Familie/Synonyme ausblenden
+
+/* Nur-Prüfungsstoff-Modus: Die Fachwerker-Abschlussprüfung bewertet ausschließlich
+   Deutscher Name, Gattung und Art (keine Familie). Diese opt-in Option blendet in
+   Karteikarten und Liste alles außer diesen Feldern aus (Info-Links bleiben) –
+   weniger Lernstoff, nur das Geprüfte. Nur bei Fachwerker-Profilen aktivierbar. */
+function isFachwerker(){ return /_fachwerker$/.test(profileId); }
+function examOnlyActive(){ return examOnly && isFachwerker(); }
+function normalizeSort(){ if(examOnlyActive() && listSort==="familie"){ listSort="bot"; store.set(LS_PREFIX+"listsort",listSort); } }
+function syncExamOnlyUI(){
+  const wrap=$("#examOnlyWrap"); if(wrap) wrap.hidden = !isFachwerker();   // Schalter nur bei Fachwerker zeigen
+  const cb=$("#examOnly"); if(cb) cb.checked = examOnly;
+}
 
 let toastT=null;
 function toast(msg,isErr){ const t=$("#toast"); t.textContent=msg; t.classList.toggle("err",!!isErr); t.classList.add("show");
@@ -188,8 +201,10 @@ function answerMeta(c){
   const bits=[];
   if(c.g)   bits.push(row("Gattung", c.g, true));
   if(c.a)   bits.push(row("Art", c.a, true));
-  if(c.fam) bits.push(row("Familie", famName(c.fam), false));
-  if(c.syn) bits.push(row("Syn.", c.syn, true));
+  if(!examOnlyActive()){                          // im Prüfungsstoff-Modus (Fachwerker) Familie/Synonyme weglassen
+    if(c.fam) bits.push(row("Familie", famName(c.fam), false));
+    if(c.syn) bits.push(row("Syn.", c.syn, true));
+  }
   return bits.join("");
 }
 
@@ -559,7 +574,9 @@ function renderListControls(){
   const sub = groupsView()
     ? (listCats.size ? `${SORT_LABEL[listSort]} · ${listCats.size} ausgewählt` : `${SORT_LABEL[listSort]} · alle`)
     : SORT_LABEL[listSort];
-  const sorts=Object.keys(SORT_LABEL).map(s=>`<button class="sortbtn${listSort===s?" on":""}" data-sort="${s}">${SORT_LABEL[s]}</button>`).join("");
+  // im Prüfungsstoff-Modus (Fachwerker) entfällt die Familien-Ansicht (Familie ist ausgeblendet)
+  const sortKeys=Object.keys(SORT_LABEL).filter(s=> !(examOnlyActive() && s==="familie"));
+  const sorts=sortKeys.map(s=>`<button class="sortbtn${listSort===s?" on":""}" data-sort="${s}">${SORT_LABEL[s]}</button>`).join("");
   let tags="";
   if(groupsView()){
     const vals=dimValues();
@@ -600,10 +617,14 @@ function renderList(){
     return;
   }
   const flat=[];
+  const showFam = !examOnlyActive();               // Prüfungsstoff-Modus (Fachwerker): keine Familie in der Zeile
   const rowHtml=c=>{ const idx=flat.push(c)-1;
+    const sub = showFam
+      ? `${c.de?esc(c.de):""}${c.de&&c.fam?" · ":""}${c.fam?`<span class="sp-fam">${esc(c.fam)}</span>`:""}`
+      : (c.de?esc(c.de):"");
     return `<li class="sprow" data-idx="${idx}" tabindex="0" role="button" aria-label="${esc(norm(c.g+" "+c.a))} – Infos öffnen">
       <div class="sp-main"><span class="sp-bot">${esc(norm(c.g+" "+c.a))}</span>${c.zp?'<span class="sp-zp" title="prüfungsrelevant (ZP)">ZP</span>':""}<span class="sp-go">ℹ</span></div>
-      ${(c.de||c.fam)?`<div class="sp-sub">${c.de?esc(c.de):""}${c.de&&c.fam?" · ":""}${c.fam?`<span class="sp-fam">${esc(c.fam)}</span>`:""}</div>`:""}
+      ${sub?`<div class="sp-sub">${sub}</div>`:""}
     </li>`; };
   let html=`<div class="listtop">${p.length} ${p.length===1?"Art":"Arten"}${term?(" · Treffer für »"+esc(raw)+"«"):""} · sortiert nach ${SORT_LABEL[listSort]} · zum Nachschlagen antippen</div>`;
   if(p.some(c=>c.zp)) html+=`<div class="zpnote"><span class="sp-zp">ZP</span> = für die Zwischenprüfung relevant</div>`;
@@ -909,6 +930,8 @@ function loadProfile(id){
   if($("#listSearch")) $("#listSearch").value="";   // Suche beim Profilwechsel zurücksetzen
   listCats.clear();                                  // Kategorie-Tags beim Profilwechsel zurücksetzen
   refreshKat();
+  syncExamOnlyUI();                                  // »nur Prüfungsstoff«-Schalter nur bei Fachwerker zeigen
+  normalizeSort();                                   // ggf. Familien-Ansicht verlassen, wenn ausgeblendet
   applyMode();                                       // Ansicht passend zum aktuellen Modus (inkl. Liste)
   store.set(LS_PREFIX+"profile", id);
 }
@@ -935,6 +958,10 @@ function wire(){
   $("#nivSelect").onchange=applyProfile;
   $("#cat").onchange=refreshView;
   $("#onlyzp").onchange=refreshView;
+  if($("#examOnly")) $("#examOnly").onchange=()=>{
+    examOnly=$("#examOnly").checked; store.set(LS_PREFIX+"examonly", examOnly?"1":"0");
+    normalizeSort(); refreshView();
+  };
   $("#listSearch").oninput=()=>{ if(mode==="list") renderList(); };
   if($("#btnPrintList")) $("#btnPrintList").onclick=printList;
   $("#modeTabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{
@@ -956,6 +983,7 @@ function wire(){
     $("#frSelect").innerHTML=FR_LIST.map(f=>`<option value="${slug(f)}">${esc(f)}</option>`).join("");
     $("#nivSelect").innerHTML=NIVEAUS.map(n=>`<option value="${n.key}">${esc(n.label)}</option>`).join("");
     listSort = store.get(LS_PREFIX+"listsort") || "bot";
+    examOnly = store.get(LS_PREFIX+"examonly")==="1";
     mode = store.get(LS_PREFIX+"mode") || "cards";
     let pid = store.get(LS_PREFIX+"profile");
     if(!(typeof SEEDS!=="undefined" && SEEDS[pid])) pid="gemuesebau_gaertner";

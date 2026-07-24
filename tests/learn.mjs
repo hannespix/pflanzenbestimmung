@@ -385,6 +385,45 @@ async function main() {
   assert(fn.gala === "Fabaceae · Schmetterlingsblütler" && fn.gemuese === "Fabaceae · Schmetterlingsblütler",
     "famName darf den deutschen Familiennamen nicht doppeln: " + JSON.stringify(fn));
   assert(fn.plain === "Aizoaceae", "famName ohne dt. Namen soll nur den lateinischen zeigen: " + fn.plain);
+
+  // »nur Prüfungsstoff« (Fachwerker): optionaler Schalter blendet Familie/Synonyme aus
+  const exo = await page.evaluate(() => {
+    const setNiv = (v) => { const s = document.querySelector("#nivSelect"); s.value = v; s.dispatchEvent(new Event("change")); };
+    setNiv("gaertner");
+    const hiddenForGaertner = document.querySelector("#examOnlyWrap").hidden === true;   // Schalter bei Gärtner unsichtbar
+    setNiv("fachwerker");
+    const shownForFachwerker = document.querySelector("#examOnlyWrap").hidden === false;  // bei Fachwerker sichtbar
+    const pick = allCards.find((x) => x.a && x.fam) || allCards[0];
+    const backLabels = () => {
+      document.querySelector('#modeTabs button[data-mode="cards"]').click(); startSession();
+      current = pick; flipCard();
+      return [...document.querySelectorAll("#card .answer .meta .mf b")].map((b) => b.textContent);
+    };
+    const cb = document.querySelector("#examOnly");
+    // AN
+    cb.checked = true; cb.dispatchEvent(new Event("change"));
+    const labelsOn = backLabels();
+    document.querySelector('#modeTabs button[data-mode="list"]').click();
+    const famRowsOn = document.querySelectorAll("#stage .sprow .sp-fam").length;
+    const famBtnOn = !!document.querySelector('#listControls .sortbtn[data-sort="familie"]');
+    // AUS
+    cb.checked = false; cb.dispatchEvent(new Event("change"));
+    const labelsOff = backLabels();
+    document.querySelector('#modeTabs button[data-mode="list"]').click();
+    const famRowsOff = document.querySelectorAll("#stage .sprow .sp-fam").length;
+    const famBtnOff = !!document.querySelector('#listControls .sortbtn[data-sort="familie"]');
+    setNiv("gaertner");
+    return { hiddenForGaertner, shownForFachwerker, hasFam: !!pick.fam, labelsOn, famRowsOn, famBtnOn, labelsOff, famRowsOff, famBtnOff };
+  });
+  assert(exo.hiddenForGaertner, "»nur Prüfungsstoff« darf bei Gärtner NICHT sichtbar sein");
+  assert(exo.shownForFachwerker, "»nur Prüfungsstoff« muss bei Fachwerker sichtbar sein");
+  assert(exo.hasFam, "Testvoraussetzung: Fachwerker-Profil hat eine Art mit Familie");
+  assert(exo.labelsOn.includes("Gattung") && !exo.labelsOn.includes("Familie") && !exo.labelsOn.includes("Syn."),
+    "Prüfungsstoff-Modus: Kartenrückseite darf nur Gattung/Art zeigen (war: " + JSON.stringify(exo.labelsOn) + ")");
+  assert(exo.famRowsOn === 0 && !exo.famBtnOn, "Prüfungsstoff-Modus: Liste darf keine Familie (.sp-fam) und keine »Familie«-Ansicht zeigen");
+  assert(exo.labelsOff.includes("Familie"), "Ausgeschaltet: Familie muss auf der Kartenrückseite wieder erscheinen");
+  assert(exo.famRowsOff > 0 && exo.famBtnOff, "Ausgeschaltet: Familie/-Ansicht müssen in der Liste wiederkommen");
+
   // zurück auf Standardprofil
   await page.evaluate(() => {
     document.querySelector("#frSelect").value = "gemuesebau";
@@ -495,7 +534,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (kategorisiert/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Wuchsform/Familie/A–Z), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Vergleich/Sieg + Zurückschicken), Disclaimer, Mobile ohne Overflow, Quiz, Tippen, Fortschritt-Persistenz.");
+  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (kategorisiert/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Wuchsform/Familie/A–Z), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Vergleich/Sieg + Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer, Mobile ohne Overflow, Quiz, Tippen, Fortschritt-Persistenz.");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });

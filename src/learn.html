@@ -412,6 +412,7 @@ main{margin-top:22px}
     <div class="setrow">
       <div class="field"><label for="cat">Kategorie</label><select id="cat" class="mini" title="Lernstoff auf eine Kategorie eingrenzen (z. B. Gehölze, Stauden, Gemüsepflanzen). »alle Kategorien« = keine Einschränkung."><option value="">alle</option></select></div>
       <label class="switch" title="Nur die für die Zwischenprüfung (ZP) markierten Arten üben."><input type="checkbox" id="onlyzp"><span class="track"></span>nur ZP-relevant</label>
+      <label class="switch" id="examOnlyWrap" hidden title="Nur den Prüfungsstoff der Fachwerker-Abschlussprüfung zeigen: Deutscher Name, Gattung, Art. Familie und Synonyme werden in Karteikarten und Liste ausgeblendet – weniger Lernstoff, nur das Geprüfte. Die Info-Links (ℹ) bleiben."><input type="checkbox" id="examOnly"><span class="track"></span>nur Prüfungsstoff</label>
       <div class="field"><label for="sessLen">Karten/Sitzung</label><input id="sessLen" class="mini" type="number" min="5" max="100" value="20" title="Wie viele Karten (5–100) eine Sitzung umfasst. Neue und fällige Karten kommen zuerst."></div>
     </div>
     <div class="modes" id="modeTabs">
@@ -481,6 +482,10 @@ main{margin-top:22px}
     <dl class="hdl">
       <dt>Kategorie · nur ZP</dt><dd>Grenzt den Lernstoff ein – z. B. nur Gehölze, oder nur die für die
         Zwischenprüfung markierten Arten.</dd>
+      <dt>nur Prüfungsstoff</dt><dd>Nur bei <b>Fachwerker</b>-Profilen sichtbar. Blendet in Karteikarten und
+        Liste alles außer <b>Deutscher Name, Gattung und Art</b> aus – Familie und Synonyme entfallen, weil die
+        Fachwerker-Abschlussprüfung nur diese Felder abfragt. So lernst du gezielt das Geprüfte, ohne
+        Informationsflut. Optional; die Info-Links (ℹ) bleiben in jedem Fall erhalten.</dd>
       <dt>Karten/Sitzung</dt><dd>Wie viele Karten eine Sitzung umfasst.</dd>
     </dl>
 
