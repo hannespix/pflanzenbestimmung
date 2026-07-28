@@ -228,22 +228,22 @@ async function main() {
     closeInfo();
     return { cats, allRows, startHidden, searchShown, hitN: hits.length, allMatch, backToAll, modalOpen };
   });
-  assert(list.cats >= 1 && list.allRows === 148, "Liste: 148 Zeilen in Kategorien erwartet, war " + list.allRows);
+  assert(list.cats >= 1 && list.allRows === 148, "Liste: 148 Zeilen in Gruppen erwartet, war " + list.allRows);
   assert(list.startHidden && list.searchShown, "Liste: Start-Leiste aus / Suchfeld an erwartet");
   assert(list.hitN > 0 && list.hitN < list.allRows && list.allMatch, "Liste-Suche »Allium« filtert nicht korrekt (" + list.hitN + ")");
   assert(list.backToAll === list.allRows, "Liste: Leeren der Suche stellt nicht alle Zeilen wieder her");
   assert(list.modalOpen, "Liste: Klick auf eine Art öffnet kein Info-Modal");
 
   // Ansicht & Filter (Akkordion): Standard ist A–Z (flach, keine Filter-Tags);
-  // Umschalten auf »Wuchsform« zeigt Filter-Tags, ein Tag filtert die Liste
+  // Umschalten auf »Thema« zeigt Filter-Tags, ein Tag filtert die Liste
   const tagsort = await page.evaluate(() => {
     const total = document.querySelectorAll("#stage .sprow").length;
-    // Standard: alphabetisch → Buchstaben-Header, keine Kategorie-Tags
+    // Standard: alphabetisch → Buchstaben-Header, keine Themen-Tags
     const botHeads = [...document.querySelectorAll("#stage .cathead")].map((e) => e.textContent.trim());
     const alphabetical = botHeads.length >= 2 && botHeads.every((h) => h.length === 1);
     const noTagsDefault = document.querySelectorAll("#listControls .cattag").length === 0;
-    // auf Wuchsform/Kategorie umschalten → Filter-Tags erscheinen
-    document.querySelector('#listControls .sortbtn[data-sort="kategorie"]').click();
+    // auf Thema umschalten → Filter-Tags erscheinen
+    document.querySelector('#listControls .sortbtn[data-sort="thema"]').click();
     const tagEls = [...document.querySelectorAll("#listControls .cattag")].filter((b) => b.dataset.cat);
     const hasTags = tagEls.length >= 1;
     tagEls[0].click();
@@ -259,9 +259,9 @@ async function main() {
   });
   assert(tagsort.alphabetical && tagsort.noTagsDefault,
     "Standard-Listenansicht sollte alphabetisch (Buchstaben-Header) und ohne Filter-Tags sein: " + JSON.stringify(tagsort));
-  assert(tagsort.hasTags, "Umschalten auf Wuchsform zeigt keine Filter-Tags");
+  assert(tagsort.hasTags, "Umschalten auf Thema zeigt keine Filter-Tags");
   assert(tagsort.afterFilter > 0 && tagsort.afterFilter < tagsort.total && tagsort.onlyOneGroup,
-    "Kategorie-Tag filtert die Liste nicht auf eine Kategorie: " + JSON.stringify(tagsort));
+    "Themen-Tag filtert die Liste nicht auf ein Thema: " + JSON.stringify(tagsort));
   assert(tagsort.famReset, "Wechsel der Ansicht setzt den Filter nicht zurück");
   assert(tagsort.backAll === tagsort.total, "Zurück auf A–Z stellt nicht alle Arten wieder her");
 
@@ -289,7 +289,7 @@ async function main() {
     };
   });
   assert(plist.n === 148 && plist.dataRows === 148, "Druckliste: 148 Datenzeilen erwartet, war " + plist.dataRows);
-  assert(plist.catRows >= 1, "Druckliste: Kategorie-Zwischenzeilen fehlen");
+  assert(plist.catRows >= 1, "Druckliste: Themen-Zwischenzeilen fehlen");
   assert(plist.title && plist.heads, "Druckliste: Titel/Spaltenköpfe entsprechen nicht dem Prüfungsbogen (Produktion)");
   assert(plist.zpCol, "Druckliste: ZP-Spalte fehlt");
   assert(plist.filled && plist.meta, "Druckliste: Zeilen nicht gefüllt oder Kopfzeile falsch");
@@ -310,7 +310,7 @@ async function main() {
   assert(pfw.n === 80 && pfw.sub && pfw.fwHeads && pfw.noFam,
     "Druckliste FW: 80 Arten im Fachwerker-Formular erwartet: " + JSON.stringify(pfw));
 
-  // Druckliste folgt der gewählten Ansicht: Wuchsform / Familie / A–Z
+  // Druckliste folgt der gewählten Ansicht: Thema / Familie / A–Z
   const psort = await page.evaluate(() => {
     document.querySelector('#modeTabs button[data-mode="list"]').click();
     const lc = document.querySelector("#listControls"); lc.dataset.open = "1"; renderListControls();
@@ -321,16 +321,16 @@ async function main() {
       const meta = document.querySelector("#printList .pmeta").textContent.replace(/\s+/g, " ");
       return { n, bands, meta };
     };
-    const kat = bandsFor("kategorie"), fam = bandsFor("familie"), bot = bandsFor("bot");
-    document.querySelector('.sortbtn[data-sort="kategorie"]').click(); buildPrintList(); // zurücksetzen
+    const kat = bandsFor("thema"), fam = bandsFor("familie"), bot = bandsFor("bot");
+    document.querySelector('.sortbtn[data-sort="thema"]').click(); buildPrintList(); // zurücksetzen
     return {
-      katOk: kat.bands.some((t) => /Gemüsepflanzen/.test(t)) && /sortiert nach Wuchsform/.test(kat.meta),
+      katOk: kat.bands.some((t) => /Gemüsepflanzen/.test(t)) && /sortiert nach Thema/.test(kat.meta),
       famOk: fam.bands.some((t) => /Asteraceae/.test(t)) && /sortiert nach Familie/.test(fam.meta),
       botOk: bot.bands.some((t) => /^A$/.test(t)) && bot.bands.every((t) => /^[A-ZÄÖÜ·]$/.test(t)) && /sortiert nach A–Z botanisch/.test(bot.meta),
       counts: [kat.n, fam.n, bot.n],
     };
   });
-  assert(psort.katOk, "Druckliste (Wuchsform): Kategorie-Band/Meta fehlt");
+  assert(psort.katOk, "Druckliste (Thema): Themen-Band/Meta fehlt");
   assert(psort.famOk, "Druckliste (Familie): Familien-Band (Asteraceae)/Meta fehlt");
   assert(psort.botOk, "Druckliste (A–Z botanisch): Buchstaben-Bänder/Meta fehlen");
   assert(psort.counts.every((n) => n === 148), "Druckliste: Artenzahl je Ansicht abweichend: " + JSON.stringify(psort.counts));
@@ -389,21 +389,71 @@ async function main() {
   assert(fam.fallback, "Familien-Steckbrief: Fallback für unbekannte Familie fehlt");
   assert(fam.gone, "Familien-Modal schließt nicht");
 
-  // Kategorien nach Wuchsform: GaLaBau (aus Quelle ohne Kategorien) ist jetzt
-  // nach Nadelgehölze/Laubgehölze/Stauden/… gegliedert
+  // Thematische Ordnung (wie im Unterricht): die Zuordnung selbst …
+  const themes = await page.evaluate(() => ({
+    eiche:  themeOf("Quercus", "robur", "Laubgehölze", "garten_und_landschaftsbau_gaertner"),
+    ahorn:  themeOf("Acer", "campestre", "Laubgehölze", "garten_und_landschaftsbau_gaertner"),
+    kirsch: themeOf("Prunus", "laurocerasus", "Laubgehölze", "baumschule_gaertner"),
+    coto:   themeOf("Cotoneaster", "dammeri", "Laubgehölze", "baumschule_gaertner"),
+    wach:   themeOf("Juniperus", "horizontalis", "Nadelgehölze", "baumschule_gaertner"),
+    fichte: themeOf("Picea", "abies", "Nadelgehölze", "baumschule_gaertner"),
+    rose:   themeOf("Rosa", "canina", "Laubgehölze", "baumschule_gaertner"),
+    efeu:   themeOf("Hedera", "helix", "Laubgehölze", "baumschule_gaertner"),
+    // dieselbe Art, anderer Kontext: im Obstbau zählt die Obstart, sonst die Wuchsform
+    apfelO: themeOf("Malus", "domestica", "Laubgehölze", "obstbau_fachwerker"),
+    apfelB: themeOf("Malus", "Cultivars", "Laubgehölze", "baumschule_gaertner"),
+    johann: themeOf("Ribes", "rubrum", "Laubgehölze", "obstbau_fachwerker"),
+    // Nicht-Gehölze behalten ihre Kategorie (vereinheitlicht)
+    staude: themeOf("Hosta", "Cultivars", "Stauden", "staudengaertnerei_gaertner"),
+    gras:   themeOf("Carex", "morrowii", "Ziergräser", "friedhofsgaertnerei_fachwerker"),
+    unkraut: themeOf("Urtica", "dioica", "Unkräuter, Wildkräuter", "obstbau_gaertner"),
+  }));
+  const expect = {
+    eiche: "Große Laubbäume", ahorn: "Kleinbäume & Großsträucher", kirsch: "Immergrüne Laubgehölze",
+    coto: "Bodendecker & Zwergsträucher", wach: "Zwerg- & Kriechkoniferen", fichte: "Nadelbäume",
+    rose: "Rosen", efeu: "Bodendecker & Zwergsträucher", apfelO: "Kernobst",
+    apfelB: "Kleinbäume & Großsträucher", johann: "Beerenobst", staude: "Stauden",
+    gras: "Gräser", unkraut: "Wild- & Unkräuter",
+  };
+  for (const [k, v] of Object.entries(expect))
+    assert(themes[k] === v, `Thema für »${k}«: erwartet »${v}«, war »${themes[k]}«`);
+
+  // … und die Themen-Ansicht der Liste (GaLaBau: Bäume, Sträucher, Stauden …)
   const wuchs = await page.evaluate(() => {
     document.querySelector("#frSelect").value = "garten_und_landschaftsbau";
     document.querySelector("#frSelect").dispatchEvent(new Event("change"));
     document.querySelector("#nivSelect").value = "gaertner";
     document.querySelector("#nivSelect").dispatchEvent(new Event("change"));
-    // Ansicht auf Wuchsform/Kategorie schalten (Standard ist alphabetisch)
-    document.querySelector('#listControls .sortbtn[data-sort="kategorie"]').click();
+    // Ansicht auf »Thema« schalten (Standard ist alphabetisch)
+    document.querySelector('#listControls .sortbtn[data-sort="thema"]').click();
     const cats = [...document.querySelectorAll("#stage .cathead")].map((e) => e.childNodes[0].textContent.trim());
-    return { cats, hasNadel: cats.includes("Nadelgehölze"), hasLaub: cats.includes("Laubgehölze"),
-      hasStaude: cats.includes("Stauden"), n: cats.length };
+    // Themen stehen in Lern-Reihenfolge: Bäume vor Sträuchern vor Stauden
+    const order = cats.indexOf("Große Laubbäume") < cats.indexOf("Blüten- & Ziersträucher")
+      && cats.indexOf("Blüten- & Ziersträucher") < cats.indexOf("Stauden");
+    return { cats, order, hasTree: cats.includes("Große Laubbäume"),
+      hasShrub: cats.includes("Blüten- & Ziersträucher"), hasStaude: cats.includes("Stauden"),
+      noVague: !cats.includes("Laubgehölze") && !cats.includes("Nadelgehölze"), n: cats.length };
   });
-  assert(wuchs.hasNadel && wuchs.hasLaub && wuchs.hasStaude && wuchs.n >= 5,
-    "GaLaBau sollte nach Wuchsform gegliedert sein (Nadel-/Laubgehölze, Stauden …): " + JSON.stringify(wuchs.cats));
+  assert(wuchs.hasTree && wuchs.hasShrub && wuchs.hasStaude && wuchs.n >= 5,
+    "GaLaBau sollte nach Themen gegliedert sein (große Laubbäume, Ziersträucher, Stauden …): " + JSON.stringify(wuchs.cats));
+  assert(wuchs.noVague, "Die unspezifischen Kategorien (Laub-/Nadelgehölze) dürfen als Thema nicht mehr auftauchen");
+  assert(wuchs.order, "Themen-Reihenfolge falsch (Bäume → Sträucher → Stauden): " + JSON.stringify(wuchs.cats));
+
+  // Lernsitzung auf ein Thema eingrenzen (Auswahl in den »Optionen«)
+  const themeSess = await page.evaluate(() => {
+    const sel = document.querySelector("#cat");
+    const opts = [...sel.options].map((o) => o.value);
+    sel.value = "Große Laubbäume"; sel.dispatchEvent(new Event("change"));
+    const rows = [...document.querySelectorAll("#stage .sprow .sp-bot")].map((e) => e.textContent.trim());
+    sel.value = ""; sel.dispatchEvent(new Event("change"));
+    const back = document.querySelectorAll("#stage .sprow").length;
+    return { hasOpt: opts.includes("Große Laubbäume"), noVagueOpt: !opts.includes("Laubgehölze"),
+      n: rows.length, sample: rows.slice(0, 3), back };
+  });
+  assert(themeSess.hasOpt && themeSess.noVagueOpt,
+    "Themen-Auswahl der Sitzung fehlt oder enthält noch Roh-Kategorien: " + JSON.stringify(themeSess));
+  assert(themeSess.n > 5 && themeSess.n < themeSess.back,
+    "Themen-Auswahl grenzt den Lernstoff nicht ein: " + JSON.stringify(themeSess));
 
   // Familienname auf der Kartenrückseite: Latein · Deutsch, ohne Dopplung –
   // egal ob die Quelle "Fabaceae" oder "Fabaceae/Schmetterlingsblütler" liefert
@@ -562,7 +612,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (kategorisiert/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Wuchsform/Familie/A–Z), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Vergleich/Sieg + Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer, Mobile ohne Overflow, Quiz, Tippen, Fortschritt-Persistenz.");
+  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Vergleich/Sieg + Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer, Mobile ohne Overflow, Quiz, Tippen, Fortschritt-Persistenz.");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });

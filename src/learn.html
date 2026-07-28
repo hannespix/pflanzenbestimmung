@@ -391,7 +391,7 @@ main{margin-top:22px}
   table.ptab td.pnum{text-align:center; width:6%; font-family:'Segoe UI',system-ui,sans-serif; color:#7a6a4f; background:#f6f7f1}
   table.ptab th.pzp,table.ptab td.pzp{text-align:center; width:6%; color:#3d6b4d; font-weight:600}
   table.ptab td.bot{font-style:italic}
-  /* Kategorie-Zwischenzeile: dezent grün hervorgehoben, quer über die Tabelle */
+  /* Themen-Zwischenzeile: dezent grün hervorgehoben, quer über die Tabelle */
   table.ptab tr.pcat td{font-family:'Segoe UI',system-ui,sans-serif; font-weight:700; font-size:9pt; letter-spacing:.03em; color:#2b4f38; background:#dbe7d8 !important; border-color:#a9ad98; padding:4pt 6pt}
   table.ptab tr{break-inside:avoid}
   .pfoot{font-family:'Segoe UI',system-ui,sans-serif; font-size:8pt; margin-top:6pt; color:#7a6a4f}
@@ -425,16 +425,16 @@ main{margin-top:22px}
       <button data-mode="cards" class="on" title="Karteikarten mit Selbsteinschätzung und verteiltem Wiederholen (Leitner/Spaced Repetition)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="14" height="12" rx="2"/><path d="M7 9h6M7 13h4M21 8v9a2 2 0 01-2 2H8"/></svg>Karteikarten</button>
       <button data-mode="quiz" title="Multiple-Choice-Quiz: aus vier Optionen die richtige wählen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5M12 17h.01"/></svg>Quiz</button>
       <button data-mode="type" title="Tippen: den Namen selbst eingeben (tippfehler-tolerant)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8"/></svg>Tippen</button>
-      <button data-mode="list" title="Liste zum Nachschlagen: alle Arten nach Kategorie sortiert, durchsuchbar; zum Öffnen von Quellen und Infos antippen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>Liste</button>
+      <button data-mode="list" title="Liste zum Nachschlagen: alle Arten nach Thema, Familie oder A–Z sortiert, durchsuchbar; zum Öffnen von Quellen und Infos antippen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>Liste</button>
     </div>
     <details class="setopts" id="setOpts">
       <summary title="Optionale Feineinstellungen ein- oder ausklappen">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
-        <span class="opts-title">Optionen</span><span class="opts-sub">Kategorie · ZP · Sitzungslänge</span>
+        <span class="opts-title">Optionen</span><span class="opts-sub">Thema · ZP · Sitzungslänge</span>
         <span class="opts-caret" aria-hidden="true">▾</span>
       </summary>
       <div class="setrow">
-        <div class="field"><label for="cat">Kategorie</label><select id="cat" class="mini" title="Lernstoff auf eine Kategorie eingrenzen (z. B. Gehölze, Stauden, Gemüsepflanzen). »alle Kategorien« = keine Einschränkung."><option value="">alle</option></select></div>
+        <div class="field"><label for="cat">Thema</label><select id="cat" class="mini" title="Lernstoff auf ein Thema eingrenzen – so, wie im Unterricht gelernt wird (z. B. große Laubbäume, Bodendecker, Steinobst, Stauden). »alle Themen« = keine Einschränkung."><option value="">alle</option></select></div>
         <label class="switch" title="Nur die für die Zwischenprüfung (ZP) markierten Arten üben."><input type="checkbox" id="onlyzp"><span class="track"></span>nur ZP-relevant</label>
         <label class="switch" id="examOnlyWrap" hidden title="Nur den Prüfungsstoff der Fachwerker-Abschlussprüfung zeigen: Deutscher Name, Gattung, Art. Familie und Synonyme werden in Karteikarten und Liste ausgeblendet – weniger Lernstoff, nur das Geprüfte. Die Info-Links (ℹ) bleiben."><input type="checkbox" id="examOnly"><span class="track"></span>nur Prüfungsstoff</label>
         <div class="field"><label for="sessLen">Karten/Sitzung</label><input id="sessLen" class="mini" type="number" min="5" max="100" value="20" title="Wie viele Karten (5–100) eine Sitzung umfasst. Neue und fällige Karten kommen zuerst."></div>
@@ -465,7 +465,7 @@ main{margin-top:22px}
     <h4>In drei Schritten</h4>
     <ol class="hsteps">
       <li><b>Fachrichtung &amp; Ausbildung</b> oben wählen – das bestimmt deinen Lernstoff.</li>
-      <li><b>Modus</b> wählen und <b>»Sitzung starten«</b>. Feineinstellungen (Kategorie,
+      <li><b>Modus</b> wählen und <b>»Sitzung starten«</b>. Feineinstellungen (<b>Thema</b>,
         „nur ZP-relevant", Sitzungslänge) stecken unter <b>»Optionen«</b> – standardmäßig
         zugeklappt, damit die Startansicht ruhig bleibt.</li>
       <li><b>Sitzung starten</b> und losüben. Deine Bewertungen steuern, welche Karten wann wiederkommen.</li>
@@ -483,14 +483,15 @@ main{margin-top:22px}
         Das ist <b>Spaced Repetition</b> (Leitner-Boxen 1–5): Was sitzt, kommt seltener; was wackelt, öfter.
         Jeder Knopf zeigt, wann die Karte wiederkommt.</dd>
       <dt>Quiz</dt><dd>Zum deutschen Namen den richtigen <b>botanischen Namen</b> aus vier Möglichkeiten
-        wählen. Die Ablenker stammen bevorzugt aus derselben Kategorie.</dd>
+        wählen. Die Ablenker stammen bevorzugt aus demselben Thema – das macht die Auswahl
+        anspruchsvoller und schult den Blick fürs Unterscheiden.</dd>
       <dt>Tippen</dt><dd>Zum deutschen Namen den <b>botanischen Namen</b> selbst eingeben –
         <b>tippfehler-tolerant</b>; Gattung und Art werden getrennt geprüft.</dd>
       <dt>Liste</dt><dd>Alle Arten des Profils zum <b>Nachschlagen</b> und <b>durchsuchbar</b>
         (Name, Familie, Synonym) – standardmäßig alphabetisch, damit es übersichtlich bleibt. Unter
         <b>»Ansicht &amp; Filter«</b> (aufklappen) lässt sich die <b>Ansicht</b> umschalten:
-        <b>A–Z</b> (botanisch/deutsch), nach <b>Wuchsform</b> (Gehölze, Stauden, Gräser …) oder nach
-        botanischer <b>Familie</b>. In den beiden Gruppen-Ansichten erscheinen <b>Filter-Tags</b>, mit
+        <b>A–Z</b> (botanisch/deutsch), nach <b>Thema</b> (große Laubbäume, Bodendecker, Steinobst,
+        Stauden …) oder nach botanischer <b>Familie</b>. In den beiden Gruppen-Ansichten erscheinen <b>Filter-Tags</b>, mit
         denen sich die Liste auf einzelne Gruppen eingrenzen lässt (mehrere gleichzeitig; »Alle« hebt
         den Filter auf). Ein Klick auf eine Art öffnet die Info. In der <b>Familien-Ansicht</b> öffnet
         das <b>ℹ</b> neben dem Familiennamen einen kurzen <b>Steckbrief</b> – was die Arten der Familie
@@ -500,8 +501,12 @@ main{margin-top:22px}
 
     <h4>Einstellungen</h4>
     <dl class="hdl">
-      <dt>Kategorie · nur ZP</dt><dd>Grenzt den Lernstoff ein – z. B. nur Gehölze, oder nur die für die
-        Zwischenprüfung markierten Arten.</dd>
+      <dt>Thema · nur ZP</dt><dd>Grenzt den Lernstoff ein – z. B. nur <b>große Laubbäume</b>,
+        nur <b>Bodendecker</b> oder nur die für die Zwischenprüfung markierten Arten. Die Themen sind
+        die Lerngruppen aus dem Unterricht: Gehölze nach Verwendung (Bäume, Sträucher, immergrün,
+        Bodendecker, Kletterpflanzen, Rosen, Nadelgehölze), im Obstbau nach Obstart
+        (Kern-, Stein-, Beeren-, Schalenobst), sonst nach Pflanzengruppe (Stauden, Gräser, Farne,
+        Zwiebel- und Knollenpflanzen, Gemüse …).</dd>
       <dt>nur Prüfungsstoff</dt><dd>Nur bei <b>Fachwerker</b>-Profilen sichtbar. Blendet in Karteikarten und
         Liste alles außer <b>Deutscher Name, Gattung und Art</b> aus – Familie und Synonyme entfallen, weil die
         Fachwerker-Abschlussprüfung nur diese Felder abfragt. So lernst du gezielt das Geprüfte, ohne
@@ -534,9 +539,9 @@ main{margin-top:22px}
     <b>Inoffizielles Hilfsmittel</b> – kein amtliches Angebot der Regierungspräsidien. Die
     Pflanzenlisten orientieren sich an den auf der gemeinsamen Seite der Regierungspräsidien
     Baden-Württemberg veröffentlichten Prüfungslisten (Stand&nbsp;Juli&nbsp;2026); maßgeblich sind
-    allein deren jeweils aktuelle Fassungen. Die Einteilung in Kategorien (Wuchsformen) wurde
-    teilweise mithilfe generativer&nbsp;KI erstellt. Für Richtigkeit und Vollständigkeit wird keine
-    Gewähr übernommen.
+    allein deren jeweils aktuelle Fassungen. Die Einteilung in Kategorien (Wuchsformen) und die
+    thematische Gliederung wurden teilweise mithilfe generativer&nbsp;KI erstellt. Für Richtigkeit
+    und Vollständigkeit wird keine Gewähr übernommen.
   </p>
 
   <footer class="foot">
