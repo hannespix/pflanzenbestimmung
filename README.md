@@ -95,16 +95,25 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
     Karte wiederkommt**. »Nochmal« bringt sie zusätzlich in derselben Sitzung erneut;
     »sitzt« ab Box 4.
   - **Multiple-Choice-Quiz** – zum deutschen Namen den richtigen **botanischen Namen**
-    unter plausiblen Ablenkern (bevorzugt aus derselben Kategorie).
+    unter plausiblen Ablenkern (bevorzugt aus **demselben Thema**).
   - **Tippen** – zum deutschen Namen den **botanischen Namen** selbst eingeben;
     tippfehlertolerant (kleine Abweichungen zählen als richtig), Gattung und Art werden
     getrennt geprüft.
-- **Liste / Nachschlagen:** ein vierter Tab zeigt **alle** Arten des Profils nach
-  Kategorie gruppiert (wie im Prüfungswerkzeug) und **durchsuchbar** (Name, Familie,
-  Synonym; akzent-tolerant). Ein Klick auf eine Art öffnet direkt das Info-Modal
+- **Liste / Nachschlagen:** ein vierter Tab zeigt **alle** Arten des Profils –
+  wahlweise **A–Z** (botanisch/deutsch), nach **Thema** oder nach botanischer
+  **Familie** – und **durchsuchbar** (Name, Familie, Synonym; akzent-tolerant). Ein Klick auf eine Art öffnet direkt das Info-Modal
   (Quellen-Links + optionale Online-Infos). Familien lassen sich hier zusätzlich über
   die Familien-Steckbriefe (ℹ) vertiefen.
-- **Lernstoff eingrenzen:** nach Kategorie und optional nur **ZP-relevante** Arten;
+- **Thematische Ordnung (wie im Unterricht):** Die Prüfungslisten sind alphabetisch,
+  gelernt wird aber nach **Themen** – »große Laubbäume«, »Bodendecker & Zwergsträucher«,
+  »Steinobst« … Das Lern-Tool ordnet jede Art zur Laufzeit einem Thema zu: **Gehölze**
+  kuratiert nach Verwendung (große Laubbäume · Kleinbäume & Großsträucher · Blüten- &
+  Ziersträucher · immergrüne Laubgehölze · Bodendecker & Zwergsträucher · Kletterpflanzen ·
+  Rosen · Nadelbäume · Zwerg- & Kriechkoniferen), in den **Obstbau**-Profilen nach Obstart
+  (Kern-, Stein-, Beeren-, Schalenobst …), sonst nach der Pflanzengruppe der Liste
+  (Stauden, Gräser, Farne, Zwiebel- und Knollenpflanzen, Gemüse …). Die Seeds bleiben
+  unverändert – die Zuordnung ist Anzeigelogik.
+- **Lernstoff eingrenzen:** nach **Thema** und optional nur **ZP-relevante** Arten;
   Sitzungslänge einstellbar.
 - **»nur Prüfungsstoff« (Fachwerker):** ein optionaler Schalter, der **nur bei
   Fachwerker-Profilen** erscheint. Ist er an, zeigen Karteikarten und Liste nur

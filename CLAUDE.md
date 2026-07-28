@@ -588,6 +588,34 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Tippfehler-Alias (`lridaceae`→Iridaceae) führt auf den richtigen Steckbrief,
       Fallback für echte Unbekannte bleibt.
 
+- [x] **Thematische Ordnung im Lern-Tool** (Rückmeldung einer Lehrerin: im Unterricht
+      wird nicht mehr »Vokabeltest«, sondern **nach Themen** gelernt – z. B. »große
+      Laubbäume« – wie in der ASP). Jede Art bekommt zur Laufzeit ein **Thema**
+      (`themeOf(gattung, art, kategorie, profilId)` in `learn.js`); die **Seeds bleiben
+      unverändert**, das Prüfungswerkzeug ist nicht betroffen. Regeln in dieser
+      Reihenfolge: (1) **Obstbau-Profile** → Obstart (`FRUIT_THEME`: Kern-/Stein-/
+      Beeren-/Schalenobst, Wildobst, Zitrusfrüchte, Obst), (2) kuratierte
+      **Art-Ausnahmen** (`SPEC_THEME`, z. B. *Prunus laurocerasus* = immergrün,
+      *Acer platanoides* = großer Baum), (3) Kategorie »Kletterpflanzen« bleibt,
+      (4) die **unspezifischen Gehölz-Kategorien** (Laub-/Nadelgehölze/Gehölze) werden
+      über **Gattungstabellen** aufgelöst (`G_TREE`/`G_SMALL`/`G_EVER`/`G_GC`/`G_CONIF`,
+      Sonderfälle Cotoneaster/Juniperus/Rosa), (5) sonst die Kategorie der Liste,
+      vereinheitlicht über `KAT_ALIAS` (»Ziergräser«→Gräser, »Bodendecker«→Bodendecker
+      & Zwergsträucher, drei Unkraut-Schreibweisen→»Wild- & Unkräuter« …).
+      **Neun Gehölz-Themen:** Große Laubbäume · Kleinbäume & Großsträucher · Blüten- &
+      Ziersträucher · Immergrüne Laubgehölze · Bodendecker & Zwergsträucher ·
+      Kletterpflanzen · Rosen · Nadelbäume · Zwerg- & Kriechkoniferen.
+      **UI:** Die Listen-Ansicht »Wuchsform/Kategorie« heißt jetzt **»Thema«** (gleiche
+      Filter-Tags, gleiche Druckliste; alter `listSort`-Wert `kategorie` wird migriert),
+      die Sitzungs-Auswahl in den »Optionen« filtert nach **Thema** statt Kategorie, und
+      die **Quiz-Ablenker** kommen aus demselben Thema. `THEME_ORDER` gibt die Lern-
+      Reihenfolge vor (Bäume → Sträucher → … → Obst → Stauden → Krautiges).
+      Die Zuordnung wurde vor dem Einbau als Python-Prototyp über alle 2114 Arten
+      geprüft und botanisch durchgesehen; `tests/learn.mjs` sichert 14 Referenz-
+      Zuordnungen, die Themen-Ansicht (inkl. Reihenfolge, keine Roh-Kategorien mehr)
+      und die Themen-Sitzung ab. **M2–M4** verfeinern die noch groben Nicht-Gehölz-
+      Themen (Stauden, Gemüse, Zimmerpflanzen).
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei

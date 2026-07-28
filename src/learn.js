@@ -32,8 +32,108 @@ const FR_LIST = ["Baumschule","Friedhofsgärtnerei","Garten- und Landschaftsbau"
 const NIVEAUS = [{key:"gaertner",label:"Gärtner/in"},{key:"fachwerker",label:"Fachwerker/in"}];
 function slug(s){ return s.toLowerCase().replace(/[äöü]/g,m=>({"ä":"ae","ö":"oe","ü":"ue"}[m])).replace(/ß/g,"ss")
   .replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""); }
-const KAT_ORDER = ["Nadelgehölze","Laubgehölze","Gehölze","Kletterpflanzen","Stauden","Gräser","Farne","Zwiebel- und Knollenpflanzen","Ein- und zweijährige","Zimmerpflanzen","Gemüsepflanzen","Gewürzkräuter","Bei-, Wild- oder Unkräuter","Gründüngungspflanzen","Zierpflanzen","Obstgehölze"];
-function katRank(k){ const i=KAT_ORDER.indexOf(k); return i<0?99:i; }
+/* ---------- Themen: die Arten nach Lerngruppen ordnen ----------
+   Die Prüfungslisten sind alphabetisch, gelernt wird aber nach Themen
+   (»große Laubbäume«, »Bodendecker«, »Steinobst« …) – so fragt es auch die ASP.
+   Regeln, in dieser Reihenfolge:
+     1. Obstbau-Profile: dort sind die Arten Obstgehölze, keine Ziergehölze.
+     2. kuratierte Art-Ausnahmen (SPEC_THEME) – z. B. Prunus laurocerasus = immergrün.
+     3. Kategorie »Kletterpflanzen« bleibt Kletterpflanzen.
+     4. unspezifische Gehölz-Kategorien (Laub-/Nadelgehölze/Gehölze) → Gattungstabellen.
+     5. sonst die Kategorie der Liste (vereinheitlicht über KAT_ALIAS).
+   Die Seeds bleiben unverändert – das Thema wird zur Laufzeit bestimmt. */
+const TH_TREE="Große Laubbäume", TH_SMALL="Kleinbäume & Großsträucher", TH_SHRUB="Blüten- & Ziersträucher",
+      TH_EVER="Immergrüne Laubgehölze", TH_GC="Bodendecker & Zwergsträucher", TH_CLIMB="Kletterpflanzen",
+      TH_ROSE="Rosen", TH_CONIF="Nadelbäume", TH_DWARF="Zwerg- & Kriechkoniferen";
+const THEME_ORDER = [TH_TREE,TH_SMALL,TH_SHRUB,TH_EVER,TH_GC,TH_CLIMB,TH_ROSE,TH_CONIF,TH_DWARF,
+  "Kernobst","Steinobst","Beerenobst","Schalenobst","Wildobst","Zitrusfrüchte","Obst","Wirtspflanzen",
+  "Stauden","Gräser","Farne","Zwiebel- und Knollenpflanzen","Ein- und zweijährige","Beet- und Balkonpflanzen",
+  "Schnittblumen","Frühjahrsblüher","Herbstpflanzen","Blühpflanzen","Topf- und Grünpflanzen","Zimmerpflanzen",
+  "Gemüsepflanzen","Gewürzkräuter","Gründüngungspflanzen","Wild- & Unkräuter"];
+function themeRank(k){ const i=THEME_ORDER.indexOf(k); return i<0?99:i; }
+const VAGUE_KAT = new Set(["Laubgehölze","Nadelgehölze","Gehölze"]);   // sagen nichts über die Verwendung
+const KAT_ALIAS = {                                                    // uneinheitliche Kategorien der Quelllisten
+  "Ziergräser":"Gräser", "Bodendecker":TH_GC,
+  "Unkräuter, Wildkräuter":"Wild- & Unkräuter", "Wildkräuter":"Wild- & Unkräuter",
+  "Bei-, Wild- oder Unkräuter":"Wild- & Unkräuter",
+  "Steinobst, Unterlage":"Steinobst", "Unterlage, Steinobst":"Steinobst",
+  "Unterlage für Kaki":"Obst", "Wirtpflanzen":"Wirtspflanzen"
+};
+const G_CONIF = new Set(["Abies","Araucaria","Callitropsis","Cedrus","Cephalotaxus","Chamaecyparis",
+  "Chameacyparis","Chameacypris","Cryptomeria","Cupressus","Ginkgo","Juniperus","Larix","Metasequoia",
+  "Picea","Pinus","Podocarpus","Pseudotsuga","Sciadopitys","Sequoiadendron","Taxus","Thuja","Thujopsis",
+  "Tsuga","Xanthocyparis","×Hesperotropsis"]);
+const SP_DWARF_CONIF = new Set(["Pinus mugo","Pinus pumila"]);         // Juniperus komplett, s. u.
+const G_TREE = new Set(["Quercus","Fagus","Tilia","Fraxinus","Platanus","Aesculus","Betula","Populus",
+  "Juglans","Castanea","Liriodendron","Liquidambar","Ulmus","Zelkova","Robinia","Gleditsia","Sophora",
+  "Styphnolobium","Ailanthus","Paulownia","Celtis","Pterocarya","Alnus","Nothofagus","Catalpa","Carpinus"]);
+const G_SMALL = new Set(["Acer","Prunus","Salix","Amelanchier","Crataegus","Sorbus","Scandosorbus",
+  "Mespilus","Cydonia","Malus","Cercis","Cercidiphyllum","Parrotia","Laburnum","Albizia","Corylus",
+  "Ficus","Magnolia","Rhus","Aralia","Olea","Punica","Trachycarpus","Eucalyptus","Sambucus","Diospyros","Asimina"]);
+const G_EVER = new Set(["Buxus","Ilex","Aucuba","Skimmia","Osmanthus","Mahonia","Photinia","Laurus",
+  "Pittosporum","Nandina","Choisya","Pieris","Arbutus","Myrtus","Yucca","Hebe","Camellia","Citrus",
+  "Nerium","Callistemon"]);
+const G_GC = new Set(["Calluna","Erica","Empetrum","Gaultheria","Genista","Helianthemum","Dasiphora",
+  "Hedera","Muehlenbeckia"]);
+const SP_COTO_GC = new Set(["dammeri","horizontalis","procumbens","radicans","microphyllus","salicifolius","congestus"]);
+const SPEC_THEME = {   // "Gattung|Art-Epitheton" → Thema (Ausnahmen von der Gattungsregel)
+  "Acer|platanoides":TH_TREE, "Acer|pseudoplatanus":TH_TREE, "Acer|saccharinum":TH_TREE, "Acer|negundo":TH_TREE,
+  "Salix|alba":TH_TREE, "Salix|babylonica":TH_TREE, "Salix|×":TH_TREE,
+  "Aesculus|parviflora":TH_SHRUB,
+  "Acer|campestre":TH_SMALL, "Acer|ginnala":TH_SMALL, "Corylus|avellana":TH_SMALL,
+  "Salix|caprea":TH_SMALL, "Prunus|padus":TH_SMALL, "Salix|repens":TH_GC,
+  "Prunus|laurocerasus":TH_EVER, "Prunus|lusitanica":TH_EVER,
+  "Viburnum|tinus":TH_EVER, "Viburnum|davidii":TH_EVER, "Viburnum|rhytidophyllum":TH_EVER,
+  "Berberis|julianae":TH_EVER, "Berberis|buxifolia":TH_EVER, "Berberis|microphylla":TH_EVER,
+  "Berberis|aquifolium":TH_EVER, "Euonymus|japonicus":TH_EVER, "Ligustrum|ovalifolium":TH_EVER,
+  "Rhododendron|catawbiense":TH_EVER, "Rhododendron|degronianum":TH_EVER,
+  "Lonicera|nitida":TH_GC, "Lonicera|pileata":TH_GC, "Lonicera|ligustrina":TH_GC,
+  "Cytisus|decumbens":TH_GC, "Daphne|cneorum":TH_GC, "Muehlenbeckia|axillaris":TH_GC,
+  "Rhododendron|forrestii":TH_GC, "Rhododendron|impeditum":TH_GC,
+  "Lonicera|xylosteum":TH_SHRUB, "Lonicera|purpusii":TH_SHRUB,   // stehen in den Listen unter »Kletterpflanzen«
+  "Lathyrus|vernus":"Stauden",
+  "Prunus|spinosa":TH_SHRUB, "Prunus|tenella":TH_SHRUB, "Prunus|triloba":TH_SHRUB, "Daphne|mezereum":TH_SHRUB,
+  "Juniperus|scopulorum":TH_CONIF
+};
+const FRUIT_THEME = {  // nur in den Obstbau-Profilen (dort zählt die Obstart, nicht die Wuchsform)
+  "Malus|domestica":"Kernobst", "Pyrus|communis":"Kernobst", "Pyrus|pyrifolia":"Kernobst",
+  "Cydonia|oblonga":"Kernobst", "Mespilus|germanica":"Kernobst", "Aronia|melanocarpa":"Kernobst",
+  "Sorbus|domestica":"Kernobst",
+  "Prunus|armeniaca":"Steinobst", "Prunus|avium":"Steinobst", "Prunus|cerasus":"Steinobst",
+  "Prunus|domestica":"Steinobst", "Prunus|insititia":"Steinobst", "Prunus|persica":"Steinobst",
+  "Prunus|mahaleb":"Steinobst", "Prunus|cerasifera":"Steinobst", "Prunus|spinosa":"Steinobst",
+  "Ribes|nigrum":"Beerenobst", "Ribes|rubrum":"Beerenobst", "Ribes|uva-crispa":"Beerenobst",
+  "Rubus|idaeus":"Beerenobst", "Rubus|fruticosus":"Beerenobst", "Rubus|sect.":"Beerenobst",
+  "Vaccinium|corymbosum":"Beerenobst", "Vaccinium|macrocarpon":"Beerenobst",
+  "Vaccinium|myrtillus":"Beerenobst", "Vaccinium|vitis-idaea":"Beerenobst",
+  "Hippophae|rhamnoides":"Beerenobst", "Sambucus|nigra":"Beerenobst", "Fragaria|x":"Beerenobst",
+  "Actinidia|arguta":"Beerenobst", "Actinidia|deliciosa":"Beerenobst", "Actinidia|chinensis":"Beerenobst",
+  "Vitis|vinifera":"Beerenobst",
+  "Juglans|regia":"Schalenobst", "Corylus|avellana":"Schalenobst", "Castanea|sativa":"Schalenobst",
+  "Prunus|dulcis":"Schalenobst", "Prunus|amygdalus":"Schalenobst",
+  "Cornus|mas":"Wildobst",
+  "Citrus|limon":"Zitrusfrüchte", "Citrus|reticulata":"Zitrusfrüchte", "Citrus|x":"Zitrusfrüchte",
+  "Ficus|carica":"Obst", "Punica|granatum":"Obst"
+};
+function woodyTheme(g, ep){
+  if(g==="Rosa") return TH_ROSE;
+  if(G_CONIF.has(g)) return (g==="Juniperus" || SP_DWARF_CONIF.has(g+" "+ep)) ? TH_DWARF : TH_CONIF;
+  if(g==="Cotoneaster") return SP_COTO_GC.has(ep) ? TH_GC : TH_SHRUB;
+  if(G_GC.has(g))    return TH_GC;
+  if(G_EVER.has(g))  return TH_EVER;
+  if(G_TREE.has(g))  return TH_TREE;
+  if(G_SMALL.has(g)) return TH_SMALL;
+  return TH_SHRUB;                                    // übriges Laubgehölz = Ziergehölz
+}
+function themeOf(g, art, kat, pid){
+  const ep=(art||"").split(" ")[0]||"", sp=g+"|"+ep;
+  kat=(kat||"").trim();
+  if(/^obstbau/.test(pid||"") && FRUIT_THEME[sp]) return FRUIT_THEME[sp];
+  if(g && SPEC_THEME[sp]) return SPEC_THEME[sp];
+  if(kat===TH_CLIMB) return TH_CLIMB;
+  if(g && VAGUE_KAT.has(kat)) return woodyTheme(g, ep);
+  return KAT_ALIAS[kat] || kat || "Ohne Thema";
+}
 
 /* ---------- Familien-Steckbriefe (kuratiert, offline) ----------
    Kurze Lernhilfe je Pflanzenfamilie: was die Arten gemeinsam haben (m) und
@@ -225,6 +325,7 @@ function cardsFor(id){
   const rows = (typeof SEEDS!=="undefined" && SEEDS[id]) || [];
   return rows.map(r=>({
     g:r[0]||"", a:r[1]||"", fam:r[2]||"", de:r[3]||"", kat:r[4]||"", zp:r[5]?1:0, syn:r[6]||"",
+    thema:themeOf(r[0]||"", r[1]||"", r[4]||"", id),
     key:((r[0]||"")+"|"+(r[1]||"")+"|"+(r[3]||"")).toLowerCase()
   })).filter(c=>c.g);
 }
@@ -290,7 +391,7 @@ function grade(card, g){ // g: 'again' | 'hard' | 'good'
 /* ---------- Auswahl / Filter ---------- */
 function pool(){
   const cat=$("#cat").value, zp=$("#onlyzp").checked;
-  return allCards.filter(c=> (!cat||c.kat===cat) && (!zp||c.zp));
+  return allCards.filter(c=> (!cat||c.thema===cat) && (!zp||c.zp));
 }
 function buildQueue(){
   const p = pool();
@@ -342,7 +443,7 @@ function answerMeta(c){
 /* ---------- Distraktoren fürs Quiz ---------- */
 function distractors(c, n){
   const want = answerText(c).toLowerCase();
-  const same = allCards.filter(x=>x.key!==c.key && answerText(x).toLowerCase()!==want && x.kat===c.kat);
+  const same = allCards.filter(x=>x.key!==c.key && answerText(x).toLowerCase()!==want && x.thema===c.thema);
   const rest = allCards.filter(x=>x.key!==c.key && answerText(x).toLowerCase()!==want);
   const picks=[]; const seen=new Set([want]);
   for(const src of [shuffle(same.slice()), shuffle(rest.slice())]){
@@ -672,17 +773,17 @@ function startHintOnly(){
 const deacc = s => (s==null?"":String(s)).normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 /* Gefilterte Listen-Menge (Kategorie-/ZP-Filter + Suchfeld) \u2013 auch Basis der Druckliste */
 /* Ansichten (Gruppier-/Sortier-Dimensionen). »bot«/»de« sind flach-alphabetisch
-   (keine Filter-Tags); »kategorie«/»familie« gruppieren und bieten Filter-Tags
+   (keine Filter-Tags); »thema«/»familie« gruppieren und bieten Filter-Tags
    der jeweiligen Dimension. */
-const SORT_LABEL={bot:"A–Z botanisch",de:"A–Z deutsch",kategorie:"Wuchsform/Kategorie",familie:"Familie"};
-const groupsView = () => listSort==="kategorie" || listSort==="familie";
-const dimKey = c => listSort==="familie" ? (c.fam||"Ohne Familie") : (c.kat||"Ohne Kategorie");
+const SORT_LABEL={bot:"A–Z botanisch",de:"A–Z deutsch",thema:"Thema",familie:"Familie"};
+const groupsView = () => listSort==="thema" || listSort==="familie";
+const dimKey = c => listSort==="familie" ? (c.fam||"Ohne Familie") : (c.thema||"Ohne Thema");
 function dimValues(){ // Werte der aktuellen Gruppier-Dimension (+ Anzahl), für die Filter-Tags
   const zp=$("#onlyzp") && $("#onlyzp").checked;
   const set=new Map();
   allCards.forEach(c=>{ if(zp&&!c.zp) return; const k=dimKey(c); set.set(k,(set.get(k)||0)+1); });
   const byFam=listSort==="familie";
-  return [...set.entries()].sort((a,b)=> byFam ? a[0].localeCompare(b[0],"de") : (katRank(a[0])-katRank(b[0]) || a[0].localeCompare(b[0],"de")));
+  return [...set.entries()].sort((a,b)=> byFam ? a[0].localeCompare(b[0],"de") : (themeRank(a[0])-themeRank(b[0]) || a[0].localeCompare(b[0],"de")));
 }
 function listFiltered(){
   const raw = $("#listSearch") ? $("#listSearch").value : "";
@@ -769,11 +870,11 @@ function renderList(){
     }
     if(letter) html+=`</ul></div>`;
   } else {
-    // nach Kategorie oder Familie gruppieren
+    // nach Thema oder Familie gruppieren
     const byFam = listSort==="familie";
     const groups=new Map();
-    p.forEach(c=>{ const k=(byFam?(c.fam||"Ohne Familie"):(c.kat||"Ohne Kategorie")); if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(c); });
-    const keys=[...groups.keys()].sort((a,b)=> byFam ? a.localeCompare(b,"de") : (katRank(a)-katRank(b) || a.localeCompare(b,"de")));
+    p.forEach(c=>{ const k=dimKey(c); if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(c); });
+    const keys=[...groups.keys()].sort((a,b)=> byFam ? a.localeCompare(b,"de") : (themeRank(a)-themeRank(b) || a.localeCompare(b,"de")));
     for(const k of keys){
       const rows=groups.get(k).slice().sort((a,b)=> norm(a.g+" "+a.a).localeCompare(norm(b.g+" "+b.a),"de"));
       // In der Familien-Ansicht: ℹ öffnet einen kurzen Familien-Steckbrief
@@ -820,7 +921,7 @@ function buildPrintList(){
              : "Abschlussprüfung Pflanzenbestimmung";
   const heute=new Date().toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"});
   const filt=[];
-  if(groupsView() && listCats.size) filt.push((listSort==="familie"?"Familie: ":"Kategorie: ")+[...listCats].join(", "));
+  if(groupsView() && listCats.size) filt.push((listSort==="familie"?"Familie: ":"Thema: ")+[...listCats].join(", "));
   if($("#onlyzp").checked) filt.push("nur ZP-relevant");
   if(term) filt.push("Suche: »"+raw+"«");
 
@@ -845,11 +946,11 @@ function buildPrintList(){
       rows+=rowFor(c);
     }
   } else {
-    // nach Wuchsform/Kategorie oder botanischer Familie gruppieren
+    // nach Thema oder botanischer Familie gruppieren
     const byFam=listSort==="familie";
     const groups=new Map();
     p.forEach(c=>{ const k=dimKey(c); if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(c); });
-    const keys=[...groups.keys()].sort((a,b)=> byFam ? a.localeCompare(b,"de") : (katRank(a)-katRank(b) || a.localeCompare(b,"de")));
+    const keys=[...groups.keys()].sort((a,b)=> byFam ? a.localeCompare(b,"de") : (themeRank(a)-themeRank(b) || a.localeCompare(b,"de")));
     for(const k of keys){
       const arr=groups.get(k).slice().sort((a,b)=> norm(a.g+" "+a.a).localeCompare(norm(b.g+" "+b.a),"de"));
       rows+=band(`${k} · ${arr.length} ${arr.length===1?"Art":"Arten"}`);
@@ -861,7 +962,7 @@ function buildPrintList(){
     <h1 class="ptitle${fam==="fw"?" pb":""}">${esc(title)} — Lernliste</h1>
     ${fam==="fw"?`<div class="psub">Gartenbaufachwerker/in</div>`:""}
     <div class="pmeta">Fachrichtung ${esc(frLabel)} · ${esc(nivLabel)} · ${n} ${n===1?"Art":"Arten"}
-      · sortiert nach ${esc(SORT_LABEL[listSort]||"Kategorie")}${filt.length?` · ${esc(filt.join(" · "))}`:""} · Stand ${esc(heute)}</div>
+      · sortiert nach ${esc(SORT_LABEL[listSort]||"Thema")}${filt.length?` · ${esc(filt.join(" · "))}`:""} · Stand ${esc(heute)}</div>
     <table class="ptab"><thead><tr>${heads}</tr></thead><tbody>${rows}</tbody></table>
     <div class="pfoot">${hasZP?"ZP = für die Zwischenprüfung relevant · ":""}Pflanzenkenntnis · Lernliste in der Form des Prüfungsbogens (Spalten und Punkte wie in der Prüfung)</div>`;
   return n;
@@ -990,7 +1091,7 @@ function openInfo(card){
   closeInfo();
   const links = deepLinks(card).map(l=>
     `<a href="${esc(l.u)}" target="_blank" rel="noopener">${esc(l.n)}<span class="ext">↗</span></a>`).join("");
-  const fam = [card.fam, card.kat].filter(Boolean).join(" · ");
+  const fam = [card.fam, card.thema].filter(Boolean).join(" · ");
   const scrim = el("div","scrim"); scrim.id="infoScrim";
   scrim.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Pflanzen-Info">
      <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
@@ -1063,11 +1164,11 @@ function loadProfile(id){
   applyMode();                                       // Ansicht passend zum aktuellen Modus (inkl. Liste)
   store.set(LS_PREFIX+"profile", id);
 }
-function refreshKat(){
-  const set=[...new Set(allCards.map(c=>c.kat).filter(Boolean))].sort((a,b)=>katRank(a)-katRank(b)||a.localeCompare(b));
+function refreshKat(){   // Themen-Auswahl für die Lernsitzung
+  const set=[...new Set(allCards.map(c=>c.thema).filter(Boolean))].sort((a,b)=>themeRank(a)-themeRank(b)||a.localeCompare(b,"de"));
   const cur=$("#cat").value;
-  $("#cat").innerHTML='<option value="">alle Kategorien</option>'+set.map(k=>`<option value="${esc(k)}">${esc(k)}</option>`).join("");
-  if(set.includes(cur)) $("#cat").value=cur;
+  $("#cat").innerHTML='<option value="">alle Themen</option>'+set.map(k=>`<option value="${esc(k)}">${esc(k)}</option>`).join("");
+  $("#cat").value = set.includes(cur) ? cur : "";
 }
 function profSub(){
   const fr = FR_LIST.find(f=>slug(f)===$("#frSelect").value)||"";
@@ -1111,6 +1212,8 @@ function wire(){
     $("#frSelect").innerHTML=FR_LIST.map(f=>`<option value="${slug(f)}">${esc(f)}</option>`).join("");
     $("#nivSelect").innerHTML=NIVEAUS.map(n=>`<option value="${n.key}">${esc(n.label)}</option>`).join("");
     listSort = store.get(LS_PREFIX+"listsort") || "bot";
+    if(listSort==="kategorie") listSort="thema";              // frühere Ansicht »Wuchsform/Kategorie«
+    if(!SORT_LABEL[listSort]) listSort="bot";
     examOnly = store.get(LS_PREFIX+"examonly")==="1";
     mode = store.get(LS_PREFIX+"mode") || "cards";
     let pid = store.get(LS_PREFIX+"profile");
@@ -1140,6 +1243,7 @@ window.closeInfo=closeInfo;
 window.wikiCandidates=wikiCandidates;
 window.searchName=searchName;
 window.buildPrintList=buildPrintList;
+window.themeOf=themeOf;
 window.renderListControls=renderListControls;
 window.openFamilyInfo=openFamilyInfo;
 window.shareChallenge=shareChallenge;
