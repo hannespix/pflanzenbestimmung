@@ -67,6 +67,18 @@ input,select{font-family:inherit; color:inherit}
 .hdl dt{font-weight:600; color:var(--green-deep)} .hdl dd{margin:0; color:var(--ink-soft)}
 .hnotes{margin:0; padding-left:20px; font-size:14px; line-height:1.6; color:var(--ink-soft)} .hnotes li{margin:5px 0}
 
+/* Bilder-Quiz: Foto + Quellenzeile (Bild wird erst im Modus geladen) */
+.photobox{margin:16px auto 4px; max-width:520px; text-align:center}
+.ph-img{max-width:100%; max-height:46vh; border-radius:6px; border:1px solid var(--rule-strong);
+  box-shadow:0 1px 3px var(--shadow); background:var(--surface-2); display:block; margin:0 auto}
+.ph-load{padding:44px 16px; border:1px dashed var(--rule-strong); border-radius:6px; color:var(--ink-faint);
+  font-size:13.5px; background:var(--surface-2)}
+.ph-src{margin-top:7px; font-size:11.5px; color:var(--ink-faint); line-height:1.5}
+.ph-src a{color:var(--sepia)}
+.ph-note{margin:18px auto 0; max-width:460px; padding:18px 20px; border:1px solid var(--rule-strong);
+  border-radius:8px; background:var(--surface); font-size:14px; line-height:1.55; color:var(--ink-soft); text-align:center}
+.ph-actions{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:12px}
+
 /* Lernduell: eingehende Herausforderung, Teilen-Block, Vergleich */
 .duelbanner{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:14px; padding:13px 16px;
   background:linear-gradient(180deg,var(--green-tint),var(--surface)); border:1px solid var(--green);
@@ -305,9 +317,9 @@ main{margin-top:18px}
   .hdl dt{margin-top:10px}
   /* Modus-Tabs: sauberes 2×2-Raster statt zufälligem Umbruch */
   .modes{display:grid; grid-template-columns:1fr 1fr; width:100%}
-  .modes button{border-right:none; justify-content:center; padding:11px 8px}
+  .modes button{border-right:none; border-bottom:1px solid var(--rule-strong); justify-content:center; padding:11px 8px}
   .modes button:nth-child(odd){border-right:1px solid var(--rule-strong)}
-  .modes button:nth-child(-n+2){border-bottom:1px solid var(--rule-strong)}
+  .modes button:last-child{grid-column:1/-1; border-right:none; border-bottom:none}
   /* Listen-Suche: Druck-Knopf rutscht in voller Breite unter das Suchfeld */
   .listsearchrow .printbtn{width:100%; justify-content:center}
   /* Setup-Felder: volle Breite, Selects schrumpfen mit (kein Überlauf) */
@@ -425,6 +437,7 @@ main{margin-top:22px}
       <button data-mode="cards" class="on" title="Karteikarten mit Selbsteinschätzung und verteiltem Wiederholen (Leitner/Spaced Repetition)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="14" height="12" rx="2"/><path d="M7 9h6M7 13h4M21 8v9a2 2 0 01-2 2H8"/></svg>Karteikarten</button>
       <button data-mode="quiz" title="Multiple-Choice-Quiz: aus vier Optionen die richtige wählen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5M12 17h.01"/></svg>Quiz</button>
       <button data-mode="type" title="Tippen: den Namen selbst eingeben (tippfehler-tolerant)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8"/></svg>Tippen</button>
+      <button data-mode="photo" title="Bilder-Quiz: die Pflanze am Bild erkennen und den richtigen botanischen Namen wählen. Braucht Internet – die Bilder kommen von Wikipedia."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.6"/><path d="M4 17.5l4.5-4.5 3 3 3-3 5 5"/></svg>Bilder</button>
       <button data-mode="list" title="Liste zum Nachschlagen: alle Arten nach Thema, Familie oder A–Z sortiert, durchsuchbar; zum Öffnen von Quellen und Infos antippen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>Liste</button>
     </div>
     <details class="setopts" id="setOpts">
@@ -459,7 +472,8 @@ main{margin-top:22px}
   <section class="helppanel" id="helpPanel" hidden>
     <h2 class="hh">Hilfe · So lernst du mit dem Tool</h2>
     <p class="hlead">Übe die Pflanzen deiner Fachrichtung – mit Karteikarten, Quiz, Tippen und einer
-      Nachschlage-Liste. Alles läuft <b>offline</b> im Browser; dein Fortschritt wird je Profil
+      Nachschlage-Liste. Alles läuft <b>offline</b> im Browser (einzige Ausnahme: der optionale
+      <b>Bilder-Quiz</b> und die Online-Infos im ℹ-Fenster); dein Fortschritt wird je Profil
       gespeichert. Keine Prüfungslisten, keine Noten – nur üben.</p>
 
     <h4>In drei Schritten</h4>
@@ -475,7 +489,7 @@ main{margin-top:22px}
       <b>deutsche Name</b> der Pflanze, gesucht ist die <b>botanische Identität</b> – <b>Gattung, Art</b> und
       <b>Familie</b>. Genau das musst du in der Prüfung zur vorgelegten Pflanze schreiben.</p>
 
-    <h4>Die vier Modi</h4>
+    <h4>Die fünf Modi</h4>
     <dl class="hdl">
       <dt>Karteikarten</dt><dd>Vorne steht der <b>deutsche Name</b>; zum <b>Umdrehen</b> tippen und die
         Rückseite mit <b>Gattung, Art und Familie</b> prüfen, dann ehrlich bewerten:
@@ -487,6 +501,13 @@ main{margin-top:22px}
         anspruchsvoller und schult den Blick fürs Unterscheiden.</dd>
       <dt>Tippen</dt><dd>Zum deutschen Namen den <b>botanischen Namen</b> selbst eingeben –
         <b>tippfehler-tolerant</b>; Gattung und Art werden getrennt geprüft.</dd>
+      <dt>Bilder</dt><dd><b>Pflanze am Bild erkennen:</b> Du siehst nur ein <b>Bild der Pflanze</b>, sonst
+        nichts, und wählst aus vier botanischen Namen den richtigen – am nächsten an der Prüfung, wo die
+        Pflanze vor dir steht. Nach der Antwort erscheinen der deutsche Name und der <b>Bildnachweis</b>.
+        <b>Dieser Modus braucht Internet</b>: Gezeigt wird das Artikelbild der deutschen Wikipedia (meist ein
+        Foto, gelegentlich eine botanische Zeichnung); geladen wird erst, wenn du den Modus startest. Ohne
+        Netz sagt der Modus das klar – <b>alle anderen Modi laufen vollständig offline weiter</b>. Arten ohne
+        brauchbares Bild werden übersprungen, Verbreitungskarten und Diagramme aussortiert.</dd>
       <dt>Liste</dt><dd>Alle Arten des Profils zum <b>Nachschlagen</b> und <b>durchsuchbar</b>
         (Name, Familie, Synonym) – standardmäßig alphabetisch, damit es übersichtlich bleibt. Unter
         <b>»Ansicht &amp; Filter«</b> (aufklappen) lässt sich die <b>Ansicht</b> umschalten:

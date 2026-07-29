@@ -14,13 +14,16 @@ Bitte alle Antworten und Commit-/PR-Texte **auf Deutsch**.
 - **Vollständig offline. Kein CDN, keine externen Ressourcen.** Alle Bibliotheken
   werden beim Build inline eingebettet. `python3 tools/check_offline.py` muss grün
   bleiben (läuft in CI).
-- **Eine bewusste Ausnahme, nur im Lern-Tool:** Das »ℹ Mehr zur Pflanze«-Modal bietet
-  **optionale** Online-Infos (deutsche Wikipedia). Sie sind **opt-in** (nur auf
-  Knopfdruck), laden **nichts beim Seitenaufbau** und nutzen **JSONP** (zur Laufzeit
-  erzeugtes `<script>`) statt `fetch`/`XHR` – dadurch bleibt `check_offline.py` grün
-  und der Kern (Karteikarten/Quiz/Tippen) funktioniert **ohne Netz** vollständig
-  weiter; nur die Anreicherung entfällt. Die Deep-Link-Buttons öffnen bloß einen neuen
-  Tab. **Das Prüfungswerkzeug bleibt strikt offline** – dort keine Online-Funktion.
+- **Zwei bewusste Ausnahmen, beide nur im Lern-Tool und beide opt-in:**
+  (1) Das »ℹ Mehr zur Pflanze«-Modal bietet **optionale** Online-Infos (deutsche
+  Wikipedia, nur auf Knopfdruck). (2) Der **Lernmodus »Bilder«** lädt Bilder von
+  Wikipedia/Wikimedia Commons – aber erst, wenn der Modus gestartet wird.
+  Beide laden **nichts beim Seitenaufbau** und nutzen **JSONP** (zur Laufzeit
+  erzeugtes `<script>`) statt `fetch`/`XHR` – dadurch bleibt `check_offline.py` grün.
+  Der Kern (**Karteikarten/Quiz/Tippen/Liste**) funktioniert **ohne Netz** vollständig
+  weiter; ohne Verbindung sagt der Bilder-Modus das klar an. Die Deep-Link-Buttons
+  öffnen bloß einen neuen Tab. **Das Prüfungswerkzeug bleibt strikt offline** – dort
+  keine Online-Funktion.
 - **Kein Framework, kein Build-Tool-Zoo.** Reines Vanilla-JS, eine `app.js`, ein
   `template.html`. Kein React/Vue/Svelte, kein npm-Bundler, kein TypeScript.
   Node wird nur für das Konverter-Skript (`tools/xlsx_to_seed.mjs`) gebraucht.
@@ -615,6 +618,27 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Zuordnungen, die Themen-Ansicht (inkl. Reihenfolge, keine Roh-Kategorien mehr)
       und die Themen-Sitzung ab. **M2–M4** verfeinern die noch groben Nicht-Gehölz-
       Themen (Stauden, Gemüse, Zimmerpflanzen).
+
+- [x] **Bilder-Quiz als fünfter Lernmodus** (»Bilder«, opt-in, braucht Internet):
+      Prüfungsnah – man sieht **nur ein Bild** der Pflanze (sonst nichts) und wählt
+      aus **vier botanischen Namen** den richtigen; die Ablenker kommen wie im
+      Quiz bevorzugt aus **demselben Thema**. Nach der Antwort erscheinen deutscher
+      Name und **Bildnachweis** (Urheber + Lizenz über die Commons-`imageinfo`-API,
+      erst danach abgefragt, damit die Lösung nicht verraten wird). Bild = Artikelbild
+      der deutschen Wikipedia über `prop=pageimages` (`wikiPhoto()`), geholt per
+      **JSONP** (`jsonpGet()`, aus der Text-Anreicherung herausgezogen – kein
+      `fetch`/`XHR`, `check_offline.py` bleibt grün). Bild-URLs werden je Art im
+      `localStorage` gemerkt (`pflanzenlernen.photos`, Deckel 1500), das nächste Bild
+      wird vorgeladen. **Robustheit:** einzelne fehlgeschlagene Abrufe brechen nicht
+      ab (nächster Kandidat), erst wenn **gar keine** Antwort kommt, meldet der Modus
+      »Keine Verbindung« mit »Erneut versuchen«; Arten ohne brauchbares Bild werden
+      übersprungen (nach 6 Fehlschlägen Hinweis), **Verbreitungskarten/Diagramme/SVG**
+      filtert `usablePhoto()` aus. Wertet wie das Quiz in den Leitner-Fortschritt ein
+      und ist duell-fähig (`scoreable()`). Die **vier bestehenden Modi bleiben
+      unverändert offline**. Tests: `tests/learn.mjs` hängt über `__setPhotoSource`
+      eine Bildquelle ein (kein Netz in CI) und prüft Foto, vier Optionen, Wertung,
+      Bildnachweis, Offline-Hinweis und den Karten-Filter. Datenschutzseite und Hilfe
+      nennen den Modus als zweite bewusste Online-Ausnahme.
 
 ## Offene Aufgaben (TODO)
 
