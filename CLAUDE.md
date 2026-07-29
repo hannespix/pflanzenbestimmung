@@ -640,6 +640,28 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Bildnachweis, Offline-Hinweis und den Karten-Filter. Datenschutzseite und Hilfe
       nennen den Modus als zweite bewusste Online-Ausnahme.
 
+- [x] **Abfragerichtung wählbar + Auswahl nach Thema ODER Familie** (Lern-Tool,
+      beides in der »Optionen«-Klappe, keine neue Bedienebene). **Abfrage**
+      (`#dir`, `DIRS`/`curDir()`): Text-Modi `de2bot` (Standard, Prüfungsrichtung)
+      und `bot2de`; Bilder-Modus `img2bot` (Standard) und `img2de`. Das Feld zeigt
+      **nur die zum Modus passenden** Richtungen (`dirsFor()`, `syncDirUI()`) und ist
+      im Listenmodus ausgeblendet; die Wahl wird je Modus-Gruppe gemerkt
+      (`pflanzenlernen.dirtext` / `.dirphoto`). Wirkt auf Vorderseite/Rückseite
+      (`promptHTML`/`answerMeta`), Quiz-Optionen, Tippen und Bilder-Quiz; die
+      Lösungszeile (`solutionLine`) nennt immer beide Seiten. **Tippen auf Deutsch**
+      akzeptiert jede in der Liste geführte Schreibweise, Bindestriche/Leerzeichen
+      egal (»Hängebirke« = »Hänge-Birke«), weiter tippfehlertolerant. Kurzform
+      `deMain`/`deAll` für Antwortoptionen; die **Vorderseite zeigt weiterhin alle**
+      deutschen Namen. **Auswahl** (`#cat`, `scopeOk()`): `<optgroup>` **Thema**
+      (`t:…`) und **Pflanzenfamilie** (`f:…`, über `famKey()` normalisiert) plus
+      »alle Arten«, jeweils mit Artenzahl. Das Lernduell kodiert die Richtung mit
+      (`r`-Feld) und übernimmt sie beim Annehmen. `tests/learn.mjs` prüft die
+      Richtungslisten je Modus, bot→de auf Karte/Quiz/Tippen (inkl. Zweitname ohne
+      Bindestrich), Bild→deutsch und die Auswahl nach Thema **und** Familie.
+      *Hinweis:* Die Richtungswahl war früher entfernt worden (»botanisch→deutsch
+      nicht sinnvoll«); sie ist jetzt **Option** mit prüfungsnahem Standard.
+      Art→Familie bleibt bewusst draußen.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei

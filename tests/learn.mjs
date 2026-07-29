@@ -273,6 +273,99 @@ async function main() {
     "Bilder-Quiz: Karten/Diagramme müssen aussortiert, Fotos behalten werden: " + JSON.stringify(photoSkip));
   assert(photoSkip.note, "Bilder-Quiz: ohne verfügbare Bilder fehlt der erklärende Hinweis");
 
+  // Abfragerichtung wählbar: Text-Modi de↔bot, Bilder-Modus Bild→bot/de
+  const dirUI = await page.evaluate(() => {
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    const textOpts = [...document.querySelectorAll("#dir option")].map((o) => o.value);
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();
+    const photoOpts = [...document.querySelectorAll("#dir option")].map((o) => o.value);
+    document.querySelector('#modeTabs button[data-mode="list"]').click();
+    const hiddenInList = document.querySelector("#dirField").hidden;
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    return { textOpts, photoOpts, hiddenInList, back: document.querySelector("#dir").value };
+  });
+  assert(dirUI.textOpts.join() === "de2bot,bot2de",
+    "Text-Modi brauchen genau beide Richtungen: " + JSON.stringify(dirUI.textOpts));
+  assert(dirUI.photoOpts.join() === "img2bot,img2de",
+    "Bilder-Modus braucht Bild→botanisch und Bild→deutsch: " + JSON.stringify(dirUI.photoOpts));
+  assert(dirUI.hiddenInList, "Im Listenmodus ist die Abfragerichtung gegenstandslos und gehört ausgeblendet");
+  assert(dirUI.back === "de2bot", "Standard muss die prüfungsnahe Richtung bleiben, war " + dirUI.back);
+
+  // Richtung botanisch → deutsch: Vorderseite botanisch (kursiv), Rückseite deutscher Name
+  const rev = await page.evaluate(() => {
+    const setDir = (v) => { const d = document.querySelector("#dir"); d.value = v; d.dispatchEvent(new Event("change")); };
+    setDir("bot2de");
+    document.querySelector("#sessLen").value = "8"; startSession();
+    const c = current;
+    const front = document.querySelector("#card .prompt");
+    const frontBot = front.querySelector("i") && front.textContent.trim() === (c.g + " " + c.a).trim();
+    const label = (document.querySelector("#card .side-label") || {}).textContent;
+    document.querySelector("#card").click();
+    const big = (document.querySelector("#card .answer .big") || {}).textContent.trim();
+    const labels = [...document.querySelectorAll("#card .answer .meta .mf b")].map((b) => b.textContent);
+    return { frontBot, label, big, deFirst: (c.de || "").split(/[,;/]/)[0].trim(), labels,
+      noGattung: !labels.includes("Gattung") };
+  });
+  assert(rev.frontBot && rev.label === "Botanischer Name",
+    "bot→de: Vorderseite muss der botanische Name (kursiv) sein: " + JSON.stringify(rev));
+  assert(rev.big === rev.deFirst && rev.noGattung,
+    "bot→de: Rückseite muss der deutsche Name sein (ohne Gattung/Art-Wiederholung): " + JSON.stringify(rev));
+
+  // Quiz und Tippen folgen der Richtung: Optionen bzw. erwartete Eingabe sind deutsch
+  const revPlay = await page.evaluate(() => {
+    const setDir = (v) => { const d = document.querySelector("#dir"); d.value = v; d.dispatchEvent(new Event("change")); };
+    document.querySelector('#modeTabs button[data-mode="quiz"]').click();
+    setDir("bot2de"); startSession();
+    const c = current;
+    const opts = [...document.querySelectorAll("#opts .opt")].map((b) => b.querySelector("span:last-child").textContent);
+    const want = (c.de || "").split(/[,;/]/)[0].trim();
+    const optIsDe = opts.includes(want) && !opts.includes((c.g + " " + c.a).trim());
+    [...document.querySelectorAll("#opts .opt")].find((b) => b.querySelector("span:last-child").textContent === want).click();
+    const quizGood = /Richtig!/.test(document.querySelector("#fb").innerHTML);
+    document.querySelector('#modeTabs button[data-mode="type"]').click();
+    setDir("bot2de"); startSession();
+    const c2 = current;
+    const variants = (c2.de || "").split(/[,;/]/).map((x) => x.trim()).filter(Boolean);
+    const alt = variants[variants.length - 1];                 // auch der letzte Zweitname zählt
+    document.querySelector("#typeIn").value = alt.replace(/-/g, "");  // ohne Bindestrich getippt
+    document.querySelector("#chk").click();
+    const typeGood = /Richtig!/.test(document.querySelector("#fb").innerHTML);
+    return { optIsDe, quizGood, typeGood, alt, opts: opts.slice(0, 4) };
+  });
+  assert(revPlay.optIsDe, "bot→de: Quiz-Optionen müssen deutsche Namen sein: " + JSON.stringify(revPlay.opts));
+  assert(revPlay.quizGood, "bot→de: richtige Quiz-Antwort nicht gewertet");
+  assert(revPlay.typeGood,
+    "bot→de: Tippen muss jede geführte Schreibweise akzeptieren (auch ohne Bindestrich): " + revPlay.alt);
+
+  // Bilder-Quiz mit Richtung Bild → deutscher Name
+  const photoDe = await page.evaluate(async (PX) => {
+    __clearPhotoCache();
+    __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g, file: "T.jpg", url: "https://x/y" }));
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();
+    const d = document.querySelector("#dir"); d.value = "img2de"; d.dispatchEvent(new Event("change"));
+    startSession();
+    await new Promise((r) => setTimeout(r, 60));
+    const c = current;
+    const opts = [...document.querySelectorAll("#opts .opt")].map((b) => b.querySelector("span:last-child").textContent);
+    const want = (c.de || "").split(/[,;/]/)[0].trim();
+    const btn = [...document.querySelectorAll("#opts .opt")].find((b) => b.querySelector("span:last-child").textContent === want);
+    if (btn) btn.click();
+    const fb = document.querySelector("#fb").innerHTML;
+    __setPhotoSource(null);
+    return { hasImg: !!document.querySelector("#phImg"), optIsDe: opts.includes(want),
+      noBot: !opts.includes((c.g + " " + c.a).trim()), good: /Richtig!/.test(fb), solBoth: /<i>/.test(fb) };
+  }, PX);
+  assert(photoDe.hasImg && photoDe.optIsDe && photoDe.noBot,
+    "Bild→deutsch: Optionen müssen deutsche Namen sein: " + JSON.stringify(photoDe));
+  assert(photoDe.good && photoDe.solBoth,
+    "Bild→deutsch: Wertung bzw. Lösungszeile mit beiden Namen fehlt: " + JSON.stringify(photoDe));
+
+  // zurück auf die prüfungsnahe Standardrichtung für die folgenden Prüfungen
+  await page.evaluate(() => {
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    const d = document.querySelector("#dir"); d.value = "de2bot"; d.dispatchEvent(new Event("change"));
+  });
+
   // Liste / Nachschlagen: kategorisiert, durchsuchbar, Klick öffnet Info-Modal
   const list = await page.evaluate(() => {
     document.querySelector('#modeTabs button[data-mode="list"]').click();
@@ -502,21 +595,31 @@ async function main() {
   assert(wuchs.noVague, "Die unspezifischen Kategorien (Laub-/Nadelgehölze) dürfen als Thema nicht mehr auftauchen");
   assert(wuchs.order, "Themen-Reihenfolge falsch (Bäume → Sträucher → Stauden): " + JSON.stringify(wuchs.cats));
 
-  // Lernsitzung auf ein Thema eingrenzen (Auswahl in den »Optionen«)
+  // Lernstoff eingrenzen (»Optionen · Auswahl«): alle Arten · Thema · Pflanzenfamilie
   const themeSess = await page.evaluate(() => {
     const sel = document.querySelector("#cat");
     const opts = [...sel.options].map((o) => o.value);
-    sel.value = "Große Laubbäume"; sel.dispatchEvent(new Event("change"));
-    const rows = [...document.querySelectorAll("#stage .sprow .sp-bot")].map((e) => e.textContent.trim());
+    const groups = [...sel.querySelectorAll("optgroup")].map((g) => g.label);
+    const pick = (v) => { sel.value = v; sel.dispatchEvent(new Event("change"));
+      return [...document.querySelectorAll("#stage .sprow .sp-bot")].map((e) => e.textContent.trim()); };
+    const baum = pick("t:Große Laubbäume");
+    const rosa = pick("f:Rosaceae");
     sel.value = ""; sel.dispatchEvent(new Event("change"));
     const back = document.querySelectorAll("#stage .sprow").length;
-    return { hasOpt: opts.includes("Große Laubbäume"), noVagueOpt: !opts.includes("Laubgehölze"),
-      n: rows.length, sample: rows.slice(0, 3), back };
+    return { groups, hasTheme: opts.includes("t:Große Laubbäume"), hasFam: opts.includes("f:Rosaceae"),
+      noVagueOpt: !opts.includes("t:Laubgehölze"), allLabel: sel.options[0].textContent,
+      nTheme: baum.length, nFam: rosa.length, themeSample: baum.slice(0, 3), famSample: rosa.slice(0, 3), back };
   });
-  assert(themeSess.hasOpt && themeSess.noVagueOpt,
+  assert(themeSess.hasTheme && themeSess.noVagueOpt,
     "Themen-Auswahl der Sitzung fehlt oder enthält noch Roh-Kategorien: " + JSON.stringify(themeSess));
-  assert(themeSess.n > 5 && themeSess.n < themeSess.back,
+  assert(themeSess.hasFam && themeSess.groups.join("|") === "Thema|Pflanzenfamilie",
+    "Auswahl muss nach Thema UND Pflanzenfamilie gruppiert sein: " + JSON.stringify(themeSess.groups));
+  assert(/^alle Arten \(\d+\)/.test(themeSess.allLabel),
+    "Erste Option sollte »alle Arten (n)« sein, war: " + themeSess.allLabel);
+  assert(themeSess.nTheme > 5 && themeSess.nTheme < themeSess.back,
     "Themen-Auswahl grenzt den Lernstoff nicht ein: " + JSON.stringify(themeSess));
+  assert(themeSess.nFam > 3 && themeSess.nFam < themeSess.back,
+    "Familien-Auswahl grenzt den Lernstoff nicht ein: " + JSON.stringify(themeSess));
 
   // Familienname auf der Kartenrückseite: Latein · Deutsch, ohne Dopplung –
   // egal ob die Quelle "Fabaceae" oder "Fabaceae/Schmetterlingsblütler" liefert
@@ -675,7 +778,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Vergleich/Sieg + Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer, Mobile ohne Overflow, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz.");
+  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Vergleich/Sieg + Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer, Mobile ohne Overflow, Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz.");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });

@@ -341,6 +341,8 @@ let listCats = new Set();     // aktive Filter-Tags der laufenden Dimension (lee
 let listSort = "bot";         // Ansicht: bot | de | kategorie | familie (Standard: alphabetisch, ohne Gruppen)
 let pendingChallenge = null;  // aus der URL (#c=…) dekodierte, noch nicht angenommene Herausforderung
 let examOnly = false;         // opt-in: nur Prüfungsstoff (Fachwerker) – Familie/Synonyme ausblenden
+let dirText  = "de2bot";      // Abfragerichtung für Karteikarten/Quiz/Tippen
+let dirPhoto = "img2bot";     // Abfragerichtung für den Bilder-Quiz
 
 /* Nur-Prüfungsstoff-Modus: Die Fachwerker-Abschlussprüfung bewertet ausschließlich
    Deutscher Name, Gattung und Art (keine Familie). Diese opt-in Option blendet in
@@ -389,9 +391,16 @@ function grade(card, g){ // g: 'again' | 'hard' | 'good'
 }
 
 /* ---------- Auswahl / Filter ---------- */
+/* Lernstoff eingrenzen: alles, ein Thema (»t:…«) oder eine Pflanzenfamilie (»f:…«). */
+function scopeOk(c, sel){
+  if(!sel) return true;
+  if(sel.slice(0,2)==="t:") return c.thema===sel.slice(2);
+  if(sel.slice(0,2)==="f:") return famKey(c.fam)===sel.slice(2);
+  return c.thema===sel;                                    // Altbestand: reiner Themenname
+}
 function pool(){
-  const cat=$("#cat").value, zp=$("#onlyzp").checked;
-  return allCards.filter(c=> (!cat||c.thema===cat) && (!zp||c.zp));
+  const sel=$("#cat").value, zp=$("#onlyzp").checked;
+  return allCards.filter(c=> scopeOk(c,sel) && (!zp||c.zp));
 }
 function buildQueue(){
   const p = pool();
@@ -408,31 +417,60 @@ function buildQueue(){
   return arr.slice(0,len).map(x=>x.c);
 }
 
-/* ---------- Lernrichtung: Deutscher Name → botanische Identität ----------
-   Lern-didaktisch sinnvoll ist genau die Prüfungssituation: Man erkennt die
-   Pflanze (der greifbarste Anker ohne Bild ist ihr deutscher Name) und muss
-   Gattung, Art und Familie nennen. Deshalb fragt das Tool durchgängig in dieser
-   einen Richtung – Vorderseite deutscher Name, Rückseite die vollständige
-   botanische Identität. (Botanisch→Deutsch und Art→Familie sind fachlich nicht
-   sinnvoll und wurden entfernt.) Die Familie ist Teil der Rückseite; zusätzlich
-   lässt sie sich über Liste + Familien-Steckbriefe vertiefen. */
+/* ---------- Abfragerichtung ----------
+   Standard ist die Prüfungssituation: Man erkennt die Pflanze (ohne Bild ist der
+   greifbarste Anker ihr deutscher Name) und nennt Gattung, Art und Familie.
+   Wer den umgekehrten Weg üben will (botanischer Name → deutscher Name) oder im
+   Bilder-Modus den deutschen Namen sucht, stellt das unter »Optionen · Abfrage«
+   um. Art→Familie gibt es bewusst nicht – die Familie steht auf der Rückseite
+   und wird über Liste + Familien-Steckbriefe vertieft. */
+const DIRS = {
+  de2bot : { label:"Deutscher Name → botanisch", prompt:"Deutscher Name",    answer:"Botanischer Name" },
+  bot2de : { label:"Botanisch → deutscher Name", prompt:"Botanischer Name",  answer:"Deutscher Name"   },
+  img2bot: { label:"Bild → botanischer Name",    prompt:"Bild",              answer:"Botanischer Name" },
+  img2de : { label:"Bild → deutscher Name",      prompt:"Bild",              answer:"Deutscher Name"   }
+};
+const DIRS_TEXT  = ["de2bot","bot2de"];           // Karteikarten · Quiz · Tippen
+const DIRS_PHOTO = ["img2bot","img2de"];          // Bilder-Quiz
+function dirsFor(m){ return (m||mode)==="photo" ? DIRS_PHOTO : DIRS_TEXT; }
+function curDir(){                                 // gültige Richtung für den aktuellen Modus
+  const d = mode==="photo" ? dirPhoto : dirText;
+  return dirsFor().includes(d) ? d : dirsFor()[0];
+}
+const wantsDe = () => curDir()==="bot2de" || curDir()==="img2de";   // gesucht ist der deutsche Name
 function famName(f){                              // "Fabaceae · Schmetterlingsblütler" (dt. Name aus Daten oder FAM_INFO)
   const lat=famKey(f); if(!lat) return f||"";
   const de=famGerman(f) || (FAM_INFO[lat] && FAM_INFO[lat].de) || "";
   return de ? lat+" · "+de : lat;
 }
-function promptHTML(c){ return esc(c.de||"—"); }                 // Vorderseite: nur deutscher Name
-function promptSub(c){ return ""; }                              // kein Hinweis vorne (nur der Name)
-function answerText(c){ return norm(c.g+" "+c.a); }              // gesucht: botanischer Name (Gattung + Art)
-function answerLabel(){ return "Botanischer Name"; }
-function promptLabel(){ return "Deutscher Name"; }
-/* Rückseite: Gattung, Art und Familie klar getrennt (wie im Prüfungsbogen bewertet).
-   Botanische Werte kursiv (Gattung/Art/Synonyme), Familiennamen aufrecht. */
+const botName = c => norm(c.g+" "+c.a);
+const deMain  = c => norm((c.de||"").split(/[,;/]/)[0]);          // erster deutscher Name (die Liste kann mehrere führen)
+const deAll   = c => (c.de||"").split(/[,;/]/).map(norm).filter(Boolean);
+function promptHTML(c){                            // Vorderseite (im Bilder-Modus steht dort das Bild)
+  return wantsDe() ? `<i>${esc(botName(c))}</i>` : esc(c.de||"—");   // gefragt wird nach allen geführten Namen
+}
+function promptSub(c){ return ""; }                // kein Hinweis vorne
+function answerText(c){ return wantsDe() ? deMain(c) : botName(c); }
+function answerLabel(){ return DIRS[curDir()].answer; }
+function promptLabel(){ return DIRS[curDir()].prompt; }
+/* Lösungszeile für Quiz/Tippen/Bilder: Gesuchtes zuerst, die andere Seite dahinter. */
+function solutionLine(c){
+  return wantsDe() ? esc(deMain(c))+" · <i>"+esc(botName(c))+"</i>"
+                   : "<i>"+esc(botName(c))+"</i>"+(deMain(c)?" · "+esc(deMain(c)):"");
+}
+/* Rückseite: die vollständige Identität, gefragte Seite ausgenommen. Botanische
+   Werte kursiv (Gattung/Art/Synonyme), Familiennamen aufrecht. */
 function answerMeta(c){
   const row=(lab,val,it)=>`<span class="mf"><b>${lab}</b>${it?"<i>"+esc(val)+"</i>":esc(val)}</span>`;
   const bits=[];
-  if(c.g)   bits.push(row("Gattung", c.g, true));
-  if(c.a)   bits.push(row("Art", c.a, true));
+  if(wantsDe()){                                   // gesucht war der deutsche Name → botanische Seite steht schon vorne
+    const weitere = deAll(c).slice(1);
+    if(weitere.length) bits.push(row("Auch", weitere.join(", "), false));
+  } else {
+    if(c.g) bits.push(row("Gattung", c.g, true));
+    if(c.a) bits.push(row("Art", c.a, true));
+    if(mode==="photo" && deMain(c)) bits.push(row("Deutsch", c.de, false));
+  }
   if(!examOnlyActive()){                          // im Prüfungsstoff-Modus (Fachwerker) Familie/Synonyme weglassen
     if(c.fam) bits.push(row("Familie", famName(c.fam), false));
     if(c.syn) bits.push(row("Syn.", c.syn, true));
@@ -465,6 +503,13 @@ function closeEnough(input, target){
   return lev(a,b)<=tol;
 }
 function checkTyped(input, c){
+  if(wantsDe()){
+    // Deutscher Name: jede in der Liste geführte Schreibweise zählt, Bindestriche
+    // und Leerzeichen egal (»Hängebirke« = »Hänge-Birke«), tippfehlertolerant.
+    const flat = s => clean(s).replace(/[-\s]/g,"");
+    const inp = flat(input); if(!inp) return false;
+    return deAll(c).some(v => closeEnough(input, v) || closeEnough(inp, flat(v)));
+  }
   // Gattung + Art getrennt prüfen (tippfehlertolerant)
   const parts=clean(input).split(" ");
   const gi=parts.shift()||""; const ai=parts.join(" ");
@@ -496,7 +541,7 @@ function renderProgress(){
          <i class="b-neu" style="background:var(--rule-strong)"></i>${neu} neu</span>
      </div>`;
   const due = p.filter(c=>{ const pr=pget(c.key); return !pr.box || !pr.due || pr.due<=todayISO(); }).length;
-  $("#startHint").textContent = p.length ? `${due} Karten heute dran · ${answerLabel()} gefragt` : "Keine Arten im aktuellen Filter.";
+  $("#startHint").textContent = p.length ? `${due} Karten heute dran · ${DIRS[curDir()].label}` : "Keine Arten in der aktuellen Auswahl.";
   $("#btnStart").disabled = !p.length;
 }
 
@@ -527,7 +572,7 @@ function nivNameOf(pid){ return /_fachwerker$/.test(pid)?"Fachwerker/in":"Gärtn
 
 function challengeURL(){                  // aktuelle Sitzung als Herausforderungs-Link kodieren
   const idx = (sess.cards||[]).map(c=>allCards.indexOf(c)).filter(i=>i>=0);
-  const payload = { v:1, p:profileId, m:mode, i:idx, s:sess.correct, t:sess.done, n:duelName() };
+  const payload = { v:1, p:profileId, m:mode, r:curDir(), i:idx, s:sess.correct, t:sess.done, n:duelName() };
   return location.href.split("#")[0] + "#c=" + b64urlEnc(payload);
 }
 function duelMessage(url){
@@ -730,8 +775,8 @@ function answerQuiz(btn, chosen, opts){
   });
   if(!ok) btn.classList.add("wrong");
   grade(c, ok?"good":"again"); if(ok) sess.correct++; else requeueCurrent();
-  $("#fb").innerHTML = ok ? `<span class="good">Richtig!</span>`
-    : `<span class="bad">Leider falsch.</span> <span class="sol">Richtig: ${esc(correct)}</span>`;
+  $("#fb").innerHTML = (ok ? `<span class="good">Richtig!</span>` : `<span class="bad">Leider falsch.</span>`)+
+    ` <span class="sol">${solutionLine(c)}</span>`;
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
 }
@@ -756,8 +801,8 @@ function submitType(inp){
   const c=current; const ok=checkTyped(inp.value, c);
   inp.disabled=true; inp.classList.add(ok?"ok":"no");
   grade(c, ok?"good":"again"); if(ok) sess.correct++; else requeueCurrent();
-  $("#fb").innerHTML = ok ? `<span class="good">Richtig!</span>`
-    : `<span class="bad">Nicht ganz.</span> <span class="sol">Richtig: ${esc(answerText(c))}</span>`;
+  $("#fb").innerHTML = (ok ? `<span class="good">Richtig!</span>` : `<span class="bad">Nicht ganz.</span>`)+
+    ` <span class="sol">${solutionLine(c)}</span>`;
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
 }
@@ -987,6 +1032,7 @@ function applyMode(){
   if(sr) sr.hidden = isList;
   if(lsr) lsr.hidden = !isList;
   if(lc) lc.hidden = !isList;
+  syncDirUI();
   if(isList){ $("#progress").hidden = true; renderListControls(); renderList(); }
   else { renderProgress(); startHintOnly(); }
 }
@@ -1226,7 +1272,7 @@ function answerPhoto(btn, chosen, p){
   if(!ok) btn.classList.add("wrong");
   grade(c, ok?"good":"again"); if(ok) sess.correct++; else requeueCurrent();
   $("#fb").innerHTML = (ok ? `<span class="good">Richtig!</span>` : `<span class="bad">Leider falsch.</span>`)+
-    ` <span class="sol">${esc(correct)}${c.de?" · "+esc(c.de):""}</span>`;
+    ` <span class="sol">${solutionLine(c)}</span>`;
   const box=$("#stage").querySelector(".photobox");    // Bildnachweis erst jetzt (verrät sonst die Lösung)
   if(box && p){
     box.insertAdjacentHTML("beforeend", photoSrcLine(p));
@@ -1321,11 +1367,25 @@ function loadProfile(id){
   applyMode();                                       // Ansicht passend zum aktuellen Modus (inkl. Liste)
   store.set(LS_PREFIX+"profile", id);
 }
-function refreshKat(){   // Themen-Auswahl für die Lernsitzung
-  const set=[...new Set(allCards.map(c=>c.thema).filter(Boolean))].sort((a,b)=>themeRank(a)-themeRank(b)||a.localeCompare(b,"de"));
+function refreshKat(){   // Auswahl der Lernsitzung: alles · ein Thema · eine Familie
+  const count = keyf => { const m=new Map(); allCards.forEach(c=>{ const k=keyf(c); if(k) m.set(k,(m.get(k)||0)+1); }); return m; };
+  const themen = [...count(c=>c.thema).entries()].sort((a,b)=>themeRank(a[0])-themeRank(b[0])||a[0].localeCompare(b[0],"de"));
+  const fams   = [...count(c=>famKey(c.fam)).entries()].sort((a,b)=>a[0].localeCompare(b[0],"de"));
+  const opt = (v,l,n)=>`<option value="${esc(v)}">${esc(l)} (${n})</option>`;
   const cur=$("#cat").value;
-  $("#cat").innerHTML='<option value="">alle Themen</option>'+set.map(k=>`<option value="${esc(k)}">${esc(k)}</option>`).join("");
-  $("#cat").value = set.includes(cur) ? cur : "";
+  $("#cat").innerHTML = `<option value="">alle Arten (${allCards.length})</option>`+
+    (themen.length?`<optgroup label="Thema">`+themen.map(([k,n])=>opt("t:"+k,k,n)).join("")+`</optgroup>`:"")+
+    (fams.length  ?`<optgroup label="Pflanzenfamilie">`+fams.map(([k,n])=>opt("f:"+k,famName(k),n)).join("")+`</optgroup>`:"");
+  const have=[...$("#cat").options].some(o=>o.value===cur);
+  $("#cat").value = have ? cur : "";
+}
+/* Abfragerichtung: je Modus nur die sinnvollen Optionen; im Listenmodus verborgen. */
+function syncDirUI(){
+  const wrap=$("#dirField"), sel=$("#dir"); if(!sel) return;
+  if(wrap) wrap.hidden = (mode==="list");
+  const keys=dirsFor(), cur=curDir();
+  sel.innerHTML = keys.map(k=>`<option value="${k}">${esc(DIRS[k].label)}</option>`).join("");
+  sel.value = cur;
 }
 function profSub(){
   const fr = FR_LIST.find(f=>slug(f)===$("#frSelect").value)||"";
@@ -1343,6 +1403,11 @@ function wire(){
   $("#frSelect").onchange=applyProfile;
   $("#nivSelect").onchange=applyProfile;
   $("#cat").onchange=refreshView;
+  if($("#dir")) $("#dir").onchange=()=>{
+    if(mode==="photo"){ dirPhoto=$("#dir").value; store.set(LS_PREFIX+"dirphoto",dirPhoto); }
+    else { dirText=$("#dir").value; store.set(LS_PREFIX+"dirtext",dirText); }
+    refreshView();
+  };
   $("#onlyzp").onchange=refreshView;
   if($("#examOnly")) $("#examOnly").onchange=()=>{
     examOnly=$("#examOnly").checked; store.set(LS_PREFIX+"examonly", examOnly?"1":"0");
@@ -1372,6 +1437,8 @@ function wire(){
     if(listSort==="kategorie") listSort="thema";              // frühere Ansicht »Wuchsform/Kategorie«
     if(!SORT_LABEL[listSort]) listSort="bot";
     examOnly = store.get(LS_PREFIX+"examonly")==="1";
+    dirText  = DIRS_TEXT.includes(store.get(LS_PREFIX+"dirtext"))   ? store.get(LS_PREFIX+"dirtext")  : "de2bot";
+    dirPhoto = DIRS_PHOTO.includes(store.get(LS_PREFIX+"dirphoto")) ? store.get(LS_PREFIX+"dirphoto") : "img2bot";
     mode = store.get(LS_PREFIX+"mode") || "cards";
     let pid = store.get(LS_PREFIX+"profile");
     if(!(typeof SEEDS!=="undefined" && SEEDS[pid])) pid="gemuesebau_gaertner";
@@ -1381,6 +1448,7 @@ function wire(){
     if(ch && ch.p && Array.isArray(ch.i) && ch.i.length && (typeof SEEDS!=="undefined" && SEEDS[ch.p])){
       pendingChallenge = ch; pid = ch.p;
       if(ch.m==="quiz"||ch.m==="type"||ch.m==="photo") mode = ch.m;
+      if(ch.r && DIRS[ch.r]){ if(DIRS_PHOTO.includes(ch.r)) dirPhoto=ch.r; else dirText=ch.r; }
     }
     $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.mode===mode));
     const parts = pid.match(/^(.*)_(gaertner|fachwerker)$/);
