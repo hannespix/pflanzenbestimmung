@@ -443,11 +443,12 @@ main{margin-top:22px}
     <details class="setopts" id="setOpts">
       <summary title="Optionale Feineinstellungen ein- oder ausklappen">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
-        <span class="opts-title">Optionen</span><span class="opts-sub">Thema · ZP · Sitzungslänge</span>
+        <span class="opts-title">Optionen</span><span class="opts-sub">Abfrage · Auswahl · ZP · Sitzungslänge</span>
         <span class="opts-caret" aria-hidden="true">▾</span>
       </summary>
       <div class="setrow">
-        <div class="field"><label for="cat">Thema</label><select id="cat" class="mini" title="Lernstoff auf ein Thema eingrenzen – so, wie im Unterricht gelernt wird (z. B. große Laubbäume, Bodendecker, Steinobst, Stauden). »alle Themen« = keine Einschränkung."><option value="">alle</option></select></div>
+        <div class="field" id="dirField"><label for="dir">Abfrage</label><select id="dir" class="mini" title="Was gefragt wird: deutscher Name → botanischer Name (wie in der Prüfung) oder umgekehrt. Im Bilder-Quiz: Bild → botanischer bzw. deutscher Name."></select></div>
+        <div class="field"><label for="cat">Auswahl</label><select id="cat" class="mini" title="Lernstoff eingrenzen: alle Arten, ein Thema (z. B. große Laubbäume, Bodendecker, Steinobst) oder eine Pflanzenfamilie (z. B. Rosaceae). Die Zahl in Klammern nennt die Artenzahl."><option value="">alle</option></select></div>
         <label class="switch" title="Nur die für die Zwischenprüfung (ZP) markierten Arten üben."><input type="checkbox" id="onlyzp"><span class="track"></span>nur ZP-relevant</label>
         <label class="switch" id="examOnlyWrap" hidden title="Nur den Prüfungsstoff der Fachwerker-Abschlussprüfung zeigen: Deutscher Name, Gattung, Art. Familie und Synonyme werden in Karteikarten und Liste ausgeblendet – weniger Lernstoff, nur das Geprüfte. Die Info-Links (ℹ) bleiben."><input type="checkbox" id="examOnly"><span class="track"></span>nur Prüfungsstoff</label>
         <div class="field"><label for="sessLen">Karten/Sitzung</label><input id="sessLen" class="mini" type="number" min="5" max="100" value="20" title="Wie viele Karten (5–100) eine Sitzung umfasst. Neue und fällige Karten kommen zuerst."></div>
@@ -479,20 +480,24 @@ main{margin-top:22px}
     <h4>In drei Schritten</h4>
     <ol class="hsteps">
       <li><b>Fachrichtung &amp; Ausbildung</b> oben wählen – das bestimmt deinen Lernstoff.</li>
-      <li><b>Modus</b> wählen und <b>»Sitzung starten«</b>. Feineinstellungen (<b>Thema</b>,
-        „nur ZP-relevant", Sitzungslänge) stecken unter <b>»Optionen«</b> – standardmäßig
-        zugeklappt, damit die Startansicht ruhig bleibt.</li>
+      <li><b>Modus</b> wählen und <b>»Sitzung starten«</b>. Feineinstellungen (<b>Abfrage</b>,
+        <b>Auswahl</b>, „nur ZP-relevant", Sitzungslänge) stecken unter <b>»Optionen«</b> –
+        standardmäßig zugeklappt, damit die Startansicht ruhig bleibt.</li>
       <li><b>Sitzung starten</b> und losüben. Deine Bewertungen steuern, welche Karten wann wiederkommen.</li>
     </ol>
 
-    <p class="hlead" style="margin-top:14px">Gelernt wird durchgehend in <b>Prüfungsrichtung</b>: vorne der
+    <p class="hlead" style="margin-top:14px">Standard ist die <b>Prüfungsrichtung</b>: vorne der
       <b>deutsche Name</b> der Pflanze, gesucht ist die <b>botanische Identität</b> – <b>Gattung, Art</b> und
-      <b>Familie</b>. Genau das musst du in der Prüfung zur vorgelegten Pflanze schreiben.</p>
+      <b>Familie</b>. Genau das musst du in der Prüfung zur vorgelegten Pflanze schreiben. Unter
+      <b>»Optionen · Abfrage«</b> kannst du die Richtung <b>umdrehen</b> (botanischer Name → deutscher Name);
+      im <b>Bilder</b>-Modus wählst du dort zwischen <b>Bild → botanischer Name</b> und
+      <b>Bild → deutscher Name</b>.</p>
 
     <h4>Die fünf Modi</h4>
     <dl class="hdl">
-      <dt>Karteikarten</dt><dd>Vorne steht der <b>deutsche Name</b>; zum <b>Umdrehen</b> tippen und die
-        Rückseite mit <b>Gattung, Art und Familie</b> prüfen, dann ehrlich bewerten:
+      <dt>Karteikarten</dt><dd>Vorne steht (je nach <b>Abfrage</b>) der <b>deutsche</b> oder der
+        <b>botanische Name</b>; zum <b>Umdrehen</b> tippen und die Rückseite prüfen – in Prüfungsrichtung mit
+        <b>Gattung, Art und Familie</b> –, dann ehrlich bewerten:
         <b>Nochmal</b> (heute nochmal) · <b>Unsicher</b> (bald wieder) · <b>Gewusst</b> (in einigen Tagen).
         Das ist <b>Spaced Repetition</b> (Leitner-Boxen 1–5): Was sitzt, kommt seltener; was wackelt, öfter.
         Jeder Knopf zeigt, wann die Karte wiederkommt.</dd>
@@ -522,12 +527,18 @@ main{margin-top:22px}
 
     <h4>Einstellungen</h4>
     <dl class="hdl">
-      <dt>Thema · nur ZP</dt><dd>Grenzt den Lernstoff ein – z. B. nur <b>große Laubbäume</b>,
-        nur <b>Bodendecker</b> oder nur die für die Zwischenprüfung markierten Arten. Die Themen sind
-        die Lerngruppen aus dem Unterricht: Gehölze nach Verwendung (Bäume, Sträucher, immergrün,
-        Bodendecker, Kletterpflanzen, Rosen, Nadelgehölze), im Obstbau nach Obstart
-        (Kern-, Stein-, Beeren-, Schalenobst), sonst nach Pflanzengruppe (Stauden, Gräser, Farne,
-        Zwiebel- und Knollenpflanzen, Gemüse …).</dd>
+      <dt>Abfrage</dt><dd>Was gefragt wird. <b>Deutscher Name → botanisch</b> ist die Prüfungsrichtung
+        und der Standard; <b>botanisch → deutscher Name</b> übt den umgekehrten Weg. Im <b>Bilder</b>-Modus
+        stehen <b>Bild → botanischer Name</b> und <b>Bild → deutscher Name</b> zur Wahl. Beim Tippen zählt
+        jede in der Liste geführte Schreibweise (auch ohne Bindestrich).</dd>
+      <dt>Auswahl · nur ZP</dt><dd>Grenzt den Lernstoff ein: <b>alle Arten</b>, ein <b>Thema</b> oder eine
+        <b>Pflanzenfamilie</b> (die Zahl in Klammern nennt die Artenzahl) – dazu optional nur die für die
+        Zwischenprüfung markierten Arten. Die Themen sind die Lerngruppen aus dem Unterricht: Gehölze nach
+        Verwendung (Bäume, Sträucher, immergrün, Bodendecker, Kletterpflanzen, Rosen, Nadelgehölze), im
+        Obstbau nach Obstart (Kern-, Stein-, Beeren-, Schalenobst), sonst nach Pflanzengruppe (Stauden,
+        Gräser, Farne, Zwiebel- und Knollenpflanzen, Gemüse …). Nach <b>Familie</b> zu lernen lohnt sich,
+        weil Arten einer Familie Bauplan und Merkmale teilen – der ℹ-Steckbrief in der Listen-Ansicht
+        »Familie« fasst sie zusammen.</dd>
       <dt>nur Prüfungsstoff</dt><dd>Nur bei <b>Fachwerker</b>-Profilen sichtbar. Blendet in Karteikarten und
         Liste alles außer <b>Deutscher Name, Gattung und Art</b> aus – Familie und Synonyme entfallen, weil die
         Fachwerker-Abschlussprüfung nur diese Felder abfragt. So lernst du gezielt das Geprüfte, ohne

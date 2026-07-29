@@ -122,7 +122,12 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
   (Kern-, Stein-, Beeren-, Schalenobst …), sonst nach der Pflanzengruppe der Liste
   (Stauden, Gräser, Farne, Zwiebel- und Knollenpflanzen, Gemüse …). Die Seeds bleiben
   unverändert – die Zuordnung ist Anzeigelogik.
-- **Lernstoff eingrenzen:** nach **Thema** und optional nur **ZP-relevante** Arten;
+- **Abfragerichtung wählbar** (»Optionen · Abfrage«): Standard ist die Prüfungsrichtung
+  **deutscher Name → botanisch**; umschaltbar auf **botanisch → deutscher Name**. Im
+  **Bilder**-Modus stehen **Bild → botanischer Name** und **Bild → deutscher Name** zur
+  Wahl. Beim Tippen zählt jede in der Liste geführte Schreibweise (auch ohne Bindestrich).
+- **Lernstoff eingrenzen** (»Optionen · Auswahl«): **alle Arten**, ein **Thema** oder eine
+  **Pflanzenfamilie** (jeweils mit Artenzahl), dazu optional nur **ZP-relevante** Arten;
   Sitzungslänge einstellbar.
 - **»nur Prüfungsstoff« (Fachwerker):** ein optionaler Schalter, der **nur bei
   Fachwerker-Profilen** erscheint. Ist er an, zeigen Karteikarten und Liste nur
