@@ -521,7 +521,7 @@ function duelName(v){                    // Name des Herausforderers (optional, 
   return store.get(LS_PREFIX+"name") || "";
 }
 function sessAcc(){ return sess.done ? Math.round(sess.correct/sess.done*100) : 0; }
-function scoreable(){ return mode==="quiz" || mode==="type"; }   // nur Modi mit echter Trefferquote
+function scoreable(){ return mode==="quiz" || mode==="type" || mode==="photo"; }   // nur Modi mit echter Trefferquote
 function frNameOf(pid){ const s=(pid.match(/^(.*)_(gaertner|fachwerker)$/)||[])[1]; return FR_LIST.find(f=>slug(f)===s)||""; }
 function nivNameOf(pid){ return /_fachwerker$/.test(pid)?"Fachwerker/in":"Gärtner/in"; }
 
@@ -532,7 +532,7 @@ function challengeURL(){                  // aktuelle Sitzung als Herausforderun
 }
 function duelMessage(url){
   const who = duelName().trim();
-  const modeLabel = mode==="quiz" ? "Quiz" : "Tippen";
+  const modeLabel = mode==="quiz" ? "Quiz" : mode==="photo" ? "Bilder-Quiz" : "Tippen";
   const fr = frNameOf(profileId);
   return `🌱 Pflanzen-Lernduell (${modeLabel}${fr?" · "+fr:""})\n`+
     `${who?who+" hat":"Ich habe"} ${sess.correct} von ${sess.done} richtig (${sessAcc()} %). Schaffst du mehr?\n`+
@@ -602,14 +602,14 @@ function startChallenge(){                // genau die Karten der Herausforderun
   const cards = (ch.i||[]).map(i=>allCards[i]).filter(Boolean);
   if(!cards.length){ toast("Karten dieser Herausforderung nicht gefunden",true); return; }
   const b=$("#duelBanner"); if(b) b.hidden=true;
-  queue = cards.slice(); qi = 0;
+  queue = cards.slice(); qi = 0; photoMisses = 0;
   sess = { total:queue.length, done:0, correct:0, active:true, cards:cards.slice(), challenge:ch };
   nextCard();
 }
 
 /* ---------- Sitzung / Bühne ---------- */
 function startSession(){
-  queue = buildQueue(); qi = 0;
+  queue = buildQueue(); qi = 0; photoMisses = 0;
   sess = { total:queue.length, done:0, correct:0, active:true, cards:queue.slice(), challenge:null };
   if(!queue.length){ toast("Keine Arten im aktuellen Filter",true); return; }
   nextCard();
@@ -624,6 +624,7 @@ function nextCard(){
   current = queue[qi]; flipped=false;
   if(mode==="cards") renderCard();
   else if(mode==="quiz") renderQuiz();
+  else if(mode==="photo") renderPhoto();
   else renderType();
   const stop=$("#btnStop"); if(stop) stop.onclick=finishSession;
 }
@@ -762,10 +763,16 @@ function submitType(inp){
 }
 
 function startHintOnly(){
+  const photo = mode==="photo";
   $("#stage").innerHTML = `<div class="stage-empty">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22V8M12 8C12 8 7 3 4 4c-1 3 4 8 8 8zM12 8c0 0 5-5 8-4 1 3-4 8-8 8z"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">${photo
+      ? `<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M4 18l5-5 3 3 3-3 5 5"/>`
+      : `<path d="M12 22V8M12 8C12 8 7 3 4 4c-1 3 4 8 8 8zM12 8c0 0 5-5 8-4 1 3-4 8-8 8z"/>`}</svg>
     <h2>Bereit zum Lernen</h2>
-    <p>Modus wählen und »Sitzung starten«. Gefragt wird der <b>deutsche Name → botanische Identität</b> (Gattung, Art, Familie), wie in der Prüfung. Details unter <b>Hilfe</b>.</p>
+    ${photo
+      ? `<p>Bild ansehen und die richtige Pflanze wählen – wie beim Erkennen in der Prüfung.
+         <b>Dieser Modus braucht Internet</b> (die Bilder kommen von Wikipedia); alle anderen Modi laufen offline.</p>`
+      : `<p>Modus wählen und »Sitzung starten«. Gefragt wird der <b>deutsche Name → botanische Identität</b> (Gattung, Art, Familie), wie in der Prüfung. Details unter <b>Hilfe</b>.</p>`}
   </div>`;
 }
 
@@ -1013,7 +1020,10 @@ function deepLinks(c){
 }
 const wikiCache = new Map();   // card.key -> {title,extract,thumb,url} | null (nicht gefunden)
 let __wpN = 0;
-function wikiJSONP(title){
+/* Generischer JSONP-Aufruf (dynamisches <script>, kein fetch/XHR): hängt den
+   Callback-Namen an die übergebene URL an. Wird von der Text-Anreicherung UND
+   vom Bilder-Quiz genutzt. */
+function jsonpGet(url){
   return new Promise((resolve,reject)=>{
     const cb = "__wpcb"+(++__wpN);
     const sc = document.createElement("script");
@@ -1022,11 +1032,13 @@ function wikiJSONP(title){
     const to = setTimeout(()=>{ if(done) return; done=true; cleanup(); reject(new Error("timeout")); }, 7000);
     window[cb] = d=>{ if(done) return; done=true; clearTimeout(to); cleanup(); resolve(d); };
     sc.onerror = ()=>{ if(done) return; done=true; clearTimeout(to); cleanup(); reject(new Error("network")); };
-    sc.src = "https://de.wikipedia.org/w/api.php?action=query&format=json&prop=extracts%7Cpageimages"+
-      "&exintro=1&explaintext=1&piprop=thumbnail&pithumbsize=320&redirects=1&titles="+
-      encodeURIComponent(title)+"&callback="+cb;
+    sc.src = url + "&callback=" + cb;
     document.head.appendChild(sc);
   });
+}
+function wikiJSONP(title){
+  return jsonpGet("https://de.wikipedia.org/w/api.php?action=query&format=json&prop=extracts%7Cpageimages"+
+    "&exintro=1&explaintext=1&piprop=thumbnail&pithumbsize=320&redirects=1&titles="+encodeURIComponent(title));
 }
 function wikiFirstPage(d){
   const pg = d && d.query && d.query.pages; if(!pg) return null;
@@ -1083,6 +1095,151 @@ async function loadWiki(card, host, btn){
     url: "https://de.wikipedia.org/wiki/"+encodeURIComponent(pg.title.replace(/ /g,"_")) };
   wikiCache.set(card.key, data); renderWiki(host, data); if(btn.parentNode) btn.remove();
 }
+/* ---------- Bilder-Quiz: Foto erkennen (opt-in, braucht Internet) ----------
+   Prüfungsnah: Man sieht die Pflanze und muss sie benennen – hier als Bild
+   statt in echt. Die Bilder sind das Artikelbild der deutschen Wikipedia
+   (meist ein Foto, gelegentlich eine botanische Tafel; JSONP wie die
+   Text-Anreicherung, kein fetch/XHR), die Bildrechte
+   fragen wir NACH der Antwort bei Wikimedia Commons nach und weisen sie aus.
+   Bewusst ein EIGENER Modus: Er lädt nichts beim Seitenaufbau, und ohne Netz
+   sagt er das klar – Karteikarten, Quiz, Tippen und Liste bleiben offline voll
+   nutzbar. */
+const LS_PHOTOS = LS_PREFIX+"photos";                 // gemerkte Bild-URLs (spart API-Abrufe)
+let photoStore = null, photoMisses = 0;
+function photoStoreLoad(){
+  if(photoStore) return photoStore;
+  try{ photoStore = JSON.parse(store.get(LS_PHOTOS)||"{}") || {}; }catch(e){ photoStore = {}; }
+  return photoStore;
+}
+function photoRemember(key, val){
+  const s = photoStoreLoad(); s[key] = val;
+  const ks = Object.keys(s);
+  if(ks.length > 1500) delete s[ks[0]];               // Deckel: älteste Einträge fallen raus
+  try{ store.set(LS_PHOTOS, JSON.stringify(s)); }catch(e){ /* Speicher voll – egal */ }
+}
+function wikiPage(d){                                  // erste Seite der Antwort (auch ohne extract)
+  const pg = d && d.query && d.query.pages; if(!pg) return null;
+  const k = Object.keys(pg)[0]; if(!k || k==="-1") return null;
+  const p = pg[k]; return (p && p.missing===undefined) ? p : null;
+}
+/* Verbreitungskarten, Diagramme und Wappen taugen nicht zum Erkennen. */
+function usablePhoto(file){
+  if(!file) return true;
+  if(/\.svg$/i.test(file)) return false;
+  return !/(map|karte|distribution|range|verbreitung|locator|diagram|chart|wappen|logo|signature)/i.test(file);
+}
+async function wikiPhoto(card){                        // → {thumb,title,file,url} | null
+  let answered = false;                                // kam überhaupt eine Antwort?
+  for(const t of wikiCandidates(card)){
+    let d;
+    try{
+      d = await jsonpGet("https://de.wikipedia.org/w/api.php?action=query&format=json"+
+        "&prop=pageimages&piprop=thumbnail%7Cname&pithumbsize=640&redirects=1&titles="+encodeURIComponent(t));
+    }catch(e){ continue; }                             // einzelner Fehlversuch – nächster Kandidat
+    answered = true;
+    const p = wikiPage(d);
+    if(p && p.thumbnail && p.thumbnail.source && usablePhoto(p.pageimage)){
+      return { thumb:p.thumbnail.source, title:p.title, file:p.pageimage||"",
+               url:"https://de.wikipedia.org/wiki/"+encodeURIComponent(p.title.replace(/ /g,"_")) };
+    }
+  }
+  if(!answered) throw new Error("network");            // gar keine Antwort → offline/blockiert
+  return null;                                         // beantwortet, aber ohne brauchbares Bild
+}
+let photoSource = wikiPhoto;                           // austauschbar (Tests laufen ohne Netz)
+async function photoFor(card){
+  const known = photoStoreLoad()[card.key];
+  if(known !== undefined) return known;                // null = sicher kein Bild
+  const p = await photoSource(card);                   // wirft bei Netzfehler
+  photoRemember(card.key, p);
+  return p;
+}
+/* Bildnachweis (Urheber + Lizenz) – erst nach der Antwort, damit die Frage nicht
+   verraten wird und die Anzeige nicht wartet. */
+async function photoCredit(file){
+  const d = await jsonpGet("https://commons.wikimedia.org/w/api.php?action=query&format=json"+
+    "&prop=imageinfo&iiprop=extmetadata&iiextmetadatafilter=Artist%7CLicenseShortName&titles=File:"+
+    encodeURIComponent(file));
+  const p = wikiPage(d), m = p && p.imageinfo && p.imageinfo[0] && p.imageinfo[0].extmetadata;
+  if(!m) return null;
+  const plain = v => v ? String(v.value).replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim() : "";
+  return { artist:plain(m.Artist), license:plain(m.LicenseShortName) };
+}
+function photoSrcLine(p){                              // Quellenzeile unter dem Bild (nach der Antwort)
+  const commons = p.file ? "https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(p.file) : p.url;
+  return `<div class="ph-src" id="phSrc">Bild: <a href="${esc(commons)}" target="_blank" rel="noopener">Wikimedia&nbsp;Commons</a>`+
+         ` · <a href="${esc(p.url)}" target="_blank" rel="noopener">Wikipedia – ${esc(p.title)}</a></div>`;
+}
+function photoNotice(html){
+  $("#stage").innerHTML = sessionBar() + `<div class="ph-note">${html}</div>`;
+  const stop=$("#btnStop"); if(stop) stop.onclick=finishSession;
+}
+async function renderPhoto(){
+  const c = current;
+  $("#stage").innerHTML = sessionBar() + `<div class="photobox"><div class="ph-load">Bild wird geladen …</div></div>
+    <div class="options" id="opts"></div><div class="feedback" id="fb"></div><div class="nav" id="nav"></div>`;
+  const stop=$("#btnStop"); if(stop) stop.onclick=finishSession;
+  let p=null, netFail=false;
+  try{ p = await photoFor(c); }catch(e){ netFail=true; }
+  if(current!==c) return;                              // Sitzung weitergelaufen (Abbruch/Weiter)
+  if(netFail){
+    photoNotice(`<b>Keine Verbindung.</b> Der Bilder-Quiz braucht Internet – die Bilder kommen von Wikipedia.
+      <div class="ph-actions"><button class="btn" id="phRetry">Erneut versuchen</button>
+      <button class="btn" id="phSkip">Diese Art überspringen</button></div>`);
+    $("#phRetry").onclick=()=>renderPhoto();
+    $("#phSkip").onclick=()=>advance();
+    return;
+  }
+  if(!p){                                              // kein brauchbares Bild → Art überspringen
+    photoMisses++;
+    if(photoMisses>=6){ photoNotice(`<b>Für diese Auswahl gibt es kaum Bilder.</b> Probier ein anderes Thema
+      oder einen anderen Modus – Karteikarten, Quiz und Tippen funktionieren immer.`); return; }
+    queue.splice(qi,1); sess.total=Math.max(sess.done, sess.total-1);
+    return nextCard();
+  }
+  photoMisses = 0;
+  const opts = shuffle([answerText(c), ...distractors(c,3)]);
+  $("#stage").querySelector(".photobox").innerHTML =
+    `<img class="ph-img" id="phImg" src="${esc(p.thumb)}" alt="Bild der gesuchten Pflanze">`;
+  const img=$("#phImg");
+  if(img) img.onerror=()=>{ const b=$("#stage").querySelector(".photobox");
+    if(b) b.innerHTML=`<div class="ph-load">Bild konnte nicht geladen werden.</div>`; };
+  const host=$("#opts"), letters=["A","B","C","D","E"];
+  opts.forEach((o,i)=>{
+    const b=el("button","opt"); b.innerHTML=`<span class="k">${letters[i]}</span><span>${esc(o)}</span>`;
+    b.onclick=()=>answerPhoto(b,o,p);
+    host.appendChild(b);
+  });
+  prefetchPhoto();                                     // nächstes Bild schon im Hintergrund holen
+}
+function prefetchPhoto(){
+  const nx = queue[qi+1];
+  if(nx && photoStoreLoad()[nx.key]===undefined) photoFor(nx).catch(()=>{});
+}
+function answerPhoto(btn, chosen, p){
+  const c=current, correct=answerText(c);
+  const ok = chosen.toLowerCase()===correct.toLowerCase();
+  document.querySelectorAll("#opts .opt").forEach(b=>{
+    b.disabled=true;
+    if(b.querySelector("span:last-child").textContent.toLowerCase()===correct.toLowerCase()) b.classList.add("correct");
+  });
+  if(!ok) btn.classList.add("wrong");
+  grade(c, ok?"good":"again"); if(ok) sess.correct++; else requeueCurrent();
+  $("#fb").innerHTML = (ok ? `<span class="good">Richtig!</span>` : `<span class="bad">Leider falsch.</span>`)+
+    ` <span class="sol">${esc(correct)}${c.de?" · "+esc(c.de):""}</span>`;
+  const box=$("#stage").querySelector(".photobox");    // Bildnachweis erst jetzt (verrät sonst die Lösung)
+  if(box && p){
+    box.insertAdjacentHTML("beforeend", photoSrcLine(p));
+    if(p.file) photoCredit(p.file).then(cr=>{
+      const el2=$("#phSrc");
+      if(el2 && cr && (cr.artist||cr.license))
+        el2.insertAdjacentHTML("beforeend", ` · ${esc([cr.artist,cr.license].filter(Boolean).join(", "))}`);
+    }).catch(()=>{});
+  }
+  const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
+  wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
+}
+
 let infoEl=null;
 function infoKey(e){ if(e.key==="Escape") closeInfo(); }
 function closeInfo(){ if(infoEl){ infoEl.remove(); infoEl=null; document.removeEventListener("keydown", infoKey); } }
@@ -1223,7 +1380,7 @@ function wire(){
     const ch = cm ? b64urlDec(cm[1]) : null;
     if(ch && ch.p && Array.isArray(ch.i) && ch.i.length && (typeof SEEDS!=="undefined" && SEEDS[ch.p])){
       pendingChallenge = ch; pid = ch.p;
-      if(ch.m==="quiz"||ch.m==="type") mode = ch.m;
+      if(ch.m==="quiz"||ch.m==="type"||ch.m==="photo") mode = ch.m;
     }
     $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.mode===mode));
     const parts = pid.match(/^(.*)_(gaertner|fachwerker)$/);
@@ -1244,6 +1401,11 @@ window.wikiCandidates=wikiCandidates;
 window.searchName=searchName;
 window.buildPrintList=buildPrintList;
 window.themeOf=themeOf;
+window.usablePhoto=usablePhoto;
+window.wikiPhoto=wikiPhoto;
+/* Bild-Quelle austauschbar + Bild-Cache leerbar: Die Tests laufen ohne Netz. */
+window.__setPhotoSource=fn=>{ photoSource = fn || wikiPhoto; };
+window.__clearPhotoCache=()=>{ photoStore={}; try{ store.set(LS_PHOTOS,"{}"); }catch(e){} };
 window.renderListControls=renderListControls;
 window.openFamilyInfo=openFamilyInfo;
 window.shareChallenge=shareChallenge;

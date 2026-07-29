@@ -85,7 +85,7 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
   Pflanze (der greifbarste bildlose Anker ist ihr **deutscher Name**) und nennt die
   **botanische Identität**: **Gattung, Art, Familie**. Genau diese Richtung üben alle
   Modi – kein verwirrendes Richtungs-Dropdown.
-- **Drei Lernmodi:**
+- **Fünf Lernmodi:**
   - **Karteikarten** mit **Spaced-Repetition (Leitner-Boxen 1–5).** **Vorne nur der
     deutsche Name**; nach dem Umdrehen zeigt die **Rückseite** den botanischen Namen
     (kursiv) und – klar beschriftet – **Gattung · Art · Familie** (mit deutschem
@@ -99,6 +99,15 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
   - **Tippen** – zum deutschen Namen den **botanischen Namen** selbst eingeben;
     tippfehlertolerant (kleine Abweichungen zählen als richtig), Gattung und Art werden
     getrennt geprüft.
+  - **Bilder** (zusätzlicher Modus, **braucht Internet**) – **die Pflanze am Bild
+    erkennen:** zu sehen ist nur ein Bild, sonst nichts; aus vier botanischen Namen ist
+    der richtige zu wählen. Das ist am nächsten an der Prüfung, wo die Pflanze vor einem
+    steht. Nach der Antwort erscheinen der deutsche Name und der **Bildnachweis**
+    (Urheber + Lizenz). Gezeigt wird das Artikelbild der deutschen Wikipedia (meist ein
+    Foto, gelegentlich eine botanische Zeichnung); geladen wird **erst beim Start des
+    Modus**. Ohne Netz sagt der Modus das klar – **die vier anderen Modi laufen
+    vollständig offline weiter**. Arten ohne brauchbares Bild werden übersprungen,
+    Verbreitungskarten und Diagramme aussortiert.
 - **Liste / Nachschlagen:** ein vierter Tab zeigt **alle** Arten des Profils –
   wahlweise **A–Z** (botanisch/deutsch), nach **Thema** oder nach botanischer
   **Familie** – und **durchsuchbar** (Name, Familie, Synonym; akzent-tolerant). Ein Klick auf eine Art öffnet direkt das Info-Modal

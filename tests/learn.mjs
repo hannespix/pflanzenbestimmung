@@ -210,6 +210,69 @@ async function main() {
   });
   assert(typed.good, "Tippen: korrekte Eingabe nicht als richtig gewertet");
 
+  // Bilder-Quiz: Foto erkennen. Läuft hier ohne Netz über eine eingehängte
+  // Bild-Quelle (im Betrieb liefert Wikipedia das Artikelbild per JSONP).
+  const PX = "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==";
+  const photo = await page.evaluate(async (PX) => {
+    __clearPhotoCache();
+    __setPhotoSource((card) => Promise.resolve({
+      thumb: PX, title: card.g + " " + card.a, file: "Test.jpg",
+      url: "https://de.wikipedia.org/wiki/Test",
+    }));
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();
+    const hint = document.querySelector("#stage").textContent;
+    startSession();
+    await new Promise((r) => setTimeout(r, 60));
+    const img = document.querySelector("#phImg");
+    const opts = [...document.querySelectorAll("#opts .opt")].map((b) => b.querySelector("span:last-child").textContent);
+    const noName = !/wikipedia|Test\.jpg/i.test(document.querySelector("#stage").textContent);
+    const correct = answerText(current).toLowerCase();
+    const before = sess.correct;
+    const btn = [...document.querySelectorAll("#opts .opt")]
+      .find((b) => b.querySelector("span:last-child").textContent.toLowerCase() === correct);
+    if (btn) btn.click();
+    const fb = (document.querySelector("#fb") || {}).innerHTML || "";
+    return { hintOnline: /braucht Internet/i.test(hint), hasImg: !!img, src: img && img.getAttribute("src"),
+      nOpts: opts.length, hasCorrectOpt: !!btn, uniq: new Set(opts).size, noName,
+      good: /Richtig!/.test(fb), scored: sess.correct === before + 1,
+      credit: !!document.querySelector("#phSrc"), weiter: !!document.querySelector("#wt") };
+  }, PX);
+  assert(photo.hintOnline, "Bilder-Quiz: Startansicht weist nicht auf die Internet-Voraussetzung hin");
+  assert(photo.hasImg && photo.src === PX, "Bilder-Quiz: kein Bild angezeigt");
+  assert(photo.nOpts === 4 && photo.uniq === 4 && photo.hasCorrectOpt,
+    "Bilder-Quiz: vier verschiedene Optionen inkl. der richtigen erwartet: " + JSON.stringify(photo));
+  assert(photo.noName, "Bilder-Quiz: die Frage darf außer dem Bild nichts verraten");
+  assert(photo.good && photo.scored, "Bilder-Quiz: richtige Antwort nicht gewertet");
+  assert(photo.credit && photo.weiter, "Bilder-Quiz: Bildnachweis/Weiter-Knopf fehlen nach der Antwort");
+
+  // Bilder-Quiz ohne Netz: klare Ansage statt kaputter Ansicht
+  const photoOff = await page.evaluate(async () => {
+    __clearPhotoCache();
+    __setPhotoSource(() => Promise.reject(new Error("network")));
+    startSession();
+    await new Promise((r) => setTimeout(r, 60));
+    const txt = document.querySelector("#stage").textContent;
+    return { note: /Keine Verbindung/i.test(txt), retry: !!document.querySelector("#phRetry") };
+  });
+  assert(photoOff.note && photoOff.retry,
+    "Bilder-Quiz offline: Hinweis + »Erneut versuchen« erwartet: " + JSON.stringify(photoOff));
+
+  // Arten ohne brauchbares Foto (z. B. Verbreitungskarte) werden übersprungen
+  const photoSkip = await page.evaluate(async () => {
+    const bad = ["Quercus_robur_range_map.svg", "Verbreitung_Fagus.png", "Wappen_Baden.svg"];
+    const good = ["Quercus_robur_Blatt.jpg", "Rosa-canina-Bluete.JPG"];
+    __clearPhotoCache(); __setPhotoSource(() => Promise.resolve(null));
+    startSession();
+    await new Promise((r) => setTimeout(r, 60));
+    const skipped = document.querySelector("#stage").textContent;
+    __setPhotoSource(null);   // wieder die echte Quelle (wird hier nicht mehr aufgerufen)
+    return { filterBad: bad.every((f) => !usablePhoto(f)), filterGood: good.every((f) => usablePhoto(f)),
+      note: /kaum Bilder/i.test(skipped) };
+  });
+  assert(photoSkip.filterBad && photoSkip.filterGood,
+    "Bilder-Quiz: Karten/Diagramme müssen aussortiert, Fotos behalten werden: " + JSON.stringify(photoSkip));
+  assert(photoSkip.note, "Bilder-Quiz: ohne verfügbare Bilder fehlt der erklärende Hinweis");
+
   // Liste / Nachschlagen: kategorisiert, durchsuchbar, Klick öffnet Info-Modal
   const list = await page.evaluate(() => {
     document.querySelector('#modeTabs button[data-mode="list"]').click();
@@ -612,7 +675,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Vergleich/Sieg + Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer, Mobile ohne Overflow, Quiz, Tippen, Fortschritt-Persistenz.");
+  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Vergleich/Sieg + Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer, Mobile ohne Overflow, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz.");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
