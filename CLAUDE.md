@@ -662,6 +662,29 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       nicht sinnvoll«); sie ist jetzt **Option** mit prüfungsnahem Standard.
       Art→Familie bleibt bewusst draußen.
 
+- [x] **Bilder-Quiz: drei Antwortarten, inkl. »wie in der Prüfung«** (`#phAnswer`,
+      `photoAnswer` = `mc` | `type` | `exam`, gemerkt in `pflanzenlernen.phanswer`;
+      Auswahl bleibt Standard). `renderPhoto()` rendert nur noch Bild + Rahmen und
+      delegiert an `renderPhotoChoice()` / `renderPhotoType()` / `renderPhotoExam()`;
+      gemeinsamer Abschluss in `finishPhotoAnswer(ok,g,p,solHTML)` und
+      `photoRevealCredit(p)` (Bildnachweis weiterhin erst nach der Antwort).
+      **»wie in der Prüfung«:** ein Eingabefeld je bewerteter Spalte, Beschriftung,
+      Reihenfolge und **Punkte aus `PRINT_COLS`** (um einen numerischen Punktwert
+      erweitert – dieselbe Quelle wie Druckliste und Prüfungsbogen, also je
+      Fachrichtung fw/gala/prod korrekt), Enter springt ins nächste Feld, feldweise
+      ✓/✗ mit richtiger Antwort und **Teilpunkte** (»7 von 10 Punkten«). Leitner:
+      alles richtig → `good`, teilweise → `hard`, nichts → `again`; die
+      Trefferquote der Sitzung zählt nur volle Treffer. **Felder selbst bestimmen**
+      (`#examFieldsRow`, `examFields`, Standard = Bogen des Profils, gespeichert je
+      Profil unter `pflanzenlernen.examfields.<profil>`; mindestens ein Feld).
+      Prüfung je Feld über `fieldOk()`: Gattung/Art tippfehlertolerant (Art auch als
+      Präfix), deutscher Name über `checkDeName()` (jede geführte Schreibweise,
+      Bindestriche egal), **Familie lateinisch ODER deutsch**. Die Abfragerichtung
+      wird bei `exam` ausgeblendet (dann werden ohnehin alle Felder gefragt).
+      `tests/learn.mjs` prüft Tippen-Variante, Prüfungsfelder (Bogen-Reihenfolge,
+      Beschriftung/Punkte, ✓✓✓✗, 7 von 10, Teilpunkt-Meldung), Abwählen eines Feldes,
+      den Fachwerker-Bogen (Dt. Name zuerst, 0,5 P.) und `fieldOk()` im Detail.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei

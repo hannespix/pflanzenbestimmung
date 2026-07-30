@@ -79,6 +79,30 @@ input,select{font-family:inherit; color:inherit}
   border-radius:8px; background:var(--surface); font-size:14px; line-height:1.55; color:var(--ink-soft); text-align:center}
 .ph-actions{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:12px}
 
+/* Bilder-Quiz »wie in der Prüfung«: ein Feld je bewerteter Spalte + Punkte */
+.examform{display:flex; flex-direction:column; gap:9px; max-width:520px; margin:6px auto 0}
+.exrow{display:grid; grid-template-columns:minmax(120px,170px) 1fr auto; align-items:center; gap:10px}
+.exlab{font-size:13px; color:var(--ink-soft); display:flex; align-items:baseline; gap:6px}
+.expts{font-family:var(--mono); font-size:10.5px; color:var(--sepia); white-space:nowrap}
+.exrow input{border:1.3px solid var(--rule-strong); border-radius:5px; padding:9px 11px; font-size:15px;
+  background:#fff; width:100%; min-width:0}
+.exrow input:focus{border-color:var(--green); outline:none}
+.exrow input.ok{border-color:var(--green); background:var(--green-tint)}
+.exrow input.no{border-color:var(--madder-soft); background:var(--madder-tint)}
+.exmark{font-size:12px; min-width:1.2em; text-align:left; line-height:1.3}
+.ex-ok{color:var(--green); font-weight:700} .ex-no{color:var(--madder); font-weight:700}
+.ex-sol{color:var(--ink-soft); font-size:12px}
+/* Selbst bestimmen, welche Felder abgefragt werden */
+.exfields{display:flex; flex-wrap:wrap; align-items:center; gap:7px; padding:0 13px 12px}
+.exf-lab{font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia)}
+.exf{display:inline-flex; align-items:center; gap:5px; border:1px solid var(--rule-strong); border-radius:999px;
+  padding:4px 10px; font-size:12.5px; background:var(--surface); cursor:pointer}
+.exf.on{background:var(--green-tint); border-color:var(--green); color:var(--green-deep)}
+.exf input{margin:0; accent-color:var(--green)}
+.exf-p{font-family:var(--mono); font-size:10px; color:var(--sepia)}
+.exf-hint{font-size:11px; color:var(--ink-faint)}
+@media (max-width:640px){ .exrow{grid-template-columns:1fr; gap:4px} .exlab{gap:8px} }
+
 /* Lernduell: eingehende Herausforderung, Teilen-Block, Vergleich */
 .duelbanner{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:14px; padding:13px 16px;
   background:linear-gradient(180deg,var(--green-tint),var(--surface)); border:1px solid var(--green);
@@ -447,12 +471,14 @@ main{margin-top:22px}
         <span class="opts-caret" aria-hidden="true">▾</span>
       </summary>
       <div class="setrow">
+        <div class="field" id="phAnswerField" hidden><label for="phAnswer">Antwort</label><select id="phAnswer" class="mini" title="Wie im Bilder-Quiz geantwortet wird: aus vier Namen auswählen, den Namen selbst tippen – oder »wie in der Prüfung« mit einem Feld je bewerteter Spalte (Gattung, Art, Familie, Deutscher Name) samt Punkten."></select></div>
         <div class="field" id="dirField"><label for="dir">Abfrage</label><select id="dir" class="mini" title="Was gefragt wird: deutscher Name → botanischer Name (wie in der Prüfung) oder umgekehrt. Im Bilder-Quiz: Bild → botanischer bzw. deutscher Name."></select></div>
         <div class="field"><label for="cat">Auswahl</label><select id="cat" class="mini" title="Lernstoff eingrenzen: alle Arten, ein Thema (z. B. große Laubbäume, Bodendecker, Steinobst) oder eine Pflanzenfamilie (z. B. Rosaceae). Die Zahl in Klammern nennt die Artenzahl."><option value="">alle</option></select></div>
         <label class="switch" title="Nur die für die Zwischenprüfung (ZP) markierten Arten üben."><input type="checkbox" id="onlyzp"><span class="track"></span>nur ZP-relevant</label>
         <label class="switch" id="examOnlyWrap" hidden title="Nur den Prüfungsstoff der Fachwerker-Abschlussprüfung zeigen: Deutscher Name, Gattung, Art. Familie und Synonyme werden in Karteikarten und Liste ausgeblendet – weniger Lernstoff, nur das Geprüfte. Die Info-Links (ℹ) bleiben."><input type="checkbox" id="examOnly"><span class="track"></span>nur Prüfungsstoff</label>
         <div class="field"><label for="sessLen">Karten/Sitzung</label><input id="sessLen" class="mini" type="number" min="5" max="100" value="20" title="Wie viele Karten (5–100) eine Sitzung umfasst. Neue und fällige Karten kommen zuerst."></div>
       </div>
+      <div class="exfields" id="examFieldsRow" hidden></div>
     </details>
     <div class="startrow" id="startRow">
       <button class="btn primary big" id="btnStart" title="Neue Lernsitzung mit den aktuellen Einstellungen starten">Sitzung starten</button>
@@ -507,8 +533,12 @@ main{margin-top:22px}
       <dt>Tippen</dt><dd>Zum deutschen Namen den <b>botanischen Namen</b> selbst eingeben –
         <b>tippfehler-tolerant</b>; Gattung und Art werden getrennt geprüft.</dd>
       <dt>Bilder</dt><dd><b>Pflanze am Bild erkennen:</b> Du siehst nur ein <b>Bild der Pflanze</b>, sonst
-        nichts, und wählst aus vier botanischen Namen den richtigen – am nächsten an der Prüfung, wo die
-        Pflanze vor dir steht. Nach der Antwort erscheinen der deutsche Name und der <b>Bildnachweis</b>.
+        nichts – am nächsten an der Prüfung, wo die Pflanze vor dir steht. <b>Wie du antwortest, bestimmst du
+        unter »Optionen · Antwort«:</b> aus <b>vier Namen auswählen</b>, den Namen <b>selbst tippen</b> oder
+        <b>»wie in der Prüfung«</b> – dann erscheint unter dem Bild für jede bewertete Spalte ein eigenes Feld
+        (Gattung, Art, Familie, Deutscher Name) mit den <b>Punkten deiner Fachrichtung</b>; du bekommst
+        <b>Teilpunkte</b> und siehst feldweise, was gestimmt hat. Nach der Antwort erscheinen der deutsche
+        Name und der <b>Bildnachweis</b>.
         <b>Dieser Modus braucht Internet</b>: Gezeigt wird das Artikelbild der deutschen Wikipedia (meist ein
         Foto, gelegentlich eine botanische Zeichnung); geladen wird erst, wenn du den Modus startest. Ohne
         Netz sagt der Modus das klar – <b>alle anderen Modi laufen vollständig offline weiter</b>. Arten ohne
@@ -531,6 +561,13 @@ main{margin-top:22px}
         und der Standard; <b>botanisch → deutscher Name</b> übt den umgekehrten Weg. Im <b>Bilder</b>-Modus
         stehen <b>Bild → botanischer Name</b> und <b>Bild → deutscher Name</b> zur Wahl. Beim Tippen zählt
         jede in der Liste geführte Schreibweise (auch ohne Bindestrich).</dd>
+      <dt>Antwort</dt><dd>Nur im <b>Bilder</b>-Modus: <b>Auswahl (4 Namen)</b>, <b>Namen tippen</b> oder
+        <b>wie in der Prüfung</b>. Bei »wie in der Prüfung« wird pro bewerteter Spalte ein Feld abgefragt –
+        die Beschriftungen und Punkte sind die deiner Fachrichtung (Fachwerker: Deutscher Name 3 / Gattung 0,5
+        / Art 0,5 · GaLaBau: Gattung 1 / Art 1 / Deutscher Name 2 · Produktion: Gattung 3 / Art 3 / Familie 1
+        / Deutscher Name 3). Über die <b>Felder</b>-Schalter darunter bestimmst du selbst, was abgefragt wird;
+        die Auswahl wird je Profil gemerkt. Bei der Familie zählt der <b>lateinische oder der deutsche</b>
+        Name, und mit <b>Enter</b> springst du ins nächste Feld.</dd>
       <dt>Auswahl · nur ZP</dt><dd>Grenzt den Lernstoff ein: <b>alle Arten</b>, ein <b>Thema</b> oder eine
         <b>Pflanzenfamilie</b> (die Zahl in Klammern nennt die Artenzahl) – dazu optional nur die für die
         Zwischenprüfung markierten Arten. Die Themen sind die Lerngruppen aus dem Unterricht: Gehölze nach

@@ -245,6 +245,109 @@ async function main() {
   assert(photo.good && photo.scored, "Bilder-Quiz: richtige Antwort nicht gewertet");
   assert(photo.credit && photo.weiter, "Bilder-Quiz: Bildnachweis/Weiter-Knopf fehlen nach der Antwort");
 
+  // Bilder-Quiz, Antwort »Namen tippen«: Eingabefeld direkt unter dem Bild
+  const phType = await page.evaluate(async (PX) => {
+    __clearPhotoCache();
+    __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g, file: "T.jpg", url: "https://x/y" }));
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();
+    const set = (id, v) => { const e = document.querySelector(id); e.value = v; e.dispatchEvent(new Event("change")); };
+    set("#phAnswer", "type"); set("#dir", "img2bot");
+    startSession();
+    await new Promise((r) => setTimeout(r, 60));
+    const hasImg = !!document.querySelector("#phImg"), hasInput = !!document.querySelector("#typeIn");
+    const noOpts = document.querySelectorAll("#opts .opt").length === 0;
+    document.querySelector("#typeIn").value = (current.g + " " + current.a).trim();
+    document.querySelector("#chk").click();
+    const fb = document.querySelector("#fb").innerHTML;
+    return { hasImg, hasInput, noOpts, good: /Richtig!/.test(fb), credit: !!document.querySelector("#phSrc") };
+  }, PX);
+  assert(phType.hasImg && phType.hasInput && phType.noOpts,
+    "Bilder-Quiz »tippen«: Eingabefeld unter dem Bild statt Auswahl erwartet: " + JSON.stringify(phType));
+  assert(phType.good && phType.credit, "Bilder-Quiz »tippen«: Wertung/Bildnachweis fehlen: " + JSON.stringify(phType));
+
+  // Bilder-Quiz, Antwort »wie in der Prüfung«: ein Feld je bewerteter Spalte, Punkte
+  const phExam = await page.evaluate(async (PX) => {
+    __clearPhotoCache();
+    __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g, file: "T.jpg", url: "https://x/y" }));
+    const set = (id, v) => { const e = document.querySelector(id); e.value = v; e.dispatchEvent(new Event("change")); };
+    set("#phAnswer", "exam");
+    const dirHidden = document.querySelector("#dirField").hidden;   // Richtung dann gegenstandslos
+    const fieldsShown = !document.querySelector("#examFieldsRow").hidden;
+    startSession();
+    await new Promise((r) => setTimeout(r, 60));
+    const keys = [...document.querySelectorAll("#examForm input")].map((i) => i.dataset.k);
+    const labels = [...document.querySelectorAll("#examForm .exlab")].map((e) => e.textContent.replace(/\s+/g, " ").trim());
+    const c = current;
+    // Gattung/Art/Familie richtig, deutschen Namen absichtlich falsch -> Teilpunkte
+    const fill = (k, v) => { const i = document.querySelector("#ex_" + k); if (i) i.value = v; };
+    fill("g", c.g); fill("a", c.a); fill("fam", (c.fam || "").split("/")[0]); fill("de", "Quatschname");
+    document.querySelector("#chk").click();
+    const fb = document.querySelector("#fb").textContent;
+    const marks = [...document.querySelectorAll("#examForm .exmark")].map((e) => e.textContent.trim().charAt(0));
+    return { dirHidden, fieldsShown, keys, labels, fb, marks, partial: /Teilweise/.test(fb),
+      pts: (fb.match(/([\d,]+) von ([\d,]+) Punkten/) || []).slice(1) };
+  }, PX);
+  assert(phExam.fieldsShown && phExam.dirHidden,
+    "»wie in der Prüfung«: Feldwahl muss erscheinen, die Abfragerichtung entfallen: " + JSON.stringify(phExam));
+  assert(phExam.keys.join() === "g,a,fam,de",
+    "Produktions-Profil braucht Gattung, Art, Familie, Deutscher Name (Bogen-Reihenfolge): " + JSON.stringify(phExam.keys));
+  assert(phExam.labels.some((l) => /Gattungsname\s*3 P\./.test(l)) && phExam.labels.some((l) => /Familienname\s*1 P\./.test(l)),
+    "Feldbeschriftung/Punkte müssen dem Bogen entsprechen: " + JSON.stringify(phExam.labels));
+  assert(phExam.marks.join("") === "✓✓✓✗",
+    "Feldweise Bewertung erwartet (3 richtig, dt. Name falsch): " + JSON.stringify(phExam.marks));
+  assert(phExam.partial && phExam.pts[0] === "7" && phExam.pts[1] === "10",
+    "Teilpunkte erwartet: 7 von 10 Punkten, war " + JSON.stringify(phExam.pts) + " / " + phExam.fb);
+
+  // Prüfungsfelder selbst bestimmen (Familie abwählen) + Fachwerker-Bogen
+  const phFields = await page.evaluate(async (PX) => {
+    __clearPhotoCache();
+    __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g, file: "T.jpg", url: "https://x/y" }));
+    const cb = document.querySelector('#examFieldsRow input[data-k="fam"]');
+    cb.checked = false; cb.dispatchEvent(new Event("change"));
+    startSession();
+    await new Promise((r) => setTimeout(r, 60));
+    const without = [...document.querySelectorAll("#examForm input")].map((i) => i.dataset.k);
+    // Fachwerker: eigener Bogen (Dt. Name zuerst, Gattung/Art je 0,5 Punkte)
+    document.querySelector("#nivSelect").value = "fachwerker";
+    document.querySelector("#nivSelect").dispatchEvent(new Event("change"));
+    startSession();
+    await new Promise((r) => setTimeout(r, 60));
+    const fwKeys = [...document.querySelectorAll("#examForm input")].map((i) => i.dataset.k);
+    const fwLabels = [...document.querySelectorAll("#examForm .exlab")].map((e) => e.textContent.replace(/\s+/g, " ").trim());
+    document.querySelector("#nivSelect").value = "gaertner";
+    document.querySelector("#nivSelect").dispatchEvent(new Event("change"));
+    __setPhotoSource(null);
+    return { without, fwKeys, fwLabels };
+  }, PX);
+  assert(phFields.without.join() === "g,a,de",
+    "Abgewähltes Feld darf nicht mehr abgefragt werden: " + JSON.stringify(phFields.without));
+  assert(phFields.fwKeys.join() === "de,g,a" && phFields.fwLabels.some((l) => /0,5 P\./.test(l)),
+    "Fachwerker-Bogen erwartet (Dt. Name zuerst, 0,5 Punkte): " + JSON.stringify(phFields));
+
+  // Feldprüfung: tippfehlertolerant, Familie lateinisch ODER deutsch
+  const fchk = await page.evaluate(() => {
+    const c = { g: "Quercus", a: "robur", fam: "Fagaceae", de: "Stiel-Eiche, Deutsche Eiche" };
+    return {
+      gTypo: fieldOk("g", "Quercuss", c), gWrong: fieldOk("g", "Fagus", c),
+      aPrefix: fieldOk("a", "rob", c),
+      famLat: fieldOk("fam", "Fagaceae", c), famDe: fieldOk("fam", "Buchengewächse", c),
+      famWrong: fieldOk("fam", "Rosaceae", c),
+      deSecond: fieldOk("de", "Deutsche Eiche", c), deNoHyphen: fieldOk("de", "Stieleiche", c),
+      empty: fieldOk("g", "  ", c),
+    };
+  });
+  assert(fchk.gTypo && !fchk.gWrong && fchk.aPrefix,
+    "Gattung/Art: Tippfehler tolerieren, Falsches ablehnen: " + JSON.stringify(fchk));
+  assert(fchk.famLat && fchk.famDe && !fchk.famWrong,
+    "Familie muss lateinisch UND deutsch zählen: " + JSON.stringify(fchk));
+  assert(fchk.deSecond && fchk.deNoHyphen && !fchk.empty,
+    "Deutscher Name: Zweitname und Schreibung ohne Bindestrich müssen zählen: " + JSON.stringify(fchk));
+
+  // zurück auf Auswahl, damit die folgenden Bilder-Prüfungen unverändert greifen
+  await page.evaluate(() => {
+    const e = document.querySelector("#phAnswer"); e.value = "mc"; e.dispatchEvent(new Event("change"));
+  });
+
   // Bilder-Quiz ohne Netz: klare Ansage statt kaputter Ansicht
   const photoOff = await page.evaluate(async () => {
     __clearPhotoCache();
@@ -778,7 +881,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Vergleich/Sieg + Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer, Mobile ohne Overflow, Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz.");
+  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Vergleich/Sieg + Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer, Mobile ohne Overflow, Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz.");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
