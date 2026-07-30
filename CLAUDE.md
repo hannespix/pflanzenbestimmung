@@ -313,8 +313,11 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
 - [x] Ausführliche Hilfe (`#helpPanel`, Button »Hilfe«) mit Kurzanleitung und
       Erklärung jeder Funktion; detaillierte `title`-Tooltips auf Buttons/Feldern.
 - [x] Sicherung enthält Prüfungen und Einstellungen (`backupData`/`applyBackup`).
-- [x] Automatischer Deploy nach jedem Merge (früher GitHub Pages, jetzt eigener
-      Webspace per SFTP: `.github/workflows/deploy.yml`).
+- [x] Automatischer Deploy nach jedem Merge auf **zwei Kanälen**
+      (`.github/workflows/deploy.yml`, zwei unabhängige Jobs): eigener Webspace per
+      SFTP (Live + PR-Vorschau) **und** GitHub Pages als Zweitadresse
+      (`hannespix.github.io/pflanzenbestimmung/`, nur `main`) – weil manche
+      Firmennetze junge Domains sperren.
 - [x] Puppeteer-Smoke-Test (`tests/smoke.mjs`) und CI-Integration (`build.yml`).
 - [x] `localStorage`-Ausfall-Fallback (In-Memory) für Kiosk-/Sandbox-Profile.
 - [x] Konverter-Ladefehler behoben (SheetJS-Standalone via require lieferte unter

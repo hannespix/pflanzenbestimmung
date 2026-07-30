@@ -1,11 +1,18 @@
 name: deploy
 
-# Veröffentlicht das Werkzeug auf dem eigenen Webspace (pflanze-bw.de).
+# Veröffentlicht das Werkzeug auf ZWEI Kanälen – beide aus demselben Build:
+#   1. eigener Webspace  → https://pflanze-bw.de            (Job »deploy«)
+#   2. GitHub Pages      → https://<user>.github.io/<repo>/ (Job »pages«)
+# Der Pages-Kanal bleibt als Zweitadresse bestehen, weil junge Domains in manchen
+# Firmennetzen geblockt werden – github.io ist dort erreichbar. Die beiden Jobs
+# laufen unabhängig: fällt einer aus, veröffentlicht der andere trotzdem.
 #
 # Zwei Auslöser:
-#   • Push auf main (also nach jedem Merge) → LIVE ins Web-Wurzelverzeichnis
+#   • Push auf main (also nach jedem Merge) → LIVE ins Web-Wurzelverzeichnis + Pages
 #   • Pull Request                          → VORSCHAU unter vorschau/pr-<Nummer>/
 # So überschreibt eine noch nicht gemergte Änderung nie die veröffentlichte Seite.
+# Pages hat nur EINE Fassung und bekommt deshalb nur den Stand von main; per
+# »Run workflow« lässt sich ausnahmsweise auch ein Zweig dorthin stellen.
 #
 # Übertragen wird per SFTP (Port 22, verschlüsselt) – nicht per Klartext-FTP.
 # Nötig ist genau EIN Repository-Secret:  DEPLOY_PASSWORD
@@ -27,6 +34,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ── Kanal 1: eigener Webspace (Live + PR-Vorschau) ────────────────────────
   deploy:
     runs-on: ubuntu-latest
     # Forks bekommen keine Secrets – dort läuft nur der Workflow »build«.
@@ -167,3 +175,60 @@ jobs:
             echo "### Live veröffentlicht" >> "$GITHUB_STEP_SUMMARY"
             echo "https://pflanze-bw.de/" >> "$GITHUB_STEP_SUMMARY"
           fi
+
+  # ── Kanal 2: GitHub Pages (Zweitadresse für Netze, die neue Domains blocken) ──
+  # Unabhängig vom Webspace-Job: braucht kein Secret, läuft auch dann, wenn der
+  # SFTP-Upload scheitert. Pull Requests bleiben außen vor – Pages hat nur eine
+  # Fassung, Vorschauen liegen auf dem Webspace.
+  pages:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build (Single-File HTML + PWA-Dateien)
+        run: python3 build.py
+
+      - name: Offline-Check aller vier Seiten
+        run: |
+          for f in index pflanzenkenntnis pflanzen-lernen rechtliches; do
+            python3 tools/check_offline.py "dist/$f.html"
+          done
+
+      - name: Zu veröffentlichende Dateien sammeln
+        run: |
+          mkdir -p _site
+          cp dist/index.html dist/pflanzenkenntnis.html dist/pflanzen-lernen.html dist/rechtliches.html _site/
+          # PWA: Manifest, Service Worker, Icons
+          cp dist/manifest.webmanifest dist/sw.js _site/
+          cp dist/icon-192.png dist/icon-512.png dist/icon-maskable.png dist/apple-touch-icon.png _site/
+          ls -l _site
+
+      # enablement: true schaltet Pages beim ersten Lauf selbst frei (Quelle:
+      # »GitHub Actions«), falls es in den Repository-Einstellungen noch aus ist.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Ergebnis
+        run: |
+          echo "### Zusätzlich auf GitHub Pages veröffentlicht" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.deployment.outputs.page_url }}" >> "$GITHUB_STEP_SUMMARY"

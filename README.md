@@ -183,18 +183,30 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
 aktuellen Stand automatisch per **SFTP** auf den eigenen Webspace. Pull Requests
 werden zusätzlich als **Vorschau** unter `…/vorschau/pr-<Nummer>/` veröffentlicht, so
 dass die Live-Seite erst beim Merge wechselt (Einrichtung siehe *Deployment* unten).
+**Zweitadresse:** <https://hannespix.github.io/pflanzenbestimmung/> — derselbe Stand
+liegt parallel auf GitHub Pages, weil manche Firmennetze junge Domains sperren.
 Die **Startseite** verzweigt zu *Lernen* und *Prüfen*; die
 Werkzeuge liegen unter `…/pflanzenkenntnis.html` und `…/pflanzen-lernen.html` und
 sind zusätzlich direkt untereinander verlinkt.
 
-### Deployment (eigener Webspace)
+### Deployment (eigener Webspace **und** GitHub Pages)
 
-Der Workflow `.github/workflows/deploy.yml` baut, prüft und lädt hoch:
+Der Workflow `.github/workflows/deploy.yml` baut, prüft und veröffentlicht auf **zwei
+Kanälen** – beide aus demselben Build, in zwei unabhängigen Jobs (fällt einer aus,
+veröffentlicht der andere trotzdem):
 
-| Auslöser | Ziel |
-|---|---|
-| Push auf `main` (Merge) | Live in das Web-Wurzelverzeichnis |
-| Pull Request | Vorschau unter `vorschau/pr-<Nummer>/` |
+| Auslöser | Job `deploy` (Webspace) | Job `pages` (GitHub Pages) |
+|---|---|---|
+| Push auf `main` (Merge) | Live in das Web-Wurzelverzeichnis | Live auf `…github.io/pflanzenbestimmung/` |
+| Pull Request | Vorschau unter `vorschau/pr-<Nummer>/` | — (Pages hat nur eine Fassung) |
+| *Run workflow* (manuell) | wie Push | wie Push – auch aus einem Zweig |
+
+**Warum beides?** In manchen Firmennetzen werden neu registrierte Domains gesperrt;
+die `github.io`-Adresse bleibt dort erreichbar und dient als Zweitweg zum Ansehen.
+Der Pages-Job braucht **kein Secret** – nur die Repository-Berechtigung, die der
+Workflow selbst setzt (`pages: write`, `id-token: write`). Steht die Pages-Quelle
+noch nicht auf *GitHub Actions*, schaltet `actions/configure-pages` sie beim ersten
+Lauf selbst frei (Repository → *Settings* → *Pages* → Source: **GitHub Actions**).
 
 **Einmalig einzurichten** — Repository → *Settings* → *Secrets and variables* → *Actions*:
 
