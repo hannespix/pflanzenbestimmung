@@ -738,9 +738,10 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       bleiben unberührt. Konfiguration: **ein** Secret `DEPLOY_PASSWORD`, optional die
       Variablen `DEPLOY_HOST`/`USER`/`PORT`/`PATH`/`PROTO`/`TLS_VERIFY` (Vorgaben
       s179.goserver.host · web69 · 22 · . · sftp · yes). **Datenschutzseite angepasst:**
-      Hosting nicht mehr GitHub Pages, sondern eigener Webspace – der **Name des
-      Hosting-Anbieters ist als `<mark>`-Lücke offen** und muss vor dem Livegang
-      eingetragen werden.
+      Hosting nicht mehr GitHub Pages, sondern eigener Webspace bei der
+      **webgo GmbH** (Wendenstraße 8–12, 20097 Hamburg; s179.goserver.host gehört
+      webgo), mit Link auf deren Datenschutzerklärung und Hinweis auf den
+      AV-Vertrag nach Art. 28 DSGVO.
 
 ## Offene Aufgaben (TODO)
 
