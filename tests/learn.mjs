@@ -178,13 +178,14 @@ async function main() {
   assert(info.hasLoad, "Info-Modal: »Online-Infos laden«-Knopf fehlt");
   assert(info.closed, "Info-Modal schließt nicht");
 
-  // Wikipedia-Auflösung: Sorten-/Gruppen-Eintrag findet das reine Binom, NIE die bloße Gattung
-  const wc = await page.evaluate(() => {
-    const c = allCards.find((x) => /^beta$/i.test(x.g)) || { g: "Beta", a: "vulgaris Conditiva-Grp.", de: "Rote Bete" };
-    return { name: (c.g + " " + c.a).trim(), cands: wikiCandidates(c) };
-  });
-  assert(wc.cands.some((t) => /^beta vulgaris$/i.test(t)), "Wiki-Kandidaten müssen das reine Binom »Beta vulgaris« enthalten (" + wc.name + " → " + JSON.stringify(wc.cands) + ")");
-  assert(!wc.cands.some((t) => /^beta$/i.test(t)), "Wiki-Kandidaten dürfen NICHT die bloße Gattung »Beta« enthalten (griech. Buchstabe)");
+  // Wikipedia-Auflösung: Sorten-GRUPPE (kein Rang var./ssp.) findet das reine Binom,
+  // NIE die bloße Gattung (»Beta« = griech. Buchstabe). Unterarten dagegen s. u.
+  const wc = await page.evaluate(() =>
+    wikiCandidates({ g: "Beta", a: "vulgaris Conditiva-Grp.", de: "Rote Bete" }));
+  assert(wc.some((t) => /^beta vulgaris$/i.test(t)),
+    "Wiki-Kandidaten müssen bei einer Sorten-Gruppe das reine Binom »Beta vulgaris« enthalten: " + JSON.stringify(wc));
+  assert(!wc.some((t) => /^beta$/i.test(t)),
+    "Wiki-Kandidaten dürfen NICHT die bloße Gattung »Beta« enthalten (griech. Buchstabe): " + JSON.stringify(wc));
 
   // Granularität: Wikipedia FEIN (voller Name), andere Quellen GROB (reines Binom)
   const gran = await page.evaluate(() => {
@@ -589,6 +590,30 @@ async function main() {
   assert(zuordnung.salbei === null, "Bildzuordnung: Artikel ohne Gattungsbezug (Homonym) wird trotzdem genommen");
   assert(zuordnung.illuKoehler && !zuordnung.illuFoto,
     "Bildzuordnung: alte Tafeln (Köhler) werden nicht als solche erkannt: " + JSON.stringify(zuordnung));
+
+  // Wikipedia-Vorschau: bei ANDERER Unterart darf nicht die Elternart erscheinen
+  // (»Brassica napus« = Raps, gesucht ist die Steckrübe ssp. rapifera). Offline –
+  // nur die Kandidatenliste/Titelbildung, kein Netzabruf.
+  const wikiCand = await page.evaluate(() => {
+    const steck = { g: "Brassica", a: "napus ssp. rapifera", de: "Kohl- / Steck-Rübe" };
+    const raps  = { g: "Brassica", a: "napus", de: "Raps" };
+    const auto  = { g: "Cornus", a: "kousa subsp. kousa", de: "Japanischer Blumen-Hartriegel" };
+    const low = (a) => a.map((x) => x.toLowerCase());
+    return {
+      steck: wikiCandidates(steck), steckTitles: deArticleTitles(steck),
+      steckHasBinom: low(wikiCandidates(steck)).includes("brassica napus"),
+      raps0: wikiCandidates(raps)[0].toLowerCase(),
+      autoHasBinom: low(wikiCandidates(auto)).includes("cornus kousa"),
+    };
+  });
+  assert(wikiCand.steck.includes("Steckrübe") && !wikiCand.steckHasBinom,
+    "Steckrübe-Vorschau: deutscher Name muss Kandidat sein, das Binom (Raps) NICHT: " + JSON.stringify(wikiCand.steck));
+  assert(wikiCand.steckTitles.includes("Steckrübe") && wikiCand.steckTitles.includes("Kohlrübe"),
+    "deArticleTitles: Bindestrich auflösen (Steckrübe) und geteiltes Grundwort ergänzen (Kohlrübe): " + JSON.stringify(wikiCand.steckTitles));
+  assert(wikiCand.raps0 === "brassica napus",
+    "Reine Art: das Binom bleibt erster Kandidat: " + wikiCand.raps0);
+  assert(wikiCand.autoHasBinom,
+    "Autonym (subsp. = Art): das Binom bleibt Kandidat (dieselbe Pflanze): " + JSON.stringify(wikiCand));
 
   // Deutsche Namen: die Listen führen drei Muster – alle müssen als richtig zählen,
   // ohne dass ein blankes Adjektiv durchgeht (Profil: Gemüsebau/Gärtner)

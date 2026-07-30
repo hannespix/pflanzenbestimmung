@@ -1480,17 +1480,48 @@ function renderWiki(host, d){
     `<div class="wp-text">${esc(d.extract)}</div>`+
     `<div class="wp-src">Quelle: <a href="${esc(d.url)}" target="_blank" rel="noopener">Wikipedia – ${esc(d.title)}</a> · Text unter CC BY-SA</div>`;
 }
-/* Kandidaten in sinnvoller Reihenfolge – bewusst OHNE bloße Gattung.
-   Grund: viele Gattungsnamen sind auf Wikipedia mehrdeutig (»Beta« = griech.
-   Buchstabe, »Iris« = u. a. Auge). Sorten-/Gruppen-Einträge (»Beta vulgaris
-   Conditiva-Grp.«) haben keinen eigenen Artikel → wir treffen über das reine
-   Binom (»Beta vulgaris« → »Rübe«) bzw. den deutschen Namen. */
+/* Deutsche Namen als Wikipedia-Artikeltitel. Die Listen schreiben Komposita mit
+   Bindestrich (»Steck-Rübe«, »Kohl- / Steck-Rübe«); Wikipedia löst den Bindestrich
+   NICHT auf (»Steck-Rübe« → nichts, »Steckrübe« → Treffer). Darum jeden Namen
+   zusätzlich OHNE Bindestrich/Leerzeichen anbieten und die geteilten Grundwörter
+   auflösen (»Kohl-« + »…-Rübe« → »Kohlrübe«). */
+function deArticleTitles(card){
+  const out=[], seen=new Set();
+  const push=s=>{ s=norm(String(s)).replace(/^[-\s]+|[-\s]+$/g,"");
+    const dehy=s.replace(/-\s*(.)/g,(_,c)=>c.toLowerCase());   // »Steck-Rübe« → »Steckrübe« (Wikipedia löst Bindestriche nicht auf)
+    for(const v of [s, dehy]){
+      const k=v.toLowerCase(); if(v && !seen.has(k)){ seen.add(k); out.push(v); } } };
+  for(const part of (card.de||"").split(/[,;]/)){
+    const clean0 = part.replace(/\([^)]*\)/g,"");        // »(Arznei-)Engelwurz« → ohne Klammern
+    const segs = clean0.split("/").map(norm).filter(Boolean);
+    if(segs.length<2){ push(clean0); continue; }
+    const last = segs[segs.length-1];                    // »Steck-Rübe«
+    push(last);
+    const tail = last.split(/[-\s]/).pop().toLowerCase();// »rübe«
+    for(const sg of segs.slice(0,-1)) push(sg.replace(/-$/,"")+tail);   // »Kohl«+»rübe« → »Kohlrübe«
+  }
+  return out;
+}
+/* Kandidaten in sinnvoller Reihenfolge – bewusst OHNE bloße Gattung (»Beta«,
+   »Iris« sind auf Wikipedia mehrdeutig). Wichtig bei UNTERARTEN/Varietäten: das
+   reine Binom ist die ELTERNart und damit eine ANDERE Pflanze – »Brassica napus«
+   ist Raps, die Steckrübe (ssp. rapifera) hat einen eigenen Artikel. Dort zeigt
+   das Binom das Falsche; deshalb bei infraspezifischen Namen der DEUTSCHE Name
+   zuerst und das bloße Binom weglassen. Bei reinen Arten und Sorten-Gruppen bleibt
+   das Binom (»Beta vulgaris« → »Rübe«) ein guter Treffer. */
 function wikiCandidates(card){
   const cands=[], seen=new Set();
   const add=s=>{ s=norm(s); if(s && !seen.has(s.toLowerCase())){ seen.add(s.toLowerCase()); cands.push(s); } };
+  const de = deArticleTitles(card);
+  const inf = infraEpithet(card.a);
+  const autonym = inf && inf===binomEpithet(card.a);   // »Cornus kousa subsp. kousa« = die Art selbst
   add(card.g+" "+card.a);                               // voller Name (z. B. mit Sorte/Gruppe)
-  add(searchName(card));                                // reines Binom ohne Zusatz (»Beta vulgaris«)
-  add((card.de||"").split(/[,;/]/)[0]);                 // deutscher Name (oft der echte Artikeltitel)
+  if(inf && !autonym){                                  // ANDERE Unterart: Binom = Elternart (Raps) → nur deutscher Name
+    de.forEach(add);
+  }else{                                                // Art oder Autonym: Binom ist dieselbe Pflanze (unverändert)
+    add(searchName(card));                              // reines Binom zuerst (eindeutig)
+    de.forEach(add);
+  }
   return cands;
 }
 async function loadWiki(card, host, btn){
@@ -2092,6 +2123,8 @@ window.searchName=searchName;
 window.buildPrintList=buildPrintList;
 window.themeOf=themeOf;
 window.usablePhoto=usablePhoto;
+window.wikiCandidates=wikiCandidates;
+window.deArticleTitles=deArticleTitles;
 window.photoSteps=photoSteps;
 window.fileMentionsOther=fileMentionsOther;
 window.pageFitsCard=pageFitsCard;
