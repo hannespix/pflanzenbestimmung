@@ -202,8 +202,10 @@ Der Workflow `.github/workflows/deploy.yml` baut, prüft und lädt hoch:
   FTP-/SFTP-Passwort des Webspace-Benutzers. **Mehr ist nicht nötig.**
 - Reiter **Variables** (optional, nur wenn die Vorgaben nicht passen):
   `DEPLOY_HOST` (Vorgabe `s179.goserver.host`), `DEPLOY_USER` (`web69`),
-  `DEPLOY_PORT` (`22`), `DEPLOY_PATH` (`.` — Zielverzeichnis relativ zum
-  Login-Verzeichnis, z. B. `htdocs`), `DEPLOY_PROTO` (`sftp`, alternativ `ftps`),
+  `DEPLOY_PORT` (`22`), `DEPLOY_PATH` (`/home/www/pflanze-bw.de` — das
+  Dokumentenverzeichnis der Domain; der SFTP-Login landet **darüber**, ein relativer
+  Pfad würde also außerhalb des Web-Verzeichnisses landen), `DEPLOY_PROTO` (`sftp`,
+  alternativ `ftps`),
   `DEPLOY_TLS_VERIFY` (`yes`, nur für `ftps` relevant).
 
 Übertragen wird per **SFTP über Port 22** (verschlüsselt); das Passwort steht nur in
