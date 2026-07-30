@@ -102,12 +102,18 @@ async function main() {
     hasDatenschutz: !!document.getElementById("datenschutz"),
     hasAnschrift: /Hannes Pix/.test(document.body.textContent) && /Ihringen/.test(document.body.textContent),
     hasMail: !!document.querySelector('a[href^="mailto:"]'),
+    // Impressum muss die Webseite benennen, für die es gilt
+    domainNennung: /pflanze-bw\.de/.test(document.getElementById("impressum").textContent),
+    domainLink: !!document.querySelector('#impressum a[href="https://pflanze-bw.de"]'),
+    geltung: /gilt für[\s\S]{0,60}Seiten/.test(document.getElementById("impressum").textContent),
     back: (document.querySelector("a.back") || {}).getAttribute ? document.querySelector("a.back").getAttribute("href") : null,
   }));
   assert(/Impressum/.test(legal.title), "rechtliches.html: Titel ohne »Impressum«");
   assert(legal.hasImpressum && legal.hasDatenschutz, "rechtliches.html: Abschnitt Impressum/Datenschutz fehlt");
   assert(legal.hasAnschrift, "rechtliches.html: Anschrift (Hannes Pix / Ihringen) fehlt");
   assert(legal.hasMail, "rechtliches.html: Kontakt-E-Mail (mailto) fehlt");
+  assert(legal.domainNennung && legal.domainLink, "rechtliches.html: Impressum nennt die Webseite pflanze-bw.de nicht (bzw. ohne Link)");
+  assert(legal.geltung, "rechtliches.html: Geltungshinweis (gilt für alle Seiten) fehlt");
   assert(legal.back === "index.html", "rechtliches.html: Rücklink zur Startseite fehlt");
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
