@@ -85,6 +85,30 @@ jobs:
         if: steps.cred.outputs.ok == 'yes'
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
+      # Zeigt einmalig, wie der Webspace aufgebaut ist – damit DEPLOY_PATH richtig
+      # gesetzt werden kann (die Dateien müssen im Dokumentenverzeichnis der Domain
+      # landen, nicht im Login-Verzeichnis).
+      - name: Webspace-Struktur anzeigen
+        if: steps.cred.outputs.ok == 'yes'
+        env:
+          LFTP_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
+          HOST: ${{ vars.DEPLOY_HOST || 's179.goserver.host' }}
+          NUTZER: ${{ vars.DEPLOY_USER || 'web69' }}
+          PORT: ${{ vars.DEPLOY_PORT || '22' }}
+          PROTO: ${{ vars.DEPLOY_PROTO || 'sftp' }}
+        run: |
+          lftp -u "$NUTZER" --env-password -p "$PORT" "$PROTO://$HOST" -e "
+            set sftp:auto-confirm yes;
+            echo === Login-Verzeichnis;
+            pwd;
+            cls -l .;
+            echo === html;      cls -1 html;
+            echo === www;       cls -1 www;
+            echo === httpdocs;  cls -1 httpdocs;
+            echo === public_html; cls -1 public_html;
+            echo === pflanze-bw.de; cls -1 pflanze-bw.de;
+            bye" || true
+
       - name: Zielverzeichnis bestimmen
         id: ziel
         if: steps.cred.outputs.ok == 'yes'
