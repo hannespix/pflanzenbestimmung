@@ -561,10 +561,14 @@ main{margin-top:22px}
         (Gattung, Art, Familie, Deutscher Name) mit den <b>Punkten deiner Fachrichtung</b>; du bekommst
         <b>Teilpunkte</b> und siehst feldweise, was gestimmt hat. Nach der Antwort erscheinen der deutsche
         Name und der <b>Bildnachweis</b>.
-        <b>Dieser Modus braucht Internet</b>: Gezeigt wird das Artikelbild der deutschen Wikipedia (meist ein
-        Foto, gelegentlich eine botanische Zeichnung); geladen wird erst, wenn du den Modus startest. Ohne
-        Netz sagt der Modus das klar – <b>alle anderen Modi laufen ohne Internet weiter</b>. Arten ohne
-        brauchbares Bild werden übersprungen, Verbreitungskarten und Diagramme aussortiert.</dd>
+        <b>Dieser Modus braucht Internet</b>: Die Bilder kommen von Wikimedia Commons und Wikipedia; geladen
+        wird erst, wenn du den Modus startest. Ohne Netz sagt der Modus das klar – <b>alle anderen Modi laufen
+        ohne Internet weiter</b>. Gesucht wird <b>vom Genauen zum Groben</b>: zuerst die Bildkategorie genau
+        dieser Art oder Sorte, erst danach unschärfere Quellen. Bilder, die eine <b>andere Art</b> derselben
+        Gattung nennen, alte Tafeln, Verbreitungskarten und Diagramme werden aussortiert; steht neben einer
+        Sorte auch die Art selbst in deiner Liste (z. B. Tomate und Kirschtomate), wird <b>kein Bild der Art</b>
+        gezeigt – sonst wäre die Frage nicht zu entscheiden. Findet sich kein passendes Bild, überspringt der
+        Modus die Art lieber, als ein falsches zu zeigen.</dd>
       <dt>Liste</dt><dd>Alle Arten des Profils zum <b>Nachschlagen</b> und <b>durchsuchbar</b>
         (Name, Familie, Synonym) – standardmäßig alphabetisch, damit es übersichtlich bleibt. Unter
         <b>»Ansicht &amp; Filter«</b> (aufklappen) lässt sich die <b>Ansicht</b> umschalten:
@@ -1140,8 +1144,13 @@ function answerMeta(c){
 /* ---------- Distraktoren fürs Quiz ---------- */
 function distractors(c, n){
   const want = answerText(c).toLowerCase();
-  const same = allCards.filter(x=>x.key!==c.key && answerText(x).toLowerCase()!==want && x.thema===c.thema);
-  const rest = allCards.filter(x=>x.key!==c.key && answerText(x).toLowerCase()!==want);
+  // Im Bilder-Quiz keine Geschwister derselben Art anbieten (Tomate ↔ Kirschtomate):
+  // Auf einem Foto wäre die Frage sonst auch mit perfektem Bild kaum zu entscheiden.
+  const binom = searchName(c).toLowerCase();
+  const ok = x => x.key!==c.key && answerText(x).toLowerCase()!==want
+                  && (mode!=="photo" || searchName(x).toLowerCase()!==binom);
+  const same = allCards.filter(x=>ok(x) && x.thema===c.thema);
+  const rest = allCards.filter(ok);
   const picks=[]; const seen=new Set([want]);
   for(const src of [shuffle(same.slice()), shuffle(rest.slice())]){
     for(const x of src){ const t=answerText(x); const tl=t.toLowerCase(); if(!seen.has(tl)){ seen.add(tl); picks.push(t); if(picks.length>=n) return picks; } }
@@ -2070,7 +2079,7 @@ async function loadWiki(card, host, btn){
    Bewusst ein EIGENER Modus: Er lädt nichts beim Seitenaufbau, und ohne Netz
    sagt er das klar – Karteikarten, Quiz, Tippen und Liste bleiben offline voll
    nutzbar. */
-const LS_PHOTOS = LS_PREFIX+"photos";                 // gemerkte Bild-URLs (spart API-Abrufe)
+const LS_PHOTOS = LS_PREFIX+"photos2";                // gemerkte Bild-URLs (spart API-Abrufe; »2« = neue Auswahl, alte Treffer verfallen)
 let photoStore = null, photoMisses = 0;
 function photoStoreLoad(){
   if(photoStore) return photoStore;
@@ -2094,23 +2103,137 @@ function usablePhoto(file){
   if(/\.svg$/i.test(file)) return false;
   return !/(map|karte|distribution|range|verbreitung|locator|diagram|chart|wappen|logo|signature)/i.test(file);
 }
-async function wikiPhoto(card){                        // → {thumb,title,file,url} | null
-  let answered = false;                                // kam überhaupt eine Antwort?
-  for(const t of wikiCandidates(card)){
-    let d;
-    try{
-      d = await jsonpGet("https://de.wikipedia.org/w/api.php?action=query&format=json"+
-        "&prop=pageimages&piprop=thumbnail%7Cname&pithumbsize=640&redirects=1&titles="+encodeURIComponent(t));
-    }catch(e){ continue; }                             // einzelner Fehlversuch – nächster Kandidat
-    answered = true;
-    const p = wikiPage(d);
-    if(p && p.thumbnail && p.thumbnail.source && usablePhoto(p.pageimage)){
-      return { thumb:p.thumbnail.source, title:p.title, file:p.pageimage||"",
-               url:"https://de.wikipedia.org/wiki/"+encodeURIComponent(p.title.replace(/ /g,"_")) };
+/* ---------- Welches Bild gehört wirklich zu DIESER Art? ----------
+   Das Artikelbild der Wikipedia allein reicht nicht:
+     · Sorten/Varietäten haben meist keinen eigenen Artikel – die Anfrage landet
+       auf der Art (»Kirschtomate« → Foto einer normalen Tomate).
+     · Manche Artikelbilder sind alte Tafeln, die ZWEI Arten zeigen
+       (»Illustration Allium schoenoprasum and Allium cepa« beim Zwiebel-Artikel).
+     · Der deutsche Name kann auf einen ganz anderen Artikel führen.
+   Deshalb: erst die genaue Taxon-Kategorie auf Wikimedia Commons fragen, dann
+   der Reihe nach unschärfere Quellen – und jeder Treffer muss zwei Prüfungen
+   bestehen: Der Artikel muss die Gattung nennen (pageFitsCard) und der Dateiname
+   darf keine ANDERE Art derselben Gattung nennen (fileMentionsOther).
+   Sorten-Sonderfall: Steht die Art selbst ebenfalls in der Liste (Tomate UND
+   Kirschtomate), wird ein Bild auf Artniveau gar nicht erst angeboten – die Frage
+   wäre sonst nicht entscheidbar. Steht die Sorte allein, ist es zulässig. */
+const INFRA_RE = /\b(?:var|subsp|ssp|convar|f|cv)\.\s*([a-zäöüß][a-zäöüß-]{2,})/i;
+const GRP_RE   = /(cultivars?|hybriden?|in sorten|-?grp\.|gruppe|group)/i;
+function infraEpithet(a){ const m = INFRA_RE.exec(norm(a||"")); return m ? m[1].toLowerCase() : ""; }
+function isCultivarName(a){ a = norm(a||""); return INFRA_RE.test(a) || GRP_RE.test(a); }
+function looksIllustration(file){                     // alte Tafeln/Sammelbilder statt Foto
+  const f = deacc(String(file||"").toLowerCase());    // »Köhler–s Medizinal-Pflanzen« → koehler…
+  return /(illustration|kohler|koehler|koeh_|medizinal|sturm|thome|liebig|plate|drawing|zeichnung|botanical|tafel|gravure|lithograph)/.test(f);
+}
+function fileMentionsOther(file, card){               // Dateiname nennt eine andere Art derselben Gattung
+  const gen = norm(card.g||"").toLowerCase(); if(!gen) return false;
+  const epi = binomEpithet(card.a||"").toLowerCase(), inf = infraEpithet(card.a||"");
+  const w = String(file||"").replace(/[_\-.,()]/g," ").split(/\s+/).filter(Boolean);
+  for(let i=0;i<w.length-1;i++){
+    const a = w[i].toLowerCase(), b = w[i+1].toLowerCase().replace(/\d+$/,"");
+    if(a!==gen || !/^[a-zäöüß]{4,}$/.test(b)) continue;
+    if(b!==epi && b!==inf && b!=="var" && b!=="subsp" && b!=="ssp") return true;
+  }
+  return false;
+}
+function pageFitsCard(p, card){                       // Artikel muss die Pflanze meinen, nicht ein Homonym
+  const gen = norm(card.g||"").toLowerCase(); if(!gen) return true;
+  return (((p.title||"")+" "+(p.extract||"")).toLowerCase()).indexOf(gen) >= 0;
+}
+let binomCount = new Map();                           // Binom → Zahl der Arten im Profil (Sorten-Geschwister)
+function buildBinomIndex(){
+  binomCount = new Map();
+  allCards.forEach(c=>{ const b=searchName(c).toLowerCase(); binomCount.set(b,(binomCount.get(b)||0)+1); });
+}
+function artLevelOk(card){                            // darf ein Bild der ART gezeigt werden?
+  if(!infraEpithet(card.a)) return true;              // keine Varietät → Artbild ist das richtige Bild
+  return (binomCount.get(searchName(card).toLowerCase())||0) <= 1;   // Geschwister in der Liste? dann nein
+}
+function photoSteps(card){                            // Suchwege, vom genauesten zum gröbsten
+  const full = norm(card.g+" "+card.a).replace(/\s+/g," ").trim();
+  const binom = searchName(card), de = (card.de||"").split(/[,;/]/)[0].trim();
+  const inf = infraEpithet(card.a), steps = [];
+  if(isCultivarName(card.a)){
+    steps.push({k:"cm", q:`incategory:"${full}"`});                       // exakte Taxon-Kategorie
+    if(inf) steps.push({k:"cm", q:`incategory:"${binom}" ${inf}`});       // Sorte innerhalb der Art
+    steps.push({k:"cm", q:`"${full}"`});
+    if(de){ steps.push({k:"wp", q:de}); steps.push({k:"cm", q:`"${de}"`}); }
+    if(inf) steps.push({k:"cm", q:`${binom} ${inf}`});                   // Volltext, beide Wörter müssen vorkommen
+    if(artLevelOk(card)){ steps.push({k:"wp", q:binom}); steps.push({k:"cm", q:`incategory:"${binom}"`}); }
+  }else{
+    steps.push({k:"wp", q:binom});
+    steps.push({k:"cm", q:`incategory:"${binom}"`});
+    if(de) steps.push({k:"wp", q:de});
+    steps.push({k:"cm", q:binom});                                       // z. B. »Osmanthus burkwoodii« (Kategorie heißt »× burkwoodii«)
+  }
+  return steps;
+}
+let jsonp = (...a) => jsonpGet(...a);                 // austauschbar: die Tests laufen ohne Netz
+function wikiArticleQuery(title){                     // Artikelbild + erster Satz in EINER Anfrage
+  return jsonp("https://de.wikipedia.org/w/api.php?action=query&format=json&prop=pageimages%7Cextracts"+
+    "&exintro=1&explaintext=1&exsentences=1&piprop=thumbnail%7Cname&pithumbsize=640&redirects=1&titles="+
+    encodeURIComponent(title));
+}
+function commonsQuery(q){                             // Dateien auf Commons suchen (Kategorie oder Phrase)
+  return jsonp("https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search"+
+    "&gsrnamespace=6&gsrlimit=12&gsrsearch="+encodeURIComponent(q)+
+    "&prop=imageinfo&iiprop=url&iiurlwidth=640");
+}
+/* Dateien, die die Pflanze im Namen führen, sind meist gezielte Aufnahmen –
+   besser als ein beliebiges Bild aus derselben Kategorie (»Hortus Haren … 24.jpg«). */
+function commonsScore(file, card){
+  const f = deacc(String(file||"").toLowerCase());
+  const gen = deacc(norm(card.g||"").toLowerCase()), epi = deacc(binomEpithet(card.a||"").toLowerCase());
+  const de = deacc(((card.de||"").split(/[,;/]/)[0]||"").toLowerCase().trim());
+  let s = 0;
+  if(gen && f.indexOf(gen)>=0) s += (epi && f.indexOf(epi)>=0) ? 4 : 2;
+  if(de && de.length>4 && f.indexOf(de)>=0) s += 3;
+  return s;
+}
+function pickCommons(d, card){                        // bester Treffer der Commons-Suche
+  const pg = (d && d.query && d.query.pages) || null; if(!pg) return null;
+  const list = Object.keys(pg).map(k=>pg[k]).sort((a,b)=>(a.index||0)-(b.index||0));
+  let best = null, bestScore = -1;
+  for(const p of list){
+    const file = String(p.title||"").replace(/^File:/i,"").replace(/^Datei:/i,"");
+    const ii = p.imageinfo && p.imageinfo[0]; if(!ii || !(ii.thumburl||ii.url)) continue;
+    if(!usablePhoto(file) || looksIllustration(file) || fileMentionsOther(file, card)) continue;
+    const sc = commonsScore(file, card);
+    if(sc > bestScore){                               // Gleichstand → der zuerst gelistete (Relevanz der Suche)
+      bestScore = sc;
+      best = { thumb: ii.thumburl || ii.url, file, title: norm(card.g+" "+card.a),
+               url: ii.descriptionurl || ("https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(file)), src:"cm" };
     }
   }
+  return best;
+}
+async function wikiPhoto(card){                        // → {thumb,title,file,url,src} | null
+  let answered = false, weak = null;                   // weak: Zeichnung/Tafel nur als Notnagel
+  const inf = infraEpithet(card.a), strict = inf && !artLevelOk(card);
+  for(const st of photoSteps(card)){
+    try{
+      if(st.k==="cm"){
+        const hit = pickCommons(await commonsQuery(st.q), card);
+        answered = true;
+        if(hit) return hit;
+      }else{
+        const d = await wikiArticleQuery(st.q); answered = true;
+        const p = wikiPage(d);
+        if(!p || !p.thumbnail || !p.thumbnail.source) continue;
+        if(!pageFitsCard(p, card)) continue;                       // anderer Artikel (Homonym)
+        // Sorte gesucht, aber auf dem Art-Artikel gelandet? Nur zulässig, wenn die Art nicht ebenfalls in der Liste steht.
+        if(strict && ((p.title||"")+" "+(p.extract||"")).toLowerCase().indexOf(inf) < 0) continue;
+        if(!usablePhoto(p.pageimage) || fileMentionsOther(p.pageimage, card)) continue;
+        const hit = { thumb:p.thumbnail.source, title:p.title, file:p.pageimage||"", src:"wp",
+                      url:"https://de.wikipedia.org/wiki/"+encodeURIComponent(String(p.title).replace(/ /g,"_")) };
+        if(!looksIllustration(p.pageimage)) return hit;
+        weak = weak || hit;                                        // Tafel merken, erst ganz am Ende nehmen
+      }
+    }catch(e){ continue; }                             // einzelner Fehlversuch – nächster Weg
+  }
+  if(weak) return weak;
   if(!answered) throw new Error("network");            // gar keine Antwort → offline/blockiert
-  return null;                                         // beantwortet, aber ohne brauchbares Bild
+  return null;                                         // beantwortet, aber ohne passendes Bild
 }
 let photoSource = wikiPhoto;                           // austauschbar (Tests laufen ohne Netz)
 async function photoFor(card){
@@ -2134,7 +2257,9 @@ async function photoCredit(file){
 function photoSrcLine(p){                              // Quellenzeile unter dem Bild (nach der Antwort)
   const commons = p.file ? "https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(p.file) : p.url;
   return `<div class="ph-src" id="phSrc">Bild: <a href="${esc(commons)}" target="_blank" rel="noopener">Wikimedia&nbsp;Commons</a>`+
-         ` · <a href="${esc(p.url)}" target="_blank" rel="noopener">Wikipedia – ${esc(p.title)}</a></div>`;
+         (p.src==="cm" ? "" :                          // Commons-Treffer haben keinen Artikel dahinter
+           ` · <a href="${esc(p.url)}" target="_blank" rel="noopener">Wikipedia – ${esc(p.title)}</a>`)+
+         `</div>`;
 }
 function photoNotice(html){
   $("#stage").innerHTML = sessionBar() + `<div class="ph-note">${html}</div>`;
@@ -2348,6 +2473,7 @@ function loadProfile(id){
   listCats.clear();                                  // Kategorie-Tags beim Profilwechsel zurücksetzen
   refreshKat();
   buildDeIndex();                                    // Grundwörter zählen (für »Rhabarber« statt »Krauser Rhabarber«)
+  buildBinomIndex();                                 // Arten je Binom zählen (Sorte + Art beide in der Liste?)
   loadExamFields();                                  // Prüfungsfelder gelten je Profil (Bogen der Fachrichtung)
   syncExamOnlyUI();                                  // »nur Prüfungsstoff«-Schalter nur bei Fachwerker zeigen
   normalizeSort();                                   // ggf. Familien-Ansicht verlassen, wenn ausgeblendet
@@ -2492,6 +2618,14 @@ window.searchName=searchName;
 window.buildPrintList=buildPrintList;
 window.themeOf=themeOf;
 window.usablePhoto=usablePhoto;
+window.photoSteps=photoSteps;
+window.fileMentionsOther=fileMentionsOther;
+window.pageFitsCard=pageFitsCard;
+window.looksIllustration=looksIllustration;
+window.isCultivarName=isCultivarName;
+window.infraEpithet=infraEpithet;
+window.artLevelOk=artLevelOk;
+window.pickCommons=pickCommons;
 window.fieldOk=fieldOk;
 window.checkDeName=checkDeName;
 window.deHeadCounts=()=>deHeadCount;   // für Tests: Grundwort → Artenzahl im Profil
@@ -2500,6 +2634,7 @@ window.examFieldList=examFieldList;
 window.wikiPhoto=wikiPhoto;
 /* Bild-Quelle austauschbar + Bild-Cache leerbar: Die Tests laufen ohne Netz. */
 window.__setPhotoSource=fn=>{ photoSource = fn || wikiPhoto; };
+window.__setJsonp=fn=>{ jsonp = fn || ((...a)=>jsonpGet(...a)); };   // API-Antworten für Tests vorgeben
 window.__clearPhotoCache=()=>{ photoStore={}; try{ store.set(LS_PHOTOS,"{}"); }catch(e){} };
 window.renderListControls=renderListControls;
 window.openFamilyInfo=openFamilyInfo;

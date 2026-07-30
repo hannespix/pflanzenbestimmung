@@ -396,6 +396,68 @@ async function main() {
     "Bilder-Quiz: Karten/Diagramme müssen aussortiert, Fotos behalten werden: " + JSON.stringify(photoSkip));
   assert(photoSkip.note, "Bilder-Quiz: ohne verfügbare Bilder fehlt der erklärende Hinweis");
 
+  // Bildzuordnung: das Bild muss zur ART passen – nicht zur Art statt zur Sorte,
+  // nicht zu einem Homonym, keine Tafel mit zwei Arten. Die API-Antworten sind
+  // hier vorgegeben (__setJsonp), der Test bleibt also ohne Netz.
+  const zuordnung = await page.evaluate(async () => {
+    $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    const kirsche = allCards.find((c) => /cerasiforme/.test(c.a));
+    const zwiebel = allCards.find((c) => /^Allium cepa/.test(c.g + " " + c.a) && /Cepa/.test(c.a));
+    const salbei  = allCards.find((c) => c.g === "Salvia");
+    const wege = photoSteps(kirsche).map((s) => s.k + ":" + s.q);
+
+    const cmPage = (i, file) => ({ index: i, title: "File:" + file, imageinfo: [{ thumburl: "https://x/" + file, descriptionurl: "https://commons/" + file }] });
+    const cmAnswer = (files) => ({ query: { pages: Object.fromEntries(files.map((f, i) => ["p" + i, cmPage(i + 1, f)])) } });
+    const wpAnswer = (title, extract, file) => ({ query: { pages: { "1": { title, extract, pageimage: file, thumbnail: { source: "https://x/" + file } } } } });
+
+    // 1) Sorte: Taxon-Kategorie liefert das Sortenbild
+    __clearPhotoCache();
+    __setJsonp((url) => Promise.resolve(/commons/.test(url)
+      ? cmAnswer(["Starr 060406-7207 Solanum lycopersicum var. cerasiforme.jpg"])
+      : wpAnswer("Tomate", "Die Tomate (Solanum lycopersicum) …", "Tomatoes-on-the-bush.jpg")));
+    const a = await wikiPhoto(kirsche);
+
+    // 2) Artikelbild zeigt ZWEI Arten → verworfen, Commons-Treffer gewinnt; dabei
+    //    schlägt die benannte Datei das beliebige Bild aus derselben Kategorie
+    __clearPhotoCache();
+    __setJsonp((url) => Promise.resolve(/commons/.test(url)
+      ? cmAnswer(["Hortus Haren 06-05-2020 24.jpg", "Allium cepa Zwiebeln 01.jpg"])
+      : wpAnswer("Zwiebel", "Die Zwiebel (Allium cepa) …", "Illustration_Allium_schoenoprasum_and_Allium_cepa0.jpg")));
+    const b = await wikiPhoto(zwiebel);
+
+    // 3) Homonym: Artikel nennt die Gattung nicht → kein Bild von dort
+    __clearPhotoCache();
+    __setJsonp((url) => Promise.resolve(/commons/.test(url)
+      ? { query: { pages: {} } }
+      : wpAnswer("Salbei (Begriffsklärung)", "Ein Ortsteil der Gemeinde …", "Ortsschild.jpg")));
+    const c = await wikiPhoto(salbei);
+
+    __setJsonp(null); __clearPhotoCache();
+    return { wege, kirscheFile: a && a.file, kirscheSrc: a && a.src, zwiebelFile: b && b.file, salbei: c,
+      illuKoehler: looksIllustration("Salvia_officinalis_-_Köhler–s_Medizinal-Pflanzen-126.jpg"),
+      illuFoto: looksIllustration("Carpinus betulus 001.JPG"),
+      zweiArten: fileMentionsOther("Illustration_Allium_schoenoprasum_and_Allium_cepa0.jpg", zwiebel),
+      eigeneArt: fileMentionsOther("Allium cepa Zwiebeln 01.jpg", zwiebel),
+      sorte: isCultivarName(kirsche.a) && infraEpithet(kirsche.a) === "cerasiforme",
+      artBildVerboten: !artLevelOk(kirsche) };
+  });
+  assert(zuordnung.sorte, "Bildzuordnung: Varietät wird nicht als solche erkannt");
+  assert(zuordnung.artBildVerboten,
+    "Bildzuordnung: Steht die Art ebenfalls in der Liste, darf für die Sorte kein Artbild genommen werden");
+  assert(zuordnung.wege[0] === 'cm:incategory:"Solanum lycopersicum var. cerasiforme"',
+    "Bildzuordnung: erster Weg ist nicht die exakte Taxon-Kategorie: " + JSON.stringify(zuordnung.wege));
+  assert(!zuordnung.wege.some((w) => w === 'cm:incategory:"Solanum lycopersicum"' || w === "wp:Solanum lycopersicum"),
+    "Bildzuordnung: Artniveau darf bei vorhandener Geschwister-Art nicht angefragt werden: " + JSON.stringify(zuordnung.wege));
+  assert(/cerasiforme/.test(zuordnung.kirscheFile || "") && zuordnung.kirscheSrc === "cm",
+    "Bildzuordnung: Sorte bekommt nicht das Sortenbild: " + JSON.stringify(zuordnung));
+  assert(zuordnung.zweiArten && !zuordnung.eigeneArt,
+    "Bildzuordnung: Tafel mit zwei Arten wird nicht erkannt: " + JSON.stringify(zuordnung));
+  assert(zuordnung.zwiebelFile === "Allium cepa Zwiebeln 01.jpg",
+    "Bildzuordnung: benannte Datei muss das beliebige Kategoriebild schlagen: " + JSON.stringify(zuordnung));
+  assert(zuordnung.salbei === null, "Bildzuordnung: Artikel ohne Gattungsbezug (Homonym) wird trotzdem genommen");
+  assert(zuordnung.illuKoehler && !zuordnung.illuFoto,
+    "Bildzuordnung: alte Tafeln (Köhler) werden nicht als solche erkannt: " + JSON.stringify(zuordnung));
+
   // Deutsche Namen: die Listen führen drei Muster – alle müssen als richtig zählen,
   // ohne dass ein blankes Adjektiv durchgeht (Profil: Gemüsebau/Gärtner)
   const deChk = await page.evaluate(() => {

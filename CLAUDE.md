@@ -785,6 +785,33 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       veränderte Stelle → abgelehnt (auch beim Boot: kein Banner), alte JSON-Links
       lesbar, Banner nennt 10:00, Zeitvergleich entscheidet bei gleicher Quote.
 
+- [x] **Bilder-Quiz: das Bild muss zur Art passen** (Rückmeldung: statt der
+      Kirschtomate erschien eine normale Tomate, bei »Zwiebel« eine Tafel mit zwei
+      Arten). Ursache: Es wurde nur das **Artikelbild** der de-Wikipedia genommen –
+      Sorten haben selten einen eigenen Artikel (Anfrage landet auf der Art), manche
+      Artikelbilder sind alte Tafeln mit mehreren Arten, und der deutsche Name kann
+      auf ein Homonym führen. Neu (`photoSteps`/`pickCommons`/`wikiPhoto`):
+      **Suchkette vom Genauen zum Groben** – Commons-Kategorie des exakten Taxons →
+      Art-Kategorie + infraspezifisches Epitheton → Phrase → deutscher Name →
+      (nur wenn zulässig) Artniveau. Jeder Treffer muss zwei Prüfungen bestehen:
+      `pageFitsCard` (Artikel nennt die Gattung – killt Homonyme) und
+      `fileMentionsOther` (Dateiname nennt keine **andere** Art derselben Gattung –
+      killt »Illustration Allium schoenoprasum and Allium cepa«). Zusätzlich
+      `looksIllustration` (Köhler/Tafel/Liebig … nur als Notnagel, `deacc`-normalisiert)
+      und `commonsScore` (Dateien, die Gattung/Art/deutschen Namen führen, schlagen
+      beliebige Kategoriebilder). **Sorten-Regel:** Steht die Art selbst ebenfalls im
+      Profil (`binomCount`, `artLevelOk`), wird für die Sorte **kein Artbild** angeboten –
+      die Frage wäre sonst nicht entscheidbar; im Bilder-Quiz erscheinen dann auch keine
+      Geschwister derselben Art als Ablenker (`distractors`). Ohne passendes Bild wird
+      die Art übersprungen. Bild-Cache-Key auf `pflanzenlernen.photos2` gehoben (alte
+      Treffer verfallen). **Verfahren:** Regeln als Python-Zwilling gegen die echten
+      APIs geprüft – Kirschtomate → *Starr … var. cerasiforme.jpg*, Küchen-Zwiebel →
+      *Küchen-Zwiebel.jpg*, Schalotte → *Allium cepa Aggregatum Grp.jpg*, Hainbuche →
+      *Carpinus betulus 001.JPG*, Salbei/Schachblume → Fotos statt Tafeln; Stichprobe
+      über 42 zufällige Arten aus allen 14 Profilen: **0 % ohne Bild**. `tests/learn.mjs`
+      hängt über `__setJsonp` feste API-Antworten ein (kein Netz in CI) und prüft
+      Suchreihenfolge, Sortenbild, Zwei-Arten-Tafel, Homonym, Ranking und Tafel-Erkennung.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei
