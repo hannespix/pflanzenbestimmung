@@ -400,6 +400,51 @@ async function main() {
   assert(phExam.partial && phExam.pts[0] === "7" && phExam.pts[1] === "10",
     "Teilpunkte erwartet: 7 von 10 Punkten, war " + JSON.stringify(phExam.pts) + " / " + phExam.fb);
 
+  // Schreibfehler: halbe Punkte, Karte gilt NICHT als bestanden und kommt wieder –
+  // beim fehlerfreien zweiten Anlauf wird die fehlende Hälfte nachgebucht.
+  const halbe = await page.evaluate(async () => {
+    __clearPhotoCache();
+    startSession();
+    await new Promise((r) => setTimeout(r, 60));
+    const c = current, key = c.key;
+    const fill = (k, v) => { const i = document.querySelector("#ex_" + k); if (i) i.value = v; };
+    const alles = (verdreht) => {
+      fill("g", verdreht ? c.g + "x" + c.g.slice(-1) : c.g);   // grober Tippfehler in der Gattung
+      fill("a", c.a); fill("fam", (c.fam || "").split("/")[0]); fill("de", (c.de || "").split(/[,;/]/)[0]);
+    };
+    alles(true);
+    document.querySelector("#chk").click();
+    const fb1 = document.querySelector("#fb").textContent;
+    const stand1 = { sum: sess.pts.sum, max: sess.pts.max, correct: sess.correct,
+      inQueue: queue.slice(qi + 1).some((x) => x.key === key) };
+    document.querySelector("#wt").click();                       // weiter …
+    // … bis die Karte wiederkommt
+    let guard = 0;
+    while (current.key !== key && guard++ < 40) {
+      await new Promise((r) => setTimeout(r, 30));
+      const inp = document.querySelector("#ex_g");
+      if (!inp) break;
+      fill("g", "Zzz"); fill("a", "zzz"); fill("fam", "zzz"); fill("de", "zzz");
+      document.querySelector("#chk").click();
+      const w = document.querySelector("#wt"); if (w) w.click();
+    }
+    await new Promise((r) => setTimeout(r, 60));
+    const wieder = current.key === key;
+    alles(false);                                                // jetzt fehlerfrei
+    document.querySelector("#chk").click();
+    const fb2 = document.querySelector("#fb").textContent;
+    return { fb1, fb2, stand1, wieder, sum: sess.pts.sum, je: sess.pts.je[key],
+      korrekt: sess.correct, maxKarte: 10 };
+  });
+  assert(halbe.stand1.sum === 8.5 && /Schreibfehler zählen halb/.test(halbe.fb1),
+    "Schreibfehler muss die halbe Punktzahl geben (8,5 von 10): " + JSON.stringify(halbe.stand1) + " / " + halbe.fb1);
+  assert(halbe.stand1.correct === 0 && halbe.stand1.inQueue,
+    "Schreibfehler darf nicht als bestanden gelten und die Karte muss wiederkommen: " + JSON.stringify(halbe.stand1));
+  assert(halbe.wieder, "Karte mit Schreibfehler kam in derselben Sitzung nicht wieder");
+  assert(halbe.je === 10 && /nachträglich gutgeschrieben/.test(halbe.fb2),
+    "Fehlerfreie Wiederholung muss die fehlende Hälfte nachbuchen: " + JSON.stringify(halbe) );
+  assert(halbe.korrekt === 1, "Nach der fehlerfreien Wiederholung muss die Karte als richtig zählen: " + JSON.stringify(halbe));
+
   // Prüfungsfelder selbst bestimmen (Familie abwählen) + Fachwerker-Bogen
   const phFields = await page.evaluate(async (PX) => {
     __clearPhotoCache();

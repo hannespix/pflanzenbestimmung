@@ -1,5 +1,5 @@
 /* ============================================================
-   Pflanzenkenntnis · Lernen (für Azubis der grünen Berufe)
+   Pflanzenkenntnis · Lernen (für Azubis der Gärtnerberufe)
    Karteikarten mit Leitner/Spaced-Repetition, Multiple-Choice-Quiz und Tippen.
    Nutzt dieselben hinterlegten Listen wie das Prüfungswerkzeug (SEEDS),
    vollständig offline, Fortschritt je Profil im Browser (localStorage).
@@ -337,7 +337,7 @@ let allCards = [];           // alle Arten des Profils
 let progress = {};           // key -> {box(1..5), due(YYYY-MM-DD), seen, correct, wrong}
 let mode = "cards";          // cards | quiz | type | list
 let queue = [], qi = 0, current = null, flipped = false;
-let sess = { total:0, done:0, correct:0, ms:0, active:false };
+let sess = { total:0, done:0, correct:0, ms:0, pts:null, active:false };
 let qStart = 0, clockTimer = null;   // Zeitmessung: Start der offenen Frage · Anzeige-Takt
 let listCats = new Set();     // aktive Filter-Tags der laufenden Dimension (leer = alle)
 let listSort = "bot";         // Ansicht: bot | de | kategorie | familie (Standard: alphabetisch, ohne Gruppen)
@@ -1008,7 +1008,7 @@ function startChallenge(){                // genau die Karten der Herausforderun
   if(!cards.length){ toast("Karten dieser Herausforderung nicht gefunden",true); return; }
   const b=$("#duelBanner"); if(b) b.hidden=true;
   queue = cards.slice(); qi = 0; photoMisses = 0; qStart = 0;
-  sess = { total:queue.length, done:0, correct:0, ms:0, active:true, cards:cards.slice(), challenge:ch };
+  sess = { total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, cards:cards.slice(), challenge:ch };
   clockRun(true);
   nextCard();
 }
@@ -1016,7 +1016,7 @@ function startChallenge(){                // genau die Karten der Herausforderun
 /* ---------- Sitzung / Bühne ---------- */
 function startSession(){
   queue = buildQueue(); qi = 0; photoMisses = 0; qStart = 0;
-  sess = { total:queue.length, done:0, correct:0, ms:0, active:true, cards:queue.slice(), challenge:null };
+  sess = { total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, cards:queue.slice(), challenge:null };
   if(!queue.length){ toast("Keine Arten im aktuellen Filter",true); return; }
   clockRun(true);
   nextCard();
@@ -1025,6 +1025,7 @@ function sessionBar(){
   const pct = sess.total? Math.round(sess.done/sess.total*100):0;
   return `<div class="sessionbar"><span>${sess.done} / ${sess.total}</span><span class="sbar"><i style="width:${pct}%"></i></span>`+
     (mode!=="cards"?`<span>${sess.correct} richtig</span>`:``)+
+    (examScoring()&&sess.pts?`<span class="spts" title="Punkte dieser Sitzung – ein Schreibfehler zählt halb, der Rest kommt bei der fehlerfreien Wiederholung dazu">${nfmt(sess.pts.sum)} / ${nfmt(sess.pts.max)} P.</span>`:``)+
     (scoreable()?`<span class="sclock" id="sclock" title="Denkzeit dieser Sitzung – die Uhr läuft nur, solange eine Frage offen ist">${fmtDur(clockNow())}</span>`:``)+
     `<button class="btn ghost" id="btnStop" title="Sitzung beenden">beenden</button></div>`;
 }
@@ -1069,7 +1070,7 @@ function finishSession(){
   stage.innerHTML = `<div class="stage-empty">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6L9 17l-5-5"/></svg>
     <h2>Sitzung geschafft</h2>
-    <p>${sess.done} Karten gelernt${mode!=="cards"?` · ${sess.correct} richtig (${acc} %)`:""}${scoreable()&&sess.ms?` · Denkzeit ${fmtDur(sess.ms)}`:""}.</p>
+    <p>${sess.done} Karten gelernt${mode!=="cards"?` · ${sess.correct} richtig (${acc} %)`:""}${examScoring()&&sess.pts?` · <b>${nfmt(sess.pts.sum)} von ${nfmt(sess.pts.max)} Punkten</b>`:""}${scoreable()&&sess.ms?` · Denkzeit ${fmtDur(sess.ms)}`:""}.</p>
     ${extra}
     ${share}
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px">
@@ -1807,12 +1808,30 @@ function renderPhotoExam(p){
         : `<span class="ex-no">✗</span> <span class="ex-sol">${esc(fieldSolution(k,c))}</span>`;
     });
     const all = right===ins.length;
+    const buch = bookPoints(c, got, max);                // Punkte gutschreiben (Rest bei der Wiederholung)
     finishPhotoAnswer(all, all ? "good" : ((right||fast) ? "hard" : "again"), p,
       `<span class="sol">${nfmt(got)} von ${nfmt(max)} Punkten`+
-      (fast?` · <b>≈</b> Schreibfehler zählen halb – so steht es auf dem Prüfungsbogen`:"")+
+      (buch.nach>0 ? ` · <b>+${nfmt(buch.nach)}</b> nachträglich gutgeschrieben` : "")+
+      (fast&&!all ? ` · <b>≈</b> Schreibfehler zählen halb – schreibst du die Art gleich fehlerfrei, gibt es den Rest`
+                  : fast ? ` · <b>≈</b> Schreibfehler zählen halb – so steht es auf dem Prüfungsbogen` : "")+
       (all?"":" · "+solutionLine(c))+`</span>`);
   };
 }
+/* ---------- Punktekonto der Sitzung ----------
+   Ein Schreibfehler gibt die halbe Punktzahl und die Karte kommt wieder – sie gilt
+   NICHT als bestanden. Wird sie beim zweiten Anlauf fehlerfrei geschrieben, wird nur
+   die noch fehlende Hälfte gutgeschrieben (nicht doppelt gezählt). Je Karte zählt
+   also der beste Versuch, und das Konto kann nie über die mögliche Punktzahl steigen. */
+function bookPoints(card, got, max){
+  if(!sess.pts) sess.pts = { sum:0, max:0, je:{} };
+  const k = card.key, alt = sess.pts.je[k];
+  if(alt===undefined){ sess.pts.je[k] = 0; sess.pts.max += max; }
+  const nach = Math.max(0, got - (sess.pts.je[k]||0));
+  sess.pts.sum += nach;
+  sess.pts.je[k] = Math.max(sess.pts.je[k]||0, got);
+  return { nach: alt===undefined ? 0 : nach, sum:sess.pts.sum, max:sess.pts.max };
+}
+function examScoring(){ return mode==="photo" && photoAnswer==="exam"; }   // Modus mit Punkten
 /* Gemeinsamer Abschluss: bewerten, Rückmeldung, Bildnachweis, »Weiter« */
 function finishPhotoAnswer(ok, g, p, solHTML, full){
   clockStop();                                        // gilt für alle drei Antwortarten
