@@ -376,6 +376,46 @@ async function main() {
     "Bilder-Quiz: Karten/Diagramme müssen aussortiert, Fotos behalten werden: " + JSON.stringify(photoSkip));
   assert(photoSkip.note, "Bilder-Quiz: ohne verfügbare Bilder fehlt der erklärende Hinweis");
 
+  // Deutsche Namen: die Listen führen drei Muster – alle müssen als richtig zählen,
+  // ohne dass ein blankes Adjektiv durchgeht (Profil: Gemüsebau/Gärtner)
+  const deChk = await page.evaluate(() => {
+    const t = (de, inp) => checkDeName(inp, { g: "X", a: "y", de, fam: "" });
+    const rha = "Krauser / gewöhnlicher Rhabarber";
+    const fen = "Knollen- / Gemüsefenchel";
+    const kar = "Karotte / Möhre / Gelbe Rübe";
+    return {
+      // Muster »Adjektiv / Adjektiv Grundwort«: Grundwort und beide Vollformen gelten
+      rhaHead: t(rha, "Rhabarber"), rhaA: t(rha, "Krauser Rhabarber"), rhaB: t(rha, "gewöhnlicher Rhabarber"),
+      rhaAdjAlone: t(rha, "Krauser"), rhaWrong: t(rha, "Spinat"),
+      // Muster »Vorderteil- / Grundwort«: beide Zusammensetzungen gelten
+      fenA: t(fen, "Knollenfenchel"), fenB: t(fen, "Gemüsefenchel"), fenWrong: t(fen, "Knollenkohl"),
+      // Muster »Name / Name / Name«: jeder Teil ist ein eigener Name
+      karA: t(kar, "Karotte"), karB: t(kar, "Möhre"), karC: t(kar, "Gelbe Rübe"),
+      // Synonyme (Komma) und Schreibung ohne Bindestrich
+      synA: t("Rotkohl, Blaukraut", "Blaukraut"), synWrong: t("Rotkohl, Blaukraut", "Weißkohl"),
+      hyph: t("Hänge-Birke, Sand-Birke, Weiß-Birke", "Sandbirke"),
+      // Klammer-Form und Abkürzung
+      klammer: t("Angelika / (Arznei-)Engelwurz", "Engelwurz"),
+      abk: t("Gew. / Große Brennessel", "gewöhnliche Brennessel"),
+      // Grundwort NUR bei Eindeutigkeit: die Liste führt Große UND Kleine Brennessel
+      brennCount: deHeadCounts().get("brennessel"), brennAlone: t("Gew. / Große Brennessel", "Brennessel"),
+    };
+  });
+  assert(deChk.rhaHead && deChk.rhaA && deChk.rhaB,
+    "»Rhabarber« und beide Vollformen müssen gelten: " + JSON.stringify(deChk));
+  assert(!deChk.rhaAdjAlone && !deChk.rhaWrong,
+    "Ein blankes Adjektiv (»Krauser«) darf nicht als Name zählen: " + JSON.stringify(deChk));
+  assert(deChk.fenA && deChk.fenB && !deChk.fenWrong,
+    "Geteiltes Grundwort (Knollen-/Gemüsefenchel) nicht korrekt aufgelöst: " + JSON.stringify(deChk));
+  assert(deChk.karA && deChk.karB && deChk.karC,
+    "Bei »Karotte / Möhre / Gelbe Rübe« muss jeder Teil zählen: " + JSON.stringify(deChk));
+  assert(deChk.synA && !deChk.synWrong && deChk.hyph,
+    "Synonyme und Schreibung ohne Bindestrich müssen zählen: " + JSON.stringify(deChk));
+  assert(deChk.klammer && deChk.abk,
+    "Klammer-Form und Abkürzung (Gew. → gewöhnliche) nicht behandelt: " + JSON.stringify(deChk));
+  assert(deChk.brennCount === 2 && !deChk.brennAlone,
+    "Grundwort darf nur bei Eindeutigkeit gelten – die Liste führt Große UND Kleine Brennessel: " + JSON.stringify(deChk));
+
   // Abfragerichtung wählbar: Text-Modi de↔bot, Bilder-Modus Bild→bot/de
   const dirUI = await page.evaluate(() => {
     document.querySelector('#modeTabs button[data-mode="cards"]').click();
@@ -881,7 +921,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Vergleich/Sieg + Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer, Mobile ohne Overflow, Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz.");
+  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Vergleich/Sieg + Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer, Mobile ohne Overflow, deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz.");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });

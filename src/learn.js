@@ -12,6 +12,7 @@ const $ = s => document.querySelector(s);
 const el = (t,c) => { const e=document.createElement(t); if(c) e.className=c; return e; };
 const esc = s => (s==null?"":String(s)).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
 const norm = s => (s==null?"":String(s)).replace(/\s+/g," ").trim();
+const deacc = s => (s==null?"":String(s)).normalize("NFD").replace(/[\u0300-\u036f]/g,"");   // akzentfrei (Suche, Adjektiv-Erkennung)
 const shuffle = a => { for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
 
 /* ---------- Speicher (localStorage mit In-Memory-Fallback) ---------- */
@@ -447,7 +448,7 @@ function famName(f){                              // "Fabaceae · Schmetterlings
 }
 const botName = c => norm(c.g+" "+c.a);
 const deMain  = c => norm((c.de||"").split(/[,;/]/)[0]);          // erster deutscher Name (die Liste kann mehrere führen)
-const deAll   = c => (c.de||"").split(/[,;/]/).map(norm).filter(Boolean);
+const deAll   = c => (c.de||"").split(/[,;]/).map(norm).filter(Boolean);   // Synonyme; »/«-Formen bleiben zusammen
 function promptHTML(c){                            // Vorderseite (im Bilder-Modus steht dort das Bild)
   return wantsDe() ? `<i>${esc(botName(c))}</i>` : esc(c.de||"—");   // gefragt wird nach allen geführten Namen
 }
@@ -457,8 +458,8 @@ function answerLabel(){ return DIRS[curDir()].answer; }
 function promptLabel(){ return DIRS[curDir()].prompt; }
 /* Lösungszeile für Quiz/Tippen/Bilder: Gesuchtes zuerst, die andere Seite dahinter. */
 function solutionLine(c){
-  return wantsDe() ? esc(deMain(c))+" · <i>"+esc(botName(c))+"</i>"
-                   : "<i>"+esc(botName(c))+"</i>"+(deMain(c)?" · "+esc(deMain(c)):"");
+  return wantsDe() ? esc(c.de||"—")+" · <i>"+esc(botName(c))+"</i>"      // alle geführten Synonyme zeigen
+                   : "<i>"+esc(botName(c))+"</i>"+(c.de?" · "+esc(c.de):"");
 }
 /* Rückseite: die vollständige Identität, gefragte Seite ausgenommen. Botanische
    Werte kursiv (Gattung/Art/Synonyme), Familiennamen aufrecht. */
@@ -534,10 +535,94 @@ function fieldSolution(k,c){                                          // richtig
   if(k==="de")  return c.de||"";
   return c[k]||"";
 }
-function checkDeName(input, c){   // jede geführte Schreibweise, Bindestriche/Leerzeichen egal
-  const flat = t => clean(t).replace(/[-\s]/g,"");
-  const inp = flat(input); if(!inp) return false;
-  return deAll(c).some(v => closeEnough(input, v) || closeEnough(inp, flat(v)));
+/* ---------- Deutsche Namen: gültige Schreibweisen ----------
+   Die Listen führen deutsche Namen in drei Mustern, die alle gelten müssen:
+     1. Synonyme, mit Komma getrennt   »Hänge-Birke, Sand-Birke, Weiß-Birke«
+     2. geteiltes Grundwort mit Bindestrich  »Knollen- / Gemüsefenchel«
+        → Knollenfenchel UND Gemüsefenchel
+     3. geteiltes Grundwort mit Adjektiv    »Krauser / gewöhnlicher Rhabarber«
+        → »Krauser Rhabarber« und »gewöhnlicher Rhabarber«, aber »Krauser«
+          allein ist kein Pflanzenname
+   Zusätzlich gilt das **Grundwort allein** (»Rhabarber«), sofern es im Profil
+   eindeutig ist – bei »Birke« oder »Ahorn« reicht es also nicht, weil die Liste
+   mehrere führt. Muster 3 unterscheidet sich von Muster 1 (»Karotte / Möhre /
+   Gelbe Rübe«, wo jeder Teil ein eigener Name ist) daran, ob das Vorderteil ein
+   flektiertes Adjektiv ist; die Stämme dafür stehen in ADJ_STEMS (gegen alle
+   Listen geprüft). */
+const adjKey = w => deacc(String(w||"")).replace(/ß/g,"ss").toLowerCase();   // »größe« → »grosse«
+const ADJ_STEMS = new Set(("gewöhnlich gemein echt wild kraus weiß gelb rot schwarz blau grün "+
+  "braun grau silbrig bunt groß klein breit schmal spitz rund hoch niedrig kriechend hängend aufrecht "+
+  "essbar giftig australisch westindisch isländisch japanisch chinesisch amerikanisch europäisch kanadisch "+
+  "orientalisch mediterran gefüllt klebrig strahlig ewig dick dünn süß sauer scharf bitter einjährig "+
+  "zweijährig ausdauernd stengellos stiellos wohlriechend duftend kahl rauhaarig behaart edel bekannt "+
+  "gebräuchlich falsch stachelig dornig krautig staudig früh spät").split(" ").map(adjKey));
+const ABBR = { "gew":"gewöhnliche", "einj":"einjähriges", "gemü":"Gemüse" };   // in den Listen vorkommende Kürzel
+function looksAdjective(seg){
+  const raw=norm(seg);
+  if(/\.$/.test(raw)) return true;                       // »Gew.«, »Einj.« – Abkürzung, kein Name
+  const w=clean(seg); if(!w || w.includes(" ")) return false;
+  const st = adjKey(w);
+  for(const end of ["er","es","en","em","e"])
+    if(st.endsWith(end) && ADJ_STEMS.has(st.slice(0,-end.length))) return true;
+  return ADJ_STEMS.has(st);
+}
+const flatName = t => clean(t).replace(/[-\s]/g,"");
+function deHeads(name){                                   // Grundwort: letztes Wort, auch nach dem Bindestrich
+  const t=clean(name).split(" "); const last=t[t.length-1]||"";
+  const out=[last];
+  if(last.includes("-")) out.push(last.split("-").pop());
+  return out.filter(h=>h.length>=3);
+}
+function deForms(c){                                      // {names, prefixes, heads} – je Karte gemerkt
+  if(c.__de) return c.__de;
+  const names=[], prefixes=[], heads=new Set();
+  const add=v=>{ v=norm(v).replace(/^[-\s]+|[-\s]+$/g,""); if(v){ names.push(v); deHeads(v).forEach(h=>heads.add(h)); } };
+  for(const part of (c.de||"").split(/[,;]/)){
+    const withParens = /\(/.test(part)
+      ? [part.replace(/[()]/g,""), part.replace(/\([^)]*\)/g,"")]   // »(Arznei-)Engelwurz«: mit und ohne
+      : [part];
+    for(const v of withParens){
+      const segs=v.split("/").map(norm).filter(Boolean);
+      if(segs.length<2){ add(v); continue; }
+      const last=segs[segs.length-1];
+      add(last);
+      const head=last.split(" ").pop();
+      for(const sg of segs.slice(0,-1)){
+        if(/-$/.test(sg)){                                // geteiltes Grundwort – zur Prüfzeit aufgelöst
+          const pre=sg.replace(/-$/,"");
+          prefixes.push([pre,last]);
+          deHeads(last).forEach(h=>heads.add(h));
+        } else {
+          add(sg+" "+head);                               // Adjektiv-Lesart: »Krauser Rhabarber«
+          const ab=ABBR[clean(sg).replace(/\.$/,"")];
+          if(ab) add(ab+" "+head);                        // »Gew. / Große Brennessel« → gewöhnliche Brennessel
+          if(!looksAdjective(sg)) add(sg);                // eigenständiger Name: »Karotte«
+        }
+      }
+    }
+  }
+  c.__de={ names, prefixes, heads:[...heads] };
+  return c.__de;
+}
+let deHeadCount = new Map();                              // Grundwort → Zahl der Arten im Profil
+function buildDeIndex(){
+  deHeadCount = new Map();
+  allCards.forEach(c=>{ new Set(deForms(c).heads).forEach(h=>deHeadCount.set(h,(deHeadCount.get(h)||0)+1)); });
+}
+function checkDeName(input, c){
+  const inp=flatName(input); if(!inp) return false;
+  const f=deForms(c);
+  if(f.names.some(v=> closeEnough(input,v) || closeEnough(inp, flatName(v)))) return true;
+  for(const [pre,last] of f.prefixes){                    // »Knollen-…fenchel«: Vorderteil + Endung des Grundworts
+    const cands=[flatName(pre)]; const w=norm(pre).split(" ").pop(); if(w) cands.push(flatName(w));
+    for(const p of cands){
+      if(!p || !inp.startsWith(p)) continue;
+      const rest=inp.slice(p.length);
+      if(rest.length>=4 && flatName(last).endsWith(rest)) return true;
+    }
+  }
+  // Grundwort allein – nur wenn im Profil keine zweite Art dasselbe Grundwort trägt
+  return f.heads.some(h=> (deHeadCount.get(h)||0)<=1 && (closeEnough(input,h) || closeEnough(inp, flatName(h))));
 }
 function fieldOk(k, input, c){                                        // tippfehlertolerant, je Feld passend
   const v=clean(input); if(!v) return false;
@@ -867,7 +952,6 @@ function startHintOnly(){
 }
 
 /* ---------- Liste / Nachschlagen (durchsuchbar, nach Kategorie gruppiert) ---------- */
-const deacc = s => (s==null?"":String(s)).normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 /* Gefilterte Listen-Menge (Kategorie-/ZP-Filter + Suchfeld) \u2013 auch Basis der Druckliste */
 /* Ansichten (Gruppier-/Sortier-Dimensionen). »bot«/»de« sind flach-alphabetisch
    (keine Filter-Tags); »thema«/»familie« gruppieren und bieten Filter-Tags
@@ -1470,6 +1554,7 @@ function loadProfile(id){
   if($("#listSearch")) $("#listSearch").value="";   // Suche beim Profilwechsel zurücksetzen
   listCats.clear();                                  // Kategorie-Tags beim Profilwechsel zurücksetzen
   refreshKat();
+  buildDeIndex();                                    // Grundwörter zählen (für »Rhabarber« statt »Krauser Rhabarber«)
   loadExamFields();                                  // Prüfungsfelder gelten je Profil (Bogen der Fachrichtung)
   syncExamOnlyUI();                                  // »nur Prüfungsstoff«-Schalter nur bei Fachwerker zeigen
   normalizeSort();                                   // ggf. Familien-Ansicht verlassen, wenn ausgeblendet
@@ -1615,6 +1700,9 @@ window.buildPrintList=buildPrintList;
 window.themeOf=themeOf;
 window.usablePhoto=usablePhoto;
 window.fieldOk=fieldOk;
+window.checkDeName=checkDeName;
+window.deHeadCounts=()=>deHeadCount;   // für Tests: Grundwort → Artenzahl im Profil
+window.deForms=deForms;
 window.examFieldList=examFieldList;
 window.wikiPhoto=wikiPhoto;
 /* Bild-Quelle austauschbar + Bild-Cache leerbar: Die Tests laufen ohne Netz. */
