@@ -337,7 +337,8 @@ let allCards = [];           // alle Arten des Profils
 let progress = {};           // key -> {box(1..5), due(YYYY-MM-DD), seen, correct, wrong}
 let mode = "cards";          // cards | quiz | type | list
 let queue = [], qi = 0, current = null, flipped = false;
-let sess = { total:0, done:0, correct:0, active:false };
+let sess = { total:0, done:0, correct:0, ms:0, active:false };
+let qStart = 0, clockTimer = null;   // Zeitmessung: Start der offenen Frage · Anzeige-Takt
 let listCats = new Set();     // aktive Filter-Tags der laufenden Dimension (leer = alle)
 let listSort = "bot";         // Ansicht: bot | de | kategorie | familie (Standard: alphabetisch, ohne Gruppen)
 let pendingChallenge = null;  // aus der URL (#c=…) dekodierte, noch nicht angenommene Herausforderung
@@ -675,6 +676,28 @@ function renderProgress(){
   $("#btnStart").disabled = !p.length;
 }
 
+/* ---------- Zeitmessung (Denkzeit) ----------
+   Gezählt wird nur die reine Antwortzeit: Die Uhr läuft, sobald die Frage fertig
+   auf dem Schirm steht (im Bilder-Quiz also erst NACH dem Laden des Bildes), und
+   stoppt mit dem Abschicken der Antwort. Warten auf die Leitung und das Lesen der
+   Lösung zählen nicht mit – nur so ist der Vergleich im Lernduell fair, egal wie
+   schnell die Verbindung ist. Läuft nur in den bewerteten Modi (Quiz, Tippen,
+   Bilder); Karteikarten bewerten sich selbst und bleiben ohne Uhr. */
+function fmtDur(ms){
+  const s = Math.max(0, Math.round(ms/1000));
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), r = s%60;
+  const mm = h ? String(m).padStart(2,"0") : String(m);
+  return (h ? h+":" : "") + mm + ":" + String(r).padStart(2,"0");
+}
+function clockStart(){ if(scoreable() && sess.active) qStart = Date.now(); }
+function clockStop(){ if(qStart){ sess.ms = (sess.ms||0) + (Date.now()-qStart); qStart = 0; } }
+function clockNow(){ return (sess.ms||0) + (qStart ? Date.now()-qStart : 0); }
+function clockTick(){ const e=$("#sclock"); if(e) e.textContent = fmtDur(clockNow()); }
+function clockRun(on){
+  if(clockTimer){ clearInterval(clockTimer); clockTimer=null; }
+  if(on) clockTimer = setInterval(clockTick, 1000);
+}
+
 /* ---------- Ergebnis teilen · Lernduell (Herausforderung) ----------
    Eine abgeschlossene Quiz-/Tipp-Sitzung lässt sich als Herausforderung teilen:
    Profil, Modus und die EXAKTE Kartenauswahl (als Indizes in
@@ -683,13 +706,109 @@ function renderProgress(){
    Fragen und versucht, die Trefferquote zu schlagen. Alles offline – kein Netz-
    abruf; geteilt wird per Web-Share (mobil inkl. WhatsApp), WhatsApp-Deeplink
    (wa.me, neuer Tab) oder Link-Kopieren. */
-function b64urlEnc(obj){
+function b64urlEnc(obj){                  // Altformat (v1): lesbares JSON – nur noch zum Lesen alter Links
   const s = btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
   return s.replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
 }
 function b64urlDec(s){
   try{ s=String(s).replace(/-/g,"+").replace(/_/g,"/"); while(s.length%4) s+="=";
     return JSON.parse(decodeURIComponent(escape(atob(s)))); }catch(e){ return null; }
+}
+
+/* ---------- Kodierung der Herausforderung (kompakt · nicht im Klartext) ----------
+   Früher stand die Sitzung als lesbares JSON im Link (»…"s":8,"t":10…«) – wer den
+   Link vor dem Verschicken aufmachte, konnte sein Ergebnis in zehn Sekunden
+   hochschrauben. Jetzt werden die Angaben binär gepackt, verwürfelt und mit einer
+   Prüfsumme versehen: im Link stehen keine lesbaren Zahlen mehr, jede geänderte
+   Stelle fällt auf, und der Link wird nebenbei rund fünfmal kürzer.
+   Ehrlich gesagt: Einen echten Fälschungsschutz kann es ohne Server nicht geben –
+   der Code liegt im Browser jedes Nutzers. Es verhindert das schnelle Schummeln,
+   nicht den entschlossenen Bastler.
+   Reihenfolge der drei Tabellen NICHT ändern – sonst zeigen alte Links ins Leere. */
+const CH_PROFILES = [
+  "baumschule_gaertner","baumschule_fachwerker",
+  "friedhofsgaertnerei_gaertner","friedhofsgaertnerei_fachwerker",
+  "garten_und_landschaftsbau_gaertner","garten_und_landschaftsbau_fachwerker",
+  "gemuesebau_gaertner","gemuesebau_fachwerker",
+  "obstbau_gaertner","obstbau_fachwerker",
+  "staudengaertnerei_gaertner","staudengaertnerei_fachwerker",
+  "zierpflanzenbau_gaertner","zierpflanzenbau_fachwerker"];
+const CH_MODES = ["quiz","type","photo"];
+const CH_DIRS  = ["de2bot","bot2de","img2bot","img2de"];
+const CH_VER   = 2;
+
+function vPut(out, n){                     // Varint: kleine Zahlen = ein Byte
+  n = Math.max(0, Math.round(n));
+  while(n > 127){ out.push((n & 127) | 128); n = Math.floor(n/128); }
+  out.push(n);
+}
+function vGet(b, st){
+  let n=0, sh=1;
+  for(;;){ if(st.i>=b.length) throw 0; const x=b[st.i++]; n += (x & 127)*sh; if(!(x & 128)) break; sh *= 128; }
+  return n;
+}
+function chSum(b, len){                    // FNV-1a, 16 Bit – erkennt jede Handänderung
+  let h = 0x811c;
+  for(let i=0;i<len;i++){ h ^= b[i]; h = (h*0x0193) & 0xffff; }
+  return h;
+}
+function chMask(b){                        // Verwürfeln (symmetrisch): kein lesbares Muster im Link
+  let x = 0x9e3779b9, out = new Uint8Array(b.length);
+  for(let i=0;i<b.length;i++){ x = (Math.imul(x,1664525) + 1013904223) >>> 0; out[i] = b[i] ^ ((x>>>24) & 255); }
+  return out;
+}
+function bytesToB64url(b){
+  let s=""; for(let i=0;i<b.length;i++) s += String.fromCharCode(b[i]);
+  return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+function b64urlToBytes(s){
+  s = String(s).replace(/-/g,"+").replace(/_/g,"/"); while(s.length%4) s+="=";
+  const bin = atob(s), a = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) a[i] = bin.charCodeAt(i);
+  return a;
+}
+function chEncode(o){
+  const pi = CH_PROFILES.indexOf(o.p), mi = Math.max(0, CH_MODES.indexOf(o.m)), di = Math.max(0, CH_DIRS.indexOf(o.r));
+  const out = [CH_VER, ((pi<0?15:pi)<<4) | (mi<<2) | di];
+  if(pi<0){ const s=unescape(encodeURIComponent(o.p||"")); vPut(out,s.length); for(let i=0;i<s.length;i++) out.push(s.charCodeAt(i) & 255); }
+  const idx = o.i||[];
+  vPut(out, idx.length); idx.forEach(n=>vPut(out,n));
+  vPut(out, o.s||0); vPut(out, o.t||0); vPut(out, o.z||0);
+  const nm = unescape(encodeURIComponent((o.n||"").slice(0,40)));
+  vPut(out, nm.length); for(let i=0;i<nm.length;i++) out.push(nm.charCodeAt(i) & 255);
+  const body = Uint8Array.from(out), sum = chSum(body, body.length);
+  const all = new Uint8Array(body.length+2);
+  all.set(body); all[body.length] = sum & 255; all[body.length+1] = sum >>> 8;
+  return bytesToB64url(chMask(all));
+}
+function chDecode(s){
+  try{
+    const raw = chMask(b64urlToBytes(s));
+    if(raw.length>=4 && raw[0]===CH_VER){
+      const n = raw.length-2, sum = chSum(raw, n);
+      if(((sum & 255)===raw[n]) && ((sum>>>8)===raw[n+1])){
+        const st={i:2}, head=raw[1], pi=head>>>4;
+        let p;
+        if(pi===15){ const len=vGet(raw,st); let t=""; for(let k=0;k<len;k++) t+=String.fromCharCode(raw[st.i++]); p=decodeURIComponent(escape(t)); }
+        else p = CH_PROFILES[pi] || "";
+        const cnt=vGet(raw,st), i=[];
+        for(let k=0;k<cnt;k++) i.push(vGet(raw,st));
+        const sc=vGet(raw,st), t=vGet(raw,st), z=vGet(raw,st);
+        const nl=vGet(raw,st); let nm="";
+        for(let k=0;k<nl;k++) nm += String.fromCharCode(raw[st.i++]);
+        const o = { v:CH_VER, p, m:CH_MODES[(head>>>2)&3]||"quiz", r:CH_DIRS[head&3]||"de2bot",
+                    i, s:sc, t, z, n:decodeURIComponent(escape(nm)) };
+        return chPlausible(o) ? o : null;
+      }
+    }
+  }catch(e){ /* kein neues Format – unten das alte versuchen */ }
+  const old = b64urlDec(s);                       // v1-Links (lesbares JSON) weiterhin annehmen
+  return old && chPlausible(old) ? old : null;
+}
+function chPlausible(o){                          // grober Unsinn (mehr richtig als gefragt …) fliegt raus
+  return !!o && typeof o.p==="string" && Array.isArray(o.i) && o.i.length>0
+      && o.i.every(n=>Number.isInteger(n) && n>=0)
+      && Number.isFinite(o.s) && Number.isFinite(o.t) && o.s>=0 && o.t>0 && o.s<=o.t;
 }
 function duelName(v){                    // Name des Herausforderers (optional, im Browser gemerkt)
   if(v!=null) store.set(LS_PREFIX+"name", String(v).slice(0,40));
@@ -702,15 +821,18 @@ function nivNameOf(pid){ return /_fachwerker$/.test(pid)?"Fachwerker/in":"Gärtn
 
 function challengeURL(){                  // aktuelle Sitzung als Herausforderungs-Link kodieren
   const idx = (sess.cards||[]).map(c=>allCards.indexOf(c)).filter(i=>i>=0);
-  const payload = { v:1, p:profileId, m:mode, r:curDir(), i:idx, s:sess.correct, t:sess.done, n:duelName() };
-  return location.href.split("#")[0] + "#c=" + b64urlEnc(payload);
+  // z = Denkzeit in Sekunden; ältere Links ohne z werden weiterhin verstanden.
+  const payload = { v:CH_VER, p:profileId, m:mode, r:curDir(), i:idx, s:sess.correct, t:sess.done,
+                    z:Math.round((sess.ms||0)/1000), n:duelName() };
+  return location.href.split("#")[0] + "#c=" + chEncode(payload);
 }
 function duelMessage(url){
   const who = duelName().trim();
   const modeLabel = mode==="quiz" ? "Quiz" : mode==="photo" ? "Bilder-Quiz" : "Tippen";
   const fr = frNameOf(profileId);
+  const zeit = sess.ms ? ` in ${fmtDur(sess.ms)} min` : "";
   return `🌱 Pflanzen-Lernduell (${modeLabel}${fr?" · "+fr:""})\n`+
-    `${who?who+" hat":"Ich habe"} ${sess.correct} von ${sess.done} richtig (${sessAcc()} %). Schaffst du mehr?\n`+
+    `${who?who+" hat":"Ich habe"} ${sess.correct} von ${sess.done} richtig (${sessAcc()} %)${zeit}. Schaffst du mehr?\n`+
     `Gleiche Karten, gleiche Fragen – tippe den Link:\n${url}`;
 }
 function shareChallenge(){
@@ -738,7 +860,7 @@ function shareBlockHTML(primaryLabel){
   const name = esc(duelName());
   return `<div class="shareblock" id="shareBlock">
     <p class="share-h">Fordere Azubi-Kollegen heraus</p>
-    <p class="share-sub">Verschick genau diese Lektion – gleiche Karten, gleiche Fragen. Wer den Link öffnet, versucht deine Trefferquote zu schlagen und kann dir sein Ergebnis zurückschicken.</p>
+    <p class="share-sub">Verschick genau diese Lektion – gleiche Karten, gleiche Fragen. Wer den Link öffnet, versucht deine Trefferquote zu schlagen (bei Gleichstand zählt die Denkzeit) und kann dir sein Ergebnis zurückschicken.</p>
     <input id="duelName" class="duel-name" type="text" maxlength="40" placeholder="Dein Name (optional)" value="${name}" aria-label="Dein Name für die Herausforderung">
     <div class="share-btns">
       <button class="btn primary" id="btnShare">${esc(primaryLabel)}</button>
@@ -756,12 +878,12 @@ function showChallengeBanner(ch){
   const b=$("#duelBanner"); if(!b) return;
   const who=(ch.n||"").trim();
   const theirAcc = ch.t ? Math.round(ch.s/ch.t*100) : 0;
-  const modeLabel = ch.m==="quiz" ? "Quiz" : "Tippen";
+  const modeLabel = ch.m==="quiz" ? "Quiz" : ch.m==="photo" ? "Bilder-Quiz" : "Tippen";
   const n=(ch.i||[]).length;
   b.innerHTML = `<div class="duel-ic" aria-hidden="true">🌱</div>
     <div class="duel-txt">
       <p class="duel-title">${who?esc(who)+" fordert dich heraus!":"Lernduell – Herausforderung"}</p>
-      <p class="duel-meta">${modeLabel} · ${esc(frNameOf(ch.p))} · ${esc(nivNameOf(ch.p))} · ${n} Karten · Zielwert <b>${theirAcc} %</b> (${ch.s}/${ch.t} richtig)</p>
+      <p class="duel-meta">${modeLabel} · ${esc(frNameOf(ch.p))} · ${esc(nivNameOf(ch.p))} · ${n} Karten · Zielwert <b>${theirAcc} %</b> (${ch.s}/${ch.t} richtig)${ch.z?` · Zeit <b>${fmtDur(ch.z*1000)}</b>`:""}</p>
     </div>
     <div class="duel-cta">
       <button class="btn primary" id="btnAcceptDuel">Herausforderung annehmen</button>
@@ -777,22 +899,26 @@ function startChallenge(){                // genau die Karten der Herausforderun
   const cards = (ch.i||[]).map(i=>allCards[i]).filter(Boolean);
   if(!cards.length){ toast("Karten dieser Herausforderung nicht gefunden",true); return; }
   const b=$("#duelBanner"); if(b) b.hidden=true;
-  queue = cards.slice(); qi = 0; photoMisses = 0;
-  sess = { total:queue.length, done:0, correct:0, active:true, cards:cards.slice(), challenge:ch };
+  queue = cards.slice(); qi = 0; photoMisses = 0; qStart = 0;
+  sess = { total:queue.length, done:0, correct:0, ms:0, active:true, cards:cards.slice(), challenge:ch };
+  clockRun(true);
   nextCard();
 }
 
 /* ---------- Sitzung / Bühne ---------- */
 function startSession(){
-  queue = buildQueue(); qi = 0; photoMisses = 0;
-  sess = { total:queue.length, done:0, correct:0, active:true, cards:queue.slice(), challenge:null };
+  queue = buildQueue(); qi = 0; photoMisses = 0; qStart = 0;
+  sess = { total:queue.length, done:0, correct:0, ms:0, active:true, cards:queue.slice(), challenge:null };
   if(!queue.length){ toast("Keine Arten im aktuellen Filter",true); return; }
+  clockRun(true);
   nextCard();
 }
 function sessionBar(){
   const pct = sess.total? Math.round(sess.done/sess.total*100):0;
   return `<div class="sessionbar"><span>${sess.done} / ${sess.total}</span><span class="sbar"><i style="width:${pct}%"></i></span>`+
-    (mode!=="cards"?`<span>${sess.correct} richtig</span>`:``)+`<button class="btn ghost" id="btnStop" title="Sitzung beenden">beenden</button></div>`;
+    (mode!=="cards"?`<span>${sess.correct} richtig</span>`:``)+
+    (scoreable()?`<span class="sclock" id="sclock" title="Denkzeit dieser Sitzung – die Uhr läuft nur, solange eine Frage offen ist">${fmtDur(clockNow())}</span>`:``)+
+    `<button class="btn ghost" id="btnStop" title="Sitzung beenden">beenden</button></div>`;
 }
 function nextCard(){
   if(qi>=queue.length){ return finishSession(); }
@@ -810,6 +936,7 @@ function requeueCurrent(){ // "Nochmal"/falsch: Karte in dieser Sitzung später 
 }
 
 function finishSession(){
+  clockStop(); clockRun(false);
   sess.active=false;
   const acc = sessAcc();
   const ch = sess.challenge;                     // angenommene Herausforderung (falls vorhanden)
@@ -817,12 +944,15 @@ function finishSession(){
   if(ch){                                        // Vergleich Du ↔ Herausforderer
     const theirAcc = ch.t ? Math.round(ch.s/ch.t*100) : 0;
     const who = (ch.n||"").trim() || "Herausforderer";
+    const mine = sess.ms||0, theirs = (ch.z||0)*1000;   // Zeit entscheidet nur bei gleicher Quote
     const verdict = acc>theirAcc ? `<b class="duel-win">Du hast gewonnen! 🎉</b>`
       : acc<theirAcc ? `<b class="duel-lose">Knapp – ${esc(who)} liegt vorn. Nochmal versuchen?</b>`
+      : (mine && theirs && mine<theirs) ? `<b class="duel-win">Gleiche Quote – aber du warst schneller! 🎉</b>`
+      : (mine && theirs && mine>theirs) ? `<b class="duel-lose">Gleiche Quote – ${esc(who)} war schneller. Revanche?</b>`
       : `<b>Gleichstand!</b>`;
     extra = `<div class="duel-result">
-      <div class="duel-row"><span>Du</span><span class="duel-pct">${acc} %</span><span class="duel-raw">${sess.correct}/${sess.done}</span></div>
-      <div class="duel-row"><span>${esc(who)}</span><span class="duel-pct">${theirAcc} %</span><span class="duel-raw">${ch.s}/${ch.t}</span></div>
+      <div class="duel-row"><span>Du</span><span class="duel-pct">${acc} %</span><span class="duel-raw">${sess.correct}/${sess.done}</span>${mine?`<span class="duel-time">${fmtDur(mine)}</span>`:""}</div>
+      <div class="duel-row"><span>${esc(who)}</span><span class="duel-pct">${theirAcc} %</span><span class="duel-raw">${ch.s}/${ch.t}</span>${theirs?`<span class="duel-time">${fmtDur(theirs)}</span>`:""}</div>
       <p class="duel-verdict">${verdict}</p></div>`;
   }
   const share = scoreable() ? shareBlockHTML(ch ? "Mein Ergebnis zurückschicken" : "Ergebnis teilen · herausfordern") : "";
@@ -830,7 +960,7 @@ function finishSession(){
   stage.innerHTML = `<div class="stage-empty">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6L9 17l-5-5"/></svg>
     <h2>Sitzung geschafft</h2>
-    <p>${sess.done} Karten gelernt${mode!=="cards"?` · ${sess.correct} richtig (${acc} %)`:""}.</p>
+    <p>${sess.done} Karten gelernt${mode!=="cards"?` · ${sess.correct} richtig (${acc} %)`:""}${scoreable()&&sess.ms?` · Denkzeit ${fmtDur(sess.ms)}`:""}.</p>
     ${extra}
     ${share}
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px">
@@ -894,8 +1024,10 @@ function renderQuiz(){
     b.onclick=()=>answerQuiz(b,o,opts);
     host.appendChild(b);
   });
+  clockStart();                                   // Frage steht – ab jetzt läuft die Uhr
 }
 function answerQuiz(btn, chosen, opts){
+  clockStop();
   const c=current; const correct = answerText(c);
   const ok = chosen.toLowerCase()===correct.toLowerCase();
   document.querySelectorAll("#opts .opt").forEach(b=>{
@@ -926,8 +1058,10 @@ function renderType(){
   const inp=$("#typeIn"); inp.focus();
   inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); $("#chk").click(); }});
   $("#chk").onclick=()=>submitType(inp);
+  clockStart();
 }
 function submitType(inp){
+  clockStop();
   const c=current; const ok=checkTyped(inp.value, c);
   inp.disabled=true; inp.classList.add(ok?"ok":"no");
   grade(c, ok?"good":"again"); if(ok) sess.correct++; else requeueCurrent();
@@ -1157,6 +1291,7 @@ function printList(){
 /* Modus anwenden: Liste zeigt sofort die Nachschlage-Liste (ohne »Sitzung starten«) */
 function applyMode(){
   const isList = mode==="list";
+  sess.active=false; qStart=0; clockRun(false);          // Moduswechsel bricht die Sitzung ab
   const sr=$("#startRow"), lsr=$("#listSearchRow"), lc=$("#listControls");
   if(sr) sr.hidden = isList;
   const ln=$("#learnNote"); if(ln) ln.hidden = isList;   // Hinweis gehört zu den Lektionen, nicht zur Liste
@@ -1382,6 +1517,7 @@ async function renderPhoto(){
   if(photoAnswer==="exam")      renderPhotoExam(p);
   else if(photoAnswer==="type") renderPhotoType(p);
   else                          renderPhotoChoice(p);
+  clockStart();                                        // erst jetzt – die Ladezeit zählt nicht mit
   prefetchPhoto();                                     // nächstes Bild schon im Hintergrund holen
 }
 /* Antwort 1: Auswahl aus vier Namen */
@@ -1446,6 +1582,7 @@ function renderPhotoExam(p){
 }
 /* Gemeinsamer Abschluss: bewerten, Rückmeldung, Bildnachweis, »Weiter« */
 function finishPhotoAnswer(ok, g, p, solHTML){
+  clockStop();                                        // gilt für alle drei Antwortarten
   const c=current;
   grade(c, g); if(ok) sess.correct++; else requeueCurrent();
   $("#fb").innerHTML = (ok ? `<span class="good">Richtig!</span>`
@@ -1674,7 +1811,7 @@ function wire(){
     if(!(typeof SEEDS!=="undefined" && SEEDS[pid])) pid="gemuesebau_gaertner";
     // Eingehende Herausforderung (#c=…) übernimmt Profil und Modus
     const cm = (location.hash||"").match(/[#&]c=([^&]+)/);
-    const ch = cm ? b64urlDec(cm[1]) : null;
+    const ch = cm ? chDecode(cm[1]) : null;   // neues kompaktes Format, alte JSON-Links weiterhin lesbar
     if(ch && ch.p && Array.isArray(ch.i) && ch.i.length && (typeof SEEDS!=="undefined" && SEEDS[ch.p])){
       pendingChallenge = ch; pid = ch.p;
       if(ch.m==="quiz"||ch.m==="type"||ch.m==="photo") mode = ch.m;
@@ -1717,4 +1854,7 @@ window.challengeURL=challengeURL;
 window.showChallengeBanner=showChallengeBanner;
 window.b64urlEnc=b64urlEnc;
 window.b64urlDec=b64urlDec;
+window.chEncode=chEncode;
+window.chDecode=chDecode;
+window.fmtDur=fmtDur;
 window.famName=famName;

@@ -884,8 +884,13 @@ async function main() {
     const hasWa = !!document.querySelector("#btnWa");
     const hasCopy = !!document.querySelector("#btnCopy");
     const nameInp = document.querySelector("#duelName"); nameInp.value = "Testine"; nameInp.dispatchEvent(new Event("input"));
-    const url = challengeURL();
-    return { finished, hasShare, hasWa, hasCopy, url, dec: b64urlDec(url.split("#c=")[1]), correct: sess.correct, done: sess.done };
+    sess.ms = 187000;                                // feste Denkzeit → prüfbare Kodierung (3:07)
+    const url = challengeURL(), frag = url.split("#c=")[1];
+    // eine einzelne veränderte Stelle muss die Prüfsumme reißen
+    const kaputt = (() => { const a = frag.split(""); a[3] = a[3] === "A" ? "B" : "A"; return chDecode(a.join("")); })();
+    return { finished, hasShare, hasWa, hasCopy, url, frag, dec: chDecode(frag),
+      alsJson: b64urlDec(frag), kaputt, correct: sess.correct, done: sess.done,
+      alt: chDecode(b64urlEnc({ v: 1, p: "gemuesebau_gaertner", m: "quiz", i: [1, 2], s: 1, t: 2, n: "Alt" })) };
   });
   assert(duelShare.finished, "Lernduell: Quiz-Sitzung erreicht den Abschluss-Screen nicht");
   assert(duelShare.hasShare && duelShare.hasWa && duelShare.hasCopy, "Lernduell: Teilen-Block (Teilen/WhatsApp/Kopieren) fehlt");
@@ -895,9 +900,17 @@ async function main() {
     "Lernduell-Link kodiert die exakte Kartenauswahl (Indizes) nicht: " + JSON.stringify(duelShare.dec.i));
   assert(duelShare.dec.n === "Testine" && duelShare.dec.s === duelShare.correct && duelShare.dec.t === duelShare.done,
     "Lernduell-Link kodiert Name/Ergebnis nicht: " + JSON.stringify(duelShare.dec));
+  assert(duelShare.dec.z === 187, "Lernduell-Link kodiert die Denkzeit nicht: " + JSON.stringify(duelShare.dec));
+  // Ergebnis/Zeit dürfen nicht im Klartext im Link stehen und der Link soll kurz bleiben
+  assert(duelShare.alsJson === null && !/^eyJ/.test(duelShare.frag),
+    "Lernduell-Link ist lesbares JSON (manipulierbar): " + duelShare.frag);
+  assert(duelShare.frag.length < 90, "Lernduell-Link unnötig lang (" + duelShare.frag.length + " Zeichen): " + duelShare.frag);
+  assert(duelShare.kaputt === null, "Lernduell-Link: veränderte Stelle wird nicht erkannt (Prüfsumme wirkungslos)");
+  assert(duelShare.alt && duelShare.alt.p === "gemuesebau_gaertner" && duelShare.alt.s === 1,
+    "Lernduell: alte (JSON-)Links werden nicht mehr verstanden: " + JSON.stringify(duelShare.alt));
 
-  // 2) Eingehende Herausforderung (#c=…): Banner erscheint, übernimmt Profil/Modus
-  const b64 = await page.evaluate((idx) => b64urlEnc({ v: 1, p: "gemuesebau_gaertner", m: "quiz", i: idx, s: 1, t: 4, n: "Kollege" }), duelShare.dec.i);
+  // 2) Eingehende Herausforderung (#c=…): Banner erscheint, übernimmt Profil/Modus, nennt die Zeit
+  const b64 = await page.evaluate((idx) => chEncode({ v: 2, p: "gemuesebau_gaertner", m: "quiz", r: "de2bot", i: idx, s: idx.length, t: idx.length, z: 600, n: "Kollege" }), duelShare.dec.i);
   await page.goto("about:blank");                   // erzwingt echten Reload (Hash-Wechsel allein lädt nicht neu)
   await page.goto(FILE + "#c=" + b64, { waitUntil: "load" });
   await page.waitForFunction("window.startChallenge!=null", { timeout: 10000 });
@@ -908,28 +921,48 @@ async function main() {
   });
   assert(duelIn.shown && duelIn.hasAccept, "Lernduell: Banner/Annehmen-Knopf erscheint nicht bei #c=-Link");
   assert(/Kollege/.test(duelIn.txt) && /fordert dich heraus/.test(duelIn.txt), "Lernduell-Banner nennt Herausforderer/Text nicht: " + duelIn.txt);
+  assert(/10:00/.test(duelIn.txt), "Lernduell-Banner nennt die Zeit des Herausforderers nicht: " + duelIn.txt);
   assert(duelIn.prof === "gemuesebau_gaertner" && duelIn.mode === "quiz",
     "Lernduell: Profil/Modus nicht aus dem Link übernommen: " + JSON.stringify(duelIn));
 
-  // Annehmen spielt EXAKT die kodierten Karten; alle richtig → Sieg + Zurückschicken-Knopf
+  // Annehmen spielt EXAKT die kodierten Karten; gleiche Quote, aber schneller → Sieg über die Zeit
   const duelPlay = await page.evaluate((idx) => {
     document.querySelector("#btnAcceptDuel").click();
     const started = sess.cards.map((c) => allCards.indexOf(c));
     const sameSet = started.length === idx.length && started.every((v, k) => v === idx[k]);
+    const hasClock = !!document.querySelector("#sclock");
     let guard = 0;
     while (document.querySelector("#opts") && guard++ < 60) {
       const correct = answerText(current).toLowerCase();
       const opt = [...document.querySelectorAll("#opts .opt")].find((b) => b.querySelector("span:last-child").textContent.toLowerCase() === correct);
       if (!opt) break; opt.click();
+      sess.ms = 120000;                              // eigene Denkzeit 2:00 – Herausforderer brauchte 10:00
       const wt = document.querySelector("#wt"); if (wt) wt.click();
     }
     const txt = document.querySelector("#stage").textContent;
-    return { sameSet, hasResult: !!document.querySelector(".duel-result"), win: /gewonnen/i.test(txt),
+    return { sameSet, hasClock, hasResult: !!document.querySelector(".duel-result"),
+      times: [...document.querySelectorAll(".duel-time")].map((e) => e.textContent),
+      schneller: /schneller/i.test(txt), txt: txt.slice(0, 400),
       backLabel: (document.querySelector("#btnShare") || {}).textContent || "" };
   }, duelShare.dec.i);
   assert(duelPlay.sameSet, "Lernduell: Annehmen spielt nicht exakt die kodierten Karten");
-  assert(duelPlay.hasResult && duelPlay.win, "Lernduell: Vergleich/Sieg wird nicht angezeigt");
+  assert(duelPlay.hasClock, "Lernduell/Quiz: Uhr (#sclock) fehlt in der Sitzungsleiste");
+  assert(duelPlay.hasResult, "Lernduell: Vergleich wird nicht angezeigt");
+  assert(duelPlay.times.length === 2 && /2:0\d/.test(duelPlay.times[0]) && duelPlay.times[1] === "10:00",
+    "Lernduell: Zeiten fehlen im Vergleich: " + JSON.stringify(duelPlay.times));
+  assert(duelPlay.schneller, "Lernduell: bei gleicher Quote entscheidet die Zeit nicht: " + duelPlay.txt);
   assert(/zurückschicken/i.test(duelPlay.backLabel), "Lernduell: Revanche-/Zurückschicken-Knopf fehlt");
+
+  // Manipulierter Link (eine Stelle geändert) wird nicht angenommen
+  const kaputtFrag = b64.slice(0, 3) + (b64[3] === "A" ? "B" : "A") + b64.slice(4);
+  await page.goto("about:blank");
+  await page.goto(FILE + "#c=" + kaputtFrag, { waitUntil: "load" });
+  await page.waitForFunction("window.startSession!=null", { timeout: 10000 });
+  const kaputtIn = await page.evaluate(() => {
+    const b = document.querySelector("#duelBanner");
+    return { shown: !!(b && !b.hidden) };
+  });
+  assert(!kaputtIn.shown, "Lernduell: manipulierter Link wird trotzdem als Herausforderung angenommen");
 
   // Zurück auf sauberen Zustand für die Aufräum-Schritte
   await page.goto("about:blank");
@@ -941,7 +974,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Vergleich/Sieg + Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz.");
+  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON-Links lesbar, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz.");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
