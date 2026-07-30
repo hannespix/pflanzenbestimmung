@@ -230,6 +230,67 @@ async function main() {
   });
   assert(typed.good, "Tippen: korrekte Eingabe nicht als richtig gewertet");
 
+  // Tippen, drei Stufen: richtig · fast (mit korrekter Form) · noch nicht.
+  // Dazu die kleine Belohnung: Partikel nur bei einem Treffer.
+  const stufen = await page.evaluate(() => {
+    const probe = (mach) => {
+      document.querySelectorAll(".conf-host").forEach((h) => h.remove());
+      const inp = document.querySelector("#typeIn"); if (!inp) return null;
+      const soll = answerText(current), c = current;
+      inp.value = mach(c, soll);
+      document.querySelector("#chk").click();
+      const fb = document.querySelector("#fb");
+      const r = { soll, ein: inp.value, txt: fb.textContent,
+        stufe: fb.querySelector(".good") ? "ok" : fb.querySelector(".near") ? "near" : "no",
+        dif: (fb.querySelector(".dif") || {}).textContent || "",
+        partikel: document.querySelectorAll(".conf-host .conf").length,
+        box: (progress[c.key] || {}).box || 0 };
+      document.querySelector("#wt").click();
+      return r;
+    };
+    startSession();
+    const exakt = probe((c, s) => s);                                  // exakt richtig
+    const tippfehler = probe((c, s) => s.slice(0, -1) + "x");          // ein Buchstabe daneben → toleriert
+    const nurGattung = probe((c) => c.g);                              // Gattung stimmt, Art fehlt → »fast«
+    const daneben = probe((c) => "Zzzz qqqq");                         // nichts davon
+    return { exakt, tippfehler, nurGattung, daneben };
+  });
+  assert(stufen.exakt.stufe === "ok" && stufen.exakt.partikel > 0,
+    "Tippen: exakte Antwort muss »richtig« sein und die Partikel auslösen: " + JSON.stringify(stufen.exakt));
+  assert(stufen.tippfehler.stufe === "ok" && /Schreibweise/.test(stufen.tippfehler.txt) && stufen.tippfehler.dif,
+    "Tippen: kleiner Tippfehler zählt als richtig, muss aber die saubere Schreibweise zeigen: " + JSON.stringify(stufen.tippfehler));
+  assert(stufen.nurGattung.stufe === "near" && /Gattung stimmt/.test(stufen.nurGattung.txt)
+    && /richtig wäre/i.test(stufen.nurGattung.txt) && stufen.nurGattung.partikel === 0,
+    "Tippen: nur die Gattung muss »fast« ergeben – mit Lob für das Richtige und ohne Partikel: " + JSON.stringify(stufen.nurGattung));
+  assert(stufen.daneben.stufe === "no" && /Noch nicht/.test(stufen.daneben.txt),
+    "Tippen: klar falsche Eingabe muss »noch nicht« ergeben: " + JSON.stringify(stufen.daneben));
+
+  // Bewertung der Stufen (Leitner) und die Feld-Variante der Prüfungsantwort
+  const stufenLogik = await page.evaluate(() => {
+    const c = { g: "Weigela", a: "florida", de: "Liebliche Weigelie", fam: "Caprifoliaceae", syn: "", key: "w|f|l" };
+    return {
+      exakt: judgeTyped("Weigela florida", c).lvl,
+      tippfehler: judgeTyped("Weigela floridaa", c).lvl,      // 1 Zeichen – bleibt richtig
+      grob: judgeTyped("Waigellia florida", c).lvl,           // 3 Zeichen – »fast«
+      gattung: judgeTyped("Weigela", c),
+      falsch: judgeTyped("Cornus mas", c).lvl,
+      feldOk: fieldJudge("g", "Weigela", c),
+      feldTippfehler: fieldJudge("g", "Weigella", c),         // 1 Zeichen – bleibt richtig
+      feldFast: fieldJudge("g", "Waigellia", c),
+      feldNo: fieldJudge("g", "Cornus", c),
+      famFast: fieldJudge("fam", "Kaprifoliazeen", c),
+      diff: markDiff("Weigela florida", "Weigelia florida"),
+    };
+  });
+  assert(stufenLogik.exakt === "ok" && stufenLogik.tippfehler === "ok" && stufenLogik.feldTippfehler === "ok",
+    "judgeTyped: kleine Tippfehler müssen richtig bleiben: " + JSON.stringify(stufenLogik));
+  assert(stufenLogik.grob === "near" && stufenLogik.gattung.lvl === "near" && stufenLogik.gattung.hint === "Gattung stimmt",
+    "judgeTyped: grober Tippfehler bzw. nur die Gattung muss »fast« ergeben: " + JSON.stringify(stufenLogik));
+  assert(stufenLogik.falsch === "no", "judgeTyped: andere Art darf nicht »fast« sein: " + JSON.stringify(stufenLogik));
+  assert(stufenLogik.feldOk === "ok" && stufenLogik.feldFast === "near" && stufenLogik.feldNo === "no" && stufenLogik.famFast === "near",
+    "fieldJudge: Stufen je Prüfungsfeld stimmen nicht: " + JSON.stringify(stufenLogik));
+  assert(/<u class="dif">/.test(stufenLogik.diff), "markDiff markiert die abweichende Stelle nicht: " + stufenLogik.diff);
+
   // Bilder-Quiz: Foto erkennen. Läuft hier ohne Netz über eine eingehängte
   // Bild-Quelle (im Betrieb liefert Wikipedia das Artikelbild per JSONP).
   const PX = "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==";
@@ -1036,7 +1097,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON-Links lesbar, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz.");
+  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON-Links lesbar, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz.");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });

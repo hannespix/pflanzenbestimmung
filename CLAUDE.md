@@ -812,6 +812,28 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       hängt über `__setJsonp` feste API-Antworten ein (kein Netz in CI) und prüft
       Suchreihenfolge, Sortenbild, Zwei-Arten-Tafel, Homonym, Ranking und Tafel-Erkennung.
 
+- [x] **»Fast richtig« statt »falsch« + kleine Belohnung** (Lern-Tool). Beim Tippen
+      (Text-Modus und Bilder-Modus) gibt es jetzt **drei Stufen** statt richtig/falsch
+      (`judgeTyped` → `ok|near|no`, Text über `typeFeedback`):
+      **richtig** (zählt; war ein kleiner Tippfehler dabei, wird zusätzlich die saubere
+      Schreibweise gezeigt), **fast** (knapp daneben oder nur die Gattung – zählt nicht
+      als Treffer, Leitner-Stufe `hard`, Karte kommt in derselben Sitzung wieder, die
+      richtige Form erscheint mit **markierter Abweichung** via `markDiff`) und
+      **noch nicht** (`again`). Didaktik: sofortige Korrektur, Teilwissen zuerst
+      benennen (»Gattung stimmt« – die Prüfung bewertet Gattung und Art ebenfalls
+      getrennt), kein hartes »falsch« für einen Buchstaben. Schwelle: `closeEnough`
+      (1–2 Zeichen) = richtig, `nearEnough` (bis 40 % der Länge) = fast.
+      In der Antwortart **»wie in der Prüfung«** gibt ein »fast« die **halbe Punktzahl**
+      (`fieldJudge`), genau wie der amtliche Bogen es vorsieht (»Schreibfehler führen zur
+      Halbierung der Punktezahl«); die Zeile weist das aus.
+      **Belohnung:** `celebrate(anchor, stärke)` streut ein paar Blättchen (reines
+      CSS/JS, `.conf-host`/`.conf`, keine Bibliothek) – Stärke 1 bei jedem Treffer
+      (Quiz, Tippen, Bilder), Stärke 2 am Sitzungsende ab 80 % bzw. bei gewonnenem
+      Duell. Respektiert `prefers-reduced-motion` und ist in `try/catch` gekapselt
+      (Animation darf nie eine Sitzung kippen). `tests/learn.mjs` prüft die drei Stufen
+      im Ablauf (inkl. Partikel nur bei Treffern) und `judgeTyped`/`fieldJudge`/`markDiff`
+      im Detail.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei

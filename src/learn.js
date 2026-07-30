@@ -642,6 +642,16 @@ function fieldOk(k, input, c){                                        // tippfeh
   }
   return false;
 }
+function fieldJudge(k, input, c){                                     // "ok" | "near" (Schreibfehler) | "no"
+  if(fieldOk(k, input, c)) return "ok";
+  if(!clean(input)) return "no";
+  if(k==="de") return deForms(c).names.some(n=>nearEnough(input, n)) ? "near" : "no";
+  if(k==="fam"){
+    const lat=famLatin(c.fam), de=famGerman(c.fam) || (FAM_INFO[famKey(c.fam)]&&FAM_INFO[famKey(c.fam)].de) || "";
+    return (nearEnough(input, lat) || (de && nearEnough(input, de))) ? "near" : "no";
+  }
+  return nearEnough(input, k==="g" ? c.g : c.a) ? "near" : "no";
+}
 function checkTyped(input, c){
   if(wantsDe()) return checkDeName(input, c);   // deutscher Name: jede geführte Schreibweise
   // Gattung + Art getrennt prüfen (tippfehlertolerant)
@@ -650,6 +660,54 @@ function checkTyped(input, c){
   const gOk=closeEnough(gi, c.g);
   const aOk = !norm(c.a) || closeEnough(ai, c.a) || (c.a.toLowerCase().indexOf(ai)===0 && ai.length>=3);
   return gOk && aOk;
+}
+
+/* ---------- »Fast richtig« statt »falsch« ----------
+   Wer *Weigelia* statt *Weigela* schreibt, weiß die Pflanze – nur die Schreibung
+   sitzt noch nicht. Ein hartes »Falsch« entmutigt und sagt nichts; deshalb drei
+   Stufen: **richtig** (zählt, bei Tippfehler wird die saubere Schreibweise
+   gezeigt), **fast** (zählt nicht als Treffer, kommt aber gleich wieder – mit der
+   richtigen Form und der Stelle, die abweicht) und **noch nicht**. Immer wird die
+   korrekte Antwort sofort mitgeliefert; die Abweichung ist markiert, weil das Auge
+   sie so behält. Was schon stimmte, wird zuerst genannt (»Gattung stimmt«) –
+   Teilwissen anzuerkennen hält bei der Stange und entspricht der Prüfung, die
+   Gattung und Art ebenfalls getrennt bewertet. */
+function nearEnough(input, target){                     // knapp daneben (grober Tippfehler)
+  const a=clean(input), b=clean(target);                // »richtig« deckt schon 1–2 Zeichen ab (closeEnough)
+  if(!a || !b) return false;
+  return lev(a,b) <= Math.max(2, Math.round(b.length*0.4));
+}
+function judgeTyped(input, c){                          // {lvl:"ok"|"near"|"no", exact?, hint?}
+  const soll = answerText(c);
+  if(checkTyped(input, c)) return { lvl:"ok", exact: clean(input)===clean(soll) };
+  if(wantsDe())
+    return deForms(c).names.some(n=>nearEnough(input, n)) ? { lvl:"near" } : { lvl:"no" };
+  const parts=clean(input).split(" ").filter(Boolean);
+  if(parts.length && closeEnough(parts[0], c.g))        // Gattung sitzt, Art noch nicht
+    return { lvl:"near", hint:"Gattung stimmt" };
+  return nearEnough(input, soll) ? { lvl:"near" } : { lvl:"no" };
+}
+function markDiff(right, typed){                        // abweichende Stelle in der richtigen Antwort markieren
+  const a=norm(right||""), b=norm(typed||"");
+  const la=a.toLowerCase(), lb=b.toLowerCase();
+  let p=0; while(p<la.length && p<lb.length && la[p]===lb[p]) p++;
+  let s=0; while(s<la.length-p && s<lb.length-p && la[la.length-1-s]===lb[lb.length-1-s]) s++;
+  const mid=a.slice(p, a.length-s);
+  if(mid) return esc(a.slice(0,p)) + `<u class="dif">${esc(mid)}</u>` + esc(a.slice(a.length-s));
+  if(la===lb) return esc(a);
+  const i=Math.max(0, Math.min(a.length-1, p-1));       // zu viel getippt: Stelle trotzdem zeigen
+  return esc(a.slice(0,i)) + `<u class="dif">${esc(a.slice(i,i+1))}</u>` + esc(a.slice(i+1));
+}
+function typeFeedback(j, c, typed){                     // Rückmeldungstext zu einer Eingabe
+  const soll = answerText(c);
+  if(j.lvl==="ok")
+    return (j.exact ? `<span class="good">Richtig!</span> `
+                    : `<span class="good">Richtig!</span> <span class="sol">Schreibweise: <b>${markDiff(soll, typed)}</b> · </span>`)+
+           `<span class="sol">${solutionLine(c)}</span>`;
+  if(j.lvl==="near")
+    return `<span class="near">Fast!</span> <span class="sol">${j.hint?esc(j.hint)+" · ":""}`+
+           `richtig wäre <b>${markDiff(soll, typed)}</b> – die Karte kommt gleich noch einmal.</span>`;
+  return `<span class="bad">Noch nicht.</span> <span class="sol">${solutionLine(c)}</span>`;
 }
 
 /* ---------- Fortschritts-Anzeige ---------- */
@@ -679,6 +737,36 @@ function renderProgress(){
                             : DIRS[curDir()].label;
   $("#startHint").textContent = p.length ? `${due} Karten heute dran · ${wie}` : "Keine Arten in der aktuellen Auswahl.";
   $("#btnStart").disabled = !p.length;
+}
+
+/* ---------- Kleine Belohnung: Partikel bei einem Treffer ----------
+   Reines CSS/JS, keine Bibliothek: ein paar Blättchen fliegen kurz auseinander.
+   Stärke 1 = Treffer in der Sitzung, 2 = Sitzung/Duell gewonnen. Wer im System
+   »weniger Bewegung« eingestellt hat, bekommt nichts (prefers-reduced-motion). */
+const CONF_COLORS = ["#3d6b4d","#7aa87f","#c8a24a","#9c3b2e","#2b4f38","#e0c56e"];
+function celebrate(anchor, strength){
+  try{
+    if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const n = strength>1 ? 34 : 14;
+    const r = anchor && anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : null;
+    const x = r && r.width ? r.left + r.width/2 : innerWidth/2;
+    const y = r && r.height ? r.top + r.height/2 : innerHeight/3;
+    const host = el("div","conf-host");
+    for(let i=0;i<n;i++){
+      const s = el("i","conf");
+      const ang = (Math.PI*2*i)/n + Math.random()*0.5;
+      const dist = (strength>1?150:90) * (0.5+Math.random());
+      s.style.left = x+"px"; s.style.top = y+"px";
+      s.style.setProperty("--dx", Math.cos(ang)*dist+"px");
+      s.style.setProperty("--dy", (Math.sin(ang)*dist - 40)+"px");
+      s.style.setProperty("--rot", Math.round(Math.random()*720-360)+"deg");
+      s.style.setProperty("--del", (Math.random()*0.12).toFixed(2)+"s");
+      s.style.background = CONF_COLORS[i%CONF_COLORS.length];
+      host.appendChild(s);
+    }
+    document.body.appendChild(host);
+    setTimeout(()=>host.remove(), strength>1 ? 1600 : 1200);
+  }catch(e){ /* Animation ist Kür – nie ein Grund für einen Fehler */ }
 }
 
 /* ---------- Zeitmessung (Denkzeit) ----------
@@ -945,11 +1033,12 @@ function finishSession(){
   sess.active=false;
   const acc = sessAcc();
   const ch = sess.challenge;                     // angenommene Herausforderung (falls vorhanden)
-  let extra = "";
+  let extra = "", gewonnen = scoreable() && sess.done>0 && acc>=80;   // ohne Duell: gute Quote reicht
   if(ch){                                        // Vergleich Du ↔ Herausforderer
     const theirAcc = ch.t ? Math.round(ch.s/ch.t*100) : 0;
     const who = (ch.n||"").trim() || "Herausforderer";
     const mine = sess.ms||0, theirs = (ch.z||0)*1000;   // Zeit entscheidet nur bei gleicher Quote
+    gewonnen = acc>theirAcc || (acc===theirAcc && !!mine && !!theirs && mine<theirs);
     const verdict = acc>theirAcc ? `<b class="duel-win">Du hast gewonnen! 🎉</b>`
       : acc<theirAcc ? `<b class="duel-lose">Knapp – ${esc(who)} liegt vorn. Nochmal versuchen?</b>`
       : (mine && theirs && mine<theirs) ? `<b class="duel-win">Gleiche Quote – aber du warst schneller! 🎉</b>`
@@ -973,6 +1062,7 @@ function finishSession(){
     </div></div>`;
   wireShareBlock();
   const a=$("#againBtn"); if(a) a.onclick=startSession;
+  if(gewonnen) celebrate(stage.querySelector("h2"), 2);
   renderProgress();
 }
 
@@ -1044,6 +1134,7 @@ function answerQuiz(btn, chosen, opts){
   grade(c, ok?"good":"again"); if(ok) sess.correct++; else requeueCurrent();
   $("#fb").innerHTML = (ok ? `<span class="good">Richtig!</span>` : `<span class="bad">Leider falsch.</span>`)+
     ` <span class="sol">${solutionLine(c)}</span>`;
+  if(ok) celebrate(btn, 1);
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
 }
@@ -1067,11 +1158,12 @@ function renderType(){
 }
 function submitType(inp){
   clockStop();
-  const c=current; const ok=checkTyped(inp.value, c);
-  inp.disabled=true; inp.classList.add(ok?"ok":"no");
-  grade(c, ok?"good":"again"); if(ok) sess.correct++; else requeueCurrent();
-  $("#fb").innerHTML = (ok ? `<span class="good">Richtig!</span>` : `<span class="bad">Nicht ganz.</span>`)+
-    ` <span class="sol">${solutionLine(c)}</span>`;
+  const c=current, j=judgeTyped(inp.value, c), ok=j.lvl==="ok";
+  inp.disabled=true; inp.classList.add(ok?"ok":j.lvl==="near"?"near":"no");
+  grade(c, ok?"good":j.lvl==="near"?"hard":"again");
+  if(ok) sess.correct++; else requeueCurrent();
+  $("#fb").innerHTML = typeFeedback(j, c, inp.value);
+  if(ok) celebrate($("#fb"), 1);
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
 }
@@ -1661,9 +1753,9 @@ function renderPhotoType(p){
   const inp=$("#typeIn"); inp.focus();
   inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); const b=$("#chk"); if(b) b.click(); }});
   $("#chk").onclick=()=>{
-    const c=current, ok=checkTyped(inp.value, c);
-    inp.disabled=true; inp.classList.add(ok?"ok":"no");
-    finishPhotoAnswer(ok, ok?"good":"again", p, `<span class="sol">${solutionLine(c)}</span>`);
+    const c=current, j=judgeTyped(inp.value, c), ok=j.lvl==="ok";
+    inp.disabled=true; inp.classList.add(ok?"ok":j.lvl==="near"?"near":"no");
+    finishPhotoAnswer(ok, ok?"good":j.lvl==="near"?"hard":"again", p, typeFeedback(j, c, inp.value), true);
   };
 }
 /* Antwort 3: wie in der Prüfung – ein Feld je bewerteter Spalte, mit Punkten */
@@ -1687,27 +1779,34 @@ function renderPhotoExam(p){
   }));
   $("#chk").onclick=()=>{
     const c=current;
-    let got=0, max=0, right=0;
+    let got=0, max=0, right=0, fast=0;
     ins.forEach(inp=>{
-      const k=inp.dataset.k, ok=fieldOk(k, inp.value, c), pts=examPts(k);
-      max+=pts; if(ok){ got+=pts; right++; }
-      inp.disabled=true; inp.classList.add(ok?"ok":"no");
+      const k=inp.dataset.k, lvl=fieldJudge(k, inp.value, c), pts=examPts(k);
+      max+=pts;
+      if(lvl==="ok"){ got+=pts; right++; }
+      else if(lvl==="near"){ got+=pts/2; fast++; }        // Schreibfehler: halbe Punkte (wie auf dem Bogen)
+      inp.disabled=true; inp.classList.add(lvl==="ok"?"ok":lvl==="near"?"near":"no");
       const mk=$("#mk_"+k);
-      if(mk) mk.innerHTML = ok ? `<span class="ex-ok">✓</span>`
+      if(mk) mk.innerHTML = lvl==="ok" ? `<span class="ex-ok">✓</span>`
+        : lvl==="near" ? `<span class="ex-near">≈</span> <span class="ex-sol">${markDiff(fieldSolution(k,c), inp.value)}</span>`
         : `<span class="ex-no">✗</span> <span class="ex-sol">${esc(fieldSolution(k,c))}</span>`;
     });
     const all = right===ins.length;
-    finishPhotoAnswer(all, all ? "good" : (right ? "hard" : "again"), p,
-      `<span class="sol">${nfmt(got)} von ${nfmt(max)} Punkten${all?"":" · "+solutionLine(c)}</span>`);
+    finishPhotoAnswer(all, all ? "good" : ((right||fast) ? "hard" : "again"), p,
+      `<span class="sol">${nfmt(got)} von ${nfmt(max)} Punkten`+
+      (fast?` · <b>≈</b> Schreibfehler zählen halb – so steht es auf dem Prüfungsbogen`:"")+
+      (all?"":" · "+solutionLine(c))+`</span>`);
   };
 }
 /* Gemeinsamer Abschluss: bewerten, Rückmeldung, Bildnachweis, »Weiter« */
-function finishPhotoAnswer(ok, g, p, solHTML){
+function finishPhotoAnswer(ok, g, p, solHTML, full){
   clockStop();                                        // gilt für alle drei Antwortarten
   const c=current;
   grade(c, g); if(ok) sess.correct++; else requeueCurrent();
-  $("#fb").innerHTML = (ok ? `<span class="good">Richtig!</span>`
-    : g==="hard" ? `<span class="bad">Teilweise richtig.</span>` : `<span class="bad">Leider falsch.</span>`)+" "+solHTML;
+  $("#fb").innerHTML = full ? solHTML                 // Tippen bringt seinen Text schon fertig mit
+    : (ok ? `<span class="good">Richtig!</span>`
+      : g==="hard" ? `<span class="near">Teilweise richtig.</span>` : `<span class="bad">Leider falsch.</span>`)+" "+solHTML;
+  if(ok) celebrate($("#fb"), 1);
   photoRevealCredit(p);
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
@@ -1969,6 +2068,10 @@ window.artLevelOk=artLevelOk;
 window.pickCommons=pickCommons;
 window.fieldOk=fieldOk;
 window.checkDeName=checkDeName;
+window.judgeTyped=judgeTyped;
+window.fieldJudge=fieldJudge;
+window.markDiff=markDiff;
+window.celebrate=celebrate;
 window.deHeadCounts=()=>deHeadCount;   // für Tests: Grundwort → Artenzahl im Profil
 window.deForms=deForms;
 window.examFieldList=examFieldList;
