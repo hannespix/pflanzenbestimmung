@@ -100,8 +100,12 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
     tippfehlertolerant (kleine Abweichungen zählen als richtig), Gattung und Art werden
     getrennt geprüft.
   - **Bilder** (zusätzlicher Modus, **braucht Internet**) – **die Pflanze am Bild
-    erkennen:** zu sehen ist nur ein Bild, sonst nichts; aus vier botanischen Namen ist
-    der richtige zu wählen. Das ist am nächsten an der Prüfung, wo die Pflanze vor einem
+    erkennen:** zu sehen ist nur ein Bild, sonst nichts. **Drei Antwortarten** (»Optionen ·
+    Antwort«): aus **vier Namen auswählen**, den Namen **selbst tippen** oder **»wie in der
+    Prüfung«** – dann steht unter dem Bild für jede bewertete Spalte ein eigenes Feld
+    (Gattung, Art, Familie, Deutscher Name) mit den **Punkten der Fachrichtung**, es gibt
+    **Teilpunkte** und feldweise Rückmeldung; welche Felder abgefragt werden, ist je Profil
+    frei einstellbar. Das ist am nächsten an der Prüfung, wo die Pflanze vor einem
     steht. Nach der Antwort erscheinen der deutsche Name und der **Bildnachweis**
     (Urheber + Lizenz). Gezeigt wird das Artikelbild der deutschen Wikipedia (meist ein
     Foto, gelegentlich eine botanische Zeichnung); geladen wird **erst beim Start des

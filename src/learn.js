@@ -343,6 +343,8 @@ let pendingChallenge = null;  // aus der URL (#c=…) dekodierte, noch nicht ang
 let examOnly = false;         // opt-in: nur Prüfungsstoff (Fachwerker) – Familie/Synonyme ausblenden
 let dirText  = "de2bot";      // Abfragerichtung für Karteikarten/Quiz/Tippen
 let dirPhoto = "img2bot";     // Abfragerichtung für den Bilder-Quiz
+let photoAnswer = "mc";       // Antwortart im Bilder-Quiz: mc | type | exam
+let examFields = null;        // Felder im Modus »wie in der Prüfung« (je Profil merkbar)
 
 /* Nur-Prüfungsstoff-Modus: Die Fachwerker-Abschlussprüfung bewertet ausschließlich
    Deutscher Name, Gattung und Art (keine Familie). Diese opt-in Option blendet in
@@ -502,14 +504,55 @@ function closeEnough(input, target){
   const tol = b.length<=5?1:2;
   return lev(a,b)<=tol;
 }
-function checkTyped(input, c){
-  if(wantsDe()){
-    // Deutscher Name: jede in der Liste geführte Schreibweise zählt, Bindestriche
-    // und Leerzeichen egal (»Hängebirke« = »Hänge-Birke«), tippfehlertolerant.
-    const flat = s => clean(s).replace(/[-\s]/g,"");
-    const inp = flat(input); if(!inp) return false;
-    return deAll(c).some(v => closeEnough(input, v) || closeEnough(inp, flat(v)));
+/* ---------- Antwort »wie in der Prüfung« ----------
+   Statt einer Auswahl werden die Felder des Prüfungsbogens abgefragt – je
+   Fachrichtung genau die, die dort bewertet werden (Fachwerker: Dt. Name +
+   Gattung + Art; GaLaBau: Gattung + Art + Dt. Name; Produktion zusätzlich die
+   Familie), samt Punkten. Welche Felder abgefragt werden, ist pro Profil
+   einstellbar; die Spalten kommen aus PRINT_COLS – dieselbe Quelle wie für
+   Druckliste und Prüfungsbogen. */
+const nfmt = n => String(n).replace(".", ",");                        // 0.5 -> »0,5«
+const FIELD_LABEL = { g:"Gattung", a:"Art", fam:"Familie", de:"Deutscher Name" };
+const FIELD_ORDER = ["g","a","fam","de"];
+const examCols  = () => PRINT_COLS[printFamily()];
+const examPts   = k => { const c=examCols().find(x=>x[0]===k); return c?c[3]:1; };
+const examLabel = k => { const c=examCols().find(x=>x[0]===k); return c?c[1]:(FIELD_LABEL[k]||k); };
+function defaultExamFields(){ return examCols().map(c=>c[0]); }        // Standard = Bogen des Profils
+function examFieldsKey(){ return LS_PREFIX+"examfields."+profileId; }
+function loadExamFields(){
+  let v=null;
+  try{ v=JSON.parse(store.get(examFieldsKey())||"null"); }catch(e){ v=null; }
+  examFields = (Array.isArray(v) && v.length && v.every(k=>FIELD_LABEL[k])) ? v : defaultExamFields();
+}
+function saveExamFields(){ try{ store.set(examFieldsKey(), JSON.stringify(examFields)); }catch(e){} }
+function examFieldList(){                                             // Bogen-Reihenfolge, Rest hinten
+  const order = examCols().map(c=>c[0]).concat(FIELD_ORDER);
+  return order.filter((k,i)=> order.indexOf(k)===i && examFields.includes(k));
+}
+function fieldSolution(k,c){                                          // richtige Antwort zum Anzeigen
+  if(k==="fam") return famName(c.fam);
+  if(k==="de")  return c.de||"";
+  return c[k]||"";
+}
+function checkDeName(input, c){   // jede geführte Schreibweise, Bindestriche/Leerzeichen egal
+  const flat = t => clean(t).replace(/[-\s]/g,"");
+  const inp = flat(input); if(!inp) return false;
+  return deAll(c).some(v => closeEnough(input, v) || closeEnough(inp, flat(v)));
+}
+function fieldOk(k, input, c){                                        // tippfehlertolerant, je Feld passend
+  const v=clean(input); if(!v) return false;
+  if(k==="g")  return closeEnough(input, c.g);
+  if(k==="a")  return !norm(c.a) || closeEnough(input, c.a) || (clean(c.a).indexOf(v)===0 && v.length>=3);
+  if(k==="de") return checkDeName(input, c);
+  if(k==="fam"){                                                      // lateinisch ODER deutsch zählt
+    const lat=famKey(c.fam), de=famGerman(c.fam) || (FAM_INFO[lat]&&FAM_INFO[lat].de) || "";
+    return (!!lat && (closeEnough(input, lat) || closeEnough(input, famLatin(c.fam)))) ||
+           (!!de  && closeEnough(input, de));
   }
+  return false;
+}
+function checkTyped(input, c){
+  if(wantsDe()) return checkDeName(input, c);   // deutscher Name: jede geführte Schreibweise
   // Gattung + Art getrennt prüfen (tippfehlertolerant)
   const parts=clean(input).split(" ");
   const gi=parts.shift()||""; const ai=parts.join(" ");
@@ -541,7 +584,9 @@ function renderProgress(){
          <i class="b-neu" style="background:var(--rule-strong)"></i>${neu} neu</span>
      </div>`;
   const due = p.filter(c=>{ const pr=pget(c.key); return !pr.box || !pr.due || pr.due<=todayISO(); }).length;
-  $("#startHint").textContent = p.length ? `${due} Karten heute dran · ${DIRS[curDir()].label}` : "Keine Arten in der aktuellen Auswahl.";
+  const wie = mode==="photo" ? (photoAnswer==="exam" ? "wie in der Prüfung" : DIRS[curDir()].label+" · "+PH_ANSWER[photoAnswer])
+                            : DIRS[curDir()].label;
+  $("#startHint").textContent = p.length ? `${due} Karten heute dran · ${wie}` : "Keine Arten in der aktuellen Auswahl.";
   $("#btnStart").disabled = !p.length;
 }
 
@@ -956,10 +1001,10 @@ function printFamily(){
   if(profileId.startsWith("garten_und_landschaftsbau")) return "gala";
   return "prod";
 }
-const PRINT_COLS={ // [Feld, Beschriftung, Punktangabe] im Wortlaut der Bögen
-  fw:  [["de","Deutscher Name","3 Punkte"],["g","Gattung (botanisch)","0,5 Punkte"],["a","Art (botanisch)","0,5 Punkte"]],
-  gala:[["g","Gattungsname","1 Punkt (G)"],["a","Artname","1 Punkt (G)"],["de","Deutscher Name","2 Punkte (G)"]],
-  prod:[["g","Gattungsname","3 Punkte (G)"],["a","Artname","3 Punkte (G)"],["fam","Familienname","1 Punkt (G)"],["de","Deutscher Name","3 Punkte (G)"]]
+const PRINT_COLS={ // [Feld, Beschriftung, Punktangabe im Wortlaut der Bögen, Punkte]
+  fw:  [["de","Deutscher Name","3 Punkte",3],["g","Gattung (botanisch)","0,5 Punkte",0.5],["a","Art (botanisch)","0,5 Punkte",0.5]],
+  gala:[["g","Gattungsname","1 Punkt (G)",1],["a","Artname","1 Punkt (G)",1],["de","Deutscher Name","2 Punkte (G)",2]],
+  prod:[["g","Gattungsname","3 Punkte (G)",3],["a","Artname","3 Punkte (G)",3],["fam","Familienname","1 Punkt (G)",1],["de","Deutscher Name","3 Punkte (G)",3]]
 };
 function buildPrintList(){
   const host=$("#printList"); if(!host) return 0;
@@ -1244,19 +1289,95 @@ async function renderPhoto(){
     return nextCard();
   }
   photoMisses = 0;
-  const opts = shuffle([answerText(c), ...distractors(c,3)]);
   $("#stage").querySelector(".photobox").innerHTML =
     `<img class="ph-img" id="phImg" src="${esc(p.thumb)}" alt="Bild der gesuchten Pflanze">`;
   const img=$("#phImg");
   if(img) img.onerror=()=>{ const b=$("#stage").querySelector(".photobox");
     if(b) b.innerHTML=`<div class="ph-load">Bild konnte nicht geladen werden.</div>`; };
+  if(photoAnswer==="exam")      renderPhotoExam(p);
+  else if(photoAnswer==="type") renderPhotoType(p);
+  else                          renderPhotoChoice(p);
+  prefetchPhoto();                                     // nächstes Bild schon im Hintergrund holen
+}
+/* Antwort 1: Auswahl aus vier Namen */
+function renderPhotoChoice(p){
+  const c=current, opts=shuffle([answerText(c), ...distractors(c,3)]);
   const host=$("#opts"), letters=["A","B","C","D","E"];
   opts.forEach((o,i)=>{
     const b=el("button","opt"); b.innerHTML=`<span class="k">${letters[i]}</span><span>${esc(o)}</span>`;
     b.onclick=()=>answerPhoto(b,o,p);
     host.appendChild(b);
   });
-  prefetchPhoto();                                     // nächstes Bild schon im Hintergrund holen
+}
+/* Antwort 2: den Namen direkt unter dem Bild tippen */
+function renderPhotoType(p){
+  $("#opts").innerHTML = `<div class="typebox">
+      <input id="typeIn" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
+             placeholder="${esc(answerLabel())} eingeben …">
+    </div>`;
+  $("#nav").innerHTML = `<button class="btn primary" id="chk">Prüfen</button>`;
+  const inp=$("#typeIn"); inp.focus();
+  inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); const b=$("#chk"); if(b) b.click(); }});
+  $("#chk").onclick=()=>{
+    const c=current, ok=checkTyped(inp.value, c);
+    inp.disabled=true; inp.classList.add(ok?"ok":"no");
+    finishPhotoAnswer(ok, ok?"good":"again", p, `<span class="sol">${solutionLine(c)}</span>`);
+  };
+}
+/* Antwort 3: wie in der Prüfung – ein Feld je bewerteter Spalte, mit Punkten */
+function renderPhotoExam(p){
+  const keys=examFieldList();
+  $("#opts").innerHTML = `<div class="examform" id="examForm">`+
+    keys.map((k,i)=>`<label class="exrow" for="ex_${k}">
+        <span class="exlab">${esc(examLabel(k))}<span class="expts">${nfmt(examPts(k))} P.</span></span>
+        <input id="ex_${k}" data-k="${k}" type="text" autocomplete="off" autocapitalize="${k==="de"?"sentences":"off"}"
+               spellcheck="false" ${i===0?"autofocus":""}>
+        <span class="exmark" id="mk_${k}"></span>
+      </label>`).join("")+
+    `</div>`;
+  $("#nav").innerHTML = `<button class="btn primary" id="chk">Prüfen</button>`;
+  const ins=[...document.querySelectorAll("#examForm input")];
+  if(ins[0]) ins[0].focus();
+  ins.forEach((inp,i)=>inp.addEventListener("keydown",e=>{        // Enter: nächstes Feld, am Ende prüfen
+    if(e.key!=="Enter") return;
+    e.preventDefault();
+    if(i<ins.length-1) ins[i+1].focus(); else { const b=$("#chk"); if(b) b.click(); }
+  }));
+  $("#chk").onclick=()=>{
+    const c=current;
+    let got=0, max=0, right=0;
+    ins.forEach(inp=>{
+      const k=inp.dataset.k, ok=fieldOk(k, inp.value, c), pts=examPts(k);
+      max+=pts; if(ok){ got+=pts; right++; }
+      inp.disabled=true; inp.classList.add(ok?"ok":"no");
+      const mk=$("#mk_"+k);
+      if(mk) mk.innerHTML = ok ? `<span class="ex-ok">✓</span>`
+        : `<span class="ex-no">✗</span> <span class="ex-sol">${esc(fieldSolution(k,c))}</span>`;
+    });
+    const all = right===ins.length;
+    finishPhotoAnswer(all, all ? "good" : (right ? "hard" : "again"), p,
+      `<span class="sol">${nfmt(got)} von ${nfmt(max)} Punkten${all?"":" · "+solutionLine(c)}</span>`);
+  };
+}
+/* Gemeinsamer Abschluss: bewerten, Rückmeldung, Bildnachweis, »Weiter« */
+function finishPhotoAnswer(ok, g, p, solHTML){
+  const c=current;
+  grade(c, g); if(ok) sess.correct++; else requeueCurrent();
+  $("#fb").innerHTML = (ok ? `<span class="good">Richtig!</span>`
+    : g==="hard" ? `<span class="bad">Teilweise richtig.</span>` : `<span class="bad">Leider falsch.</span>`)+" "+solHTML;
+  photoRevealCredit(p);
+  const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
+  wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
+}
+function photoRevealCredit(p){                        // Bildnachweis erst jetzt (verrät sonst die Lösung)
+  const box=$("#stage").querySelector(".photobox");
+  if(!box || !p || box.querySelector(".ph-src")) return;
+  box.insertAdjacentHTML("beforeend", photoSrcLine(p));
+  if(p.file) photoCredit(p.file).then(cr=>{
+    const el2=$("#phSrc");
+    if(el2 && cr && (cr.artist||cr.license))
+      el2.insertAdjacentHTML("beforeend", ` · ${esc([cr.artist,cr.license].filter(Boolean).join(", "))}`);
+  }).catch(()=>{});
 }
 function prefetchPhoto(){
   const nx = queue[qi+1];
@@ -1270,20 +1391,7 @@ function answerPhoto(btn, chosen, p){
     if(b.querySelector("span:last-child").textContent.toLowerCase()===correct.toLowerCase()) b.classList.add("correct");
   });
   if(!ok) btn.classList.add("wrong");
-  grade(c, ok?"good":"again"); if(ok) sess.correct++; else requeueCurrent();
-  $("#fb").innerHTML = (ok ? `<span class="good">Richtig!</span>` : `<span class="bad">Leider falsch.</span>`)+
-    ` <span class="sol">${solutionLine(c)}</span>`;
-  const box=$("#stage").querySelector(".photobox");    // Bildnachweis erst jetzt (verrät sonst die Lösung)
-  if(box && p){
-    box.insertAdjacentHTML("beforeend", photoSrcLine(p));
-    if(p.file) photoCredit(p.file).then(cr=>{
-      const el2=$("#phSrc");
-      if(el2 && cr && (cr.artist||cr.license))
-        el2.insertAdjacentHTML("beforeend", ` · ${esc([cr.artist,cr.license].filter(Boolean).join(", "))}`);
-    }).catch(()=>{});
-  }
-  const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
-  wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
+  finishPhotoAnswer(ok, ok?"good":"again", p, `<span class="sol">${solutionLine(c)}</span>`);
 }
 
 let infoEl=null;
@@ -1362,6 +1470,7 @@ function loadProfile(id){
   if($("#listSearch")) $("#listSearch").value="";   // Suche beim Profilwechsel zurücksetzen
   listCats.clear();                                  // Kategorie-Tags beim Profilwechsel zurücksetzen
   refreshKat();
+  loadExamFields();                                  // Prüfungsfelder gelten je Profil (Bogen der Fachrichtung)
   syncExamOnlyUI();                                  // »nur Prüfungsstoff«-Schalter nur bei Fachwerker zeigen
   normalizeSort();                                   // ggf. Familien-Ansicht verlassen, wenn ausgeblendet
   applyMode();                                       // Ansicht passend zum aktuellen Modus (inkl. Liste)
@@ -1379,13 +1488,43 @@ function refreshKat(){   // Auswahl der Lernsitzung: alles · ein Thema · eine 
   const have=[...$("#cat").options].some(o=>o.value===cur);
   $("#cat").value = have ? cur : "";
 }
-/* Abfragerichtung: je Modus nur die sinnvollen Optionen; im Listenmodus verborgen. */
+const PH_ANSWER = { mc:"Auswahl (4 Namen)", type:"Namen tippen", exam:"wie in der Prüfung" };
+/* Abfragerichtung + (im Bilder-Quiz) Antwortart und die selbst bestimmten
+   Prüfungsfelder. Nur zeigen, was zum Modus passt. */
 function syncDirUI(){
-  const wrap=$("#dirField"), sel=$("#dir"); if(!sel) return;
-  if(wrap) wrap.hidden = (mode==="list");
-  const keys=dirsFor(), cur=curDir();
-  sel.innerHTML = keys.map(k=>`<option value="${k}">${esc(DIRS[k].label)}</option>`).join("");
-  sel.value = cur;
+  const sel=$("#dir"); if(!sel) return;
+  const isPhoto = mode==="photo", isList = mode==="list";
+  const paw=$("#phAnswerField"); if(paw) paw.hidden = !isPhoto;
+  const pas=$("#phAnswer"); if(pas){
+    pas.innerHTML = Object.keys(PH_ANSWER).map(k=>`<option value="${k}">${esc(PH_ANSWER[k])}</option>`).join("");
+    pas.value = photoAnswer;
+  }
+  // Richtung ist gegenstandslos, wenn ohnehin alle Prüfungsfelder abgefragt werden
+  const dirOff = isList || (isPhoto && photoAnswer==="exam");
+  const wrap=$("#dirField"); if(wrap) wrap.hidden = dirOff;
+  sel.innerHTML = dirsFor().map(k=>`<option value="${k}">${esc(DIRS[k].label)}</option>`).join("");
+  sel.value = curDir();
+  syncExamFieldsUI();
+}
+function syncExamFieldsUI(){
+  const row=$("#examFieldsRow"); if(!row) return;
+  const show = mode==="photo" && photoAnswer==="exam";
+  row.hidden = !show;
+  if(!show) return;
+  if(!examFields) loadExamFields();
+  const std=defaultExamFields();
+  row.innerHTML = `<span class="exf-lab">Felder</span>`+
+    FIELD_ORDER.map(k=>`<label class="exf${examFields.includes(k)?" on":""}">
+      <input type="checkbox" data-k="${k}"${examFields.includes(k)?" checked":""}>
+      ${esc(FIELD_LABEL[k])}${std.includes(k)?`<span class="exf-p">${nfmt(examPts(k))}</span>`:""}</label>`).join("")+
+    `<span class="exf-hint">Standard = Bogen dieser Fachrichtung</span>`;
+  row.querySelectorAll("input[type=checkbox]").forEach(cb=>cb.onchange=()=>{
+    const k=cb.dataset.k;
+    const next = cb.checked ? examFields.concat([k]) : examFields.filter(x=>x!==k);
+    if(!next.length){ cb.checked=true; toast("Mindestens ein Feld muss abgefragt werden",true); return; }
+    examFields = FIELD_ORDER.filter(x=>next.includes(x));
+    saveExamFields(); syncExamFieldsUI();
+  });
 }
 function profSub(){
   const fr = FR_LIST.find(f=>slug(f)===$("#frSelect").value)||"";
@@ -1403,6 +1542,10 @@ function wire(){
   $("#frSelect").onchange=applyProfile;
   $("#nivSelect").onchange=applyProfile;
   $("#cat").onchange=refreshView;
+  if($("#phAnswer")) $("#phAnswer").onchange=()=>{
+    photoAnswer=$("#phAnswer").value; store.set(LS_PREFIX+"phanswer",photoAnswer);
+    syncDirUI(); refreshView();
+  };
   if($("#dir")) $("#dir").onchange=()=>{
     if(mode==="photo"){ dirPhoto=$("#dir").value; store.set(LS_PREFIX+"dirphoto",dirPhoto); }
     else { dirText=$("#dir").value; store.set(LS_PREFIX+"dirtext",dirText); }
@@ -1439,6 +1582,7 @@ function wire(){
     examOnly = store.get(LS_PREFIX+"examonly")==="1";
     dirText  = DIRS_TEXT.includes(store.get(LS_PREFIX+"dirtext"))   ? store.get(LS_PREFIX+"dirtext")  : "de2bot";
     dirPhoto = DIRS_PHOTO.includes(store.get(LS_PREFIX+"dirphoto")) ? store.get(LS_PREFIX+"dirphoto") : "img2bot";
+    photoAnswer = PH_ANSWER[store.get(LS_PREFIX+"phanswer")] ? store.get(LS_PREFIX+"phanswer") : "mc";
     mode = store.get(LS_PREFIX+"mode") || "cards";
     let pid = store.get(LS_PREFIX+"profile");
     if(!(typeof SEEDS!=="undefined" && SEEDS[pid])) pid="gemuesebau_gaertner";
@@ -1470,6 +1614,8 @@ window.searchName=searchName;
 window.buildPrintList=buildPrintList;
 window.themeOf=themeOf;
 window.usablePhoto=usablePhoto;
+window.fieldOk=fieldOk;
+window.examFieldList=examFieldList;
 window.wikiPhoto=wikiPhoto;
 /* Bild-Quelle austauschbar + Bild-Cache leerbar: Die Tests laufen ohne Netz. */
 window.__setPhotoSource=fn=>{ photoSource = fn || wikiPhoto; };
