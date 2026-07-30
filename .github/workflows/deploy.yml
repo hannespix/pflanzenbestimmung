@@ -1,0 +1,136 @@
+name: deploy
+
+# Veröffentlicht das Werkzeug auf dem eigenen Webspace (pflanze-bw.de).
+#
+# Zwei Auslöser:
+#   • Push auf main (also nach jedem Merge) → LIVE ins Web-Wurzelverzeichnis
+#   • Pull Request                          → VORSCHAU unter vorschau/pr-<Nummer>/
+# So überschreibt eine noch nicht gemergte Änderung nie die veröffentlichte Seite.
+#
+# Übertragen wird per SFTP (Port 22, verschlüsselt) – nicht per Klartext-FTP.
+# Nötig ist genau EIN Repository-Secret:  DEPLOY_PASSWORD
+# Optional als Repository-Variablen überschreibbar (Standard in Klammern):
+#   DEPLOY_HOST (s179.goserver.host) · DEPLOY_USER (web69) · DEPLOY_PORT (22)
+#   DEPLOY_PATH (.)      Zielverzeichnis relativ zum Login-Verzeichnis, z. B. »htdocs«
+#   DEPLOY_PROTO (sftp)  auf »ftps« stellen, falls der Host kein SFTP anbietet
+#   DEPLOY_TLS_VERIFY (yes)  nur für ftps: auf »no«, wenn das Zertifikat nicht passt
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+# Nie zwei Deploys gleichzeitig auf dasselbe Ziel.
+concurrency:
+  group: deploy-${{ github.event_name == 'pull_request' && github.event.number || 'live' }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Forks bekommen keine Secrets – dort läuft nur der Workflow »build«.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+
+      # Fehlt das Passwort, ist ein Live-Deploy ein echter Fehler – eine
+      # PR-Vorschau dagegen nur eine Annehmlichkeit und wird still übersprungen.
+      - name: Zugangsdaten vorhanden?
+        id: cred
+        env:
+          PASS: ${{ secrets.DEPLOY_PASSWORD }}
+        run: |
+          if [ -n "$PASS" ]; then
+            echo "ok=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=no" >> "$GITHUB_OUTPUT"
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              echo "::warning::Repository-Secret DEPLOY_PASSWORD fehlt – Vorschau wird übersprungen."
+            else
+              echo "::error::Repository-Secret DEPLOY_PASSWORD fehlt. Anlegen unter Settings → Secrets and variables → Actions → New repository secret."
+              exit 1
+            fi
+          fi
+
+      - uses: actions/setup-python@v5
+        if: steps.cred.outputs.ok == 'yes'
+        with:
+          python-version: "3.12"
+
+      - name: Build (Single-File HTML + PWA-Dateien)
+        if: steps.cred.outputs.ok == 'yes'
+        run: python3 build.py
+
+      # Erst prüfen, dann hochladen: eine Seite, die externe Ressourcen zöge,
+      # geht nicht online.
+      - name: Offline-Check aller vier Seiten
+        if: steps.cred.outputs.ok == 'yes'
+        run: |
+          for f in index pflanzenkenntnis pflanzen-lernen rechtliches; do
+            python3 tools/check_offline.py "dist/$f.html"
+          done
+
+      - name: Zu veröffentlichende Dateien sammeln
+        if: steps.cred.outputs.ok == 'yes'
+        run: |
+          mkdir -p _site
+          cp dist/index.html dist/pflanzenkenntnis.html dist/pflanzen-lernen.html dist/rechtliches.html _site/
+          # PWA: Manifest, Service Worker, Icons
+          cp dist/manifest.webmanifest dist/sw.js _site/
+          cp dist/icon-192.png dist/icon-512.png dist/icon-maskable.png dist/apple-touch-icon.png _site/
+          ls -l _site
+
+      - name: lftp installieren
+        if: steps.cred.outputs.ok == 'yes'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: Zielverzeichnis bestimmen
+        id: ziel
+        if: steps.cred.outputs.ok == 'yes'
+        run: |
+          BASE="${{ vars.DEPLOY_PATH || '.' }}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "dir=$BASE/vorschau/pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
+            echo "art=Vorschau" >> "$GITHUB_OUTPUT"
+          else
+            echo "dir=$BASE" >> "$GITHUB_OUTPUT"
+            echo "art=Live" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Das Passwort steht nur in der Umgebung (--env-password), nie in der
+      # Kommandozeile. Ohne --delete: fremde Dateien auf dem Webspace bleiben
+      # unberührt; unsere Dateinamen sind stabil, alte Fassungen werden ersetzt.
+      - name: Per ${{ vars.DEPLOY_PROTO || 'sftp' }} hochladen (${{ steps.ziel.outputs.art }})
+        if: steps.cred.outputs.ok == 'yes'
+        env:
+          LFTP_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
+          HOST: ${{ vars.DEPLOY_HOST || 's179.goserver.host' }}
+          NUTZER: ${{ vars.DEPLOY_USER || 'web69' }}
+          PORT: ${{ vars.DEPLOY_PORT || '22' }}
+          PROTO: ${{ vars.DEPLOY_PROTO || 'sftp' }}
+          TLSVERIFY: ${{ vars.DEPLOY_TLS_VERIFY || 'yes' }}
+          ZIEL: ${{ steps.ziel.outputs.dir }}
+        run: |
+          # mkdir vor »fail-exit«, damit ein bereits vorhandenes Verzeichnis nicht abbricht.
+          lftp -u "$NUTZER" --env-password -p "$PORT" "$PROTO://$HOST" -e "
+            set sftp:auto-confirm yes;
+            set ftp:ssl-force true;
+            set ssl:verify-certificate $TLSVERIFY;
+            set net:max-retries 3;
+            set net:timeout 20;
+            mkdir -p \"$ZIEL\";
+            set cmd:fail-exit yes;
+            mirror --reverse --verbose --no-perms --parallel=2 _site \"$ZIEL\";
+            bye"
+
+      - name: Ergebnis
+        if: steps.cred.outputs.ok == 'yes'
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "### Vorschau veröffentlicht" >> "$GITHUB_STEP_SUMMARY"
+            echo "https://pflanze-bw.de/vorschau/pr-${{ github.event.number }}/" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Live veröffentlicht" >> "$GITHUB_STEP_SUMMARY"
+            echo "https://pflanze-bw.de/" >> "$GITHUB_STEP_SUMMARY"
+          fi

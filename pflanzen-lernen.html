@@ -163,6 +163,10 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .modes button.on{background:var(--green); color:#f4f7f1; font-weight:600}
 .modes .ic{width:15px; height:15px}
 .startrow{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
+/* Hinweis vor dem Lernen: automatisch/KI-erzeugte Inhalte, keine Gewähr */
+.learnnote{margin:12px 0 0; padding:9px 12px; border-left:3px solid var(--gold); border-radius:0 5px 5px 0;
+  background:var(--surface-2); color:var(--ink-soft); font-size:11.5px; line-height:1.55; max-width:660px}
+.learnnote b{color:var(--ink)}
 .startrow .hint{font-size:12.5px; color:var(--ink-soft)}
 /* Optionen (einklappbar) – hält die Startansicht ruhig, alle Einstellungen bleiben einen Klick entfernt */
 .setopts{border:1px solid var(--rule); border-radius:6px; background:var(--surface-2); overflow:hidden}
@@ -484,6 +488,12 @@ main{margin-top:22px}
       <button class="btn primary big" id="btnStart" title="Neue Lernsitzung mit den aktuellen Einstellungen starten">Sitzung starten</button>
       <span class="hint" id="startHint"></span>
     </div>
+    <p class="learnnote" id="learnNote">
+      <b>Bitte beachten:</b> Karteikarten, Quizfragen, die <b>Bildauswahl</b> und die thematische Zuordnung
+      werden <b>automatisch erzeugt – teils mithilfe generativer KI</b>. Ich übernehme keine Gewähr und keine
+      Haftung für Richtigkeit oder Vollständigkeit. Verbindlich sind allein die offiziellen Prüfungslisten;
+      im Zweifel bitte dort und in der Fachliteratur nachprüfen.
+    </p>
     <div class="listsearchrow" id="listSearchRow" hidden>
       <div class="searchbox">
         <svg class="lsic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -1794,6 +1804,7 @@ function applyMode(){
   const isList = mode==="list";
   const sr=$("#startRow"), lsr=$("#listSearchRow"), lc=$("#listControls");
   if(sr) sr.hidden = isList;
+  const ln=$("#learnNote"); if(ln) ln.hidden = isList;   // Hinweis gehört zu den Lektionen, nicht zur Liste
   if(lsr) lsr.hidden = !isList;
   if(lc) lc.hidden = !isList;
   syncDirUI();

@@ -124,7 +124,7 @@ node tools/make_icons.mjs               # PWA-Icons einmalig neu erzeugen (Ergeb
 Quellen: `src/manifest.webmanifest`, `src/sw.js`, `icons/*.png` (einmalig via
 `tools/make_icons.mjs` erzeugt). Der Head-Snippet (Manifest-Link, apple-touch-icon,
 SW-Registrierung) steckt in allen vier `src/*.html`. Diese Assets liegen **nur in `dist/`**
-(Deploy-Basis; `dist/` ist gitignored) – der Pages-Workflow kopiert sie nach `_site/`.
+(Deploy-Basis; `dist/` ist gitignored) – der Deploy-Workflow kopiert sie nach `_site/`.
 Beim lokalen `file://`-Aufruf sind sie ohne Belang (der Kern ist ohnehin offline). Der
 Service Worker behandelt **ausschließlich same-origin**-Anfragen; die opt-in Wikipedia-
 Anreicherung bleibt unberührt. `check_offline.py` bleibt grün (nur relative Links, kein
@@ -313,7 +313,8 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
 - [x] Ausführliche Hilfe (`#helpPanel`, Button »Hilfe«) mit Kurzanleitung und
       Erklärung jeder Funktion; detaillierte `title`-Tooltips auf Buttons/Feldern.
 - [x] Sicherung enthält Prüfungen und Einstellungen (`backupData`/`applyBackup`).
-- [x] GitHub-Pages-Deploy nach jedem Merge (`.github/workflows/pages.yml`).
+- [x] Automatischer Deploy nach jedem Merge (früher GitHub Pages, jetzt eigener
+      Webspace per SFTP: `.github/workflows/deploy.yml`).
 - [x] Puppeteer-Smoke-Test (`tests/smoke.mjs`) und CI-Integration (`build.yml`).
 - [x] `localStorage`-Ausfall-Fallback (In-Memory) für Kiosk-/Sandbox-Profile.
 - [x] Konverter-Ladefehler behoben (SheetJS-Standalone via require lieferte unter
@@ -712,6 +713,34 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Fehlalarme). `deacc` wurde zu den übrigen Normalisierern nach oben gezogen.
       `tests/learn.mjs` prüft alle drei Muster, Synonyme, Klammerform, Abkürzung und
       die Eindeutigkeitsregel.
+
+- [x] **KI-Hinweis vor den Lektionen** (Lern-Tool): Direkt unter »Sitzung starten«
+      steht ein kurzer Hinweis (`.learnnote` / `#learnNote`), dass Karteikarten,
+      Quizfragen, **Bildauswahl** und thematische Zuordnung automatisch – teils
+      mithilfe generativer KI – erzeugt werden, dass **keine Gewähr und keine Haftung**
+      für Richtigkeit/Vollständigkeit übernommen wird und **allein die offiziellen
+      Prüfungslisten verbindlich** sind. Ruhig gestaltet (goldener Randstreifen,
+      11,5 px), ohne Klickhürde, im **Listenmodus ausgeblendet** (`applyMode()`), weil
+      dort keine Lektion läuft. Der ausführliche Disclaimer in der Fußzeile bleibt
+      zusätzlich. `tests/learn.mjs` prüft Sichtbarkeit vor dem Start, die genannten
+      Punkte (KI, Bildauswahl, Gewähr/Haftung, amtliche Listen) und das Ausblenden
+      in der Liste.
+
+- [x] **Deploy auf eigenen Webspace statt GitHub Pages** (`.github/workflows/deploy.yml`,
+      `pages.yml` entfernt): Ziel ist **pflanze-bw.de**. Push auf `main` → **live** ins
+      Web-Wurzelverzeichnis, Pull Request → **Vorschau** unter `vorschau/pr-<Nr>/`
+      (damit eine unfertige Änderung nie die Live-Seite überschreibt); Forks werden
+      übersprungen, weil sie keine Secrets bekommen. Übertragung per **SFTP (Port 22)**
+      mit `lftp`; das Passwort steht ausschließlich in `LFTP_PASSWORD`
+      (`--env-password`), nie in der Kommandozeile. Vor dem Upload laufen Build und
+      **Offline-Check aller vier Seiten** – was externe Ressourcen zöge, geht nicht
+      online. `mirror --reverse` **ohne** `--delete`: fremde Dateien auf dem Webspace
+      bleiben unberührt. Konfiguration: **ein** Secret `DEPLOY_PASSWORD`, optional die
+      Variablen `DEPLOY_HOST`/`USER`/`PORT`/`PATH`/`PROTO`/`TLS_VERIFY` (Vorgaben
+      s179.goserver.host · web69 · 22 · . · sftp · yes). **Datenschutzseite angepasst:**
+      Hosting nicht mehr GitHub Pages, sondern eigener Webspace – der **Name des
+      Hosting-Anbieters ist als `<mark>`-Lücke offen** und muss vor dem Livegang
+      eingetragen werden.
 
 ## Offene Aufgaben (TODO)
 
