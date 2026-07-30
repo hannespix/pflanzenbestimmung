@@ -865,6 +865,24 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       `apple-mobile-web-app-title` auf **Pflanze-BW** gesetzt (Home-Bildschirm-Label bei
       der Installation). Interne Titel/Kopfzeilen der Seiten bleiben »Pflanzenkenntnis«.
 
+- [x] **Krautige Lern-Themen (M2/M3/M4)** – das Themen-System (`themeOf` in `learn.js`,
+      bislang nur Gehölze + Obst) verfeinert jetzt auch die drei großen krautigen
+      Kategorien; die Seeds und das Prüfungswerkzeug bleiben unberührt (Laufzeit-Themen):
+      **M2 Stauden (550)** nach Lebensbereich → *Beet- & Prachtstauden* (231),
+      *Schatten- & Gehölzrandstauden* (134), *Steingarten- & Polsterstauden* (97),
+      *Wasser- & Uferstauden* (44). **M3 Gemüse (120)** nach Nutzungsgruppe →
+      *Frucht-/Kohl-/Wurzel- & Knollen-/Blatt- & Salat-/Zwiebelgemüse*, *Hülsenfrüchte*
+      (Obst war bereits über `FRUIT_THEME` gegliedert). **M4 Zimmerpflanzen (109)** nach
+      Typ → *Grün- & Blattschmuck-*, *Blühende*, *Sukkulenten & Kakteen*, *Bromelien*,
+      *Orchideen*, *Palmen & Zimmerfarne*. Kuratiert nach Gattung/Art (Lebensbereich der
+      Staude via `ST_*`/`ST_SPEC`, Nutzungsgruppe via `GEM_*`, Zimmertyp via `ZI_*`),
+      botanisch gegen **alle 2114 Arten** geprüft (`tools/themes_check.py` = kuratierte
+      Referenz + Verteilungs-/Mitglieder-Report). Nur drei neue Zweige in `themeOf`
+      **nach** den Gehölz-/Obst-Regeln – bestehendes Verhalten unverändert (z. B.
+      Erdbeere im Obstbau bleibt via `FRUIT_THEME` »Beerenobst«). `THEME_ORDER` um die
+      neuen Namen erweitert. `tests/learn.mjs`: 18 Referenz-Zuordnungen (je Thema eine)
+      + Listen-/Druck-Ansicht auf die feineren Bänder umgestellt.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei

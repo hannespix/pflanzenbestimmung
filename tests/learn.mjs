@@ -862,7 +862,7 @@ async function main() {
     const kat = bandsFor("thema"), fam = bandsFor("familie"), bot = bandsFor("bot");
     document.querySelector('.sortbtn[data-sort="thema"]').click(); buildPrintList(); // zurücksetzen
     return {
-      katOk: kat.bands.some((t) => /Gemüsepflanzen/.test(t)) && /sortiert nach Thema/.test(kat.meta),
+      katOk: kat.bands.some((t) => /Fruchtgemüse|Kohlgemüse|Wurzel- & Knollengemüse/.test(t)) && /sortiert nach Thema/.test(kat.meta),
       famOk: fam.bands.some((t) => /Asteraceae/.test(t)) && /sortiert nach Familie/.test(fam.meta),
       botOk: bot.bands.some((t) => /^A$/.test(t)) && bot.bands.every((t) => /^[A-ZÄÖÜ·]$/.test(t)) && /sortiert nach A–Z botanisch/.test(bot.meta),
       counts: [kat.n, fam.n, bot.n],
@@ -941,17 +941,42 @@ async function main() {
     apfelO: themeOf("Malus", "domestica", "Laubgehölze", "obstbau_fachwerker"),
     apfelB: themeOf("Malus", "Cultivars", "Laubgehölze", "baumschule_gaertner"),
     johann: themeOf("Ribes", "rubrum", "Laubgehölze", "obstbau_fachwerker"),
-    // Nicht-Gehölze behalten ihre Kategorie (vereinheitlicht)
-    staude: themeOf("Hosta", "Cultivars", "Stauden", "staudengaertnerei_gaertner"),
     gras:   themeOf("Carex", "morrowii", "Ziergräser", "friedhofsgaertnerei_fachwerker"),
     unkraut: themeOf("Urtica", "dioica", "Unkräuter, Wildkräuter", "obstbau_gaertner"),
+    // M2 Stauden nach Lebensbereich
+    stSchatten: themeOf("Hosta", "Cultivars", "Stauden", "staudengaertnerei_gaertner"),
+    stBeet:  themeOf("Delphinium", "Cultivars", "Stauden", "staudengaertnerei_gaertner"),
+    stStein: themeOf("Sempervivum", "arachnoideum", "Stauden", "staudengaertnerei_gaertner"),
+    stWasser: themeOf("Nymphaea", "alba", "Stauden", "staudengaertnerei_gaertner"),
+    stSpec:  themeOf("Gentiana", "asclepiadea", "Stauden", "staudengaertnerei_gaertner"),
+    // M3 Gemüse nach Nutzungsgruppe
+    gemFrucht: themeOf("Solanum", "lycopersicum var. esculentum", "Gemüsepflanzen", "gemuesebau_gaertner"),
+    gemKohl:  themeOf("Brassica", "oleracea var. botrytis", "Gemüsepflanzen", "gemuesebau_gaertner"),
+    gemWurzel: themeOf("Brassica", "napus ssp. rapifera", "Gemüsepflanzen", "gemuesebau_gaertner"),
+    gemZwiebel: themeOf("Allium", "cepa Cepa-Grp.", "Gemüsepflanzen", "gemuesebau_gaertner"),
+    gemHuelse: themeOf("Phaseolus", "vulgaris var. nanus", "Gemüsepflanzen", "gemuesebau_gaertner"),
+    gemBlatt: themeOf("Lactuca", "sativa var. capitata", "Gemüsepflanzen", "gemuesebau_gaertner"),
+    // M4 Zimmerpflanzen nach Typ
+    ziGruen: themeOf("Ficus", "benjamina", "Zimmerpflanzen", "zierpflanzenbau_gaertner"),
+    ziOrch:  themeOf("Phalaenopsis", "Cultivars", "Zimmerpflanzen", "zierpflanzenbau_gaertner"),
+    ziSuk:   themeOf("Echeveria", "elegans", "Zimmerpflanzen", "zierpflanzenbau_gaertner"),
+    ziBrom:  themeOf("Aechmea", "fasciata", "Zimmerpflanzen", "zierpflanzenbau_gaertner"),
+    ziPalm:  themeOf("Chamaedorea", "elegans", "Zimmerpflanzen", "zierpflanzenbau_gaertner"),
+    ziBlueh: themeOf("Anthurium", "andraeanum", "Zimmerpflanzen", "zierpflanzenbau_gaertner"),
   }));
   const expect = {
     eiche: "Große Laubbäume", ahorn: "Kleinbäume & Großsträucher", kirsch: "Immergrüne Laubgehölze",
     coto: "Bodendecker & Zwergsträucher", wach: "Zwerg- & Kriechkoniferen", fichte: "Nadelbäume",
     rose: "Rosen", efeu: "Bodendecker & Zwergsträucher", apfelO: "Kernobst",
-    apfelB: "Kleinbäume & Großsträucher", johann: "Beerenobst", staude: "Stauden",
+    apfelB: "Kleinbäume & Großsträucher", johann: "Beerenobst",
     gras: "Gräser", unkraut: "Wild- & Unkräuter",
+    stSchatten: "Schatten- & Gehölzrandstauden", stBeet: "Beet- & Prachtstauden",
+    stStein: "Steingarten- & Polsterstauden", stWasser: "Wasser- & Uferstauden",
+    stSpec: "Schatten- & Gehölzrandstauden",
+    gemFrucht: "Fruchtgemüse", gemKohl: "Kohlgemüse", gemWurzel: "Wurzel- & Knollengemüse",
+    gemZwiebel: "Zwiebelgemüse", gemHuelse: "Hülsenfrüchte", gemBlatt: "Blatt- & Salatgemüse",
+    ziGruen: "Grün- & Blattschmuckpflanzen", ziOrch: "Orchideen", ziSuk: "Sukkulenten & Kakteen",
+    ziBrom: "Bromelien", ziPalm: "Palmen & Zimmerfarne", ziBlueh: "Blühende Zimmerpflanzen",
   };
   for (const [k, v] of Object.entries(expect))
     assert(themes[k] === v, `Thema für »${k}«: erwartet »${v}«, war »${themes[k]}«`);
@@ -965,15 +990,15 @@ async function main() {
     // Ansicht auf »Thema« schalten (Standard ist alphabetisch)
     document.querySelector('#listControls .sortbtn[data-sort="thema"]').click();
     const cats = [...document.querySelectorAll("#stage .cathead")].map((e) => e.childNodes[0].textContent.trim());
-    // Themen stehen in Lern-Reihenfolge: Bäume vor Sträuchern vor Stauden
+    // Themen stehen in Lern-Reihenfolge: Bäume vor Sträuchern vor Stauden (jetzt nach Lebensbereich)
     const order = cats.indexOf("Große Laubbäume") < cats.indexOf("Blüten- & Ziersträucher")
-      && cats.indexOf("Blüten- & Ziersträucher") < cats.indexOf("Stauden");
+      && cats.indexOf("Blüten- & Ziersträucher") < cats.indexOf("Beet- & Prachtstauden");
     return { cats, order, hasTree: cats.includes("Große Laubbäume"),
-      hasShrub: cats.includes("Blüten- & Ziersträucher"), hasStaude: cats.includes("Stauden"),
-      noVague: !cats.includes("Laubgehölze") && !cats.includes("Nadelgehölze"), n: cats.length };
+      hasShrub: cats.includes("Blüten- & Ziersträucher"), hasStaude: cats.includes("Beet- & Prachtstauden"),
+      noVague: !cats.includes("Laubgehölze") && !cats.includes("Nadelgehölze") && !cats.includes("Stauden"), n: cats.length };
   });
   assert(wuchs.hasTree && wuchs.hasShrub && wuchs.hasStaude && wuchs.n >= 5,
-    "GaLaBau sollte nach Themen gegliedert sein (große Laubbäume, Ziersträucher, Stauden …): " + JSON.stringify(wuchs.cats));
+    "GaLaBau sollte nach Themen gegliedert sein (große Laubbäume, Ziersträucher, Beet-/Prachtstauden …): " + JSON.stringify(wuchs.cats));
   assert(wuchs.noVague, "Die unspezifischen Kategorien (Laub-/Nadelgehölze) dürfen als Thema nicht mehr auftauchen");
   assert(wuchs.order, "Themen-Reihenfolge falsch (Bäume → Sträucher → Stauden): " + JSON.stringify(wuchs.cats));
 
