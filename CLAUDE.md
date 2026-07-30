@@ -685,6 +685,34 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Beschriftung/Punkte, ✓✓✓✗, 7 von 10, Teilpunkt-Meldung), Abwählen eines Feldes,
       den Fachwerker-Bogen (Dt. Name zuerst, 0,5 P.) und `fieldOk()` im Detail.
 
+- [x] **Deutsche Namen fair prüfen** (`deForms()`/`checkDeName()` in `learn.js`): Die
+      Quelllisten führen deutsche Namen in **drei Mustern**, die beim Tippen alle als
+      richtig gelten müssen. (1) **Synonyme** mit Komma (»Rotkohl, Blaukraut«) – zählen
+      alle, Bindestriche/Leerzeichen egal. (2) **Geteiltes Grundwort mit Bindestrich**
+      (»Knollen- / Gemüsefenchel«): zur **Prüfzeit** aufgelöst – Eingabe muss mit dem
+      Vorderteil beginnen und der Rest ein Suffix (≥4 Zeichen) des letzten Segments sein
+      (deckt auch »gewöhnliche Hain-/Weißbuche« → *Hainbuche* über das letzte Wort des
+      Vorderteils). Zusammensetzen ist nicht möglich, weil das geteilte Grundwort im
+      Kompositum steckt. (3) **Geteiltes Grundwort mit Adjektiv** (»Krauser /
+      gewöhnlicher Rhabarber«): beide Vollformen gelten, **das blanke Adjektiv nicht**.
+      Unterschieden von Muster 1 (»Karotte / Möhre / Gelbe Rübe«, jeder Teil ein eigener
+      Name) über `looksAdjective()` – flektierte Form eines Stamms aus `ADJ_STEMS`
+      (~60 Stämme, akzent-/ß-normalisiert über `adjKey`) oder Abkürzung mit Punkt
+      (»Gew.«, per `ABBR` zu »gewöhnliche« aufgelöst). Zusätzlich gilt das
+      **Grundwort allein** (»Rhabarber«), aber **nur wenn im Profil eindeutig**:
+      `buildDeIndex()` zählt je Profil, wie viele Arten dasselbe Grundwort tragen –
+      bei »Brennessel« (Große + Kleine) oder »Ahorn« (8 Arten) reicht es also nicht.
+      Klammerformen (»(Arznei-)Engelwurz«) gelten mit und ohne Klammerinhalt.
+      `deAll()` trennt jetzt nur noch an Komma/Semikolon (die »/«-Form ist EIN Name,
+      vorher entstand daraus die Unform »Krauser«), die Lösungszeile nennt alle
+      Synonyme. **Verfahren:** Die Regeln wurden als Python-Prototyp gegen alle 1590
+      deutschen Namen geprüft – alle 52 »/«-Namen einzeln durchgesehen, die
+      Adjektiv-Erkennung auf **alle 33 einteiligen Vorder-Segmente** verifiziert
+      (4 Adjektive korrekt erkannt, 29 echte Namen korrekt behalten, keine
+      Fehlalarme). `deacc` wurde zu den übrigen Normalisierern nach oben gezogen.
+      `tests/learn.mjs` prüft alle drei Muster, Synonyme, Klammerform, Abkürzung und
+      die Eindeutigkeitsregel.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei

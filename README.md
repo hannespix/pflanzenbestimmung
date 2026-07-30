@@ -98,7 +98,13 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
     unter plausiblen Ablenkern (bevorzugt aus **demselben Thema**).
   - **Tippen** – zum deutschen Namen den **botanischen Namen** selbst eingeben;
     tippfehlertolerant (kleine Abweichungen zählen als richtig), Gattung und Art werden
-    getrennt geprüft.
+    getrennt geprüft. Ist der **deutsche Name** gesucht, zählt jedes in der Liste
+    geführte **Synonym**, Bindestriche/Leerzeichen sind egal, und die zusammengezogenen
+    Schreibweisen der Listen werden aufgelöst: »Knollen- / Gemüsefenchel« nimmt
+    *Knollenfenchel* **und** *Gemüsefenchel*, »Krauser / gewöhnlicher Rhabarber« beide
+    Vollformen sowie das **Grundwort allein** (*Rhabarber*) – letzteres nur, wenn die Liste
+    keine zweite Art mit diesem Grundwort führt (bei *Birke* oder *Ahorn* also nicht).
+    Ein blankes Adjektiv (»Krauser«) zählt nie.
   - **Bilder** (zusätzlicher Modus, **braucht Internet**) – **die Pflanze am Bild
     erkennen:** zu sehen ist nur ein Bild, sonst nichts. **Drei Antwortarten** (»Optionen ·
     Antwort«): aus **vier Namen auswählen**, den Namen **selbst tippen** oder **»wie in der
