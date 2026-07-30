@@ -737,7 +737,11 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       online. `mirror --reverse` **ohne** `--delete`: fremde Dateien auf dem Webspace
       bleiben unberührt. Konfiguration: **ein** Secret `DEPLOY_PASSWORD`, optional die
       Variablen `DEPLOY_HOST`/`USER`/`PORT`/`PATH`/`PROTO`/`TLS_VERIFY` (Vorgaben
-      s179.goserver.host · web69 · 22 · . · sftp · yes). **Datenschutzseite angepasst:**
+      s179.goserver.host · web69 · 22 · **/home/www/pflanze-bw.de** · sftp · yes).
+      **Wichtig:** Der SFTP-Login landet oberhalb des Dokumentenverzeichnisses – der
+      Zielpfad ist deshalb absolut, ein relativer Pfad lud die Dateien außerhalb des
+      Web-Verzeichnisses ab (HTTP 404). Ein Kontrollschritt listet nach dem Upload
+      das Zielverzeichnis im Log. **Datenschutzseite angepasst:**
       Hosting nicht mehr GitHub Pages, sondern eigener Webspace bei der
       **webgo GmbH** (Wendenstraße 8–12, 20097 Hamburg; s179.goserver.host gehört
       webgo), mit Link auf deren Datenschutzerklärung und Hinweis auf den

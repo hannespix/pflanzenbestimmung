@@ -11,7 +11,7 @@ name: deploy
 # Nötig ist genau EIN Repository-Secret:  DEPLOY_PASSWORD
 # Optional als Repository-Variablen überschreibbar (Standard in Klammern):
 #   DEPLOY_HOST (s179.goserver.host) · DEPLOY_USER (web69) · DEPLOY_PORT (22)
-#   DEPLOY_PATH (.)      Zielverzeichnis relativ zum Login-Verzeichnis, z. B. »htdocs«
+#   DEPLOY_PATH (/home/www/pflanze-bw.de)  Dokumentenverzeichnis der Domain
 #   DEPLOY_PROTO (sftp)  auf »ftps« stellen, falls der Host kein SFTP anbietet
 #   DEPLOY_TLS_VERIFY (yes)  nur für ftps: auf »no«, wenn das Zertifikat nicht passt
 
@@ -85,35 +85,11 @@ jobs:
         if: steps.cred.outputs.ok == 'yes'
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
-      # Zeigt einmalig, wie der Webspace aufgebaut ist – damit DEPLOY_PATH richtig
-      # gesetzt werden kann (die Dateien müssen im Dokumentenverzeichnis der Domain
-      # landen, nicht im Login-Verzeichnis).
-      - name: Webspace-Struktur anzeigen
-        if: steps.cred.outputs.ok == 'yes'
-        env:
-          LFTP_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
-          HOST: ${{ vars.DEPLOY_HOST || 's179.goserver.host' }}
-          NUTZER: ${{ vars.DEPLOY_USER || 'web69' }}
-          PORT: ${{ vars.DEPLOY_PORT || '22' }}
-          PROTO: ${{ vars.DEPLOY_PROTO || 'sftp' }}
-        run: |
-          lftp -u "$NUTZER" --env-password -p "$PORT" "$PROTO://$HOST" -e "
-            set sftp:auto-confirm yes;
-            echo === Login-Verzeichnis;
-            pwd;
-            cls -l .;
-            echo === html;      cls -1 html;
-            echo === www;       cls -1 www;
-            echo === httpdocs;  cls -1 httpdocs;
-            echo === public_html; cls -1 public_html;
-            echo === pflanze-bw.de; cls -1 pflanze-bw.de;
-            bye" || true
-
       - name: Zielverzeichnis bestimmen
         id: ziel
         if: steps.cred.outputs.ok == 'yes'
         run: |
-          BASE="${{ vars.DEPLOY_PATH || '.' }}"
+          BASE="${{ vars.DEPLOY_PATH || '/home/www/pflanze-bw.de' }}"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "dir=$BASE/vorschau/pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
             echo "art=Vorschau" >> "$GITHUB_OUTPUT"
@@ -147,6 +123,23 @@ jobs:
             set cmd:fail-exit yes;
             mirror --reverse --verbose --no-perms --parallel=2 _site \"$ZIEL\";
             bye"
+
+      # Kontrolle: was liegt jetzt im Zielverzeichnis? Zeigt im Log sofort, ob der
+      # Pfad stimmt (falls nicht, DEPLOY_PATH als Repository-Variable setzen).
+      - name: Zielverzeichnis prüfen
+        if: steps.cred.outputs.ok == 'yes'
+        env:
+          LFTP_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
+          HOST: ${{ vars.DEPLOY_HOST || 's179.goserver.host' }}
+          NUTZER: ${{ vars.DEPLOY_USER || 'web69' }}
+          PORT: ${{ vars.DEPLOY_PORT || '22' }}
+          PROTO: ${{ vars.DEPLOY_PROTO || 'sftp' }}
+          ZIEL: ${{ steps.ziel.outputs.dir }}
+        run: |
+          lftp -u "$NUTZER" --env-password -p "$PORT" "$PROTO://$HOST" -e "
+            set sftp:auto-confirm yes;
+            cls -l \"$ZIEL\";
+            bye" || true
 
       - name: Ergebnis
         if: steps.cred.outputs.ok == 'yes'
