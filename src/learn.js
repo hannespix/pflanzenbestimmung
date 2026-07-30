@@ -54,13 +54,14 @@ const THEME_ORDER = [TH_TREE,TH_SMALL,TH_SHRUB,TH_EVER,TH_GC,TH_CLIMB,TH_ROSE,TH
   "Grün- & Blattschmuckpflanzen","Blühende Zimmerpflanzen","Sukkulenten & Kakteen","Bromelien","Orchideen","Palmen & Zimmerfarne",
   "Topf- und Grünpflanzen","Zimmerpflanzen",
   "Fruchtgemüse","Kohlgemüse","Wurzel- & Knollengemüse","Blatt- & Salatgemüse","Zwiebelgemüse","Hülsenfrüchte",
-  "Gemüsepflanzen","Gewürzkräuter","Gründüngungspflanzen","Wild- & Unkräuter"];
+  "Gemüsepflanzen","Gewürzkräuter","Gründüngungspflanzen","Wild- & Beikräuter"];
 function themeRank(k){ const i=THEME_ORDER.indexOf(k); return i<0?99:i; }
 const VAGUE_KAT = new Set(["Laubgehölze","Nadelgehölze","Gehölze"]);   // sagen nichts über die Verwendung
 const KAT_ALIAS = {                                                    // uneinheitliche Kategorien der Quelllisten
   "Ziergräser":"Gräser", "Bodendecker":TH_GC,
-  "Unkräuter, Wildkräuter":"Wild- & Unkräuter", "Wildkräuter":"Wild- & Unkräuter",
-  "Bei-, Wild- oder Unkräuter":"Wild- & Unkräuter",
+  "Unkräuter, Wildkräuter":"Wild- & Beikräuter", "Wildkräuter":"Wild- & Beikräuter",
+  "Wild- & Beikräuter":"Wild- & Beikräuter",
+  "Bei-, Wild- oder Unkräuter":"Wild- & Beikräuter",
   "Steinobst, Unterlage":"Steinobst", "Unterlage, Steinobst":"Steinobst",
   "Unterlage für Kaki":"Obst", "Wirtpflanzen":"Wirtspflanzen"
 };

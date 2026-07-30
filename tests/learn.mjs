@@ -969,7 +969,7 @@ async function main() {
     coto: "Bodendecker & Zwergsträucher", wach: "Zwerg- & Kriechkoniferen", fichte: "Nadelbäume",
     rose: "Rosen", efeu: "Bodendecker & Zwergsträucher", apfelO: "Kernobst",
     apfelB: "Kleinbäume & Großsträucher", johann: "Beerenobst",
-    gras: "Gräser", unkraut: "Wild- & Unkräuter",
+    gras: "Gräser", unkraut: "Wild- & Beikräuter",
     stSchatten: "Schatten- & Gehölzrandstauden", stBeet: "Beet- & Prachtstauden",
     stStein: "Steingarten- & Polsterstauden", stWasser: "Wasser- & Uferstauden",
     stSpec: "Schatten- & Gehölzrandstauden",

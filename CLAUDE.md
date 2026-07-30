@@ -613,7 +613,7 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       über **Gattungstabellen** aufgelöst (`G_TREE`/`G_SMALL`/`G_EVER`/`G_GC`/`G_CONIF`,
       Sonderfälle Cotoneaster/Juniperus/Rosa), (5) sonst die Kategorie der Liste,
       vereinheitlicht über `KAT_ALIAS` (»Ziergräser«→Gräser, »Bodendecker«→Bodendecker
-      & Zwergsträucher, drei Unkraut-Schreibweisen→»Wild- & Unkräuter« …).
+      & Zwergsträucher, drei Beikraut-Schreibweisen→»Wild- & Beikräuter« …).
       **Neun Gehölz-Themen:** Große Laubbäume · Kleinbäume & Großsträucher · Blüten- &
       Ziersträucher · Immergrüne Laubgehölze · Bodendecker & Zwergsträucher ·
       Kletterpflanzen · Rosen · Nadelbäume · Zwerg- & Kriechkoniferen.
