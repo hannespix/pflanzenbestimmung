@@ -48,8 +48,12 @@ const TH_TREE="Große Laubbäume", TH_SMALL="Kleinbäume & Großsträucher", TH_
       TH_ROSE="Rosen", TH_CONIF="Nadelbäume", TH_DWARF="Zwerg- & Kriechkoniferen";
 const THEME_ORDER = [TH_TREE,TH_SMALL,TH_SHRUB,TH_EVER,TH_GC,TH_CLIMB,TH_ROSE,TH_CONIF,TH_DWARF,
   "Kernobst","Steinobst","Beerenobst","Schalenobst","Wildobst","Zitrusfrüchte","Obst","Wirtspflanzen",
+  "Beet- & Prachtstauden","Schatten- & Gehölzrandstauden","Steingarten- & Polsterstauden","Wasser- & Uferstauden",
   "Stauden","Gräser","Farne","Zwiebel- und Knollenpflanzen","Ein- und zweijährige","Beet- und Balkonpflanzen",
-  "Schnittblumen","Frühjahrsblüher","Herbstpflanzen","Blühpflanzen","Topf- und Grünpflanzen","Zimmerpflanzen",
+  "Schnittblumen","Frühjahrsblüher","Herbstpflanzen","Blühpflanzen",
+  "Grün- & Blattschmuckpflanzen","Blühende Zimmerpflanzen","Sukkulenten & Kakteen","Bromelien","Orchideen","Palmen & Zimmerfarne",
+  "Topf- und Grünpflanzen","Zimmerpflanzen",
+  "Fruchtgemüse","Kohlgemüse","Wurzel- & Knollengemüse","Blatt- & Salatgemüse","Zwiebelgemüse","Hülsenfrüchte",
   "Gemüsepflanzen","Gewürzkräuter","Gründüngungspflanzen","Wild- & Unkräuter"];
 function themeRank(k){ const i=THEME_ORDER.indexOf(k); return i<0?99:i; }
 const VAGUE_KAT = new Set(["Laubgehölze","Nadelgehölze","Gehölze"]);   // sagen nichts über die Verwendung
@@ -126,6 +130,81 @@ function woodyTheme(g, ep){
   if(G_SMALL.has(g)) return TH_SMALL;
   return TH_SHRUB;                                    // übriges Laubgehölz = Ziergehölz
 }
+/* ---------- Krautige Themen (M2/M3/M4): Stauden · Gemüse · Zimmerpflanzen ----------
+   Die groben Kategorien der Listen (»Stauden« 550, »Gemüsepflanzen«, »Zimmerpflanzen«)
+   werden – analog zu den Gehölzen oben – in gärtnerische Lerngruppen verfeinert:
+   Stauden nach Lebensbereich, Gemüse nach Nutzungsgruppe, Zimmerpflanzen nach Typ.
+   Gattungs-/Art-kuratiert, gegen alle Arten geprüft (tools/themes_check.py). */
+const TH_ST_BEET="Beet- & Prachtstauden", TH_ST_SCHATTEN="Schatten- & Gehölzrandstauden",
+      TH_ST_STEIN="Steingarten- & Polsterstauden", TH_ST_WASSER="Wasser- & Uferstauden";
+const ST_WASSER = new Set(["Butomus","Calla","Caltha","Hippuris","Nuphar","Nymphaea","Menyanthes","Pontederia","Sagittaria","Stratiotes","Alisma","Lythrum","Ligularia","Filipendula","Trollius","Chelone"]);
+const ST_STEIN = new Set(["Acaena","Alyssum","Arabis","Armeria","Aubrieta","Aurinia","Azorella","Cerastium","Delosperma","Dryas","Globularia","Leontopodium","Lithospermum","Raoulia","Sagina","Saxifraga","Sedum","Sempervivum","Antennaria","Dianthus","Pulsatilla","Iberis","Thymus","Santolina","Gentiana","Acantholimon","Draba","Aethionema","Silene"]);
+const ST_SCHATTEN = new Set(["Aconitum","Actaea","Aruncus","Asarum","Astilbe","Astilboides","Bergenia","Brunnera","Cimicifuga","Convallaria","Dicentra","Digitalis","Epimedium","Helleborus","Hepatica","Hosta","Lamium","Omphalodes","Pachysandra","Podophyllum","Polygonatum","Pulmonaria","Rodgersia","Symphytum","Tiarella","Vinca","Waldsteinia","Ajuga","Galium","Glechoma","Soleirolia","Mitchella","Heuchera","Aegopodium","Anemone","Primula","Tricyrtis","Tellima","Corydalis","Uvularia","Disporum","Anemonopsis"]);
+const ST_SPEC = {   // Art-Ausnahmen (Gattung|Epitheton) – überstimmen die Gattungsregel
+  "Gypsophila|repens":TH_ST_STEIN, "Phlox|subulata":TH_ST_STEIN, "Phlox|douglasii":TH_ST_STEIN,
+  "Veronica|prostrata":TH_ST_STEIN, "Veronica|spicata":TH_ST_BEET,
+  "Campanula|portenschlagiana":TH_ST_STEIN, "Campanula|poscharskyana":TH_ST_STEIN,
+  "Campanula|cochleariifolia":TH_ST_STEIN, "Campanula|carpatica":TH_ST_STEIN,
+  "Euphorbia|myrsinites":TH_ST_STEIN, "Euphorbia|polychroma":TH_ST_BEET,
+  "Primula|auricula":TH_ST_STEIN, "Primula|marginata":TH_ST_STEIN,
+  "Saxifraga|umbrosa":TH_ST_SCHATTEN, "Gentiana|asclepiadea":TH_ST_SCHATTEN,
+  "Anemone|blanda":TH_ST_BEET,
+  "Lysimachia|nummularia":TH_ST_WASSER, "Lysimachia|punctata":TH_ST_BEET,
+  "Iris|pseudacorus":TH_ST_WASSER,
+  "Sedum|telephium":TH_ST_BEET, "Sedum|spectabile":TH_ST_BEET,
+  "Myosotis|palustris":TH_ST_WASSER, "Mentha|aquatica":TH_ST_WASSER,
+  "Salvia|nemorosa":TH_ST_BEET
+};
+function staudeTheme(g, ep, art){
+  const sp=g+"|"+ep;
+  if(ST_SPEC[sp]) return ST_SPEC[sp];
+  if(ST_WASSER.has(g)) return TH_ST_WASSER;
+  if(ST_STEIN.has(g))  return TH_ST_STEIN;
+  if(ST_SCHATTEN.has(g)) return TH_ST_SCHATTEN;
+  return TH_ST_BEET;
+}
+const TH_GE_FRUCHT="Fruchtgemüse", TH_GE_KOHL="Kohlgemüse", TH_GE_WURZEL="Wurzel- & Knollengemüse",
+      TH_GE_BLATT="Blatt- & Salatgemüse", TH_GE_ZWIEBEL="Zwiebelgemüse", TH_GE_HUELSE="Hülsenfrüchte";
+const GEM_FRUCHT=new Set(["Capsicum","Cucumis","Cucurbita","Citrullus","Cyphomandra","Cynara","Zea"]);
+const GEM_HUELSE=new Set(["Phaseolus","Pisum","Vicia","Lens","Glycine"]);
+const GEM_WURZEL=new Set(["Daucus","Pastinaca","Scorzonera","Armoracia","Raphanus"]);
+const GEM_BLATT=new Set(["Lactuca","Spinacia","Valerianella","Eruca","Diplotaxis","Portulaca","Claytonia","Tetragonia","Lepidium","Asparagus","Rheum"]);
+function gemueseTheme(g, ep, art){
+  art=art||"";
+  if(g==="Solanum") return ep==="tuberosum" ? TH_GE_WURZEL : TH_GE_FRUCHT;
+  if(g==="Physalis") return TH_GE_FRUCHT;
+  if(g==="Brassica"){
+    if(ep==="oleracea") return TH_GE_KOHL;
+    if(ep==="rapa") return /chinensis|pekinensis|nipposinica|narinosa/i.test(art) ? TH_GE_KOHL : TH_GE_WURZEL;
+    if(ep==="napus") return TH_GE_WURZEL;
+    return TH_GE_BLATT;
+  }
+  if(g==="Beta")  return (/vulgaris/.test(art) && !/cicla|flavescens/.test(art)) ? TH_GE_WURZEL : TH_GE_BLATT;
+  if(g==="Apium") return /rapaceum/.test(art) ? TH_GE_WURZEL : TH_GE_BLATT;
+  if(g==="Cichorium") return TH_GE_BLATT;
+  if(GEM_FRUCHT.has(g)) return TH_GE_FRUCHT;
+  if(GEM_HUELSE.has(g)) return TH_GE_HUELSE;
+  if(g==="Allium") return TH_GE_ZWIEBEL;
+  if(GEM_WURZEL.has(g)) return TH_GE_WURZEL;
+  if(GEM_BLATT.has(g)) return TH_GE_BLATT;
+  if(g==="Helianthus") return TH_GE_WURZEL;   // Topinambur
+  return TH_GE_BLATT;
+}
+const TH_ZI_GRUEN="Grün- & Blattschmuckpflanzen", TH_ZI_BLUEH="Blühende Zimmerpflanzen",
+      TH_ZI_SUK="Sukkulenten & Kakteen", TH_ZI_BROM="Bromelien", TH_ZI_ORCH="Orchideen", TH_ZI_PALM="Palmen & Zimmerfarne";
+const ZI_ORCH=new Set(["Cattleya","Cymbidium","Paphiopedilum","Phalaenopsis"]);
+const ZI_BROM=new Set(["Aechmea","Guzmania","Tillandsia","Vriesea"]);
+const ZI_SUK=new Set(["Aloe","Aichryson","Crassula","Echeveria","Kalanchoe","Rhipsalidopsis","Schlumbergera","Echinocactus","Euphorbia"]);
+const ZI_PALM=new Set(["Chamaedorea","Phoenix","Washingtonia","Cycas","Nephrolepis","Platycerium"]);
+const ZI_BLUEH=new Set(["Abutilon","Aeschynanthus","Anthurium","Aphelandra","Bougainvillea","Brugmansia","Calceolaria","Clivia","Columnea","Cyclamen","Exacum","Gardenia","Hibiscus","Hoya","Mandevilla","Medinilla","Primula","Saintpaulia","Sinningia","Spathiphyllum","Stephanotis","Streptocarpus","Cuphea"]);
+function zimmerTheme(g){
+  if(ZI_ORCH.has(g)) return TH_ZI_ORCH;
+  if(ZI_BROM.has(g)) return TH_ZI_BROM;
+  if(ZI_SUK.has(g))  return TH_ZI_SUK;
+  if(ZI_PALM.has(g)) return TH_ZI_PALM;
+  if(ZI_BLUEH.has(g)) return TH_ZI_BLUEH;
+  return TH_ZI_GRUEN;   // Grünpflanzen + Rest
+}
 function themeOf(g, art, kat, pid){
   const ep=(art||"").split(" ")[0]||"", sp=g+"|"+ep;
   kat=(kat||"").trim();
@@ -133,6 +212,9 @@ function themeOf(g, art, kat, pid){
   if(g && SPEC_THEME[sp]) return SPEC_THEME[sp];
   if(kat===TH_CLIMB) return TH_CLIMB;
   if(g && VAGUE_KAT.has(kat)) return woodyTheme(g, ep);
+  if(kat==="Stauden") return staudeTheme(g, ep, art);
+  if(kat==="Gemüsepflanzen") return gemueseTheme(g, ep, art);
+  if(kat==="Zimmerpflanzen") return zimmerTheme(g);
   return KAT_ALIAS[kat] || kat || "Ohne Thema";
 }
 
