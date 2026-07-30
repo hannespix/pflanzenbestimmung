@@ -845,6 +845,26 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       im Ablauf (inkl. Partikel nur bei Treffern) und `judgeTyped`/`fieldJudge`/`markDiff`
       im Detail.
 
+- [x] **Wikipedia-Vorschau: keine Elternart bei Unterarten** (Rückmeldung: bei
+      *Steckrübe* erschien *Raps*). Ursache: `wikiCandidates` probierte nach dem vollen
+      Namen das **reine Binom** – bei einer Unterart ist das die **Elternart**
+      (`Brassica napus` = Raps; Steckrübe = ssp. *rapifera* mit eigenem Artikel). Neu:
+      Bei **anderer Unterart/Varietät** (`infraEpithet` gesetzt und ≠ `binomEpithet`,
+      also **kein Autonym**) wird das bloße Binom **weggelassen** und der **deutsche Name**
+      genommen; bei **reinen Arten** und **Autonymen** (`subsp. X` = `X`, z. B.
+      *Cornus kousa* subsp. *kousa*) bleibt das Binom (dieselbe Pflanze). Zusätzlich
+      `deArticleTitles()`: deutsche Namen als Artikeltitel, jeweils **ohne Bindestrich**
+      (Wikipedia löst ihn nicht auf: »Steck-Rübe« → nichts, »Steckrübe« → Treffer) und mit
+      **aufgelöstem geteiltem Grundwort** (»Kohl- / Steck-Rübe« → *Steckrübe* **und**
+      *Kohlrübe*). Gegen die echte API über alle 93 infraspezifischen Arten geprüft:
+      Steckrübe→Steckrübe, Autonyme (Petersilie, Schwarz-Pappel, Asiatischer Blüten-
+      Hartriegel) wieder korrekt, Raps nirgends fälschlich. `tests/learn.mjs` prüft
+      offline die Kandidaten-Reihenfolge (Steckrübe ohne »Brassica napus«, Autonym mit
+      Binom, reine Art Binom-first) und `deArticleTitles`.
+- [x] **PWA heißt »Pflanze-BW«** – Manifest `name`/`short_name` und
+      `apple-mobile-web-app-title` auf **Pflanze-BW** gesetzt (Home-Bildschirm-Label bei
+      der Installation). Interne Titel/Kopfzeilen der Seiten bleiben »Pflanzenkenntnis«.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei
