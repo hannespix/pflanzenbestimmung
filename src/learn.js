@@ -1159,6 +1159,7 @@ function applyMode(){
   const isList = mode==="list";
   const sr=$("#startRow"), lsr=$("#listSearchRow"), lc=$("#listControls");
   if(sr) sr.hidden = isList;
+  const ln=$("#learnNote"); if(ln) ln.hidden = isList;   // Hinweis gehört zu den Lektionen, nicht zur Liste
   if(lsr) lsr.hidden = !isList;
   if(lc) lc.hidden = !isList;
   syncDirUI();

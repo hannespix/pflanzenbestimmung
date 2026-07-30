@@ -144,6 +144,11 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
   **Deutscher Name, Gattung und Art** – **Familie und Synonyme werden ausgeblendet**,
   weil die Fachwerker-Abschlussprüfung genau diese Felder abfragt. Das reduziert die
   Informationsflut aufs Prüfungsrelevante; die Info-Links (ℹ) bleiben erhalten.
+- **Hinweis vor den Lektionen:** Direkt unter »Sitzung starten« steht kurz und
+  sichtbar, dass Karteikarten, Quizfragen, Bildauswahl und thematische Zuordnung
+  automatisch – teils mithilfe generativer KI – erzeugt werden, dass keine Gewähr und
+  keine Haftung für Richtigkeit übernommen wird und allein die offiziellen
+  Prüfungslisten verbindlich sind.
 - **Fortschritt bleibt erhalten** (localStorage, je Profil getrennt, Namensraum
   `pflanzenlernen.`) – die Leitner-Boxen und Fälligkeiten überleben das Schließen.
 - **Mehr zur Pflanze (ℹ):** Zu jeder Art öffnet ein Info-Modal kuratierte Links zu
@@ -174,12 +179,40 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
 
 ## Nutzung
 
-**Online:** Nach jedem Merge veröffentlicht die `pages`-Action den aktuellen Stand
-automatisch auf **GitHub Pages** → <https://hannespix.github.io/pflanzenbestimmung/>
-(einmalig in den Repo-Einstellungen unter *Pages* die Quelle *GitHub Actions*
-aktivieren). Die **Startseite** dort verzweigt zu *Lernen* und *Prüfen*; die
+**Online:** <https://pflanze-bw.de> — nach jedem Merge lädt die `deploy`-Action den
+aktuellen Stand automatisch per **SFTP** auf den eigenen Webspace. Pull Requests
+werden zusätzlich als **Vorschau** unter `…/vorschau/pr-<Nummer>/` veröffentlicht, so
+dass die Live-Seite erst beim Merge wechselt (Einrichtung siehe *Deployment* unten).
+Die **Startseite** verzweigt zu *Lernen* und *Prüfen*; die
 Werkzeuge liegen unter `…/pflanzenkenntnis.html` und `…/pflanzen-lernen.html` und
 sind zusätzlich direkt untereinander verlinkt.
+
+### Deployment (eigener Webspace)
+
+Der Workflow `.github/workflows/deploy.yml` baut, prüft und lädt hoch:
+
+| Auslöser | Ziel |
+|---|---|
+| Push auf `main` (Merge) | Live in das Web-Wurzelverzeichnis |
+| Pull Request | Vorschau unter `vorschau/pr-<Nummer>/` |
+
+**Einmalig einzurichten** — Repository → *Settings* → *Secrets and variables* → *Actions*:
+
+- Reiter **Secrets** → *New repository secret*: Name `DEPLOY_PASSWORD`, Wert = das
+  FTP-/SFTP-Passwort des Webspace-Benutzers. **Mehr ist nicht nötig.**
+- Reiter **Variables** (optional, nur wenn die Vorgaben nicht passen):
+  `DEPLOY_HOST` (Vorgabe `s179.goserver.host`), `DEPLOY_USER` (`web69`),
+  `DEPLOY_PORT` (`22`), `DEPLOY_PATH` (`.` — Zielverzeichnis relativ zum
+  Login-Verzeichnis, z. B. `htdocs`), `DEPLOY_PROTO` (`sftp`, alternativ `ftps`),
+  `DEPLOY_TLS_VERIFY` (`yes`, nur für `ftps` relevant).
+
+Übertragen wird per **SFTP über Port 22** (verschlüsselt); das Passwort steht nur in
+der Umgebungsvariablen `LFTP_PASSWORD` und nie in der Kommandozeile. Es wird
+**nichts gelöscht** — andere Dateien auf dem Webspace bleiben unberührt, unsere
+Dateinamen sind stabil und werden überschrieben.
+
+Hochgeladen werden `index.html`, `pflanzenkenntnis.html`, `pflanzen-lernen.html`,
+`rechtliches.html` sowie die PWA-Dateien (`manifest.webmanifest`, `sw.js`, Icons).
 
 **Offline:** `index.html` (Startseite), `pflanzenkenntnis.html` (Prüfende) bzw.
 `pflanzen-lernen.html` (Azubis) aus dem Repo-Root im Browser öffnen (Doppelklick
