@@ -141,12 +141,8 @@ jobs:
             cls -l \"$ZIEL\";
             bye" || true
 
-      # ---- vorübergehend: das echte Dokumentenverzeichnis der Domain finden ----
-      # Legt in jedes Kandidatenverzeichnis eine eindeutig benannte Testdatei und
-      # zeigt die Verzeichnisstruktur. Welche Datei danach über
-      # https://pflanze-bw.de/<name> erreichbar ist, verrät das Dokumentenverzeichnis.
-      # Nach der Klärung wird dieser Schritt wieder entfernt.
-      - name: Dokumentenverzeichnis suchen (Diagnose)
+      # Einmalig: die Testdateien der Verzeichnis-Diagnose wieder entfernen.
+      - name: Diagnose-Testdateien aufräumen
         if: steps.cred.outputs.ok == 'yes'
         env:
           LFTP_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
@@ -155,29 +151,14 @@ jobs:
           PORT: ${{ vars.DEPLOY_PORT || '22' }}
           PROTO: ${{ vars.DEPLOY_PROTO || 'sftp' }}
         run: |
-          lf(){ lftp -u "$NUTZER" --env-password -p "$PORT" "$PROTO://$HOST" -e "set sftp:auto-confirm yes; $1 bye"; }
-          echo "===== Struktur des Webspace"
-          lf 'pwd; echo -- Login-Verzeichnis; cls -l .; echo -- /home/www Tiefe 2; find -d 2 /home/www;' || true
-          echo "===== Testdateien ablegen"
-          mkdir -p probe
-          i=0
-          for c in /home/www/pflanze-bw.de /home/www/pflanze-bw.de/html /home/www/pflanze-bw.de/httpdocs \
-                   /home/www/pflanze-bw.de/public_html /home/www/pflanze-bw.de/web /home/www /home/www/html \
-                   /home/html /html /httpdocs /public_html /www /web . ; do
-            i=$((i+1))
-            name="probe-$i.txt"
-            printf '%s\n' "$c" > "probe/$name"
-            printf '%-2s %s\n' "$i" "$c"
-            lf "put probe/$name -o \"$c/$name\";" >/dev/null 2>&1 || echo "     (nicht beschreibbar)"
-          done
-          echo "===== Inhalt des Dokumentenverzeichnisses JETZT"
-          lf 'cls -l /home/www/pflanze-bw.de; echo -- Unterverzeichnisse; find -d 2 /home/www/pflanze-bw.de;' || true
-          echo "===== Gegentest: Datei direkt im Wurzelverzeichnis und eine in einem Unterordner"
-          echo "wurzel" > probe/probe-root.txt
-          echo "unterordner" > probe/probe-sub.txt
-          lf 'put probe/probe-root.txt -o "/home/www/pflanze-bw.de/probe-root.txt";' || true
-          lf 'mkdir -p "/home/www/pflanze-bw.de/probedir"; put probe/probe-sub.txt -o "/home/www/pflanze-bw.de/probedir/probe-sub.txt";' || true
-          echo "===== fertig – jetzt https://pflanze-bw.de/probe-<n>.txt abfragen"
+          D=/home/www/pflanze-bw.de
+          lftp -u "$NUTZER" --env-password -p "$PORT" "$PROTO://$HOST" -e "
+            set sftp:auto-confirm yes;
+            glob -a rm -f $D/probe-1.txt $D/probe-6.txt $D/probe-14.txt $D/probe-root.txt;
+            rm -f $D/probedir/probe-sub.txt;
+            rmdir $D/probedir;
+            cls -l $D;
+            bye" || true
 
       - name: Ergebnis
         if: steps.cred.outputs.ok == 'yes'
