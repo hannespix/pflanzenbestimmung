@@ -33,22 +33,46 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - uses: actions/checkout@v4
+
+      # Fehlt das Passwort, ist ein Live-Deploy ein echter Fehler – eine
+      # PR-Vorschau dagegen nur eine Annehmlichkeit und wird still übersprungen.
+      - name: Zugangsdaten vorhanden?
+        id: cred
+        env:
+          PASS: ${{ secrets.DEPLOY_PASSWORD }}
+        run: |
+          if [ -n "$PASS" ]; then
+            echo "ok=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=no" >> "$GITHUB_OUTPUT"
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              echo "::warning::Repository-Secret DEPLOY_PASSWORD fehlt – Vorschau wird übersprungen."
+            else
+              echo "::error::Repository-Secret DEPLOY_PASSWORD fehlt. Anlegen unter Settings → Secrets and variables → Actions → New repository secret."
+              exit 1
+            fi
+          fi
+
       - uses: actions/setup-python@v5
+        if: steps.cred.outputs.ok == 'yes'
         with:
           python-version: "3.12"
 
       - name: Build (Single-File HTML + PWA-Dateien)
+        if: steps.cred.outputs.ok == 'yes'
         run: python3 build.py
 
       # Erst prüfen, dann hochladen: eine Seite, die externe Ressourcen zöge,
       # geht nicht online.
       - name: Offline-Check aller vier Seiten
+        if: steps.cred.outputs.ok == 'yes'
         run: |
           for f in index pflanzenkenntnis pflanzen-lernen rechtliches; do
             python3 tools/check_offline.py "dist/$f.html"
           done
 
       - name: Zu veröffentlichende Dateien sammeln
+        if: steps.cred.outputs.ok == 'yes'
         run: |
           mkdir -p _site
           cp dist/index.html dist/pflanzenkenntnis.html dist/pflanzen-lernen.html dist/rechtliches.html _site/
@@ -58,10 +82,12 @@ jobs:
           ls -l _site
 
       - name: lftp installieren
+        if: steps.cred.outputs.ok == 'yes'
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
       - name: Zielverzeichnis bestimmen
         id: ziel
+        if: steps.cred.outputs.ok == 'yes'
         run: |
           BASE="${{ vars.DEPLOY_PATH || '.' }}"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -76,6 +102,7 @@ jobs:
       # Kommandozeile. Ohne --delete: fremde Dateien auf dem Webspace bleiben
       # unberührt; unsere Dateinamen sind stabil, alte Fassungen werden ersetzt.
       - name: Per ${{ vars.DEPLOY_PROTO || 'sftp' }} hochladen (${{ steps.ziel.outputs.art }})
+        if: steps.cred.outputs.ok == 'yes'
         env:
           LFTP_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
           HOST: ${{ vars.DEPLOY_HOST || 's179.goserver.host' }}
@@ -85,10 +112,6 @@ jobs:
           TLSVERIFY: ${{ vars.DEPLOY_TLS_VERIFY || 'yes' }}
           ZIEL: ${{ steps.ziel.outputs.dir }}
         run: |
-          if [ -z "$LFTP_PASSWORD" ]; then
-            echo "::error::Repository-Secret DEPLOY_PASSWORD fehlt. Anlegen unter Settings → Secrets and variables → Actions → New repository secret."
-            exit 1
-          fi
           # mkdir vor »fail-exit«, damit ein bereits vorhandenes Verzeichnis nicht abbricht.
           lftp -u "$NUTZER" --env-password -p "$PORT" "$PROTO://$HOST" -e "
             set sftp:auto-confirm yes;
@@ -102,6 +125,7 @@ jobs:
             bye"
 
       - name: Ergebnis
+        if: steps.cred.outputs.ok == 'yes'
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "### Vorschau veröffentlicht" >> "$GITHUB_STEP_SUMMARY"
