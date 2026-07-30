@@ -119,9 +119,9 @@ jobs:
             set ssl:verify-certificate $TLSVERIFY;
             set net:max-retries 3;
             set net:timeout 20;
-            mkdir -p \"$ZIEL\";
+            mkdir -p $ZIEL;
             set cmd:fail-exit yes;
-            mirror --reverse --verbose --no-perms --parallel=2 _site \"$ZIEL\";
+            mirror --reverse --verbose --no-perms --parallel=2 _site $ZIEL;
             bye"
 
       # Kontrolle: was liegt jetzt im Zielverzeichnis? Zeigt im Log sofort, ob der
@@ -138,11 +138,11 @@ jobs:
         run: |
           lftp -u "$NUTZER" --env-password -p "$PORT" "$PROTO://$HOST" -e "
             set sftp:auto-confirm yes;
-            cls -l \"$ZIEL\";
+            cls -l $ZIEL;
             bye" || true
 
-      # Einmalig: die Testdateien der Verzeichnis-Diagnose wieder entfernen.
-      - name: Diagnose-Testdateien aufräumen
+      # Einmalig: Reste des Anführungszeichen-Fehlers sichtbar machen (Login-Verzeichnis).
+      - name: Login-Verzeichnis auf Reste prüfen
         if: steps.cred.outputs.ok == 'yes'
         env:
           LFTP_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
@@ -151,13 +151,10 @@ jobs:
           PORT: ${{ vars.DEPLOY_PORT || '22' }}
           PROTO: ${{ vars.DEPLOY_PROTO || 'sftp' }}
         run: |
-          D=/home/www/pflanze-bw.de
           lftp -u "$NUTZER" --env-password -p "$PORT" "$PROTO://$HOST" -e "
             set sftp:auto-confirm yes;
-            glob -a rm -f $D/probe-1.txt $D/probe-6.txt $D/probe-14.txt $D/probe-root.txt;
-            rm -f $D/probedir/probe-sub.txt;
-            rmdir $D/probedir;
-            cls -l $D;
+            echo == Login-Verzeichnis;
+            cls -la .;
             bye" || true
 
       - name: Ergebnis
