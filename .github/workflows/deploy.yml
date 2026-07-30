@@ -141,6 +141,25 @@ jobs:
             cls -l \"$ZIEL\";
             bye" || true
 
+      # Einmalig: die Testdateien der Verzeichnis-Diagnose wieder entfernen.
+      - name: Diagnose-Testdateien aufräumen
+        if: steps.cred.outputs.ok == 'yes'
+        env:
+          LFTP_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
+          HOST: ${{ vars.DEPLOY_HOST || 's179.goserver.host' }}
+          NUTZER: ${{ vars.DEPLOY_USER || 'web69' }}
+          PORT: ${{ vars.DEPLOY_PORT || '22' }}
+          PROTO: ${{ vars.DEPLOY_PROTO || 'sftp' }}
+        run: |
+          D=/home/www/pflanze-bw.de
+          lftp -u "$NUTZER" --env-password -p "$PORT" "$PROTO://$HOST" -e "
+            set sftp:auto-confirm yes;
+            glob -a rm -f $D/probe-1.txt $D/probe-6.txt $D/probe-14.txt $D/probe-root.txt;
+            rm -f $D/probedir/probe-sub.txt;
+            rmdir $D/probedir;
+            cls -l $D;
+            bye" || true
+
       - name: Ergebnis
         if: steps.cred.outputs.ok == 'yes'
         run: |
