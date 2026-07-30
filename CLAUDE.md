@@ -822,7 +822,14 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       **noch nicht** (`again`). Didaktik: sofortige Korrektur, Teilwissen zuerst
       benennen (»Gattung stimmt« – die Prüfung bewertet Gattung und Art ebenfalls
       getrennt), kein hartes »falsch« für einen Buchstaben. Schwelle: `closeEnough`
-      (1–2 Zeichen) = richtig, `nearEnough` (bis 40 % der Länge) = fast.
+      = richtig, `nearEnough` (bis 40 % der Länge) = fast.
+      **Rechtschreibung bleibt relevant** (Rückmeldung: »bollensellerie« ging als
+      *Knollensellerie* durch): `closeEnough` erlaubt **ein** Zeichen statt zwei, erst
+      ab **fünf** Buchstaben (kurze Namen wie *Acer*/*Rosa* exakt) und nur bei
+      **gleichem Anfangsbuchstaben** – ein falscher Wortanfang ist kein Vertipper,
+      sondern ein anderes Wort. Der frühere Präfix-Freibrief beim Art-Epitheton
+      (»rob« für *robur*) ist durch `wordPrefixOk` ersetzt: **ganze Wörter** dürfen
+      fehlen (*graveolens* für *graveolens var. rapaceum*), abgeschnittene nicht.
       In der Antwortart **»wie in der Prüfung«** gibt ein »fast« die **halbe Punktzahl**
       (`fieldJudge`), genau wie der amtliche Bogen es vorsieht (»Schreibfehler führen zur
       Halbierung der Punktezahl«); die Zeile weist das aus.

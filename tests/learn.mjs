@@ -291,6 +291,27 @@ async function main() {
     "fieldJudge: Stufen je Prüfungsfeld stimmen nicht: " + JSON.stringify(stufenLogik));
   assert(/<u class="dif">/.test(stufenLogik.diff), "markDiff markiert die abweichende Stelle nicht: " + stufenLogik.diff);
 
+  // Rechtschreibung bleibt relevant: »Bollensellerie« darf nicht als
+  // *Knollensellerie* durchgehen (gemeldeter Fall) – das ist ein »Fast«.
+  const strenge = await page.evaluate(() => {
+    const c = { g: "Apium", a: "graveolens var. rapaceum", fam: "Apiaceae",
+      de: "Knollensellerie, Wurzelsellerie", syn: "", key: "sellerie" };
+    return {
+      falscherAnfang: checkDeName("bollensellerie", c),
+      stufeDavon: fieldJudge("de", "bollensellerie", c),
+      einZeichen: checkDeName("knollenselerie", c),      // ein fehlender Buchstabe bleibt richtig
+      zweitname: checkDeName("Wurzelsellerie", c),
+      kurzExakt: closeEnough("Acer", "Acer"), kurzTypo: closeEnough("Aser", "Acer"),
+      langTypo: closeEnough("Quercuss", "Quercus"), zweiFehler: closeEnough("Quercuus", "Quarcus"),
+    };
+  });
+  assert(!strenge.falscherAnfang && strenge.stufeDavon === "near",
+    "Rechtschreibung: falscher Wortanfang muss »fast« sein, nicht »richtig«: " + JSON.stringify(strenge));
+  assert(strenge.einZeichen && strenge.zweitname && strenge.langTypo,
+    "Rechtschreibung: ein einzelner Tippfehler und Zweitnamen müssen weiterhin zählen: " + JSON.stringify(strenge));
+  assert(!strenge.kurzTypo && strenge.kurzExakt && !strenge.zweiFehler,
+    "Rechtschreibung: kurze Namen exakt, zwei Fehler nicht mehr tolerieren: " + JSON.stringify(strenge));
+
   // Bilder-Quiz: Foto erkennen. Läuft hier ohne Netz über eine eingehängte
   // Bild-Quelle (im Betrieb liefert Wikipedia das Artikelbild per JSONP).
   const PX = "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==";
@@ -408,17 +429,22 @@ async function main() {
   // Feldprüfung: tippfehlertolerant, Familie lateinisch ODER deutsch
   const fchk = await page.evaluate(() => {
     const c = { g: "Quercus", a: "robur", fam: "Fagaceae", de: "Stiel-Eiche, Deutsche Eiche" };
+    const sorte = { g: "Apium", a: "graveolens var. rapaceum", fam: "Apiaceae", de: "Knollensellerie" };
     return {
       gTypo: fieldOk("g", "Quercuss", c), gWrong: fieldOk("g", "Fagus", c),
-      aPrefix: fieldOk("a", "rob", c),
+      aAbbruch: fieldOk("a", "rob", c),                       // abgeschnitten reicht nicht mehr
+      aWortPrefix: fieldOk("a", "graveolens", sorte),          // Art ohne Sortenzusatz gilt
+      aHalbesWort: fieldOk("a", "grav", sorte),
       famLat: fieldOk("fam", "Fagaceae", c), famDe: fieldOk("fam", "Buchengewächse", c),
       famWrong: fieldOk("fam", "Rosaceae", c),
       deSecond: fieldOk("de", "Deutsche Eiche", c), deNoHyphen: fieldOk("de", "Stieleiche", c),
       empty: fieldOk("g", "  ", c),
     };
   });
-  assert(fchk.gTypo && !fchk.gWrong && fchk.aPrefix,
-    "Gattung/Art: Tippfehler tolerieren, Falsches ablehnen: " + JSON.stringify(fchk));
+  assert(fchk.gTypo && !fchk.gWrong && !fchk.aAbbruch,
+    "Gattung/Art: einen Tippfehler tolerieren, Abgeschnittenes und Falsches ablehnen: " + JSON.stringify(fchk));
+  assert(fchk.aWortPrefix && !fchk.aHalbesWort,
+    "Art ohne Sortenzusatz muss zählen, ein halbes Wort nicht: " + JSON.stringify(fchk));
   assert(fchk.famLat && fchk.famDe && !fchk.famWrong,
     "Familie muss lateinisch UND deutsch zählen: " + JSON.stringify(fchk));
   assert(fchk.deSecond && fchk.deNoHyphen && !fchk.empty,

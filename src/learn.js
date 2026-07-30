@@ -505,11 +505,26 @@ function lev(a,b){ a=a||""; b=b||""; const m=a.length,n=b.length; if(!m)return n
   for(let i=1;i<=m;i++) for(let j=1;j<=n;j++){ const cost=a[i-1]===b[j-1]?0:1;
     d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+cost); } return d[m][n]; }
 const clean = s => norm(s).toLowerCase().replace(/[.,;’'`´()]/g," ").replace(/\s+/g," ").trim();
+/* Wie viel Tippfehler zählt noch als »richtig«?
+   Früher waren zwei Zeichen erlaubt – damit ging »Bollensellerie« als
+   *Knollensellerie* durch, und die Rechtschreibung war praktisch egal. Jetzt:
+   **ein** Zeichen, und das erst ab fünf Buchstaben (kurze Namen wie *Acer* oder
+   *Rosa* müssen sitzen); der **Anfangsbuchstabe muss stimmen** (ein falscher
+   Wortanfang ist kein Vertipper, sondern ein anderes Wort).
+   Alles knapp daneben landet nicht auf »falsch«, sondern auf »fast« (nearEnough)
+   – mit der richtigen Schreibweise und einer Wiederholung in derselben Sitzung. */
 function closeEnough(input, target){
-  const a=clean(input), b=clean(target); if(!a) return false;
+  const a=clean(input), b=clean(target); if(!a || !b) return false;
   if(a===b) return true;
-  const tol = b.length<=5?1:2;
-  return lev(a,b)<=tol;
+  if(b.length<5 || a[0]!==b[0]) return false;
+  return lev(a,b)<=1;
+}
+/* Art-Epitheton ohne Sorten-/Rangzusatz gilt: »sativus« für »sativus var. niger«.
+   Aber ganze Wörter – ein abgeschnittenes »sat« reicht nicht. */
+function wordPrefixOk(input, full){
+  const w=clean(full).split(" ").filter(Boolean), i=clean(input).split(" ").filter(Boolean);
+  if(!i.length || i.length>=w.length) return false;
+  return i.every((x,k)=>closeEnough(x, w[k]));
 }
 /* ---------- Antwort »wie in der Prüfung« ----------
    Statt einer Auswahl werden die Felder des Prüfungsbogens abgefragt – je
@@ -633,7 +648,7 @@ function checkDeName(input, c){
 function fieldOk(k, input, c){                                        // tippfehlertolerant, je Feld passend
   const v=clean(input); if(!v) return false;
   if(k==="g")  return closeEnough(input, c.g);
-  if(k==="a")  return !norm(c.a) || closeEnough(input, c.a) || (clean(c.a).indexOf(v)===0 && v.length>=3);
+  if(k==="a")  return !norm(c.a) || closeEnough(input, c.a) || wordPrefixOk(input, c.a);
   if(k==="de") return checkDeName(input, c);
   if(k==="fam"){                                                      // lateinisch ODER deutsch zählt
     const lat=famKey(c.fam), de=famGerman(c.fam) || (FAM_INFO[lat]&&FAM_INFO[lat].de) || "";
@@ -658,7 +673,7 @@ function checkTyped(input, c){
   const parts=clean(input).split(" ");
   const gi=parts.shift()||""; const ai=parts.join(" ");
   const gOk=closeEnough(gi, c.g);
-  const aOk = !norm(c.a) || closeEnough(ai, c.a) || (c.a.toLowerCase().indexOf(ai)===0 && ai.length>=3);
+  const aOk = !norm(c.a) || closeEnough(ai, c.a) || wordPrefixOk(ai, c.a);
   return gOk && aOk;
 }
 
