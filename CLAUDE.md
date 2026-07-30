@@ -750,6 +750,36 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       webgo), mit Link auf deren Datenschutzerklärung und Hinweis auf den
       AV-Vertrag nach Art. 28 DSGVO.
 
+- [x] **Denkzeit-Uhr + fälschungssicherer, kurzer Duell-Link** (Lern-Tool).
+      **Uhr:** In den bewerteten Modi (Quiz, Tippen, Bilder) läuft in der
+      Sitzungsleiste eine Uhr (`#sclock`). Gezählt wird nur die **Denkzeit**:
+      `clockStart()` beim fertig gerenderten Frage-Bild (im Bilder-Quiz also nach
+      dem Laden), `clockStop()` beim Abschicken (`answerQuiz`/`submitType`/
+      `finishPhotoAnswer`) – Netz-Wartezeit und das Lesen der Lösung zählen nicht
+      mit, sonst wäre der Vergleich von der Leitung abhängig. Summe in `sess.ms`,
+      Anzeige-Takt über `clockRun()`, Formatierung `fmtDur()` (m:ss bzw. h:mm:ss).
+      Karteikarten bleiben bewusst ohne Uhr (keine Wertung). Moduswechsel
+      (`applyMode`) bricht Sitzung und Uhr ab.
+      **Duell:** Der Link kodiert die Zeit mit (`z`, Sekunden); bei **gleicher
+      Trefferquote entscheidet die Zeit** (Abschluss-Screen zeigt beide Zeiten,
+      `.duel-time`), das Banner nennt Zielwert **und** Zeit, die Teilen-Nachricht
+      ebenso. **Kodierung neu (v2, `chEncode`/`chDecode`):** früher lesbares JSON
+      in base64 – wer den Link vor dem Verschicken öffnete, konnte `"s":8` in
+      zehn Sekunden hochsetzen. Jetzt binär gepackt (Profil/Modus/Richtung in
+      einem Byte über die festen Tabellen `CH_PROFILES`/`CH_MODES`/`CH_DIRS`,
+      Karten-Indizes und Zahlen als Varints, Name als UTF-8), mit 16-Bit-FNV-1a
+      **Prüfsumme** und symmetrischer **Verwürfelung** (`chMask`, LCG-Keystream).
+      Ergebnis: **~28 statt ~200 Zeichen**, keine lesbaren Zahlen im Link, jede
+      geänderte Stelle fällt auf (Link wird abgelehnt), zusätzlich
+      Plausibilitätsprüfung (`chPlausible`: `s ≤ t`, Indizes vorhanden).
+      **Ehrlich:** Ohne Server ist das kein echter Fälschungsschutz – der Code
+      liegt im Browser; es verhindert schnelles Schummeln, nicht den
+      entschlossenen Bastler. Alte v1-Links (JSON) werden weiterhin gelesen.
+      Reihenfolge der drei Tabellen **nicht ändern**. `tests/learn.mjs` prüft:
+      Uhr vorhanden, Zeit im Link (187 s), Link kurz + nicht als JSON lesbar,
+      veränderte Stelle → abgelehnt (auch beim Boot: kein Banner), alte JSON-Links
+      lesbar, Banner nennt 10:00, Zeitvergleich entscheidet bei gleicher Quote.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei
