@@ -1,8 +1,8 @@
-# Pflanzenkenntnis — grüne Berufe
+# Pflanzenkenntnis — Gärtnerberufe
 
-Zwei **eigenständige HTML-Werkzeuge** rund um die Pflanzenkenntnis-Prüfung der grünen
-Berufe — für alle sieben Gärtner-Fachrichtungen und die jeweiligen Fachwerker, aus
-**einer** gemeinsamen Pflanzendatenbank gebaut. Jedes Werkzeug ist **eine einzige
+Zwei **eigenständige HTML-Werkzeuge** rund um die Pflanzenkenntnis-Prüfung der
+**Gärtnerberufe** — für alle sieben Gärtner-Fachrichtungen und die jeweiligen
+Fachwerker, aus **einer** gemeinsamen Pflanzendatenbank gebaut. Jedes Werkzeug ist **eine einzige
 HTML-Datei ohne externe Ressourcen**: Sie rechnet komplett im Browser, lädt nichts
 nach und funktioniert nach dem ersten Aufruf **auch ohne Internetverbindung** — ob
 online aufgerufen, als App installiert oder als Datei per `file://` geöffnet:

@@ -1,5 +1,5 @@
 /* ============================================================
-   Pflanzenkenntnis · Prüfungslisten der grünen Berufe (BW)
+   Pflanzenkenntnis · Prüfungslisten der Gärtnerberufe (BW)
    14 Profile (7 Fachrichtungen × Gärtner/Fachwerker), je eigene Liste,
    Schema und Notenschlüssel. Hinterlegte Seeds + Browser-Speicher
    (localStorage), Excel-Import (SheetJS). Offline, ohne Datenbank-Engine.
@@ -61,7 +61,7 @@ let scaleCfg = { mode:"linear", lin:[90,70,50,30,10] };
 let schemaOrder = null;        // Editor-Reihenfolge der Bewertungsfelder (Spaltenfolge)
 function saveCfg(){ markDirty(); }
 
-/* Standard-Prüfungsschema (Pflanzenkenntnis grüne Berufe, BW) */
+/* Standard-Prüfungsschema (Pflanzenkenntnis Gärtnerberufe, BW) */
 function stdSchema(anzahl){
   return { anzahl, cols:[
     {key:"gattung",pts:3},{key:"art",pts:3},{key:"familie",pts:1},{key:"deutscher_name",pts:3}

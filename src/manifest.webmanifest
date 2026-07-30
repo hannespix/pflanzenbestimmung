@@ -1,7 +1,7 @@
 {
   "name": "Pflanzenkenntnis – Lernen & Prüfen",
   "short_name": "Pflanzenkenntnis",
-  "description": "Pflanzenkenntnis-Prüfung der grünen Berufe (Baden-Württemberg): Lernen mit Karteikarten, Quiz und Tippen sowie das Prüfungswerkzeug – vollständig offline nutzbar.",
+  "description": "Pflanzenkenntnis-Prüfung der Gärtnerberufe (Baden-Württemberg): Lernen mit Karteikarten, Quiz und Tippen sowie das Prüfungswerkzeug – läuft im Browser, auch ohne Internet.",
   "lang": "de",
   "dir": "ltr",
   "start_url": "index.html",

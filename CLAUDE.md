@@ -1,7 +1,7 @@
 # CLAUDE.md — Arbeitsanweisungen
 
 Dieses Repo enthält ein **Prüfungslisten-Werkzeug für die Pflanzenkenntnis-Prüfung**
-der grünen Berufe (Abschlussprüfung Gärtner/in und Fachwerker/in, alle sieben
+der **Gärtnerberufe** (Abschlussprüfung Gärtner/in und Fachwerker/in, alle sieben
 Fachrichtungen; zuständige Stelle: Regierungspräsidium Freiburg). Es zieht zufällig
 Pflanzen aus einer Liste, druckt Prüfungsbogen und Musterlösung und rechnet Noten.
 
@@ -208,7 +208,7 @@ als fertig gilt.
   **1 ≥ 90, 2 ≥ 70, 3 ≥ 50, 4 ≥ 30, 5 ≥ 10, 6 < 10**; Dezimalnote linear
   (`6 − 5·%`). Grenzen sind pro Profil editierbar.
 - **IHK-Schlüssel** (100-Punkte, ungleichmäßig: 92/81/67/50/30) ist als
-  Umschaltoption vorhanden, inkl. offizieller Dezimaltabelle. Für die grünen Berufe
+  Umschaltoption vorhanden, inkl. offizieller Dezimaltabelle. Für die Gärtnerberufe
   in BW ist **linear** der Standard.
 - **Zwei Druckvarianten:** Prüfungsbogen (leer, zum Ausfüllen) und Musterlösung
   (gefüllt, »Nur für Prüfende«, kompakte Zeilen). **Die Leerbögen entsprechen den
@@ -831,7 +831,11 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       (»rob« für *robur*) ist durch `wordPrefixOk` ersetzt: **ganze Wörter** dürfen
       fehlen (*graveolens* für *graveolens var. rapaceum*), abgeschnittene nicht.
       In der Antwortart **»wie in der Prüfung«** gibt ein »fast« die **halbe Punktzahl**
-      (`fieldJudge`), genau wie der amtliche Bogen es vorsieht (»Schreibfehler führen zur
+      (`fieldJudge`) – die Art gilt damit **nicht als bestanden**, kommt in derselben
+      Sitzung wieder, und bei der **fehlerfreien Wiederholung wird die fehlende Hälfte
+      nachgebucht** (`bookPoints`: Punktekonto `sess.pts = {sum,max,je}`, je Karte zählt
+      der **beste** Versuch, nichts doppelt; Anzeige in der Sitzungsleiste `.spts` und auf
+      dem Abschluss-Screen). Das entspricht dem amtlichen Bogen (»Schreibfehler führen zur
       Halbierung der Punktezahl«); die Zeile weist das aus.
       **Belohnung:** `celebrate(anchor, stärke)` streut ein paar Blättchen (reines
       CSS/JS, `.conf-host`/`.conf`, keine Bibliothek) – Stärke 1 bei jedem Treffer
