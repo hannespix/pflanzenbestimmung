@@ -170,6 +170,13 @@ jobs:
             printf '%-2s %s\n' "$i" "$c"
             lf "put probe/$name -o \"$c/$name\";" >/dev/null 2>&1 || echo "     (nicht beschreibbar)"
           done
+          echo "===== Inhalt des Dokumentenverzeichnisses JETZT"
+          lf 'cls -l /home/www/pflanze-bw.de; echo -- Unterverzeichnisse; find -d 2 /home/www/pflanze-bw.de;' || true
+          echo "===== Gegentest: Datei direkt im Wurzelverzeichnis und eine in einem Unterordner"
+          echo "wurzel" > probe/probe-root.txt
+          echo "unterordner" > probe/probe-sub.txt
+          lf 'put probe/probe-root.txt -o "/home/www/pflanze-bw.de/probe-root.txt";' || true
+          lf 'mkdir -p "/home/www/pflanze-bw.de/probedir"; put probe/probe-sub.txt -o "/home/www/pflanze-bw.de/probedir/probe-sub.txt";' || true
           echo "===== fertig – jetzt https://pflanze-bw.de/probe-<n>.txt abfragen"
 
       - name: Ergebnis
