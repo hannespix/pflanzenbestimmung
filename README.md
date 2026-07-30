@@ -116,11 +116,14 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
     **Teilpunkte** und feldweise Rückmeldung; welche Felder abgefragt werden, ist je Profil
     frei einstellbar. Das ist am nächsten an der Prüfung, wo die Pflanze vor einem
     steht. Nach der Antwort erscheinen der deutsche Name und der **Bildnachweis**
-    (Urheber + Lizenz). Gezeigt wird das Artikelbild der deutschen Wikipedia (meist ein
-    Foto, gelegentlich eine botanische Zeichnung); geladen wird **erst beim Start des
-    Modus**. Ohne Netz sagt der Modus das klar – **die vier anderen Modi laufen ohne
-    Internet weiter**. Arten ohne brauchbares Bild werden übersprungen,
-    Verbreitungskarten und Diagramme aussortiert.
+    (Urheber + Lizenz). Die Bilder kommen von **Wikimedia Commons und Wikipedia**;
+    geladen wird **erst beim Start des Modus**. Ohne Netz sagt der Modus das klar –
+    **die vier anderen Modi laufen ohne Internet weiter**. Gesucht wird **vom Genauen
+    zum Groben** (Taxon-Kategorie der Art bzw. Sorte zuerst); Bilder, die eine **andere
+    Art** derselben Gattung nennen, alte Tafeln, Verbreitungskarten und Diagramme werden
+    aussortiert. Steht neben einer Sorte auch die Art selbst in der Liste (Tomate ↔
+    Kirschtomate), wird **kein Bild auf Artniveau** angeboten; findet sich nichts
+    Passendes, wird die Art übersprungen statt ein falsches Bild zu zeigen.
 - **Liste / Nachschlagen:** ein vierter Tab zeigt **alle** Arten des Profils –
   wahlweise **A–Z** (botanisch/deutsch), nach **Thema** oder nach botanischer
   **Familie** – und **durchsuchbar** (Name, Familie, Synonym; akzent-tolerant). Ein Klick auf eine Art öffnet direkt das Info-Modal

@@ -66,6 +66,7 @@ input,select{font-family:inherit; color:inherit}
 .hdl{margin:0; display:grid; grid-template-columns:minmax(110px,150px) 1fr; gap:7px 14px; font-size:14px; line-height:1.5}
 .hdl dt{font-weight:600; color:var(--green-deep)} .hdl dd{margin:0; color:var(--ink-soft)}
 .hnotes{margin:0; padding-left:20px; font-size:14px; line-height:1.6; color:var(--ink-soft)} .hnotes li{margin:5px 0}
+.hgood{color:var(--green-deep); font-weight:600} .hnear{color:var(--sepia); font-weight:600} .hbad{color:var(--madder); font-weight:600}
 
 /* Bilder-Quiz: Foto + Quellenzeile (Bild wird erst im Modus geladen) */
 .photobox{margin:16px auto 4px; max-width:520px; text-align:center}
@@ -248,6 +249,21 @@ main{margin-top:18px}
 .feedback .good{color:var(--green-deep); font-weight:600}
 .feedback .bad{color:var(--madder); font-weight:600}
 .feedback .sol{color:var(--ink); font-family:var(--serif)}
+/* »Fast richtig«: eigene, freundliche Farbe – kein Rot, aber auch kein Grün */
+.feedback .near{color:var(--sepia); font-weight:600}
+.dif{text-decoration:underline wavy var(--sepia); text-underline-offset:3px; font-weight:700}
+input.near{border-color:var(--sepia)!important; background:#fdf8ec}
+.ex-near{color:var(--sepia); font-weight:700}
+/* Kleine Belohnung bei einem Treffer (siehe celebrate() in learn.js) */
+.conf-host{position:fixed; inset:0; pointer-events:none; z-index:80; overflow:hidden}
+.conf{position:fixed; width:8px; height:8px; border-radius:2px; opacity:0;
+  animation:conf-fly .95s cubic-bezier(.15,.7,.35,1) var(--del,0s) forwards}
+@keyframes conf-fly{
+  0%{transform:translate(-50%,-50%) scale(.4) rotate(0); opacity:0}
+  12%{opacity:1}
+  100%{transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy) + 30px)) scale(1) rotate(var(--rot)); opacity:0}
+}
+@media (prefers-reduced-motion: reduce){ .conf{display:none} }
 .nav{display:flex; justify-content:center; gap:10px; margin-top:16px}
 
 /* Toast */
@@ -553,7 +569,15 @@ main{margin-top:22px}
         <i>Knollenfenchel</i> als auch <i>Gemüsefenchel</i>, »Krauser / gewöhnlicher Rhabarber« beide
         Vollformen – und zusätzlich das <b>Grundwort allein</b> (<i>Rhabarber</i>), solange die Liste
         nur eine Art mit diesem Grundwort führt. Führt sie mehrere (Große und Kleine Brennessel,
-        acht Ahorne), musst du genauer werden. Ein blankes Adjektiv (»Krauser«) reicht nie.</dd>
+        acht Ahorne), musst du genauer werden. Ein blankes Adjektiv (»Krauser«) reicht nie.<br>
+        <b>Drei Stufen statt richtig/falsch:</b> <span class="hgood">Richtig</span> zählt als Treffer – war
+        ein kleiner Tippfehler dabei, siehst du zusätzlich die saubere Schreibweise.
+        <span class="hnear">Fast</span> heißt: knapp daneben (oder nur die Gattung) – zählt nicht als
+        Treffer, dafür siehst du sofort die richtige Form mit der <b>abweichenden Stelle markiert</b>, und die
+        Karte kommt in derselben Sitzung noch einmal. <span class="hbad">Noch nicht</span> ist der Rest.
+        Antwortest du <b>»wie in der Prüfung«</b> (Bilder-Modus), gibt es für ein »Fast« die <b>halbe
+        Punktzahl</b> – so hält es auch der amtliche Bogen (»Schreibfehler führen zur Halbierung der
+        Punktezahl«).</dd>
       <dt>Bilder</dt><dd><b>Pflanze am Bild erkennen:</b> Du siehst nur ein <b>Bild der Pflanze</b>, sonst
         nichts – am nächsten an der Prüfung, wo die Pflanze vor dir steht. <b>Wie du antwortest, bestimmst du
         unter »Optionen · Antwort«:</b> aus <b>vier Namen auswählen</b>, den Namen <b>selbst tippen</b> oder
@@ -561,10 +585,14 @@ main{margin-top:22px}
         (Gattung, Art, Familie, Deutscher Name) mit den <b>Punkten deiner Fachrichtung</b>; du bekommst
         <b>Teilpunkte</b> und siehst feldweise, was gestimmt hat. Nach der Antwort erscheinen der deutsche
         Name und der <b>Bildnachweis</b>.
-        <b>Dieser Modus braucht Internet</b>: Gezeigt wird das Artikelbild der deutschen Wikipedia (meist ein
-        Foto, gelegentlich eine botanische Zeichnung); geladen wird erst, wenn du den Modus startest. Ohne
-        Netz sagt der Modus das klar – <b>alle anderen Modi laufen ohne Internet weiter</b>. Arten ohne
-        brauchbares Bild werden übersprungen, Verbreitungskarten und Diagramme aussortiert.</dd>
+        <b>Dieser Modus braucht Internet</b>: Die Bilder kommen von Wikimedia Commons und Wikipedia; geladen
+        wird erst, wenn du den Modus startest. Ohne Netz sagt der Modus das klar – <b>alle anderen Modi laufen
+        ohne Internet weiter</b>. Gesucht wird <b>vom Genauen zum Groben</b>: zuerst die Bildkategorie genau
+        dieser Art oder Sorte, erst danach unschärfere Quellen. Bilder, die eine <b>andere Art</b> derselben
+        Gattung nennen, alte Tafeln, Verbreitungskarten und Diagramme werden aussortiert; steht neben einer
+        Sorte auch die Art selbst in deiner Liste (z. B. Tomate und Kirschtomate), wird <b>kein Bild der Art</b>
+        gezeigt – sonst wäre die Frage nicht zu entscheiden. Findet sich kein passendes Bild, überspringt der
+        Modus die Art lieber, als ein falsches zu zeigen.</dd>
       <dt>Liste</dt><dd>Alle Arten des Profils zum <b>Nachschlagen</b> und <b>durchsuchbar</b>
         (Name, Familie, Synonym) – standardmäßig alphabetisch, damit es übersichtlich bleibt. Unter
         <b>»Ansicht &amp; Filter«</b> (aufklappen) lässt sich die <b>Ansicht</b> umschalten:
@@ -611,6 +639,9 @@ main{margin-top:22px}
       <li><b>ℹ Mehr zur Pflanze</b> öffnet Quellen-Links (Wikipedia, NaturaDB u. a.) und – optional, nur
         auf Knopfdruck – einen deutschen Kurztext samt Bild von Wikipedia. Der Kern funktioniert komplett
         ohne Internet.</li>
+      <li>Bei einem Treffer fliegen ein paar Blättchen – und am Ende einer Sitzung ab 80 % bzw. bei einem
+        gewonnenen Duell etwas mehr. Wer im Betriebssystem »weniger Bewegung« eingestellt hat, sieht nichts
+        davon.</li>
       <li><b>Denkzeit ⏱:</b> In Quiz, Tippen und Bilder läuft oben eine Uhr. Sie zählt nur, solange eine
         Frage offen ist – Wartezeit auf ein Bild und das Lesen der Lösung zählen nicht mit. Karteikarten
         laufen ohne Uhr.</li>

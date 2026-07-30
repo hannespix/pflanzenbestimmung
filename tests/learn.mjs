@@ -230,6 +230,67 @@ async function main() {
   });
   assert(typed.good, "Tippen: korrekte Eingabe nicht als richtig gewertet");
 
+  // Tippen, drei Stufen: richtig · fast (mit korrekter Form) · noch nicht.
+  // Dazu die kleine Belohnung: Partikel nur bei einem Treffer.
+  const stufen = await page.evaluate(() => {
+    const probe = (mach) => {
+      document.querySelectorAll(".conf-host").forEach((h) => h.remove());
+      const inp = document.querySelector("#typeIn"); if (!inp) return null;
+      const soll = answerText(current), c = current;
+      inp.value = mach(c, soll);
+      document.querySelector("#chk").click();
+      const fb = document.querySelector("#fb");
+      const r = { soll, ein: inp.value, txt: fb.textContent,
+        stufe: fb.querySelector(".good") ? "ok" : fb.querySelector(".near") ? "near" : "no",
+        dif: (fb.querySelector(".dif") || {}).textContent || "",
+        partikel: document.querySelectorAll(".conf-host .conf").length,
+        box: (progress[c.key] || {}).box || 0 };
+      document.querySelector("#wt").click();
+      return r;
+    };
+    startSession();
+    const exakt = probe((c, s) => s);                                  // exakt richtig
+    const tippfehler = probe((c, s) => s.slice(0, -1) + "x");          // ein Buchstabe daneben → toleriert
+    const nurGattung = probe((c) => c.g);                              // Gattung stimmt, Art fehlt → »fast«
+    const daneben = probe((c) => "Zzzz qqqq");                         // nichts davon
+    return { exakt, tippfehler, nurGattung, daneben };
+  });
+  assert(stufen.exakt.stufe === "ok" && stufen.exakt.partikel > 0,
+    "Tippen: exakte Antwort muss »richtig« sein und die Partikel auslösen: " + JSON.stringify(stufen.exakt));
+  assert(stufen.tippfehler.stufe === "ok" && /Schreibweise/.test(stufen.tippfehler.txt) && stufen.tippfehler.dif,
+    "Tippen: kleiner Tippfehler zählt als richtig, muss aber die saubere Schreibweise zeigen: " + JSON.stringify(stufen.tippfehler));
+  assert(stufen.nurGattung.stufe === "near" && /Gattung stimmt/.test(stufen.nurGattung.txt)
+    && /richtig wäre/i.test(stufen.nurGattung.txt) && stufen.nurGattung.partikel === 0,
+    "Tippen: nur die Gattung muss »fast« ergeben – mit Lob für das Richtige und ohne Partikel: " + JSON.stringify(stufen.nurGattung));
+  assert(stufen.daneben.stufe === "no" && /Noch nicht/.test(stufen.daneben.txt),
+    "Tippen: klar falsche Eingabe muss »noch nicht« ergeben: " + JSON.stringify(stufen.daneben));
+
+  // Bewertung der Stufen (Leitner) und die Feld-Variante der Prüfungsantwort
+  const stufenLogik = await page.evaluate(() => {
+    const c = { g: "Weigela", a: "florida", de: "Liebliche Weigelie", fam: "Caprifoliaceae", syn: "", key: "w|f|l" };
+    return {
+      exakt: judgeTyped("Weigela florida", c).lvl,
+      tippfehler: judgeTyped("Weigela floridaa", c).lvl,      // 1 Zeichen – bleibt richtig
+      grob: judgeTyped("Waigellia florida", c).lvl,           // 3 Zeichen – »fast«
+      gattung: judgeTyped("Weigela", c),
+      falsch: judgeTyped("Cornus mas", c).lvl,
+      feldOk: fieldJudge("g", "Weigela", c),
+      feldTippfehler: fieldJudge("g", "Weigella", c),         // 1 Zeichen – bleibt richtig
+      feldFast: fieldJudge("g", "Waigellia", c),
+      feldNo: fieldJudge("g", "Cornus", c),
+      famFast: fieldJudge("fam", "Kaprifoliazeen", c),
+      diff: markDiff("Weigela florida", "Weigelia florida"),
+    };
+  });
+  assert(stufenLogik.exakt === "ok" && stufenLogik.tippfehler === "ok" && stufenLogik.feldTippfehler === "ok",
+    "judgeTyped: kleine Tippfehler müssen richtig bleiben: " + JSON.stringify(stufenLogik));
+  assert(stufenLogik.grob === "near" && stufenLogik.gattung.lvl === "near" && stufenLogik.gattung.hint === "Gattung stimmt",
+    "judgeTyped: grober Tippfehler bzw. nur die Gattung muss »fast« ergeben: " + JSON.stringify(stufenLogik));
+  assert(stufenLogik.falsch === "no", "judgeTyped: andere Art darf nicht »fast« sein: " + JSON.stringify(stufenLogik));
+  assert(stufenLogik.feldOk === "ok" && stufenLogik.feldFast === "near" && stufenLogik.feldNo === "no" && stufenLogik.famFast === "near",
+    "fieldJudge: Stufen je Prüfungsfeld stimmen nicht: " + JSON.stringify(stufenLogik));
+  assert(/<u class="dif">/.test(stufenLogik.diff), "markDiff markiert die abweichende Stelle nicht: " + stufenLogik.diff);
+
   // Bilder-Quiz: Foto erkennen. Läuft hier ohne Netz über eine eingehängte
   // Bild-Quelle (im Betrieb liefert Wikipedia das Artikelbild per JSONP).
   const PX = "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==";
@@ -395,6 +456,68 @@ async function main() {
   assert(photoSkip.filterBad && photoSkip.filterGood,
     "Bilder-Quiz: Karten/Diagramme müssen aussortiert, Fotos behalten werden: " + JSON.stringify(photoSkip));
   assert(photoSkip.note, "Bilder-Quiz: ohne verfügbare Bilder fehlt der erklärende Hinweis");
+
+  // Bildzuordnung: das Bild muss zur ART passen – nicht zur Art statt zur Sorte,
+  // nicht zu einem Homonym, keine Tafel mit zwei Arten. Die API-Antworten sind
+  // hier vorgegeben (__setJsonp), der Test bleibt also ohne Netz.
+  const zuordnung = await page.evaluate(async () => {
+    $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    const kirsche = allCards.find((c) => /cerasiforme/.test(c.a));
+    const zwiebel = allCards.find((c) => /^Allium cepa/.test(c.g + " " + c.a) && /Cepa/.test(c.a));
+    const salbei  = allCards.find((c) => c.g === "Salvia");
+    const wege = photoSteps(kirsche).map((s) => s.k + ":" + s.q);
+
+    const cmPage = (i, file) => ({ index: i, title: "File:" + file, imageinfo: [{ thumburl: "https://x/" + file, descriptionurl: "https://commons/" + file }] });
+    const cmAnswer = (files) => ({ query: { pages: Object.fromEntries(files.map((f, i) => ["p" + i, cmPage(i + 1, f)])) } });
+    const wpAnswer = (title, extract, file) => ({ query: { pages: { "1": { title, extract, pageimage: file, thumbnail: { source: "https://x/" + file } } } } });
+
+    // 1) Sorte: Taxon-Kategorie liefert das Sortenbild
+    __clearPhotoCache();
+    __setJsonp((url) => Promise.resolve(/commons/.test(url)
+      ? cmAnswer(["Starr 060406-7207 Solanum lycopersicum var. cerasiforme.jpg"])
+      : wpAnswer("Tomate", "Die Tomate (Solanum lycopersicum) …", "Tomatoes-on-the-bush.jpg")));
+    const a = await wikiPhoto(kirsche);
+
+    // 2) Artikelbild zeigt ZWEI Arten → verworfen, Commons-Treffer gewinnt; dabei
+    //    schlägt die benannte Datei das beliebige Bild aus derselben Kategorie
+    __clearPhotoCache();
+    __setJsonp((url) => Promise.resolve(/commons/.test(url)
+      ? cmAnswer(["Hortus Haren 06-05-2020 24.jpg", "Allium cepa Zwiebeln 01.jpg"])
+      : wpAnswer("Zwiebel", "Die Zwiebel (Allium cepa) …", "Illustration_Allium_schoenoprasum_and_Allium_cepa0.jpg")));
+    const b = await wikiPhoto(zwiebel);
+
+    // 3) Homonym: Artikel nennt die Gattung nicht → kein Bild von dort
+    __clearPhotoCache();
+    __setJsonp((url) => Promise.resolve(/commons/.test(url)
+      ? { query: { pages: {} } }
+      : wpAnswer("Salbei (Begriffsklärung)", "Ein Ortsteil der Gemeinde …", "Ortsschild.jpg")));
+    const c = await wikiPhoto(salbei);
+
+    __setJsonp(null); __clearPhotoCache();
+    return { wege, kirscheFile: a && a.file, kirscheSrc: a && a.src, zwiebelFile: b && b.file, salbei: c,
+      illuKoehler: looksIllustration("Salvia_officinalis_-_Köhler–s_Medizinal-Pflanzen-126.jpg"),
+      illuFoto: looksIllustration("Carpinus betulus 001.JPG"),
+      zweiArten: fileMentionsOther("Illustration_Allium_schoenoprasum_and_Allium_cepa0.jpg", zwiebel),
+      eigeneArt: fileMentionsOther("Allium cepa Zwiebeln 01.jpg", zwiebel),
+      sorte: isCultivarName(kirsche.a) && infraEpithet(kirsche.a) === "cerasiforme",
+      artBildVerboten: !artLevelOk(kirsche) };
+  });
+  assert(zuordnung.sorte, "Bildzuordnung: Varietät wird nicht als solche erkannt");
+  assert(zuordnung.artBildVerboten,
+    "Bildzuordnung: Steht die Art ebenfalls in der Liste, darf für die Sorte kein Artbild genommen werden");
+  assert(zuordnung.wege[0] === 'cm:incategory:"Solanum lycopersicum var. cerasiforme"',
+    "Bildzuordnung: erster Weg ist nicht die exakte Taxon-Kategorie: " + JSON.stringify(zuordnung.wege));
+  assert(!zuordnung.wege.some((w) => w === 'cm:incategory:"Solanum lycopersicum"' || w === "wp:Solanum lycopersicum"),
+    "Bildzuordnung: Artniveau darf bei vorhandener Geschwister-Art nicht angefragt werden: " + JSON.stringify(zuordnung.wege));
+  assert(/cerasiforme/.test(zuordnung.kirscheFile || "") && zuordnung.kirscheSrc === "cm",
+    "Bildzuordnung: Sorte bekommt nicht das Sortenbild: " + JSON.stringify(zuordnung));
+  assert(zuordnung.zweiArten && !zuordnung.eigeneArt,
+    "Bildzuordnung: Tafel mit zwei Arten wird nicht erkannt: " + JSON.stringify(zuordnung));
+  assert(zuordnung.zwiebelFile === "Allium cepa Zwiebeln 01.jpg",
+    "Bildzuordnung: benannte Datei muss das beliebige Kategoriebild schlagen: " + JSON.stringify(zuordnung));
+  assert(zuordnung.salbei === null, "Bildzuordnung: Artikel ohne Gattungsbezug (Homonym) wird trotzdem genommen");
+  assert(zuordnung.illuKoehler && !zuordnung.illuFoto,
+    "Bildzuordnung: alte Tafeln (Köhler) werden nicht als solche erkannt: " + JSON.stringify(zuordnung));
 
   // Deutsche Namen: die Listen führen drei Muster – alle müssen als richtig zählen,
   // ohne dass ein blankes Adjektiv durchgeht (Profil: Gemüsebau/Gärtner)
@@ -974,7 +1097,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON-Links lesbar, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz.");
+  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON-Links lesbar, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz.");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });

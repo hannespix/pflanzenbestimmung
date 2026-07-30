@@ -485,8 +485,13 @@ function answerMeta(c){
 /* ---------- Distraktoren fürs Quiz ---------- */
 function distractors(c, n){
   const want = answerText(c).toLowerCase();
-  const same = allCards.filter(x=>x.key!==c.key && answerText(x).toLowerCase()!==want && x.thema===c.thema);
-  const rest = allCards.filter(x=>x.key!==c.key && answerText(x).toLowerCase()!==want);
+  // Im Bilder-Quiz keine Geschwister derselben Art anbieten (Tomate ↔ Kirschtomate):
+  // Auf einem Foto wäre die Frage sonst auch mit perfektem Bild kaum zu entscheiden.
+  const binom = searchName(c).toLowerCase();
+  const ok = x => x.key!==c.key && answerText(x).toLowerCase()!==want
+                  && (mode!=="photo" || searchName(x).toLowerCase()!==binom);
+  const same = allCards.filter(x=>ok(x) && x.thema===c.thema);
+  const rest = allCards.filter(ok);
   const picks=[]; const seen=new Set([want]);
   for(const src of [shuffle(same.slice()), shuffle(rest.slice())]){
     for(const x of src){ const t=answerText(x); const tl=t.toLowerCase(); if(!seen.has(tl)){ seen.add(tl); picks.push(t); if(picks.length>=n) return picks; } }
@@ -637,6 +642,16 @@ function fieldOk(k, input, c){                                        // tippfeh
   }
   return false;
 }
+function fieldJudge(k, input, c){                                     // "ok" | "near" (Schreibfehler) | "no"
+  if(fieldOk(k, input, c)) return "ok";
+  if(!clean(input)) return "no";
+  if(k==="de") return deForms(c).names.some(n=>nearEnough(input, n)) ? "near" : "no";
+  if(k==="fam"){
+    const lat=famLatin(c.fam), de=famGerman(c.fam) || (FAM_INFO[famKey(c.fam)]&&FAM_INFO[famKey(c.fam)].de) || "";
+    return (nearEnough(input, lat) || (de && nearEnough(input, de))) ? "near" : "no";
+  }
+  return nearEnough(input, k==="g" ? c.g : c.a) ? "near" : "no";
+}
 function checkTyped(input, c){
   if(wantsDe()) return checkDeName(input, c);   // deutscher Name: jede geführte Schreibweise
   // Gattung + Art getrennt prüfen (tippfehlertolerant)
@@ -645,6 +660,54 @@ function checkTyped(input, c){
   const gOk=closeEnough(gi, c.g);
   const aOk = !norm(c.a) || closeEnough(ai, c.a) || (c.a.toLowerCase().indexOf(ai)===0 && ai.length>=3);
   return gOk && aOk;
+}
+
+/* ---------- »Fast richtig« statt »falsch« ----------
+   Wer *Weigelia* statt *Weigela* schreibt, weiß die Pflanze – nur die Schreibung
+   sitzt noch nicht. Ein hartes »Falsch« entmutigt und sagt nichts; deshalb drei
+   Stufen: **richtig** (zählt, bei Tippfehler wird die saubere Schreibweise
+   gezeigt), **fast** (zählt nicht als Treffer, kommt aber gleich wieder – mit der
+   richtigen Form und der Stelle, die abweicht) und **noch nicht**. Immer wird die
+   korrekte Antwort sofort mitgeliefert; die Abweichung ist markiert, weil das Auge
+   sie so behält. Was schon stimmte, wird zuerst genannt (»Gattung stimmt«) –
+   Teilwissen anzuerkennen hält bei der Stange und entspricht der Prüfung, die
+   Gattung und Art ebenfalls getrennt bewertet. */
+function nearEnough(input, target){                     // knapp daneben (grober Tippfehler)
+  const a=clean(input), b=clean(target);                // »richtig« deckt schon 1–2 Zeichen ab (closeEnough)
+  if(!a || !b) return false;
+  return lev(a,b) <= Math.max(2, Math.round(b.length*0.4));
+}
+function judgeTyped(input, c){                          // {lvl:"ok"|"near"|"no", exact?, hint?}
+  const soll = answerText(c);
+  if(checkTyped(input, c)) return { lvl:"ok", exact: clean(input)===clean(soll) };
+  if(wantsDe())
+    return deForms(c).names.some(n=>nearEnough(input, n)) ? { lvl:"near" } : { lvl:"no" };
+  const parts=clean(input).split(" ").filter(Boolean);
+  if(parts.length && closeEnough(parts[0], c.g))        // Gattung sitzt, Art noch nicht
+    return { lvl:"near", hint:"Gattung stimmt" };
+  return nearEnough(input, soll) ? { lvl:"near" } : { lvl:"no" };
+}
+function markDiff(right, typed){                        // abweichende Stelle in der richtigen Antwort markieren
+  const a=norm(right||""), b=norm(typed||"");
+  const la=a.toLowerCase(), lb=b.toLowerCase();
+  let p=0; while(p<la.length && p<lb.length && la[p]===lb[p]) p++;
+  let s=0; while(s<la.length-p && s<lb.length-p && la[la.length-1-s]===lb[lb.length-1-s]) s++;
+  const mid=a.slice(p, a.length-s);
+  if(mid) return esc(a.slice(0,p)) + `<u class="dif">${esc(mid)}</u>` + esc(a.slice(a.length-s));
+  if(la===lb) return esc(a);
+  const i=Math.max(0, Math.min(a.length-1, p-1));       // zu viel getippt: Stelle trotzdem zeigen
+  return esc(a.slice(0,i)) + `<u class="dif">${esc(a.slice(i,i+1))}</u>` + esc(a.slice(i+1));
+}
+function typeFeedback(j, c, typed){                     // Rückmeldungstext zu einer Eingabe
+  const soll = answerText(c);
+  if(j.lvl==="ok")
+    return (j.exact ? `<span class="good">Richtig!</span> `
+                    : `<span class="good">Richtig!</span> <span class="sol">Schreibweise: <b>${markDiff(soll, typed)}</b> · </span>`)+
+           `<span class="sol">${solutionLine(c)}</span>`;
+  if(j.lvl==="near")
+    return `<span class="near">Fast!</span> <span class="sol">${j.hint?esc(j.hint)+" · ":""}`+
+           `richtig wäre <b>${markDiff(soll, typed)}</b> – die Karte kommt gleich noch einmal.</span>`;
+  return `<span class="bad">Noch nicht.</span> <span class="sol">${solutionLine(c)}</span>`;
 }
 
 /* ---------- Fortschritts-Anzeige ---------- */
@@ -674,6 +737,36 @@ function renderProgress(){
                             : DIRS[curDir()].label;
   $("#startHint").textContent = p.length ? `${due} Karten heute dran · ${wie}` : "Keine Arten in der aktuellen Auswahl.";
   $("#btnStart").disabled = !p.length;
+}
+
+/* ---------- Kleine Belohnung: Partikel bei einem Treffer ----------
+   Reines CSS/JS, keine Bibliothek: ein paar Blättchen fliegen kurz auseinander.
+   Stärke 1 = Treffer in der Sitzung, 2 = Sitzung/Duell gewonnen. Wer im System
+   »weniger Bewegung« eingestellt hat, bekommt nichts (prefers-reduced-motion). */
+const CONF_COLORS = ["#3d6b4d","#7aa87f","#c8a24a","#9c3b2e","#2b4f38","#e0c56e"];
+function celebrate(anchor, strength){
+  try{
+    if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const n = strength>1 ? 34 : 14;
+    const r = anchor && anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : null;
+    const x = r && r.width ? r.left + r.width/2 : innerWidth/2;
+    const y = r && r.height ? r.top + r.height/2 : innerHeight/3;
+    const host = el("div","conf-host");
+    for(let i=0;i<n;i++){
+      const s = el("i","conf");
+      const ang = (Math.PI*2*i)/n + Math.random()*0.5;
+      const dist = (strength>1?150:90) * (0.5+Math.random());
+      s.style.left = x+"px"; s.style.top = y+"px";
+      s.style.setProperty("--dx", Math.cos(ang)*dist+"px");
+      s.style.setProperty("--dy", (Math.sin(ang)*dist - 40)+"px");
+      s.style.setProperty("--rot", Math.round(Math.random()*720-360)+"deg");
+      s.style.setProperty("--del", (Math.random()*0.12).toFixed(2)+"s");
+      s.style.background = CONF_COLORS[i%CONF_COLORS.length];
+      host.appendChild(s);
+    }
+    document.body.appendChild(host);
+    setTimeout(()=>host.remove(), strength>1 ? 1600 : 1200);
+  }catch(e){ /* Animation ist Kür – nie ein Grund für einen Fehler */ }
 }
 
 /* ---------- Zeitmessung (Denkzeit) ----------
@@ -940,11 +1033,12 @@ function finishSession(){
   sess.active=false;
   const acc = sessAcc();
   const ch = sess.challenge;                     // angenommene Herausforderung (falls vorhanden)
-  let extra = "";
+  let extra = "", gewonnen = scoreable() && sess.done>0 && acc>=80;   // ohne Duell: gute Quote reicht
   if(ch){                                        // Vergleich Du ↔ Herausforderer
     const theirAcc = ch.t ? Math.round(ch.s/ch.t*100) : 0;
     const who = (ch.n||"").trim() || "Herausforderer";
     const mine = sess.ms||0, theirs = (ch.z||0)*1000;   // Zeit entscheidet nur bei gleicher Quote
+    gewonnen = acc>theirAcc || (acc===theirAcc && !!mine && !!theirs && mine<theirs);
     const verdict = acc>theirAcc ? `<b class="duel-win">Du hast gewonnen! 🎉</b>`
       : acc<theirAcc ? `<b class="duel-lose">Knapp – ${esc(who)} liegt vorn. Nochmal versuchen?</b>`
       : (mine && theirs && mine<theirs) ? `<b class="duel-win">Gleiche Quote – aber du warst schneller! 🎉</b>`
@@ -968,6 +1062,7 @@ function finishSession(){
     </div></div>`;
   wireShareBlock();
   const a=$("#againBtn"); if(a) a.onclick=startSession;
+  if(gewonnen) celebrate(stage.querySelector("h2"), 2);
   renderProgress();
 }
 
@@ -1039,6 +1134,7 @@ function answerQuiz(btn, chosen, opts){
   grade(c, ok?"good":"again"); if(ok) sess.correct++; else requeueCurrent();
   $("#fb").innerHTML = (ok ? `<span class="good">Richtig!</span>` : `<span class="bad">Leider falsch.</span>`)+
     ` <span class="sol">${solutionLine(c)}</span>`;
+  if(ok) celebrate(btn, 1);
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
 }
@@ -1062,11 +1158,12 @@ function renderType(){
 }
 function submitType(inp){
   clockStop();
-  const c=current; const ok=checkTyped(inp.value, c);
-  inp.disabled=true; inp.classList.add(ok?"ok":"no");
-  grade(c, ok?"good":"again"); if(ok) sess.correct++; else requeueCurrent();
-  $("#fb").innerHTML = (ok ? `<span class="good">Richtig!</span>` : `<span class="bad">Nicht ganz.</span>`)+
-    ` <span class="sol">${solutionLine(c)}</span>`;
+  const c=current, j=judgeTyped(inp.value, c), ok=j.lvl==="ok";
+  inp.disabled=true; inp.classList.add(ok?"ok":j.lvl==="near"?"near":"no");
+  grade(c, ok?"good":j.lvl==="near"?"hard":"again");
+  if(ok) sess.correct++; else requeueCurrent();
+  $("#fb").innerHTML = typeFeedback(j, c, inp.value);
+  if(ok) celebrate($("#fb"), 1);
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
 }
@@ -1415,7 +1512,7 @@ async function loadWiki(card, host, btn){
    Bewusst ein EIGENER Modus: Er lädt nichts beim Seitenaufbau, und ohne Netz
    sagt er das klar – Karteikarten, Quiz, Tippen und Liste bleiben offline voll
    nutzbar. */
-const LS_PHOTOS = LS_PREFIX+"photos";                 // gemerkte Bild-URLs (spart API-Abrufe)
+const LS_PHOTOS = LS_PREFIX+"photos2";                // gemerkte Bild-URLs (spart API-Abrufe; »2« = neue Auswahl, alte Treffer verfallen)
 let photoStore = null, photoMisses = 0;
 function photoStoreLoad(){
   if(photoStore) return photoStore;
@@ -1439,23 +1536,137 @@ function usablePhoto(file){
   if(/\.svg$/i.test(file)) return false;
   return !/(map|karte|distribution|range|verbreitung|locator|diagram|chart|wappen|logo|signature)/i.test(file);
 }
-async function wikiPhoto(card){                        // → {thumb,title,file,url} | null
-  let answered = false;                                // kam überhaupt eine Antwort?
-  for(const t of wikiCandidates(card)){
-    let d;
-    try{
-      d = await jsonpGet("https://de.wikipedia.org/w/api.php?action=query&format=json"+
-        "&prop=pageimages&piprop=thumbnail%7Cname&pithumbsize=640&redirects=1&titles="+encodeURIComponent(t));
-    }catch(e){ continue; }                             // einzelner Fehlversuch – nächster Kandidat
-    answered = true;
-    const p = wikiPage(d);
-    if(p && p.thumbnail && p.thumbnail.source && usablePhoto(p.pageimage)){
-      return { thumb:p.thumbnail.source, title:p.title, file:p.pageimage||"",
-               url:"https://de.wikipedia.org/wiki/"+encodeURIComponent(p.title.replace(/ /g,"_")) };
+/* ---------- Welches Bild gehört wirklich zu DIESER Art? ----------
+   Das Artikelbild der Wikipedia allein reicht nicht:
+     · Sorten/Varietäten haben meist keinen eigenen Artikel – die Anfrage landet
+       auf der Art (»Kirschtomate« → Foto einer normalen Tomate).
+     · Manche Artikelbilder sind alte Tafeln, die ZWEI Arten zeigen
+       (»Illustration Allium schoenoprasum and Allium cepa« beim Zwiebel-Artikel).
+     · Der deutsche Name kann auf einen ganz anderen Artikel führen.
+   Deshalb: erst die genaue Taxon-Kategorie auf Wikimedia Commons fragen, dann
+   der Reihe nach unschärfere Quellen – und jeder Treffer muss zwei Prüfungen
+   bestehen: Der Artikel muss die Gattung nennen (pageFitsCard) und der Dateiname
+   darf keine ANDERE Art derselben Gattung nennen (fileMentionsOther).
+   Sorten-Sonderfall: Steht die Art selbst ebenfalls in der Liste (Tomate UND
+   Kirschtomate), wird ein Bild auf Artniveau gar nicht erst angeboten – die Frage
+   wäre sonst nicht entscheidbar. Steht die Sorte allein, ist es zulässig. */
+const INFRA_RE = /\b(?:var|subsp|ssp|convar|f|cv)\.\s*([a-zäöüß][a-zäöüß-]{2,})/i;
+const GRP_RE   = /(cultivars?|hybriden?|in sorten|-?grp\.|gruppe|group)/i;
+function infraEpithet(a){ const m = INFRA_RE.exec(norm(a||"")); return m ? m[1].toLowerCase() : ""; }
+function isCultivarName(a){ a = norm(a||""); return INFRA_RE.test(a) || GRP_RE.test(a); }
+function looksIllustration(file){                     // alte Tafeln/Sammelbilder statt Foto
+  const f = deacc(String(file||"").toLowerCase());    // »Köhler–s Medizinal-Pflanzen« → koehler…
+  return /(illustration|kohler|koehler|koeh_|medizinal|sturm|thome|liebig|plate|drawing|zeichnung|botanical|tafel|gravure|lithograph)/.test(f);
+}
+function fileMentionsOther(file, card){               // Dateiname nennt eine andere Art derselben Gattung
+  const gen = norm(card.g||"").toLowerCase(); if(!gen) return false;
+  const epi = binomEpithet(card.a||"").toLowerCase(), inf = infraEpithet(card.a||"");
+  const w = String(file||"").replace(/[_\-.,()]/g," ").split(/\s+/).filter(Boolean);
+  for(let i=0;i<w.length-1;i++){
+    const a = w[i].toLowerCase(), b = w[i+1].toLowerCase().replace(/\d+$/,"");
+    if(a!==gen || !/^[a-zäöüß]{4,}$/.test(b)) continue;
+    if(b!==epi && b!==inf && b!=="var" && b!=="subsp" && b!=="ssp") return true;
+  }
+  return false;
+}
+function pageFitsCard(p, card){                       // Artikel muss die Pflanze meinen, nicht ein Homonym
+  const gen = norm(card.g||"").toLowerCase(); if(!gen) return true;
+  return (((p.title||"")+" "+(p.extract||"")).toLowerCase()).indexOf(gen) >= 0;
+}
+let binomCount = new Map();                           // Binom → Zahl der Arten im Profil (Sorten-Geschwister)
+function buildBinomIndex(){
+  binomCount = new Map();
+  allCards.forEach(c=>{ const b=searchName(c).toLowerCase(); binomCount.set(b,(binomCount.get(b)||0)+1); });
+}
+function artLevelOk(card){                            // darf ein Bild der ART gezeigt werden?
+  if(!infraEpithet(card.a)) return true;              // keine Varietät → Artbild ist das richtige Bild
+  return (binomCount.get(searchName(card).toLowerCase())||0) <= 1;   // Geschwister in der Liste? dann nein
+}
+function photoSteps(card){                            // Suchwege, vom genauesten zum gröbsten
+  const full = norm(card.g+" "+card.a).replace(/\s+/g," ").trim();
+  const binom = searchName(card), de = (card.de||"").split(/[,;/]/)[0].trim();
+  const inf = infraEpithet(card.a), steps = [];
+  if(isCultivarName(card.a)){
+    steps.push({k:"cm", q:`incategory:"${full}"`});                       // exakte Taxon-Kategorie
+    if(inf) steps.push({k:"cm", q:`incategory:"${binom}" ${inf}`});       // Sorte innerhalb der Art
+    steps.push({k:"cm", q:`"${full}"`});
+    if(de){ steps.push({k:"wp", q:de}); steps.push({k:"cm", q:`"${de}"`}); }
+    if(inf) steps.push({k:"cm", q:`${binom} ${inf}`});                   // Volltext, beide Wörter müssen vorkommen
+    if(artLevelOk(card)){ steps.push({k:"wp", q:binom}); steps.push({k:"cm", q:`incategory:"${binom}"`}); }
+  }else{
+    steps.push({k:"wp", q:binom});
+    steps.push({k:"cm", q:`incategory:"${binom}"`});
+    if(de) steps.push({k:"wp", q:de});
+    steps.push({k:"cm", q:binom});                                       // z. B. »Osmanthus burkwoodii« (Kategorie heißt »× burkwoodii«)
+  }
+  return steps;
+}
+let jsonp = (...a) => jsonpGet(...a);                 // austauschbar: die Tests laufen ohne Netz
+function wikiArticleQuery(title){                     // Artikelbild + erster Satz in EINER Anfrage
+  return jsonp("https://de.wikipedia.org/w/api.php?action=query&format=json&prop=pageimages%7Cextracts"+
+    "&exintro=1&explaintext=1&exsentences=1&piprop=thumbnail%7Cname&pithumbsize=640&redirects=1&titles="+
+    encodeURIComponent(title));
+}
+function commonsQuery(q){                             // Dateien auf Commons suchen (Kategorie oder Phrase)
+  return jsonp("https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search"+
+    "&gsrnamespace=6&gsrlimit=12&gsrsearch="+encodeURIComponent(q)+
+    "&prop=imageinfo&iiprop=url&iiurlwidth=640");
+}
+/* Dateien, die die Pflanze im Namen führen, sind meist gezielte Aufnahmen –
+   besser als ein beliebiges Bild aus derselben Kategorie (»Hortus Haren … 24.jpg«). */
+function commonsScore(file, card){
+  const f = deacc(String(file||"").toLowerCase());
+  const gen = deacc(norm(card.g||"").toLowerCase()), epi = deacc(binomEpithet(card.a||"").toLowerCase());
+  const de = deacc(((card.de||"").split(/[,;/]/)[0]||"").toLowerCase().trim());
+  let s = 0;
+  if(gen && f.indexOf(gen)>=0) s += (epi && f.indexOf(epi)>=0) ? 4 : 2;
+  if(de && de.length>4 && f.indexOf(de)>=0) s += 3;
+  return s;
+}
+function pickCommons(d, card){                        // bester Treffer der Commons-Suche
+  const pg = (d && d.query && d.query.pages) || null; if(!pg) return null;
+  const list = Object.keys(pg).map(k=>pg[k]).sort((a,b)=>(a.index||0)-(b.index||0));
+  let best = null, bestScore = -1;
+  for(const p of list){
+    const file = String(p.title||"").replace(/^File:/i,"").replace(/^Datei:/i,"");
+    const ii = p.imageinfo && p.imageinfo[0]; if(!ii || !(ii.thumburl||ii.url)) continue;
+    if(!usablePhoto(file) || looksIllustration(file) || fileMentionsOther(file, card)) continue;
+    const sc = commonsScore(file, card);
+    if(sc > bestScore){                               // Gleichstand → der zuerst gelistete (Relevanz der Suche)
+      bestScore = sc;
+      best = { thumb: ii.thumburl || ii.url, file, title: norm(card.g+" "+card.a),
+               url: ii.descriptionurl || ("https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(file)), src:"cm" };
     }
   }
+  return best;
+}
+async function wikiPhoto(card){                        // → {thumb,title,file,url,src} | null
+  let answered = false, weak = null;                   // weak: Zeichnung/Tafel nur als Notnagel
+  const inf = infraEpithet(card.a), strict = inf && !artLevelOk(card);
+  for(const st of photoSteps(card)){
+    try{
+      if(st.k==="cm"){
+        const hit = pickCommons(await commonsQuery(st.q), card);
+        answered = true;
+        if(hit) return hit;
+      }else{
+        const d = await wikiArticleQuery(st.q); answered = true;
+        const p = wikiPage(d);
+        if(!p || !p.thumbnail || !p.thumbnail.source) continue;
+        if(!pageFitsCard(p, card)) continue;                       // anderer Artikel (Homonym)
+        // Sorte gesucht, aber auf dem Art-Artikel gelandet? Nur zulässig, wenn die Art nicht ebenfalls in der Liste steht.
+        if(strict && ((p.title||"")+" "+(p.extract||"")).toLowerCase().indexOf(inf) < 0) continue;
+        if(!usablePhoto(p.pageimage) || fileMentionsOther(p.pageimage, card)) continue;
+        const hit = { thumb:p.thumbnail.source, title:p.title, file:p.pageimage||"", src:"wp",
+                      url:"https://de.wikipedia.org/wiki/"+encodeURIComponent(String(p.title).replace(/ /g,"_")) };
+        if(!looksIllustration(p.pageimage)) return hit;
+        weak = weak || hit;                                        // Tafel merken, erst ganz am Ende nehmen
+      }
+    }catch(e){ continue; }                             // einzelner Fehlversuch – nächster Weg
+  }
+  if(weak) return weak;
   if(!answered) throw new Error("network");            // gar keine Antwort → offline/blockiert
-  return null;                                         // beantwortet, aber ohne brauchbares Bild
+  return null;                                         // beantwortet, aber ohne passendes Bild
 }
 let photoSource = wikiPhoto;                           // austauschbar (Tests laufen ohne Netz)
 async function photoFor(card){
@@ -1479,7 +1690,9 @@ async function photoCredit(file){
 function photoSrcLine(p){                              // Quellenzeile unter dem Bild (nach der Antwort)
   const commons = p.file ? "https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(p.file) : p.url;
   return `<div class="ph-src" id="phSrc">Bild: <a href="${esc(commons)}" target="_blank" rel="noopener">Wikimedia&nbsp;Commons</a>`+
-         ` · <a href="${esc(p.url)}" target="_blank" rel="noopener">Wikipedia – ${esc(p.title)}</a></div>`;
+         (p.src==="cm" ? "" :                          // Commons-Treffer haben keinen Artikel dahinter
+           ` · <a href="${esc(p.url)}" target="_blank" rel="noopener">Wikipedia – ${esc(p.title)}</a>`)+
+         `</div>`;
 }
 function photoNotice(html){
   $("#stage").innerHTML = sessionBar() + `<div class="ph-note">${html}</div>`;
@@ -1540,9 +1753,9 @@ function renderPhotoType(p){
   const inp=$("#typeIn"); inp.focus();
   inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); const b=$("#chk"); if(b) b.click(); }});
   $("#chk").onclick=()=>{
-    const c=current, ok=checkTyped(inp.value, c);
-    inp.disabled=true; inp.classList.add(ok?"ok":"no");
-    finishPhotoAnswer(ok, ok?"good":"again", p, `<span class="sol">${solutionLine(c)}</span>`);
+    const c=current, j=judgeTyped(inp.value, c), ok=j.lvl==="ok";
+    inp.disabled=true; inp.classList.add(ok?"ok":j.lvl==="near"?"near":"no");
+    finishPhotoAnswer(ok, ok?"good":j.lvl==="near"?"hard":"again", p, typeFeedback(j, c, inp.value), true);
   };
 }
 /* Antwort 3: wie in der Prüfung – ein Feld je bewerteter Spalte, mit Punkten */
@@ -1566,27 +1779,34 @@ function renderPhotoExam(p){
   }));
   $("#chk").onclick=()=>{
     const c=current;
-    let got=0, max=0, right=0;
+    let got=0, max=0, right=0, fast=0;
     ins.forEach(inp=>{
-      const k=inp.dataset.k, ok=fieldOk(k, inp.value, c), pts=examPts(k);
-      max+=pts; if(ok){ got+=pts; right++; }
-      inp.disabled=true; inp.classList.add(ok?"ok":"no");
+      const k=inp.dataset.k, lvl=fieldJudge(k, inp.value, c), pts=examPts(k);
+      max+=pts;
+      if(lvl==="ok"){ got+=pts; right++; }
+      else if(lvl==="near"){ got+=pts/2; fast++; }        // Schreibfehler: halbe Punkte (wie auf dem Bogen)
+      inp.disabled=true; inp.classList.add(lvl==="ok"?"ok":lvl==="near"?"near":"no");
       const mk=$("#mk_"+k);
-      if(mk) mk.innerHTML = ok ? `<span class="ex-ok">✓</span>`
+      if(mk) mk.innerHTML = lvl==="ok" ? `<span class="ex-ok">✓</span>`
+        : lvl==="near" ? `<span class="ex-near">≈</span> <span class="ex-sol">${markDiff(fieldSolution(k,c), inp.value)}</span>`
         : `<span class="ex-no">✗</span> <span class="ex-sol">${esc(fieldSolution(k,c))}</span>`;
     });
     const all = right===ins.length;
-    finishPhotoAnswer(all, all ? "good" : (right ? "hard" : "again"), p,
-      `<span class="sol">${nfmt(got)} von ${nfmt(max)} Punkten${all?"":" · "+solutionLine(c)}</span>`);
+    finishPhotoAnswer(all, all ? "good" : ((right||fast) ? "hard" : "again"), p,
+      `<span class="sol">${nfmt(got)} von ${nfmt(max)} Punkten`+
+      (fast?` · <b>≈</b> Schreibfehler zählen halb – so steht es auf dem Prüfungsbogen`:"")+
+      (all?"":" · "+solutionLine(c))+`</span>`);
   };
 }
 /* Gemeinsamer Abschluss: bewerten, Rückmeldung, Bildnachweis, »Weiter« */
-function finishPhotoAnswer(ok, g, p, solHTML){
+function finishPhotoAnswer(ok, g, p, solHTML, full){
   clockStop();                                        // gilt für alle drei Antwortarten
   const c=current;
   grade(c, g); if(ok) sess.correct++; else requeueCurrent();
-  $("#fb").innerHTML = (ok ? `<span class="good">Richtig!</span>`
-    : g==="hard" ? `<span class="bad">Teilweise richtig.</span>` : `<span class="bad">Leider falsch.</span>`)+" "+solHTML;
+  $("#fb").innerHTML = full ? solHTML                 // Tippen bringt seinen Text schon fertig mit
+    : (ok ? `<span class="good">Richtig!</span>`
+      : g==="hard" ? `<span class="near">Teilweise richtig.</span>` : `<span class="bad">Leider falsch.</span>`)+" "+solHTML;
+  if(ok) celebrate($("#fb"), 1);
   photoRevealCredit(p);
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
@@ -1693,6 +1913,7 @@ function loadProfile(id){
   listCats.clear();                                  // Kategorie-Tags beim Profilwechsel zurücksetzen
   refreshKat();
   buildDeIndex();                                    // Grundwörter zählen (für »Rhabarber« statt »Krauser Rhabarber«)
+  buildBinomIndex();                                 // Arten je Binom zählen (Sorte + Art beide in der Liste?)
   loadExamFields();                                  // Prüfungsfelder gelten je Profil (Bogen der Fachrichtung)
   syncExamOnlyUI();                                  // »nur Prüfungsstoff«-Schalter nur bei Fachwerker zeigen
   normalizeSort();                                   // ggf. Familien-Ansicht verlassen, wenn ausgeblendet
@@ -1837,14 +2058,27 @@ window.searchName=searchName;
 window.buildPrintList=buildPrintList;
 window.themeOf=themeOf;
 window.usablePhoto=usablePhoto;
+window.photoSteps=photoSteps;
+window.fileMentionsOther=fileMentionsOther;
+window.pageFitsCard=pageFitsCard;
+window.looksIllustration=looksIllustration;
+window.isCultivarName=isCultivarName;
+window.infraEpithet=infraEpithet;
+window.artLevelOk=artLevelOk;
+window.pickCommons=pickCommons;
 window.fieldOk=fieldOk;
 window.checkDeName=checkDeName;
+window.judgeTyped=judgeTyped;
+window.fieldJudge=fieldJudge;
+window.markDiff=markDiff;
+window.celebrate=celebrate;
 window.deHeadCounts=()=>deHeadCount;   // für Tests: Grundwort → Artenzahl im Profil
 window.deForms=deForms;
 window.examFieldList=examFieldList;
 window.wikiPhoto=wikiPhoto;
 /* Bild-Quelle austauschbar + Bild-Cache leerbar: Die Tests laufen ohne Netz. */
 window.__setPhotoSource=fn=>{ photoSource = fn || wikiPhoto; };
+window.__setJsonp=fn=>{ jsonp = fn || ((...a)=>jsonpGet(...a)); };   // API-Antworten für Tests vorgeben
 window.__clearPhotoCache=()=>{ photoStore={}; try{ store.set(LS_PHOTOS,"{}"); }catch(e){} };
 window.renderListControls=renderListControls;
 window.openFamilyInfo=openFamilyInfo;

@@ -785,6 +785,55 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       veränderte Stelle → abgelehnt (auch beim Boot: kein Banner), alte JSON-Links
       lesbar, Banner nennt 10:00, Zeitvergleich entscheidet bei gleicher Quote.
 
+- [x] **Bilder-Quiz: das Bild muss zur Art passen** (Rückmeldung: statt der
+      Kirschtomate erschien eine normale Tomate, bei »Zwiebel« eine Tafel mit zwei
+      Arten). Ursache: Es wurde nur das **Artikelbild** der de-Wikipedia genommen –
+      Sorten haben selten einen eigenen Artikel (Anfrage landet auf der Art), manche
+      Artikelbilder sind alte Tafeln mit mehreren Arten, und der deutsche Name kann
+      auf ein Homonym führen. Neu (`photoSteps`/`pickCommons`/`wikiPhoto`):
+      **Suchkette vom Genauen zum Groben** – Commons-Kategorie des exakten Taxons →
+      Art-Kategorie + infraspezifisches Epitheton → Phrase → deutscher Name →
+      (nur wenn zulässig) Artniveau. Jeder Treffer muss zwei Prüfungen bestehen:
+      `pageFitsCard` (Artikel nennt die Gattung – killt Homonyme) und
+      `fileMentionsOther` (Dateiname nennt keine **andere** Art derselben Gattung –
+      killt »Illustration Allium schoenoprasum and Allium cepa«). Zusätzlich
+      `looksIllustration` (Köhler/Tafel/Liebig … nur als Notnagel, `deacc`-normalisiert)
+      und `commonsScore` (Dateien, die Gattung/Art/deutschen Namen führen, schlagen
+      beliebige Kategoriebilder). **Sorten-Regel:** Steht die Art selbst ebenfalls im
+      Profil (`binomCount`, `artLevelOk`), wird für die Sorte **kein Artbild** angeboten –
+      die Frage wäre sonst nicht entscheidbar; im Bilder-Quiz erscheinen dann auch keine
+      Geschwister derselben Art als Ablenker (`distractors`). Ohne passendes Bild wird
+      die Art übersprungen. Bild-Cache-Key auf `pflanzenlernen.photos2` gehoben (alte
+      Treffer verfallen). **Verfahren:** Regeln als Python-Zwilling gegen die echten
+      APIs geprüft – Kirschtomate → *Starr … var. cerasiforme.jpg*, Küchen-Zwiebel →
+      *Küchen-Zwiebel.jpg*, Schalotte → *Allium cepa Aggregatum Grp.jpg*, Hainbuche →
+      *Carpinus betulus 001.JPG*, Salbei/Schachblume → Fotos statt Tafeln; Stichprobe
+      über 42 zufällige Arten aus allen 14 Profilen: **0 % ohne Bild**. `tests/learn.mjs`
+      hängt über `__setJsonp` feste API-Antworten ein (kein Netz in CI) und prüft
+      Suchreihenfolge, Sortenbild, Zwei-Arten-Tafel, Homonym, Ranking und Tafel-Erkennung.
+
+- [x] **»Fast richtig« statt »falsch« + kleine Belohnung** (Lern-Tool). Beim Tippen
+      (Text-Modus und Bilder-Modus) gibt es jetzt **drei Stufen** statt richtig/falsch
+      (`judgeTyped` → `ok|near|no`, Text über `typeFeedback`):
+      **richtig** (zählt; war ein kleiner Tippfehler dabei, wird zusätzlich die saubere
+      Schreibweise gezeigt), **fast** (knapp daneben oder nur die Gattung – zählt nicht
+      als Treffer, Leitner-Stufe `hard`, Karte kommt in derselben Sitzung wieder, die
+      richtige Form erscheint mit **markierter Abweichung** via `markDiff`) und
+      **noch nicht** (`again`). Didaktik: sofortige Korrektur, Teilwissen zuerst
+      benennen (»Gattung stimmt« – die Prüfung bewertet Gattung und Art ebenfalls
+      getrennt), kein hartes »falsch« für einen Buchstaben. Schwelle: `closeEnough`
+      (1–2 Zeichen) = richtig, `nearEnough` (bis 40 % der Länge) = fast.
+      In der Antwortart **»wie in der Prüfung«** gibt ein »fast« die **halbe Punktzahl**
+      (`fieldJudge`), genau wie der amtliche Bogen es vorsieht (»Schreibfehler führen zur
+      Halbierung der Punktezahl«); die Zeile weist das aus.
+      **Belohnung:** `celebrate(anchor, stärke)` streut ein paar Blättchen (reines
+      CSS/JS, `.conf-host`/`.conf`, keine Bibliothek) – Stärke 1 bei jedem Treffer
+      (Quiz, Tippen, Bilder), Stärke 2 am Sitzungsende ab 80 % bzw. bei gewonnenem
+      Duell. Respektiert `prefers-reduced-motion` und ist in `try/catch` gekapselt
+      (Animation darf nie eine Sitzung kippen). `tests/learn.mjs` prüft die drei Stufen
+      im Ablauf (inkl. Partikel nur bei Treffern) und `judgeTyped`/`fieldJudge`/`markDiff`
+      im Detail.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei
