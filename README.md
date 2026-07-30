@@ -1,8 +1,11 @@
 # Pflanzenkenntnis — grüne Berufe
 
-Zwei **eigenständige, vollständig offline lauffähige HTML-Werkzeuge** rund um die
-Pflanzenkenntnis-Prüfung der grünen Berufe — für alle sieben Gärtner-Fachrichtungen
-und die jeweiligen Fachwerker, aus **einer** gemeinsamen Pflanzendatenbank gebaut:
+Zwei **eigenständige HTML-Werkzeuge** rund um die Pflanzenkenntnis-Prüfung der grünen
+Berufe — für alle sieben Gärtner-Fachrichtungen und die jeweiligen Fachwerker, aus
+**einer** gemeinsamen Pflanzendatenbank gebaut. Jedes Werkzeug ist **eine einzige
+HTML-Datei ohne externe Ressourcen**: Sie rechnet komplett im Browser, lädt nichts
+nach und funktioniert nach dem ersten Aufruf **auch ohne Internetverbindung** — ob
+online aufgerufen, als App installiert oder als Datei per `file://` geöffnet:
 
 - **`pflanzenkenntnis.html` — Prüfungswerkzeug (für Prüfende).** Prüfungslisten
   ziehen, Prüfungsbogen und Musterlösung drucken, Noten rechnen, Prüfungen nach
@@ -115,8 +118,8 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
     steht. Nach der Antwort erscheinen der deutsche Name und der **Bildnachweis**
     (Urheber + Lizenz). Gezeigt wird das Artikelbild der deutschen Wikipedia (meist ein
     Foto, gelegentlich eine botanische Zeichnung); geladen wird **erst beim Start des
-    Modus**. Ohne Netz sagt der Modus das klar – **die vier anderen Modi laufen
-    vollständig offline weiter**. Arten ohne brauchbares Bild werden übersprungen,
+    Modus**. Ohne Netz sagt der Modus das klar – **die vier anderen Modi laufen ohne
+    Internet weiter**. Arten ohne brauchbares Bild werden übersprungen,
     Verbreitungskarten und Diagramme aussortiert.
 - **Liste / Nachschlagen:** ein vierter Tab zeigt **alle** Arten des Profils –
   wahlweise **A–Z** (botanisch/deutsch), nach **Thema** oder nach botanischer
@@ -170,8 +173,8 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
   trägt die Lektion selbst; es wird nichts nachgeladen.
 - **Hilfe & Tooltips:** eingebauter »Hilfe«-Knopf mit Kurzanleitung und Erklärung
   aller Modi und Einstellungen; nahezu jedes Feld hat einen erklärenden Tooltip.
-- Gleiche Leitplanken: **vollständig offline** (der Lernkern braucht **nie** Internet;
-  nur die optionalen »Online-Infos« oben sind eine bewusste, opt-in Ausnahme), kein
+- Gleiche Leitplanken: **keine externen Ressourcen** (der Lernkern braucht **nie**
+  Internet; nur die optionalen »Online-Infos« oben sind eine bewusste, opt-in Ausnahme), kein
   CDN, kein Framework, deutschsprachig, mobiltauglich. Baut **ohne** SheetJS (kein
   Excel-Import nötig) und ist dadurch deutlich kleiner.
 

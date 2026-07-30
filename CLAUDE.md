@@ -11,9 +11,14 @@ Bitte alle Antworten und Commit-/PR-Texte **auf Deutsch**.
 
 ## Nicht verhandelbar
 
-- **Vollständig offline. Kein CDN, keine externen Ressourcen.** Alle Bibliotheken
-  werden beim Build inline eingebettet. `python3 tools/check_offline.py` muss grün
-  bleiben (läuft in CI).
+- **Keine externen Ressourcen, kein CDN.** Jede Seite lädt nichts nach und rechnet
+  komplett im Browser – dadurch funktioniert sie nach dem ersten Aufruf **auch ohne
+  Internet** (online, als installierte App oder als Datei per `file://`). Alle
+  Bibliotheken werden beim Build inline eingebettet. `python3 tools/check_offline.py`
+  muss grün bleiben (läuft in CI).
+  *Wortwahl in der Oberfläche:* nicht »vollständig offline« schreiben – bei einer
+  Webseite klingt das widersprüchlich. Stattdessen »läuft im Browser, auch ohne
+  Internet« bzw. »nach dem ersten Aufruf ohne Internet nutzbar«.
 - **Zwei bewusste Ausnahmen, beide nur im Lern-Tool und beide opt-in:**
   (1) Das »ℹ Mehr zur Pflanze«-Modal bietet **optionale** Online-Infos (deutsche
   Wikipedia, nur auf Knopfdruck). (2) Der **Lernmodus »Bilder«** lädt Bilder von
