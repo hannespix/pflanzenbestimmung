@@ -184,6 +184,26 @@ async function main() {
   assert(theme.has && theme.afterOne === "dark" && theme.saved === "dark" && theme.afterTwo === "light",
     "Theme-Umschalter muss dunkel/hell wechseln und die Wahl speichern: " + JSON.stringify(theme));
 
+  // Bilder-Quiz: Buchdeckel/Titelseiten/Scans digitalisierter Werke werden verworfen
+  // (Praxisfall: Buchdeckel statt Majoran-Foto); Herbarbelege gelten als Tafel.
+  // Deutsche Pflanzennamen mit »buch« im Wort (Buche, Buchsbaum) bleiben erlaubt.
+  const photoFilter = await page.evaluate(() => ({
+    einband: usablePhoto("Majoran_Kraeuterbuch_Einband.jpg"),
+    titel: usablePhoto("Title_page_of_Prodromus_1790.jpg"),
+    cover: usablePhoto("Book_cover_herbal_1543.jpg"),
+    scan: usablePhoto("Origanum_scan_p123.jpg"),
+    foto: usablePhoto("Origanum_majorana_flowers_2019.jpg"),
+    buche: usablePhoto("Fagus_sylvatica_Buche_im_Wald.jpg"),
+    buchs: usablePhoto("Buxus_Buchsbaum_Hecke.jpg"),
+    groundcover: usablePhoto("Vinca_minor_groundcover.jpg"),
+    herbar: looksIllustration("Herbarium_specimen_Origanum_majorana.jpg"),
+  }));
+  assert(!photoFilter.einband && !photoFilter.titel && !photoFilter.cover && !photoFilter.scan,
+    "Buchdeckel/Titelseiten/Scans müssen als unbrauchbar verworfen werden: " + JSON.stringify(photoFilter));
+  assert(photoFilter.foto && photoFilter.buche && photoFilter.buchs && photoFilter.groundcover,
+    "Echte Fotos (auch Buche/Buchsbaum/groundcover im Namen) müssen erlaubt bleiben: " + JSON.stringify(photoFilter));
+  assert(photoFilter.herbar, "Herbarbelege müssen als Tafel/Scan erkannt werden: " + JSON.stringify(photoFilter));
+
   // Hinweis vor den Lektionen: automatisch/KI-erzeugte Inhalte, keine Gewähr –
   // muss ohne Aufklappen sichtbar sein und im Listenmodus verschwinden
   const note = await page.evaluate(() => {
