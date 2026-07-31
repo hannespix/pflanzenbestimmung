@@ -775,6 +775,11 @@ async function main() {
       abk: t("Gew. / Große Brennessel", "gewöhnliche Brennessel"),
       // Grundwort NUR bei Eindeutigkeit: die Liste führt Große UND Kleine Brennessel
       brennCount: deHeadCounts().get("brennessel"), brennAlone: t("Gew. / Große Brennessel", "Brennessel"),
+      // Anzeige-Namen (deMain): Klammer-Qualifier weg, Abkürzungen ausgeschrieben,
+      // nie eine blanke Abkürzung/ein hängender Stamm (Praxisfall Bilder-Quiz).
+      dmGurke: dm("Gurke (Freiland / Treibh.)"), dmMelone: dm("Gew. Zucker-Melone"),
+      dmJap: dm("jap. Lavendelheide"), dmAmerik: dm("[Amerik.] Rot-Eiche"),
+      dmKriech: dm("Kriech. Günsel"), dmBuche: dm("Gew. Hain-, Weißbuche"),
     };
   });
   assert(deChk.rhaHead && deChk.rhaA && deChk.rhaB,
@@ -796,6 +801,13 @@ async function main() {
     "Klammer-Form und Abkürzung (Gew. → gewöhnliche) nicht behandelt: " + JSON.stringify(deChk));
   assert(deChk.brennCount === 2 && !deChk.brennAlone,
     "Grundwort darf nur bei Eindeutigkeit gelten – die Liste führt Große UND Kleine Brennessel: " + JSON.stringify(deChk));
+  assert(deChk.dmGurke === "Gurke" && deChk.dmMelone === "Gewöhnliche Zucker-Melone"
+    && deChk.dmJap === "Japanische Lavendelheide" && deChk.dmAmerik === "Amerikanische Rot-Eiche"
+    && deChk.dmKriech === "Kriechender Günsel" && deChk.dmBuche === "Weißbuche",
+    "deMain muss Klammer-Qualifier entfernen und Abkürzungen ausschreiben (Bilder-Quiz): " + JSON.stringify(deChk));
+  assert(![deChk.dmGurke, deChk.dmMelone, deChk.dmJap, deChk.dmAmerik, deChk.dmKriech, deChk.dmBuche]
+    .some((s) => /[-–]\s*$/.test(s) || /^[A-Za-zÄÖÜäöüß]{2,10}\.$/.test(s.trim())),
+    "deMain darf nie eine blanke Abkürzung/einen hängenden Stamm zeigen: " + JSON.stringify(deChk));
 
   // Abfragerichtung wählbar: Text-Modi de↔bot, Bilder-Modus Bild→bot/de
   const dirUI = await page.evaluate(() => {
