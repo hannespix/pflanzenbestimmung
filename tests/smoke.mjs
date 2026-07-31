@@ -124,7 +124,8 @@ async function main() {
     const wasActive = btn.classList.contains("active");
     openGrader();
     const openState = { open: $("#graderScrim").classList.contains("open"),
-      active: btn.classList.contains("active"), pressed: btn.getAttribute("aria-pressed") };
+      active: btn.classList.contains("active"), pressed: btn.getAttribute("aria-pressed"),
+      gSync: (document.querySelector("#gSync")||{}).textContent };
     document.querySelector("#graderScrim .pclose").click(); // ×-Knopf
     const afterClose = { open: $("#graderScrim").classList.contains("open"),
       active: btn.classList.contains("active"), pressed: btn.getAttribute("aria-pressed") };
@@ -138,6 +139,39 @@ async function main() {
   assert(!active.afterClose.open && !active.afterClose.active && active.afterClose.pressed === "false",
     "×-Knopf schließt das Modul-Modal nicht (oder Button bleibt aktiv)");
   assert(!active.afterEsc, "Esc schließt das Modul-Modal nicht");
+  assert(/^aus Auswahl:/.test(active.openState.gSync || ""),
+    "Notenrechner: »Höchstpunktzahl aus Auswahl«-Knopf muss verständlich beschriftet sein (»aus Auswahl: … P.«), war: " + JSON.stringify(active.openState.gSync));
+
+  // 1b3) Flag-Leck: »Neue Art anlegen« (setzt selectNewAfterSave) per Esc abbrechen darf
+  // nicht dazu führen, dass eine SPÄTER regulär angelegte Art ungewollt in der Auswahl landet.
+  const flagLeak = await page.evaluate(() => {
+    drawRandom();
+    const before = selection.length;
+    // Normalfall: pvAddNew → speichern → neue Art landet in der Auswahl
+    openPreview(); pvAddNew();
+    $("#fGattung").value = "Smoketestus"; $("#fArt").value = "selectus"; saveEdit();
+    const addedSel = cache.find(x => x.gattung === "Smoketestus" && x.art === "selectus");
+    const normalInSel = addedSel ? selection.includes(addedSel.id) : null;
+    // Leck-Fall: pvAddNew → mit Esc abbrechen → danach regulär eine neue Art anlegen
+    pvAddNew();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })); // bricht ab, Flag muss zurückgesetzt werden
+    openEdit(null);
+    $("#fGattung").value = "Smoketestus"; $("#fArt").value = "leakus"; saveEdit();
+    const addedLeak = cache.find(x => x.gattung === "Smoketestus" && x.art === "leakus");
+    const leakInSel = addedLeak ? selection.includes(addedLeak.id) : null;
+    // Aufräumen: Testarten entfernen, Auswahl leeren, Vorschau-Modal schließen – damit die
+    // folgende 148-Zählung und weitere Tests unberührt bleiben.
+    [addedSel, addedLeak].forEach(a => { if (a) { const i = cache.indexOf(a); if (i >= 0) cache.splice(i, 1); } });
+    selection.length = 0;
+    $("#previewScrim").classList.remove("open");
+    markDirty(); renderList(); syncSelUI();
+    return { before, normalInSel, leakInSel, cleaned: !cache.some(x => x.gattung === "Smoketestus") };
+  });
+  assert(flagLeak.normalInSel === true,
+    "»Neue Art anlegen« → Speichern muss die Art in die Auswahl übernehmen: " + JSON.stringify(flagLeak));
+  assert(flagLeak.leakInSel === false,
+    "Nach abgebrochenem »Neue Art anlegen« (Esc) darf eine später angelegte Art NICHT automatisch in der Auswahl landen: " + JSON.stringify(flagLeak));
+  assert(flagLeak.cleaned === true, "Flag-Test-Aufräumen fehlgeschlagen: " + JSON.stringify(flagLeak));
 
   // 1b2) Barrierefreiheit der Modale: role=dialog/aria-modal/aria-labelledby, Fokus wandert
   // beim Öffnen ins Modal (zentral über wireModalA11y), Toast ist Live-Region.

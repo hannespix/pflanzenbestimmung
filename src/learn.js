@@ -1559,7 +1559,7 @@ function syncOptsSummary(){
   if($("#onlyzp") && $("#onlyzp").checked) bits.push("nur ZP");
   if($("#examOnly") && $("#examOnly").checked && $("#examOnlyWrap") && !$("#examOnlyWrap").hidden) bits.push("nur Prüfungsstoff");
   const sl=parseInt($("#sessLen") && $("#sessLen").value)||20; if(sl!==20) bits.push(sl+" Karten");
-  sub.textContent = bits.length ? bits.join(" · ") : "Abfrage · Auswahl · ZP · Sitzungslänge";
+  sub.textContent = bits.length ? bits.join(" · ") : "Abfrage · Lernstoff · ZP · Sitzungslänge";
   sub.classList.toggle("active", bits.length>0);
 }
 function applyMode(){
