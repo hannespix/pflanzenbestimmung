@@ -1135,9 +1135,12 @@ function requeueCurrent(){ // "Nochmal"/falsch: Karte in dieser Sitzung später 
   queue.splice(pos, 0, current); sess.total++;
 }
 
+/* »Zur Übersicht«: Fokus-Modus verlassen und zurück zur Startansicht (Bereit-Screen). */
+function exitSession(){ stageFull(false); startHintOnly(); try{ window.scrollTo(0,0); }catch(e){} }
 function finishSession(){
-  clockStop(); clockRun(false); stageFull(false);
+  clockStop(); clockRun(false);        // Fokus-Overlay bleibt an: Ergebnis + Teilen im Vollbild
   sess.active=false;
+  const aborted = qi < queue.length;   // vorzeitig über »beenden« verlassen (nicht alle Karten dran)
   const acc = sessAcc();
   const ch = sess.challenge;                     // angenommene Herausforderung (falls vorhanden)
   let extra = "", gewonnen = scoreable() && sess.done>0 && acc>=80;   // ohne Duell: gute Quote reicht
@@ -1160,17 +1163,21 @@ function finishSession(){
   const stage=$("#stage");
   stage.innerHTML = `<div class="stage-empty">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6L9 17l-5-5"/></svg>
-    <h2>Sitzung geschafft</h2>
+    <h2>${aborted?"Sitzung beendet":"Sitzung geschafft"}</h2>
     <p>${sess.done} Karten gelernt${mode!=="cards"?` · ${sess.correct} richtig (${acc} %)`:""}${examScoring()&&sess.pts?` · <b>${nfmt(sess.pts.sum)} von ${nfmt(sess.pts.max)} Punkten</b>`:""}${scoreable()&&sess.ms?` · Denkzeit ${fmtDur(sess.ms)}`:""}.</p>
     ${extra}
     ${share}
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px">
       <button class="btn primary" id="againBtn">Weiter lernen</button>
+      <button class="btn ghost" id="btnOverview">Zur Übersicht</button>
     </div></div>`;
   wireShareBlock();
   const a=$("#againBtn"); if(a) a.onclick=startSession;
+  const ov=$("#btnOverview"); if(ov) ov.onclick=exitSession;
   if(gewonnen) celebrate(stage.querySelector("h2"), 2);
   renderProgress();
+  // Desktop (kein Vollbild-Overlay): Ergebnis in den Blick holen statt unter dem Fold
+  try{ if(!matchMedia("(max-width:640px)").matches) stage.scrollIntoView({behavior:"smooth", block:"center"}); }catch(e){}
 }
 
 function renderCard(){
