@@ -1082,6 +1082,31 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       `tests/learn.mjs` + `tests/smoke.mjs` prüfen den Umschalter (data-theme wechselt,
       Wahl gespeichert); Light + Dark aller Kernansichten per Screenshot verifiziert.
 
+- [x] **Herbarium 2.0 · Stufe 2 – Spotlights, Papier-Milchglas, Motion (alle vier
+      Seiten).** Der Light Mode wirkte nach Stufe 1 fast unverändert – jetzt ist der
+      Refresh deutlich sichtbar, ohne die botanische Ruhe zu verlieren (Marker
+      »Stufe 2« am Ende jedes `<style>`): **(1) Spotlight-Hintergrund** – drei große,
+      weiche Lichtkegel (Grün/Gold/Krapp, Token `--spot1..3`) liegen als
+      `radial-gradient`-Ebenen über der Papier-Punktraster-Textur (`background-
+      attachment:fixed` für Tiefe; der Fokus-Modus `body.stagefull #stage` bekommt
+      dieselben Ebenen). **(2) Papier-organisches Milchglas** – die großen Karten
+      (Masthead, Setup, Karteikarte, Progress, Selbar, »Aktuelle Prüfung«, Choices,
+      Doc …) sind jetzt transluzent (`--glass-card`) mit `backdrop-filter: blur` –
+      die Spotlights schimmern grün durch – plus **feines Papierkorn** (SVG-
+      `feTurbulence` als Daten-URI, Token `--grain`) und einer **Licht-Kante oben**
+      (`inset 0 1px 0 var(--edge)`) für den 3D-Touch. **(3) Motion** – Modale gleiten
+      mit `h2ModalIn` ein (translateY+scale, expo-out; Lern-Scrims animieren beim
+      Einhängen, Prüf-Scrims über `.open`), Seiten bauen sich gestaffelt auf
+      (`h2Rise`), Quiz-Optionen/Bewertungs-Knöpfe heben sich beim Hover, Buttons
+      federn beim Drücken (`:active` scale), Fokus bekommt einen weichen grünen Ring
+      (`--ring`), Primär-Buttons einen dezenten 3D-Verlauf. Alles unter `prefers-
+      reduced-motion` abgeschaltet; Dark-Token für Spotlights/Glas/Kante doppelt
+      hinterlegt; Druck unberührt (Print-Guard aus Stufe 1 gilt weiter). Per
+      idempotentem Transformer (`Stufe 2`-Marker) eingespielt; Logik unberührt;
+      offline-rein (Daten-URI statt Netz). Alle vier Puppeteer-Tests grün; Light-
+      Screenshots (Start, Prüfwerkzeug, Lern-Setup, Intro-Modal) + Dark-Gegenprobe
+      verifiziert.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei
