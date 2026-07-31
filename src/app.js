@@ -1172,6 +1172,9 @@ function wire(){
   if($("#tabExam")) $("#tabExam").onclick=()=>setMode("exam");
   if($("#tabManage")) $("#tabManage").onclick=()=>setMode("manage");
   setMode(store.get(LS_PREFIX+"examMode")||"exam");
+  const fb=$(".findbar");   // Suchleiste klebt beim Scrollen oben; »stuck« nur, wenn wirklich angepinnt (dezenter Schatten)
+  if(fb){ const upd=()=>fb.classList.toggle("stuck", fb.getBoundingClientRect().top<=0.5);
+    window.addEventListener("scroll", upd, {passive:true}); window.addEventListener("resize", upd, {passive:true}); upd(); }
   // »Verwaltung«: seltene Funktionen (Liste/Schema/Einstellungen/Sicherung) auf-/zuklappen
   $("#btnAdmin").onclick=()=>{
     const bar=$("#adminBar"), open=bar.hidden;

@@ -112,6 +112,8 @@ async function main() {
   assert(modes.selVisManage === "none" && modes.curVisManage === "none",
     "Im Modus »Liste verwalten« müssen Ziehen-Leiste und Panel ausgeblendet sein: " + JSON.stringify(modes));
   assert(modes.searchVisManage, "Die Suche muss auch im Modus »Liste verwalten« sichtbar bleiben: " + JSON.stringify(modes));
+  const findbarSticky = await page.evaluate(() => getComputedStyle(document.querySelector(".findbar")).position);
+  assert(findbarSticky === "sticky", "Die Suchleiste muss beim Scrollen oben kleben (position:sticky), war: " + findbarSticky);
 
   // 1b) Modul als Modal: Öffnen markiert den Button, ×/Esc/Scrim-Klick schließen
   const active = await page.evaluate(() => {
