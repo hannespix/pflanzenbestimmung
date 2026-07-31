@@ -531,7 +531,11 @@ function famName(f){                              // "Fabaceae · Schmetterlings
   return de ? lat+" · "+de : lat;
 }
 const botName = c => norm(c.g+" "+c.a);
-const deMain  = c => norm((c.de||"").split(/[,;/]/)[0]);          // erster deutscher Name (die Liste kann mehrere führen)
+// Erster VOLLSTÄNDIGER deutscher Name für Anzeige/Antwort. deForms() löst die
+// Listen-Kurzschreibweisen auf (»Winter- / Staudenbohnenkraut« → »Staudenbohnenkraut«,
+// »Krauser / gewöhnlicher Rhabarber« → »gewöhnlicher Rhabarber«) – nie ein blankes
+// Präfix/Adjektiv. Fallback auf das rohe erste Segment nur, wenn nichts aufgelöst wird.
+const deMain  = c => deForms(c).names[0] || norm((c.de||"").split(/[,;/]/)[0]) || "—";
 const deAll   = c => (c.de||"").split(/[,;]/).map(norm).filter(Boolean);   // Synonyme; »/«-Formen bleiben zusammen
 function promptHTML(c){                            // Vorderseite (im Bilder-Modus steht dort das Bild)
   return wantsDe() ? `<i>${esc(botName(c))}</i>` : esc(c.de||"—");   // gefragt wird nach allen geführten Namen
@@ -2224,6 +2228,7 @@ window.markDiff=markDiff;
 window.celebrate=celebrate;
 window.deHeadCounts=()=>deHeadCount;   // für Tests: Grundwort → Artenzahl im Profil
 window.deForms=deForms;
+window.deMain=deMain;
 window.examFieldList=examFieldList;
 window.wikiPhoto=wikiPhoto;
 /* Bild-Quelle austauschbar + Bild-Cache leerbar: Die Tests laufen ohne Netz. */
