@@ -970,6 +970,22 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       `.cattag`/`.sortbtn` ≥36). Offline-rein; `tests/learn.mjs` prüft Karten-Button,
       Leertaste-Umdrehen + Bewertung, `aria-live` und den Modal-Fokus.
 
+- [x] **Prüfwerkzeug – Barrierefreiheit & Touch (UI-Audit, Schritt 5).** Erster Schritt am
+      Prüfungswerkzeug. **Modale barrierefrei – zentral & additiv:** eine neue Funktion
+      `wireModalA11y()` (in `wire()`) vergibt allen neun `.scrim`-Modalen `role="dialog"`,
+      `aria-modal="true"` und `aria-labelledby` (Titel-`id` automatisch), legt beim Öffnen den
+      Fokus ins Modal und gibt ihn beim Schließen an den Auslöser zurück (per
+      `MutationObserver` auf die `.open`-Klasse – **kein** Eingriff in die neun verstreuten
+      Öffnen-Wege oder die zentralen Schließen-Handler), plus eine **Tab-Fokusfalle** im
+      obersten offenen Dialog. **Toast als Live-Region** (`role="status" aria-live="polite"`,
+      Fehler `assertive`) → Rückmeldungen wie »20 Arten gezogen« werden angesagt. **Touch/
+      Tablet:** Zeilen-Aktionen (Bearbeiten/Löschen) waren nur bei `:hover` sichtbar und auf
+      dem iPad (>640 px, `hover:none`) gar nicht erreichbar – jetzt `@media (hover:none){
+      .rowacts{opacity:1}}`; dazu ≥40 px Tap-Ziele auf Touch (`.iconbtn`/`.pclose`/`.scmove`/
+      `.btn.small`). Offline-rein; die offiziellen Leerbögen unberührt. `tests/smoke.mjs`
+      prüft role/aria-modal/aria-labelledby, Fokus ins Modal beim Öffnen und die Toast-Live-
+      Region.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei

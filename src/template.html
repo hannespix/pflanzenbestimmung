@@ -253,6 +253,12 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .tag.bem{color:var(--sepia); border:1px dashed var(--rule-strong)}
 .rowacts{display:flex; gap:2px; opacity:0; transition:opacity .1s}
 .row:hover .rowacts,.row:focus-within .rowacts{opacity:1}
+/* Touch/Tablet (kein Hover): Zeilen-Aktionen dauerhaft sichtbar, größere Tap-Ziele (~44px) */
+@media (hover:none){
+  .rowacts{opacity:1}
+  .iconbtn,.pclose,.scmove{min-width:40px; min-height:40px}
+  .btn.small{min-height:40px}
+}
 .iconbtn{border:none; background:transparent; padding:6px; border-radius:3px; color:var(--ink-faint); display:inline-flex}
 .iconbtn:hover{background:var(--surface-2); color:var(--green-deep)}
 .iconbtn.del:hover{color:var(--madder)}
@@ -778,7 +784,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script>/*__XLSX_JS__*/</script>
 <script>

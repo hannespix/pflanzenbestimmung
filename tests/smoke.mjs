@@ -106,6 +106,24 @@ async function main() {
     "×-Knopf schließt das Modul-Modal nicht (oder Button bleibt aktiv)");
   assert(!active.afterEsc, "Esc schließt das Modul-Modal nicht");
 
+  // 1b2) Barrierefreiheit der Modale: role=dialog/aria-modal/aria-labelledby, Fokus wandert
+  // beim Öffnen ins Modal (zentral über wireModalA11y), Toast ist Live-Region.
+  const modalA11y = await page.evaluate(async () => {
+    const scrim = document.querySelector("#helpScrim");
+    const dlg = scrim.querySelector(".grader,.modal,[id$=Panel]") || scrim.firstElementChild;
+    openHelp();
+    await new Promise((r) => setTimeout(r, 50));
+    const role = dlg.getAttribute("role"), modal = dlg.getAttribute("aria-modal"), lab = dlg.getAttribute("aria-labelledby");
+    const focusInside = scrim.contains(document.activeElement);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    return { role, modal, hasLabel: !!(lab && document.getElementById(lab)), focusInside,
+      toastLive: document.querySelector("#toast").getAttribute("aria-live") };
+  });
+  assert(modalA11y.role === "dialog" && modalA11y.modal === "true" && modalA11y.hasLabel,
+    "Modal muss role=dialog, aria-modal=true und aria-labelledby haben: " + JSON.stringify(modalA11y));
+  assert(modalA11y.focusInside, "Beim Öffnen muss der Fokus ins Modal wandern: " + JSON.stringify(modalA11y));
+  assert(modalA11y.toastLive === "polite", "Toast muss eine aria-live-Region sein: " + JSON.stringify(modalA11y));
+
   // 1c) Hilfe-Modal öffnet mit Inhalt und markiert seinen Button; Tooltips vorhanden
   const help = await page.evaluate(() => {
     openHelp();
