@@ -986,6 +986,20 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       prüft role/aria-modal/aria-labelledby, Fokus ins Modal beim Öffnen und die Toast-Live-
       Region.
 
+- [x] **Prüfwerkzeug – Farben & Wortlaut (UI-Audit, Schritt 6).** Kleine, testneutrale
+      Klarheits-Politur. **Farben:** »Bogen drucken« (`#btnPrint`/`#pvPrint`) war rot
+      (`.madder`) – Rot signalisiert sonst Gefahr/Löschen; jetzt **grün** (`.primary`),
+      denn es ist die wichtigste **positive** Aktion. Umgekehrt bekommt **»Standardliste«**
+      (`#btnReset`, verwirft gespeicherte Änderungen, mit `confirm()`) jetzt **Rot** – Rot
+      bleibt destruktiven Aktionen vorbehalten. **Wortlaut:** der Auswahl-Zähler koppelt
+      »N / Ziel« an das **feste Profil-Soll** statt an das Eingabefeld (`syncSelUI`:
+      `#selTarget = drawTarget()`), sodass »18 / 20« als Fortschritt und nicht als Fehler
+      liest; Label »gezogen« → **»gewählt«** (deckt Ziehen **und** Anhaken ab). Die
+      **Status-Pille** spricht Alltagssprache statt Technik (`setStatus`): »Standardliste«,
+      »Wird gespeichert …«, »Auf diesem Gerät gespeichert«, »Nur für diese Sitzung (kein
+      dauerhafter Speicher)«. Offizielle Leerbögen unberührt, offline-rein; alle vier
+      Puppeteer-Tests grün.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei
