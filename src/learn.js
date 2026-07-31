@@ -1368,13 +1368,13 @@ function renderListControls(){
   $("#lcToggle").onclick=()=>{ host.dataset.open = open?"0":"1"; renderListControls(); };
   host.querySelectorAll(".sortbtn").forEach(b=>b.onclick=()=>{
     if(listSort!==b.dataset.sort){ listSort=b.dataset.sort; listCats.clear(); store.set(LS_PREFIX+"listsort",listSort); }
-    renderListControls(); renderList();
+    vt(()=>{ renderListControls(); renderList(); });   // Ansicht wechselt gleitend
   });
   host.querySelectorAll(".cattag").forEach(b=>b.onclick=()=>{
     const k=b.dataset.cat;
     if(!k) listCats.clear();
     else { if(listCats.has(k)) listCats.delete(k); else listCats.add(k); }
-    renderListControls(); renderList();
+    vt(()=>{ renderListControls(); renderList(); });   // Gefiltertes gleitet heraus/herein
   });
 }
 function renderList(){
@@ -2183,14 +2183,26 @@ function profSub(){
   const niv = (NIVEAUS.find(n=>n.key===$("#nivSelect").value)||{}).label||"";
   $("#profSub").textContent = `${allCards.length} Arten · ${fr} · ${niv}`;
 }
+/* View-Transition-Helfer: diskrete Zustandswechsel (Filter, Ansicht, Profil, Modus)
+   blenden weich über statt hart zu springen. Fällt ohne API, bei reduzierter
+   Bewegung oder im Test (window.__noVT) auf sofortiges Rendern zurück. */
+function vt(cb){
+  try{
+    if(document.startViewTransition && !window.__noVT &&
+       !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)){
+      document.startViewTransition(cb); return;
+    }
+  }catch(e){}
+  cb();
+}
 function applyProfile(){
   const id=$("#frSelect").value+"_"+$("#nivSelect").value;
-  loadProfile(id); profSub(); syncOptsSummary();
+  vt(()=>{ loadProfile(id); profSub(); syncOptsSummary(); });
 }
 
 /* ---------- Verdrahtung ---------- */
 function wire(){
-  const refreshView = ()=>{ syncOptsSummary(); if(mode==="list"){ renderListControls(); renderList(); } else renderProgress(); };
+  const refreshView = ()=>{ syncOptsSummary(); vt(()=>{ if(mode==="list"){ renderListControls(); renderList(); } else renderProgress(); }); };
   const lsr=$("#listSearchRow");   // Listen-Suche klebt beim Scrollen oben; »stuck« nur, wenn wirklich angepinnt (dezenter Schatten)
   if(lsr){ const upd=()=>lsr.classList.toggle("stuck", !lsr.hidden && lsr.getBoundingClientRect().top<=0.5);
     window.addEventListener("scroll", upd, {passive:true}); window.addEventListener("resize", upd, {passive:true}); }
@@ -2218,7 +2230,7 @@ function wire(){
   $("#modeTabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{
     mode=b.dataset.mode; store.set(LS_PREFIX+"mode",mode);
     $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
-    applyMode();
+    vt(applyMode);   // Moduswechsel blendet weich über
   });
   $("#btnStart").onclick=startSession;
   $("#btnHelp").onclick=()=>{

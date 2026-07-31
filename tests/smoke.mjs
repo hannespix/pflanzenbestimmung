@@ -57,6 +57,9 @@ async function main() {
 
   const browser = await puppeteer.launch(launch);
   const page = await browser.newPage();
+  // View-Transitions deaktivieren: sie rendern asynchron und würden die
+  // synchronen Assertions des Tests unzuverlässig machen (vt()-Fallback).
+  await page.evaluateOnNewDocument(() => { window.__noVT = 1; });
   const errs = [];
   page.on("pageerror", (e) => errs.push(String(e.message || e)));
   page.on("console", (m) => { if (m.type() === "error") errs.push("console.error: " + m.text()); });
