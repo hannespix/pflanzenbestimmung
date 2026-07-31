@@ -1189,6 +1189,23 @@ async function main() {
   assert(!full.afterExit && !full.afterMode,
     "Vollbild-Sitzung: nach »Zur Übersicht« bzw. Moduswechsel muss der Fokus-Modus enden: " + JSON.stringify(full));
 
+  // Fokus-Modus greift auch am Desktop (nicht nur mobil): #stage wird zum Vollbild-Overlay
+  // mit zentrierter Lese-Spalte (max-width 720), Exit über »Zur Übersicht«.
+  await page.setViewport({ width: 1000, height: 900, isMobile: false });
+  const deskFocus = await page.evaluate(() => {
+    $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    document.querySelector('#modeTabs button[data-mode="quiz"]').click();
+    $("#sessLen").value = "4"; startSession();
+    const pos = getComputedStyle(document.querySelector("#stage")).position;
+    const col = document.querySelector("#stage .qprompt") || document.querySelector("#stage > *");
+    const w = col ? Math.round(col.getBoundingClientRect().width) : 9999;
+    document.querySelector("#btnStop").click();
+    document.querySelector("#btnOverview").click();
+    return { pos, w, after: document.body.classList.contains("stagefull") };
+  });
+  assert(deskFocus.pos === "fixed" && deskFocus.w <= 760 && !deskFocus.after,
+    "Fokus-Modus muss auch am Desktop greifen (fixed, zentrierte Spalte ≤720px) und per »Zur Übersicht« enden: " + JSON.stringify(deskFocus));
+
   // Lernduell: Ergebnis teilen + Herausforderung (Share-Link, Banner, Vergleich)
   await page.setViewport({ width: 1000, height: 900, isMobile: false });
   // 1) Quiz-Sitzung zu Ende spielen → Teilen-Block erscheint, Link kodiert die exakte Lektion
