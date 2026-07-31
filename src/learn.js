@@ -2226,6 +2226,36 @@ function wire(){
 }
 
 /* ---------- Start ---------- */
+/* Erst-Einweisung: einmalig beim ersten Besuch (danach über den »So funktioniert
+   der Lernpfad«-Link), zeigt den Weg von leicht bis prüfungsreif. Reines Overlay,
+   offline; merkt sich »gesehen« im localStorage, damit die Hinweise nicht im Weg sind. */
+function openIntro(auto){
+  const prev = document.activeElement;
+  const scrim = el("div","scrim"); scrim.id="introScrim";
+  scrim.innerHTML = `<div class="modal intro" role="dialog" aria-modal="true" aria-labelledby="introTtl">
+    <button class="modal-x" id="introClose" aria-label="Schließen" title="Schließen">×</button>
+    <h2 class="intro-h" id="introTtl">So wirst du prüfungsreif</h2>
+    <p class="intro-lead">Die Modi oben sind nach Schwierigkeit sortiert – steigere dich mit deinem Fortschritt vom Erkennen bis zum freien Schreiben:</p>
+    <ol class="intro-steps">
+      <li><span class="is-ic" aria-hidden="true">🖼️</span><div><b>Bilder</b><span class="is-tag">leicht</span><br>Pflanze am Foto erkennen und den richtigen Namen wählen.</div></li>
+      <li><span class="is-ic" aria-hidden="true">✔️</span><div><b>Quiz</b><span class="is-tag">leicht</span><br>Zum deutschen Namen den richtigen botanischen aus vier Optionen wählen.</div></li>
+      <li><span class="is-ic" aria-hidden="true">🗂️</span><div><b>Karteikarten</b><span class="is-tag">mittel</span><br>Selbst abrufen und ehrlich bewerten – Wiederholung nach Plan (Spaced Repetition).</div></li>
+      <li><span class="is-ic" aria-hidden="true">⌨️</span><div><b>Tippen</b><span class="is-tag">prüfungsnah</span><br>Gattung und Art frei schreiben – so wie in der Abschlussprüfung.</div></li>
+    </ol>
+    <p class="intro-foot"><b>Ziel:</b> Du benennst Gattung, Art und Familie sicher. Diese Einführung findest du jederzeit über <b>»So funktioniert der Lernpfad«</b> wieder.</p>
+    <div class="intro-cta"><button class="btn primary" id="introGo">Los geht's</button></div>
+  </div>`;
+  document.body.appendChild(scrim);
+  const close=()=>{ try{ store.set(LS_PREFIX+"introSeen","1"); }catch(e){}
+    document.removeEventListener("keydown", key); scrim.remove();
+    if(prev && prev.focus){ try{ prev.focus(); }catch(e){} } };
+  const key=e=>{ if(e.key==="Escape") close(); };
+  scrim.addEventListener("click", e=>{ if(e.target===scrim) close(); });
+  scrim.querySelector("#introClose").onclick=close;
+  scrim.querySelector("#introGo").onclick=close;
+  document.addEventListener("keydown", key);
+  try{ scrim.querySelector("#introGo").focus(); }catch(e){}
+}
 (function boot(){
   try{
     $("#frSelect").innerHTML=FR_LIST.map(f=>`<option value="${slug(f)}">${esc(f)}</option>`).join("");
@@ -2237,7 +2267,7 @@ function wire(){
     dirText  = DIRS_TEXT.includes(store.get(LS_PREFIX+"dirtext"))   ? store.get(LS_PREFIX+"dirtext")  : "de2bot";
     dirPhoto = DIRS_PHOTO.includes(store.get(LS_PREFIX+"dirphoto")) ? store.get(LS_PREFIX+"dirphoto") : "img2bot";
     photoAnswer = PH_ANSWER[store.get(LS_PREFIX+"phanswer")] ? store.get(LS_PREFIX+"phanswer") : "mc";
-    mode = store.get(LS_PREFIX+"mode") || "cards";
+    mode = store.get(LS_PREFIX+"mode") || "photo";   // neue Nutzer starten beim leichtesten Modus (Bilder)
     let pid = store.get(LS_PREFIX+"profile");
     if(!(typeof SEEDS!=="undefined" && SEEDS[pid])) pid="gemuesebau_gaertner";
     // Eingehende Herausforderung (#c=…) übernimmt Profil und Modus
@@ -2254,6 +2284,8 @@ function wire(){
     wire();
     loadProfile(pid); profSub();
     if(pendingChallenge) showChallengeBanner(pendingChallenge);
+    const bi=$("#btnIntro"); if(bi) bi.onclick=()=>openIntro(false);
+    if(!pendingChallenge && !store.get(LS_PREFIX+"introSeen")) openIntro(true);   // Erst-Einweisung nur beim ersten Besuch
   }catch(e){
     document.body.innerHTML='<div style="max-width:640px;margin:80px auto;font-family:sans-serif;color:#22352b">'+
       '<h2>Start fehlgeschlagen</h2><pre>'+esc(e.message)+'</pre></div>';
@@ -2261,6 +2293,7 @@ function wire(){
 })();
 /* für Tests / Konsole */
 window.startSession=startSession;
+window.openIntro=openIntro;
 window.openInfo=openInfo;
 window.closeInfo=closeInfo;
 window.wikiCandidates=wikiCandidates;
