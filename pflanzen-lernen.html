@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pflanzenkenntnis · Lernen (Gärtnerberufe)</title>
 <meta name="theme-color" content="#2b4f38">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121713">
+<script>/* Theme vor dem ersten Rendern setzen (kein Aufblitzen) */(function(){try{var t=localStorage.getItem("pbw.theme");if(t==="dark"||t==="light")document.documentElement.dataset.theme=t;}catch(e){}})();</script>
 <!-- PWA: installierbar + offline (Service Worker), ausschließlich eigene Herkunft -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -45,7 +47,7 @@ input,select{font-family:inherit; color:inherit}
 .profilerow{display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px; margin:14px 0 2px 8px}
 .pfield{display:flex; flex-direction:column; gap:4px}
 .pfield label{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia)}
-.pfield select{border:1.4px solid var(--green); background:#fff; border-radius:4px; padding:9px 30px 9px 12px; font-size:15px; font-family:var(--serif); font-weight:600; color:var(--green-deep);
+.pfield select{border:1.4px solid var(--green); background:var(--card); border-radius:4px; padding:9px 30px 9px 12px; font-size:15px; font-family:var(--serif); font-weight:600; color:var(--green-deep);
   appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%232b4f38' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 11px center}
 .profsub{font-family:var(--mono); font-size:12px; color:var(--ink-soft); padding-bottom:9px}
 .examlink{white-space:nowrap; text-decoration:none}
@@ -86,7 +88,7 @@ input,select{font-family:inherit; color:inherit}
 .exlab{font-size:13px; color:var(--ink-soft); display:flex; align-items:baseline; gap:6px}
 .expts{font-family:var(--mono); font-size:10.5px; color:var(--sepia); white-space:nowrap}
 .exrow input{border:1.3px solid var(--rule-strong); border-radius:5px; padding:9px 11px; font-size:15px;
-  background:#fff; width:100%; min-width:0}
+  background:var(--card); width:100%; min-width:0}
 .exrow input:focus{border-color:var(--green); outline:none}
 .exrow input.ok{border-color:var(--green); background:var(--green-tint)}
 .exrow input.no{border-color:var(--madder-soft); background:var(--madder-tint)}
@@ -118,7 +120,7 @@ input,select{font-family:inherit; color:inherit}
 .share-h{margin:0 0 3px; font-family:var(--serif); font-weight:600; font-size:16px; color:var(--green-deep)}
 .share-sub{margin:0 0 10px; font-size:12.5px; color:var(--ink-soft); line-height:1.5}
 .duel-name{width:100%; border:1.3px solid var(--rule-strong); border-radius:5px; padding:9px 11px; font-size:14px;
-  margin-bottom:10px; background:#fff}
+  margin-bottom:10px; background:var(--card)}
 .duel-name:focus{border-color:var(--green); outline:none}
 .share-btns{display:flex; gap:8px; flex-wrap:wrap; justify-content:center}
 .duel-result{margin:14px auto 0; max-width:340px; border:1px solid var(--rule-strong); border-radius:8px;
@@ -135,7 +137,7 @@ input,select{font-family:inherit; color:inherit}
 
 /* Buttons */
 .btn{border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); padding:8px 13px; border-radius:3px; font-size:13.5px; font-weight:500; display:inline-flex; align-items:center; gap:7px; transition:background .12s,border-color .12s,transform .04s; text-decoration:none}
-.btn:hover{background:#fff; border-color:var(--green)}
+.btn:hover{background:var(--card); border-color:var(--green)}
 .btn:active{transform:translateY(1px)}
 .btn.primary{background:var(--green); border-color:var(--green-deep); color:#f4f7f1}
 .btn.primary:hover{background:var(--green-deep)}
@@ -155,7 +157,7 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .switch{display:inline-flex; align-items:center; gap:8px; font-size:13.5px; cursor:pointer; user-select:none}
 .switch input{position:absolute; opacity:0; width:0; height:0}
 .switch .track{width:34px; height:19px; border-radius:19px; background:var(--rule-strong); position:relative; transition:background .15s; flex:none}
-.switch .track::after{content:""; position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%; background:#fff; transition:transform .15s}
+.switch .track::after{content:""; position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%; background:var(--card); transition:transform .15s}
 .switch input:checked + .track{background:var(--green)}
 .switch input:checked + .track::after{transform:translateX(15px)}
 .switch input:focus-visible + .track{outline:2px solid var(--madder); outline-offset:2px}
@@ -163,7 +165,7 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .modes{display:flex; gap:0; border:1px solid var(--rule-strong); border-radius:5px; overflow:hidden; width:fit-content; max-width:100%; flex-wrap:wrap}
 .modes button{border:none; background:var(--surface-2); color:var(--ink-soft); padding:9px 15px; font-size:13.5px; border-right:1px solid var(--rule-strong); display:inline-flex; align-items:center; gap:7px}
 .modes button:last-child{border-right:none}
-.modes button:hover{background:#fff}
+.modes button:hover{background:var(--card)}
 .modes button.on{background:var(--green); color:#f4f7f1; font-weight:600}
 .modes .ic{width:15px; height:15px}
 /* Lernpfad: Modi nach Schwierigkeit, mit dezentem Schwierigkeits-Tag unter dem Namen */
@@ -256,7 +258,7 @@ main{margin-top:18px}
 .card .answer .meta .mf i{font-style:italic}
 .card .flip-hint{margin-top:16px; font-size:12.5px; color:var(--ink-faint); font-style:italic}
 .rate{display:flex; gap:10px; margin-top:14px; justify-content:center; flex-wrap:wrap}
-.rate button{flex:1; min-width:120px; border:1px solid var(--rule-strong); background:#fff; border-radius:5px; padding:11px 12px; font-size:14px; font-weight:600; display:flex; flex-direction:column; align-items:center; gap:2px}
+.rate button{flex:1; min-width:120px; border:1px solid var(--rule-strong); background:var(--card); border-radius:5px; padding:11px 12px; font-size:14px; font-weight:600; display:flex; flex-direction:column; align-items:center; gap:2px}
 .rate .r-again{color:var(--madder)} .rate .r-again:hover{border-color:var(--madder); background:var(--madder-tint)}
 .rate .r-hard{color:var(--gold)} .rate .r-hard:hover{border-color:var(--gold); background:#f6efdc}
 .rate .r-good{color:var(--green-deep)} .rate .r-good:hover{border-color:var(--green); background:var(--green-tint)}
@@ -268,7 +270,7 @@ main{margin-top:18px}
 .qsub{text-align:center; font-size:13px; color:var(--sepia); margin-bottom:16px; font-family:var(--mono)}
 .options{display:grid; gap:10px}
 .opt{border:1px solid var(--rule-strong); background:var(--surface); border-radius:6px; padding:13px 16px; font-size:15px; font-family:var(--serif); text-align:left; display:flex; align-items:center; gap:10px}
-.opt:hover:not(:disabled){border-color:var(--green); background:#fff}
+.opt:hover:not(:disabled){border-color:var(--green); background:var(--card)}
 .opt .k{font-family:var(--mono); font-size:12px; color:var(--sepia); border:1px solid var(--rule); border-radius:4px; padding:1px 7px; flex:none}
 .opt span:last-child{font-style:italic}   /* Antwortoptionen sind botanische Namen */
 .opt.correct{border-color:var(--green); background:var(--green-tint)}
@@ -277,7 +279,7 @@ main{margin-top:18px}
 
 /* Tippen */
 .typebox{display:flex; flex-direction:column; gap:12px; align-items:center}
-.typebox input{width:100%; max-width:460px; border:1.4px solid var(--rule-strong); border-radius:5px; padding:13px 14px; font-size:18px; font-family:var(--serif); background:#fff; text-align:center}
+.typebox input{width:100%; max-width:460px; border:1.4px solid var(--rule-strong); border-radius:5px; padding:13px 14px; font-size:18px; font-family:var(--serif); background:var(--card); text-align:center}
 .typebox input.ok{border-color:var(--green); background:var(--green-tint)}
 .typebox input.no{border-color:var(--madder-soft); background:var(--madder-tint)}
 .feedback{min-height:26px; text-align:center; font-size:14.5px}
@@ -310,7 +312,7 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .listsearchrow{display:flex; align-items:stretch; gap:8px; flex-wrap:wrap; margin:14px 0 10px;
   position:sticky; top:0; z-index:40; background:var(--paper); padding:8px 0}
 .listsearchrow.stuck{box-shadow:0 6px 14px -6px var(--shadow); border-bottom:1px solid var(--rule-strong)}   /* dezent abheben, sobald sie beim Scrollen klebt */
-.searchbox{display:flex; align-items:center; gap:8px; border:1.4px solid var(--rule-strong); background:#fff; border-radius:6px; padding:0 12px; flex:1; min-width:220px}
+.searchbox{display:flex; align-items:center; gap:8px; border:1.4px solid var(--rule-strong); background:var(--card); border-radius:6px; padding:0 12px; flex:1; min-width:220px}
 .listsearchrow:focus-within{border-color:var(--green)}
 .listsearchrow .lsic{width:17px; height:17px; color:var(--ink-faint); flex:none}
 .listsearch{flex:1; border:none; outline:none; background:transparent; padding:11px 4px; font-size:15px; color:var(--ink)}
@@ -319,7 +321,7 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .listcontrols{margin-top:12px}
 .listcontrols[hidden]{display:none}
 .lc-toggle{display:flex; align-items:center; gap:10px; width:100%; text-align:left; border:1.3px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); border-radius:8px; padding:9px 13px; cursor:pointer; font-family:var(--sans); font-size:13.5px; transition:border-color .12s,background .12s}
-.lc-toggle:hover{border-color:var(--green); background:#fff}
+.lc-toggle:hover{border-color:var(--green); background:var(--card)}
 .lc-toggle .ic{width:16px; height:16px; color:var(--sepia); flex:none}
 .lc-title{font-weight:600}
 .lc-sub{font-family:var(--mono); font-size:11px; color:var(--sepia); margin-left:2px}
@@ -338,13 +340,13 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .sortbtns{display:inline-flex; border:1.3px solid var(--rule-strong); border-radius:6px; overflow:hidden}
 .sortbtn{font-family:var(--sans); font-size:12.5px; border:none; border-right:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink-soft); padding:6px 12px; cursor:pointer; transition:background .12s,color .12s}
 .sortbtn:last-child{border-right:none}
-.sortbtn:hover{background:#fff; color:var(--green-deep)}
+.sortbtn:hover{background:var(--card); color:var(--green-deep)}
 .sortbtn.on{background:var(--green); color:#f4f7f1; font-weight:600}
 .listtop{font-family:var(--mono); font-size:11.5px; color:var(--ink-soft); margin:14px 2px 14px; letter-spacing:.02em}
 .catblock{margin-bottom:22px}
 .cathead{display:flex; align-items:center; gap:10px; font-family:var(--serif); font-size:18px; font-weight:600; color:var(--green-deep); padding-bottom:6px; margin-bottom:10px; border-bottom:1.5px solid var(--rule)}
 .cathead-i{margin-left:auto; flex:none; width:24px; height:24px; border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--green-deep); border-radius:50%; font-size:12px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:background .12s,border-color .12s,transform .05s}
-.cathead-i:hover{background:#fff; border-color:var(--green); transform:scale(1.08)}
+.cathead-i:hover{background:var(--card); border-color:var(--green); transform:scale(1.08)}
 .mh-bot.fam{font-style:normal}
 .fambody{display:flex; flex-direction:column; gap:14px}
 .fam-sec h4{font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); margin:0 0 5px}
@@ -354,7 +356,7 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .catn{font-family:var(--mono); font-size:11px; font-weight:400; color:var(--sepia); background:var(--surface-2); border:1px solid var(--rule); border-radius:10px; padding:1px 8px}
 .splist{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr 1fr; gap:8px}
 .sprow{min-width:0; overflow:hidden; border:1px solid var(--rule-strong); background:var(--surface); border-radius:6px; padding:10px 12px; cursor:pointer; transition:background .12s,border-color .12s,transform .04s}
-.sprow:hover{background:#fff; border-color:var(--green)}
+.sprow:hover{background:var(--card); border-color:var(--green)}
 .sprow:active{transform:translateY(1px)}
 .sprow:focus-visible{outline:2px solid var(--madder); outline-offset:2px}
 .sp-main{display:flex; align-items:center; gap:8px; min-width:0}
@@ -379,7 +381,7 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .srclabel{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); margin-bottom:8px}
 .srcgrid{display:flex; flex-wrap:wrap; gap:8px}
 .srcgrid a{display:inline-flex; align-items:center; gap:6px; text-decoration:none; border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); border-radius:5px; padding:7px 11px; font-size:13px; font-weight:500}
-.srcgrid a:hover{background:#fff; border-color:var(--green)}
+.srcgrid a:hover{background:var(--card); border-color:var(--green)}
 .srcgrid a .ext{font-family:var(--mono); font-size:11px; color:var(--ink-faint)}
 .wpblock{margin-top:16px; border-top:1px solid var(--rule); padding-top:14px}
 .wphost{margin-top:12px}
@@ -515,6 +517,75 @@ main{margin-top:22px}
   table.ptab tr{break-inside:avoid}
   .pfoot{font-family:'Segoe UI',system-ui,sans-serif; font-size:8pt; margin-top:6pt; color:#7a6a4f}
 }
+
+/* ===== Herbarium 2.0 (2026-Refresh): Design-Token, Dark Mode, Glas & Tiefe =====
+   Botanische Identität bleibt (Grün, Serifen, Papier) – moderner umgesetzt:
+   weiche große Radien, mehrschichtige Schatten, Glas-Effekt auf Sticky-Leisten
+   und Modalen, Dark Mode (folgt dem System, per Knopf übersteuerbar). */
+:root{color-scheme:light; --card:#ffffff; --glass:rgba(246,247,241,.78); --glass-m:rgba(246,247,241,.92);
+  --shadow-1:0 1px 2px rgba(34,53,43,.07); --shadow-2:0 18px 44px -22px rgba(34,53,43,.38)}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#121713; --surface:#1a211c; --surface-2:#212923; --card:#28312a;
+  --ink:#e8ece4; --ink-soft:#b7c0b1; --ink-faint:#8c9584;
+  --green:#4f8f66; --green-deep:#a3d6b2; --green-tint:#233529;
+  --sepia:#b4a17f; --madder:#e08a79; --madder-soft:#b06253; --madder-tint:#3d2822;
+  --gold:#d0aa4f; --rule:#2f3830; --rule-strong:#475147; --shadow:rgba(0,0,0,.55);
+  --glass:rgba(18,23,19,.72); --glass-m:rgba(20,26,21,.9);
+  --shadow-1:0 1px 2px rgba(0,0,0,.45); --shadow-2:0 18px 44px -20px rgba(0,0,0,.6)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --paper:#121713; --surface:#1a211c; --surface-2:#212923; --card:#28312a;
+  --ink:#e8ece4; --ink-soft:#b7c0b1; --ink-faint:#8c9584;
+  --green:#4f8f66; --green-deep:#a3d6b2; --green-tint:#233529;
+  --sepia:#b4a17f; --madder:#e08a79; --madder-soft:#b06253; --madder-tint:#3d2822;
+  --gold:#d0aa4f; --rule:#2f3830; --rule-strong:#475147; --shadow:rgba(0,0,0,.55);
+  --glass:rgba(18,23,19,.72); --glass-m:rgba(20,26,21,.9);
+  --shadow-1:0 1px 2px rgba(0,0,0,.45); --shadow-2:0 18px 44px -20px rgba(0,0,0,.6)}}
+.themebtn{position:relative; border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--sepia);
+  width:36px; height:36px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+  cursor:pointer; padding:0; flex:none; transition:background .15s, transform .15s}
+.themebtn:hover{background:var(--card); transform:rotate(14deg)}
+.themebtn .ic{width:17px; height:17px}
+.themebtn .sun{display:none}
+:root[data-theme="dark"] .themebtn .sun{display:block}
+:root[data-theme="dark"] .themebtn .moon{display:none}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .themebtn .sun{display:block}
+  :root:not([data-theme="light"]) .themebtn .moon{display:none}}
+.themebtn.abs{position:absolute; top:14px; right:14px; z-index:2}
+
+/* Herbarium 2.0 – Lern-Tool: Radien, Tiefe, Glas */
+.masthead{border-radius:18px 18px 0 0}
+.setup{border-radius:0 0 18px 18px}
+.progress,.helppanel,.stage-empty{border-radius:16px}
+.card{border-radius:18px; box-shadow:var(--shadow-1),var(--shadow-2)}
+.modes{border-radius:12px}
+.btn{border-radius:10px}
+select,input[type=number],input[type=search],input[type=text]{border-radius:9px}
+.searchbox,.typebox input,.opt{border-radius:12px}
+.rate button{border-radius:12px}
+.setopts,.listcontrols .lc-toggle{border-radius:12px}
+.shareblock{border-radius:14px}
+.cattag,.sortbtn{border-radius:999px}
+.modal{border-radius:18px; background:var(--glass-m); backdrop-filter:blur(16px) saturate(1.15); -webkit-backdrop-filter:blur(16px) saturate(1.15); box-shadow:var(--shadow-2)}
+.scrim{backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px)}
+.listsearchrow{background:var(--glass); backdrop-filter:blur(12px) saturate(1.1); -webkit-backdrop-filter:blur(12px) saturate(1.1)}
+body.stagefull .sessionbar{background:var(--glass); backdrop-filter:blur(12px) saturate(1.1); -webkit-backdrop-filter:blur(12px) saturate(1.1)}
+.btn.primary{box-shadow:0 8px 20px -10px rgba(43,79,56,.55)}
+.btn:hover{transform:translateY(-1px)} .btn:active{transform:translateY(0)}
+@media (prefers-reduced-motion:reduce){.btn:hover{transform:none}}
+
+/* Dark-Fixes für Flächen mit hellem Text (green-deep ist im Dark Mode ein heller Akzent) */
+:root[data-theme="dark"] .btn.primary:hover{background:var(--green); filter:brightness(1.12)}
+:root[data-theme="dark"] .toast{background:#2e5940}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .btn.primary:hover{background:var(--green); filter:brightness(1.12)}
+  :root:not([data-theme="light"]) .toast{background:#2e5940}}
+/* Druck bleibt immer hell (amtliche Bögen/Listen), egal welches Theme aktiv ist */
+@media print{:root,:root[data-theme="dark"]{color-scheme:light;
+  --paper:#fff; --card:#fff; --surface:#fff; --surface-2:#fff;
+  --ink:#000; --ink-soft:#333; --ink-faint:#666; --rule:#999; --rule-strong:#666}}
 </style>
 </head>
 <body>
@@ -526,6 +597,7 @@ main{margin-top:22px}
         <h1>Pflanzenkenntnis · Lernen</h1>
       </div>
       <div class="mast-right">
+        <button class="themebtn" id="btnTheme" type="button" aria-label="Dunkles oder helles Design umschalten" title="Dunkles/helles Design umschalten"><svg class="ic moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.5 14.5A8.5 8.5 0 019.5 3.5a8.5 8.5 0 1011 11z"/></svg><svg class="ic sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
         <button class="btn ghost" id="btnHelp" aria-pressed="false" title="Kurzanleitung und Erklärung aller Modi und Einstellungen ein- oder ausblenden"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5"/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/></svg>Hilfe</button>
         <a class="btn ghost examlink" href="pflanzenkenntnis.html" title="Zur Prüfungsversion für Prüfende (Prüfungslisten ziehen, Bogen und Musterlösung drucken, Noten rechnen)">Prüfungsversion&nbsp;→</a>
       </div>
@@ -3106,5 +3178,6 @@ window.fmtDur=fmtDur;
 window.famName=famName;
 
 </script>
+<script>/* Hell/Dunkel-Umschalter: übersteuert die System-Einstellung, Wahl wird gespeichert */(function(){var b=document.getElementById("btnTheme");if(!b)return;b.addEventListener("click",function(){var r=document.documentElement,sys=window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light",cur=r.dataset.theme||sys,nx=cur==="dark"?"light":"dark";r.dataset.theme=nx;try{localStorage.setItem("pbw.theme",nx);}catch(e){}});})();</script>
 </body>
 </html>

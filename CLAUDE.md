@@ -1059,6 +1059,29 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       sichtbar (praktisch fürs Nachlegen). `tests/learn.mjs` prüft den Optionen-Hinweis
       im Intro und sticky + Position außerhalb `.setup`.
 
+- [x] **Herbarium 2.0 – 2026-Design-Refresh + Dark Mode (alle vier Seiten).** Die
+      botanische Identität (Grün, Serifen, Papier) bleibt, die Umsetzung ist modern:
+      **(1) Design-Token-Layer** am Ende jedes `<style>` (Marker »Herbarium 2.0«):
+      neue Tokens `--card` (ersetzt hartkodiertes `background:#fff` in Lern-/Prüf-Tool),
+      `--glass`/`--glass-m` (Glas-Flächen), `--shadow-1/-2` (mehrschichtige Tiefe);
+      weiche große Radien (Karten 16–20 px, Buttons 10 px, Chips als Pills), Glas-Effekt
+      (`backdrop-filter: blur`) auf Sticky-Leisten (`.findbar`, `.listsearchrow`,
+      Fokus-`sessionbar`) und allen Modalen, sanfte Hover-Lifts. **(2) Dark Mode:**
+      folgt automatisch dem System (`prefers-color-scheme`), zusätzlich ein **runder
+      Umschalt-Knopf** (`#btnTheme`, Mond/Sonne) im Kopf jeder Seite – die Wahl
+      (`pbw.theme`, geräteweit für alle Seiten) übersteuert das System und wird per
+      Inline-Snippet im `<head>` **vor dem ersten Rendern** gesetzt (kein Aufblitzen);
+      dunkle Palette überschreibt nur die `:root`-Variablen (zweifach: `[data-theme=
+      "dark"]` + Media-Query mit `:not([data-theme="light"])`), plus gezielte Fixes
+      (`.btn.primary:hover`, `.toast` – `--green-deep` ist im Dark Mode ein heller
+      Akzent) und zweite `theme-color`-Meta. **(3) Druck bleibt immer hell:** ein
+      `@media print`-Guard setzt die Kern-Token auf Hell zurück – amtliche Bögen/Listen
+      unverändert, egal welches Theme aktiv ist. Umgesetzt per Transformer-Skript
+      (idempotent, Marker-geschützt) in `src/{learn,template,start,recht}.html`; die
+      Tool-Logik (`app.js`/`learn.js`) ist unberührt. Offline-rein (nur Inline-Skripte).
+      `tests/learn.mjs` + `tests/smoke.mjs` prüfen den Umschalter (data-theme wechselt,
+      Wahl gespeichert); Light + Dark aller Kernansichten per Screenshot verifiziert.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei
