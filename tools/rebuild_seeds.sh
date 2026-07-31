@@ -29,3 +29,7 @@ done
 # Kategorien (Wuchsform) für die Profile ohne Kategorien in den Quelllisten
 # nachtragen – reproduzierbar, botanisch kuratiert (siehe Skript-Kopf).
 python3 tools/categorize_seeds.py
+
+# Bekannte Lücken der Quelllisten (leere Einzelfelder) reproduzierbar füllen,
+# z. B. die in der Excel fehlende Familie zu Chimonanthus praecox.
+python3 tools/fix_source_gaps.py
