@@ -141,9 +141,9 @@ async function main() {
     zp.checked = false; zp.dispatchEvent(new Event("change"));
     return { base, withZp, activeCls, back: sub.textContent };
   });
-  assert(/Abfrage · Auswahl/.test(optsSum.base), "Ohne Abweichung neutrale Beschreibung in der Optionen-Kopfzeile: " + JSON.stringify(optsSum));
+  assert(/Abfrage · Lernstoff/.test(optsSum.base), "Ohne Abweichung neutrale Beschreibung in der Optionen-Kopfzeile: " + JSON.stringify(optsSum));
   assert(/nur ZP/.test(optsSum.withZp) && optsSum.activeCls, "Aktive Option »nur ZP« muss in der zugeklappten Kopfzeile erscheinen (grün): " + JSON.stringify(optsSum));
-  assert(/Abfrage · Auswahl/.test(optsSum.back), "Nach Rücknahme wieder neutrale Beschreibung: " + JSON.stringify(optsSum));
+  assert(/Abfrage · Lernstoff/.test(optsSum.back), "Nach Rücknahme wieder neutrale Beschreibung: " + JSON.stringify(optsSum));
 
   // Barrierefreiheit: Karteikarte per Tastatur (Leertaste dreht um, dann 1/2/3),
   // Feedback als aria-live, Info-Modal setzt den Fokus auf »Schließen«.

@@ -748,13 +748,13 @@ body.stagefull #stage>.sessionbar{
     <details class="setopts" id="setOpts">
       <summary title="Optionale Feineinstellungen ein- oder ausklappen">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
-        <span class="opts-title">Optionen</span><span class="opts-sub">Abfrage · Auswahl · ZP · Sitzungslänge</span>
+        <span class="opts-title">Optionen</span><span class="opts-sub">Abfrage · Lernstoff · ZP · Sitzungslänge</span>
         <span class="opts-caret" aria-hidden="true">▾</span>
       </summary>
       <div class="setrow">
         <div class="field" id="phAnswerField" hidden><label for="phAnswer">Antwort</label><select id="phAnswer" class="mini" title="Wie im Bilder-Quiz geantwortet wird: aus vier Namen auswählen, den Namen selbst tippen – oder »wie in der Prüfung« mit einem Feld je bewerteter Spalte (Gattung, Art, Familie, Deutscher Name) samt Punkten."></select></div>
         <div class="field" id="dirField"><label for="dir">Abfrage</label><select id="dir" class="mini" title="Was gefragt wird: deutscher Name → botanischer Name (wie in der Prüfung) oder umgekehrt. Im Bilder-Quiz: Bild → botanischer bzw. deutscher Name."></select></div>
-        <div class="field"><label for="cat">Auswahl</label><select id="cat" class="mini" title="Lernstoff eingrenzen: alle Arten, ein Thema (z. B. große Laubbäume, Bodendecker, Steinobst) oder eine Pflanzenfamilie (z. B. Rosaceae). Die Zahl in Klammern nennt die Artenzahl."><option value="">alle</option></select></div>
+        <div class="field"><label for="cat">Lernstoff</label><select id="cat" class="mini" title="Lernstoff eingrenzen: alle Arten, ein Thema (z. B. große Laubbäume, Bodendecker, Steinobst) oder eine Pflanzenfamilie (z. B. Rosaceae). Die Zahl in Klammern nennt die Artenzahl."><option value="">alle</option></select></div>
         <label class="switch" title="Nur die für die Zwischenprüfung (ZP) markierten Arten üben."><input type="checkbox" id="onlyzp"><span class="track"></span>nur ZP-relevant</label>
         <label class="switch" id="examOnlyWrap" hidden title="Nur den Prüfungsstoff der Fachwerker-Abschlussprüfung zeigen: Deutscher Name, Gattung, Art. Familie und Synonyme werden in Karteikarten und Liste ausgeblendet – weniger Lernstoff, nur das Geprüfte. Die Info-Links (ℹ) bleiben."><input type="checkbox" id="examOnly"><span class="track"></span>nur Prüfungsstoff</label>
         <div class="field"><label for="sessLen">Karten/Sitzung</label><input id="sessLen" class="mini" type="number" min="5" max="100" value="20" title="Wie viele Karten (5–100) eine Sitzung umfasst. Neue und fällige Karten kommen zuerst."></div>
@@ -786,7 +786,7 @@ body.stagefull #stage>.sessionbar{
     <ol class="hsteps">
       <li><b>Fachrichtung &amp; Ausbildung</b> oben wählen – das bestimmt deinen Lernstoff.</li>
       <li><b>Modus</b> wählen und <b>»Sitzung starten«</b>. Feineinstellungen (<b>Abfrage</b>,
-        <b>Auswahl</b>, „nur ZP-relevant", Sitzungslänge) stecken unter <b>»Optionen«</b> –
+        <b>Lernstoff</b>, „nur ZP-relevant", Sitzungslänge) stecken unter <b>»Optionen«</b> –
         standardmäßig zugeklappt, damit die Startansicht ruhig bleibt.</li>
       <li><b>Sitzung starten</b> und losüben. Deine Bewertungen steuern, welche Karten wann wiederkommen.</li>
     </ol>
@@ -874,7 +874,7 @@ body.stagefull #stage>.sessionbar{
         / Deutscher Name 3). Über die <b>Felder</b>-Schalter darunter bestimmst du selbst, was abgefragt wird;
         die Auswahl wird je Profil gemerkt. Bei der Familie zählt der <b>lateinische oder der deutsche</b>
         Name, und mit <b>Enter</b> springst du ins nächste Feld.</dd>
-      <dt>Auswahl · nur ZP</dt><dd>Grenzt den Lernstoff ein: <b>alle Arten</b>, ein <b>Thema</b> oder eine
+      <dt>Lernstoff · nur ZP</dt><dd>Grenzt den Lernstoff ein: <b>alle Arten</b>, ein <b>Thema</b> oder eine
         <b>Pflanzenfamilie</b> (die Zahl in Klammern nennt die Artenzahl) – dazu optional nur die für die
         Zwischenprüfung markierten Arten. Die Themen sind die Lerngruppen aus dem Unterricht: Gehölze nach
         Verwendung (Bäume, Sträucher, immergrün, Bodendecker, Kletterpflanzen, Rosen, Nadelgehölze), im
@@ -2518,7 +2518,7 @@ function syncOptsSummary(){
   if($("#onlyzp") && $("#onlyzp").checked) bits.push("nur ZP");
   if($("#examOnly") && $("#examOnly").checked && $("#examOnlyWrap") && !$("#examOnlyWrap").hidden) bits.push("nur Prüfungsstoff");
   const sl=parseInt($("#sessLen") && $("#sessLen").value)||20; if(sl!==20) bits.push(sl+" Karten");
-  sub.textContent = bits.length ? bits.join(" · ") : "Abfrage · Auswahl · ZP · Sitzungslänge";
+  sub.textContent = bits.length ? bits.join(" · ") : "Abfrage · Lernstoff · ZP · Sitzungslänge";
   sub.classList.toggle("active", bits.length>0);
 }
 function applyMode(){

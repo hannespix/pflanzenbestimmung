@@ -632,7 +632,7 @@ function syncSelUI(){
   });
   const has=selection.length>0;
   $("#btnPrint").disabled=!has; $("#btnClear").disabled=!has; $("#btnShuffle").disabled=selection.length<2;
-  const sync=$("#gSync"); if(sync) sync.textContent="= "+fmtPts((selection.length||drawTarget())*ptsPer())+" P.";
+  const sync=$("#gSync"); if(sync) sync.textContent="aus Auswahl: "+fmtPts((selection.length||drawTarget())*ptsPer())+" P.";
   if(panelOpen("#graderScrim")){
     if(!$("#gMax").dataset.touched){ $("#gMax").value=(selection.length||drawTarget())*ptsPer(); }
     renderGrader();
@@ -1249,12 +1249,12 @@ function wire(){
   // ×-Knopf der Modul-Modals
   document.querySelectorAll(".pclose").forEach(b=>b.onclick=()=>{ b.closest(".scrim").classList.remove("open"); syncPanelButtons(); });
   // Scrim-Klick schließt das jeweilige Modal
-  document.querySelectorAll(".scrim").forEach(s=>s.addEventListener("mousedown",e=>{ if(e.target===s){ s.classList.remove("open"); syncPanelButtons(); } }));
+  document.querySelectorAll(".scrim").forEach(s=>s.addEventListener("mousedown",e=>{ if(e.target===s){ s.classList.remove("open"); selectNewAfterSave=false; syncPanelButtons(); } }));
   // Escape schließt nur das oberste offene Modal
   document.addEventListener("keydown",e=>{
     if(e.key!=="Escape") return;
     const open=[...document.querySelectorAll(".scrim.open")];
-    if(open.length){ open[open.length-1].classList.remove("open"); syncPanelButtons(); }
+    if(open.length){ open[open.length-1].classList.remove("open"); selectNewAfterSave=false; syncPanelButtons(); }
   });
 }
 
