@@ -900,6 +900,27 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       `#stage` während der Lektion `fixed`/Vollbild + Leiste `sticky`, nach »beenden«
       und nach Moduswechsel wieder normal.
 
+- [x] **Ergebnis + Teilen bleiben im Fokus-Overlay (UI-Audit, Schritt 1).** Bisher rief
+      `finishSession` sofort `stageFull(false)` – der Abschluss-Screen samt Teilen-/
+      Lernduell-Block fiel damit aus dem Vollbild zurück in den vollen Seitenfluss und
+      landete auf dem Handy **unter dem Fold** (unter Kopf/Setup/Disclaimer). Jetzt bleibt
+      das Fokus-Overlay bis zum Schluss an: »Sitzung geschafft« + Trefferquote + der
+      **Teilen-Block** stehen mittig im Vollbild (neue Regel `body.stagefull .stage-empty`
+      zentriert ohne Kastenrahmen). Verlassen über den neuen Knopf **»Zur Übersicht«**
+      (`exitSession` → `stageFull(false)` + Bereit-Screen + Scroll nach oben); **»Weiter
+      lernen«** startet direkt im Vollbild neu. Auf dem Desktop (kein Overlay) holt ein
+      `scrollIntoView` das Ergebnis in den Blick. Abbruch über »beenden« zeigt jetzt
+      »Sitzung **beendet**« statt »geschafft« (`aborted = qi < queue.length`);
+      `.sessionbar` bricht bei Punkte+Uhr+beenden sauber um (`flex-wrap`). Direkt aus dem
+      Nutzerwunsch »das Teilen-Modul soll auch am Ende im Quiz-Modal erscheinen«.
+      **Nebenbei stabilisiert:** `tests/learn.mjs` war flaky (zog je Lauf andere Karten;
+      Stichproben-Assertions für Sammelnamen/Bild-Optionen lagen zufällig daneben) – jetzt
+      **deterministischer Seed** (`Math.random`-Override via `evaluateOnNewDocument`) und
+      die betroffenen Assertions bilden den Erwartungswert mit der App-Logik `deMain()`
+      statt naiv am ersten »/«/Komma zu splitten. `tests/learn.mjs` prüft nun: Ergebnis +
+      Teilen bleiben im Overlay (`btnOverview` + Teilen-Block sichtbar), Exit über »Zur
+      Übersicht« beendet den Fokus-Modus.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei

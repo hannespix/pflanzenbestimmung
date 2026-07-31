@@ -200,7 +200,7 @@ main{margin-top:18px}
 .stage-empty{text-align:center; padding:48px 24px; border:1.5px dashed var(--rule-strong); border-radius:6px; background:var(--surface); color:var(--ink-soft)}
 .stage-empty svg{width:46px; height:46px; color:var(--green); opacity:.7}
 .stage-empty h2{font-family:var(--serif); color:var(--ink); font-size:20px; margin:12px 0 6px}
-.sessionbar{display:flex; align-items:center; gap:12px; margin-bottom:12px; font-family:var(--mono); font-size:12px; color:var(--ink-soft)}
+.sessionbar{display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px; margin-bottom:12px; font-family:var(--mono); font-size:12px; color:var(--ink-soft)}
 .sessionbar .sbar{flex:1; height:6px; border-radius:4px; background:var(--surface-2); border:1px solid var(--rule); overflow:hidden}
 .sessionbar .sbar i{display:block; height:100%; background:var(--green); transition:width .2s}
 .sessionbar .spts{color:var(--green-deep); font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap}
@@ -401,6 +401,8 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
   body.stagefull .photobox{margin:8px auto 6px}
   body.stagefull .ph-img{max-height:38vh}
   body.stagefull .qprompt{margin-top:6px}
+  /* Abschluss-Screen (Sitzung geschafft + Teilen) füllt das Overlay mittig – ohne Kastenrahmen */
+  body.stagefull .stage-empty{flex:1 0 auto; display:flex; flex-direction:column; justify-content:center; border:none; background:transparent; padding:24px 4px}
 }
 /* ===== Design-Politur: mehr Ruhe, weiche Übergänge, dezente Tiefe ===== */
 html{scroll-behavior:smooth}
