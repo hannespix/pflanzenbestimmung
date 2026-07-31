@@ -1021,6 +1021,13 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Akkordeon), Ziehen füllt das Panel nummeriert, Modus-Umschaltung blendet Leiste+Panel
       korrekt aus/ein, Suche bleibt in »Liste verwalten« sichtbar.
 
+- [x] **Suchleiste klebt beim Scrollen oben (UI-Audit, Schritt 7b).** Nutzerwunsch: beim
+      Runterscrollen der (langen) Pflanzenliste soll die Suche als kleiner sticky Header
+      oben bleiben. Die `.findbar` ist jetzt `position:sticky; top:0` (z-index 40, unter den
+      Modalen); ein `scroll`-Listener setzt `.stuck`, sobald sie wirklich angepinnt ist
+      (dezenter Schatten + Trennlinie). Offline-rein; `tests/smoke.mjs` prüft
+      `position:sticky`.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei
