@@ -101,6 +101,32 @@ async function main() {
   assert(/nur ZP/.test(optsSum.withZp) && optsSum.activeCls, "Aktive Option »nur ZP« muss in der zugeklappten Kopfzeile erscheinen (grün): " + JSON.stringify(optsSum));
   assert(/Abfrage · Auswahl/.test(optsSum.back), "Nach Rücknahme wieder neutrale Beschreibung: " + JSON.stringify(optsSum));
 
+  // Barrierefreiheit: Karteikarte per Tastatur (Leertaste dreht um, dann 1/2/3),
+  // Feedback als aria-live, Info-Modal setzt den Fokus auf »Schließen«.
+  const a11y = await page.evaluate(() => {
+    $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    $("#sessLen").value = "6"; startSession();
+    const card = document.querySelector("#card");
+    const isBtn = card.getAttribute("role") === "button" && card.getAttribute("tabindex") === "0";
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));   // Leertaste dreht um
+    const flippedNow = !!document.querySelector("#card .answer");
+    const hasRate = !!document.querySelector(".rate .r-good");
+    document.querySelector("#btnStop").click(); document.querySelector("#btnOverview").click();
+    document.querySelector('#modeTabs button[data-mode="quiz"]').click();
+    $("#sessLen").value = "4"; startSession();
+    const fbLive = document.querySelector("#fb").getAttribute("aria-live") === "polite";
+    document.querySelector("#btnStop").click(); document.querySelector("#btnOverview").click();
+    window.openInfo(allCards[0]);
+    const modalFocus = !!(document.activeElement && document.activeElement.id === "infoClose");
+    window.closeInfo();
+    return { isBtn, flippedNow, hasRate, fbLive, modalFocus };
+  });
+  assert(a11y.isBtn, "Karteikarte muss ein per Tastatur bedienbarer Button sein (role/tabindex): " + JSON.stringify(a11y));
+  assert(a11y.flippedNow && a11y.hasRate, "Leertaste muss die Karte umdrehen und die Bewertung zeigen: " + JSON.stringify(a11y));
+  assert(a11y.fbLive, "Quiz-/Tipp-Feedback muss aria-live=polite sein (Screenreader-Ansage): " + JSON.stringify(a11y));
+  assert(a11y.modalFocus, "Info-Modal muss den Fokus auf den »Schließen«-Knopf setzen: " + JSON.stringify(a11y));
+
   // Hinweis vor den Lektionen: automatisch/KI-erzeugte Inhalte, keine Gewähr –
   // muss ohne Aufklappen sichtbar sein und im Listenmodus verschwinden
   const note = await page.evaluate(() => {
