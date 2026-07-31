@@ -1120,6 +1120,28 @@ async function main() {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   assert(overflow <= 1, "Listenmodus läuft mobil horizontal über (Überhang " + overflow + "px)");
 
+  // Fokus-/Vollbild-Sitzung auf dem Smartphone: laufende Lektion füllt den Schirm,
+  // beim Beenden/Moduswechsel normal weiter (CSS-Overlay body.stagefull)
+  const full = await page.evaluate(() => {
+    $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    document.querySelector('#modeTabs button[data-mode="quiz"]').click();
+    const before = document.body.classList.contains("stagefull");
+    $("#sessLen").value = "4"; startSession();
+    const st = getComputedStyle(document.querySelector("#stage"));
+    const during = { cls: document.body.classList.contains("stagefull"), pos: st.position,
+      bar: getComputedStyle(document.querySelector(".sessionbar")).position };
+    document.querySelector("#btnStop").click();
+    const afterStop = document.body.classList.contains("stagefull");
+    startSession();
+    document.querySelector('#modeTabs button[data-mode="list"]').click();
+    const afterMode = document.body.classList.contains("stagefull");
+    return { before, during, afterStop, afterMode };
+  });
+  assert(!full.before && full.during.cls && full.during.pos === "fixed" && full.during.bar === "sticky",
+    "Vollbild-Sitzung: #stage muss während der Lektion fixed/Vollbild sein, Leiste sticky: " + JSON.stringify(full));
+  assert(!full.afterStop && !full.afterMode,
+    "Vollbild-Sitzung: nach »beenden« bzw. Moduswechsel muss der Fokus-Modus enden: " + JSON.stringify(full));
+
   // Lernduell: Ergebnis teilen + Herausforderung (Share-Link, Banner, Vergleich)
   await page.setViewport({ width: 1000, height: 900, isMobile: false });
   // 1) Quiz-Sitzung zu Ende spielen → Teilen-Block erscheint, Link kodiert die exakte Lektion
@@ -1230,7 +1252,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON-Links lesbar, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz.");
+  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON-Links lesbar, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, endet bei »beenden«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz.");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });

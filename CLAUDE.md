@@ -883,6 +883,23 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       neuen Namen erweitert. `tests/learn.mjs`: 18 Referenz-Zuordnungen (je Thema eine)
       + Listen-/Druck-Ansicht auf die feineren Bänder umgestellt.
 
+- [x] **Fokus-Modus (Vollbild-Lektion auf dem Smartphone)** – sobald eine Sitzung
+      läuft (Karteikarten/Quiz/Tippen/Bilder), füllt die aktuelle Karte bzw. Frage auf
+      dem Handy den ganzen Bildschirm: Kopf, Setup und Fußzeile verschwinden, es bleibt
+      nur die Aufgabe. Umgesetzt als **reines CSS-Overlay** (`body.stagefull` blendet
+      `#stage` als `position:fixed; inset:0` über die Seite) statt der Fullscreen-API –
+      das funktioniert auch auf dem iPhone, wo die echte API nur für `<video>` greift.
+      In JS eine winzige Weiche `stageFull(on)` (Klasse an/aus): **an** in
+      `startSession`/`startChallenge`, **aus** in `finishSession` und `applyMode`
+      (Moduswechsel bricht ab). Die **Fortschrittsleiste** wird `position:sticky` und
+      hält den **beenden**-Knopf immer sichtbar → jederzeit zurück zur Übersicht;
+      `z-index:55` bleibt unter Toast (60), Info-Modal/Konfetti (80). Safe-Area-Insets
+      (Notch) berücksichtigt, `100dvh` gegen die iOS-Adressleiste. Nur `@media
+      (max-width:640px)` – am Desktop unverändert. Offline-rein (kein `fetch`/CDN);
+      `check_offline.py` bleibt grün. Kurznotiz im Hilfe-Panel; `tests/learn.mjs` prüft:
+      `#stage` während der Lektion `fixed`/Vollbild + Leiste `sticky`, nach »beenden«
+      und nach Moduswechsel wieder normal.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei

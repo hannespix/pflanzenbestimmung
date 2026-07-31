@@ -1096,16 +1096,20 @@ function startChallenge(){                // genau die Karten der Herausforderun
   const b=$("#duelBanner"); if(b) b.hidden=true;
   queue = cards.slice(); qi = 0; photoMisses = 0; qStart = 0;
   sess = { total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, cards:cards.slice(), challenge:ch };
-  clockRun(true);
+  clockRun(true); stageFull(true);
   nextCard();
 }
 
 /* ---------- Sitzung / Bühne ---------- */
+/* Fokus-Modus: die laufende Lektion füllt auf dem Smartphone den ganzen Schirm.
+   Reines CSS-Overlay (body.stagefull) statt Fullscreen-API – das funktioniert auch
+   auf dem iPhone (die echte Fullscreen-API greift dort nur für Videos). */
+function stageFull(on){ try{ document.body.classList.toggle("stagefull", !!on); }catch(e){} }
 function startSession(){
   queue = buildQueue(); qi = 0; photoMisses = 0; qStart = 0;
   sess = { total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, cards:queue.slice(), challenge:null };
   if(!queue.length){ toast("Keine Arten im aktuellen Filter",true); return; }
-  clockRun(true);
+  clockRun(true); stageFull(true);
   nextCard();
 }
 function sessionBar(){
@@ -1132,7 +1136,7 @@ function requeueCurrent(){ // "Nochmal"/falsch: Karte in dieser Sitzung später 
 }
 
 function finishSession(){
-  clockStop(); clockRun(false);
+  clockStop(); clockRun(false); stageFull(false);
   sess.active=false;
   const acc = sessAcc();
   const ch = sess.challenge;                     // angenommene Herausforderung (falls vorhanden)
@@ -1491,7 +1495,7 @@ function printList(){
 /* Modus anwenden: Liste zeigt sofort die Nachschlage-Liste (ohne »Sitzung starten«) */
 function applyMode(){
   const isList = mode==="list";
-  sess.active=false; qStart=0; clockRun(false);          // Moduswechsel bricht die Sitzung ab
+  sess.active=false; qStart=0; clockRun(false); stageFull(false);   // Moduswechsel bricht die Sitzung ab
   const sr=$("#startRow"), lsr=$("#listSearchRow"), lc=$("#listControls");
   if(sr) sr.hidden = isList;
   const ln=$("#learnNote"); if(ln) ln.hidden = isList;   // Hinweis gehört zu den Lektionen, nicht zur Liste

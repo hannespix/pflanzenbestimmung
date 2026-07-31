@@ -381,6 +381,26 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
   /* Ansicht-/Filter-Panel und Tags bleiben im Rahmen */
   .cattags{gap:6px}
   .cattag{font-size:12px; padding:5px 10px}
+
+  /* ===== Fokus-Modus: die laufende Lektion füllt den ganzen Schirm =====
+     Reines CSS-Overlay (body.stagefull, in JS beim Sitzungsstart gesetzt) statt
+     Fullscreen-API – funktioniert auch auf dem iPhone. z-index 55: unter Toast (60),
+     Info-Modal und Konfetti (80), aber über Kopf/Setup/Fußzeile. */
+  body.stagefull{overflow:hidden}
+  body.stagefull #stage{
+    position:fixed; inset:0; z-index:55; margin:0; width:100vw;
+    height:100vh; height:100dvh;
+    background:var(--paper); background-image:radial-gradient(var(--rule) .5px,transparent .5px); background-size:22px 22px;
+    display:flex; flex-direction:column;
+    padding:calc(env(safe-area-inset-top,0px) + 12px) calc(env(safe-area-inset-right,0px) + 14px) calc(env(safe-area-inset-bottom,0px) + 16px) calc(env(safe-area-inset-left,0px) + 14px);
+    overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
+  }
+  body.stagefull .sessionbar{position:sticky; top:0; z-index:2; margin:0 0 12px; padding:2px 0 8px;
+    background:var(--paper); border-bottom:1px solid var(--rule)}
+  body.stagefull #card{flex:1 0 auto; min-height:40vh; display:flex; flex-direction:column; justify-content:center}
+  body.stagefull .photobox{margin:8px auto 6px}
+  body.stagefull .ph-img{max-height:38vh}
+  body.stagefull .qprompt{margin-top:6px}
 }
 /* ===== Design-Politur: mehr Ruhe, weiche Übergänge, dezente Tiefe ===== */
 html{scroll-behavior:smooth}
@@ -654,6 +674,10 @@ main{margin-top:22px}
       <li><b>Denkzeit ⏱:</b> In Quiz, Tippen und Bilder läuft oben eine Uhr. Sie zählt nur, solange eine
         Frage offen ist – Wartezeit auf ein Bild und das Lesen der Lösung zählen nicht mit. Karteikarten
         laufen ohne Uhr.</li>
+      <li><b>Fokus-Modus (Smartphone):</b> Sobald eine Sitzung läuft, füllt die Karte bzw. Frage auf dem
+        Handy den ganzen Bildschirm – Kopf und Menüs verschwinden, du siehst nur noch die aktuelle Aufgabe.
+        Oben bleibt die Fortschrittsleiste mit dem Knopf <b>beenden</b>; darüber (oder am Ende der Sitzung)
+        geht es zurück zur Übersicht.</li>
       <li><b>Lernduell:</b> Nach einer Quiz-, Tipp- oder Bilder-Sitzung kannst du dein Ergebnis <b>teilen</b>
         und Kollegen <b>herausfordern</b> – per WhatsApp/Teilen-Knopf oder Link. Der Link enthält genau
         dieselben Karten und Fragen sowie deine Trefferquote und deine Denkzeit; wer ihn öffnet, versucht
