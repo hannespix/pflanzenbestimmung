@@ -157,6 +157,7 @@ let settings=null;            // globale Einstellungen (zuständige Stelle, Boge
 let toastT=null;
 function toast(msg, isErr){
   const t=$("#toast"); t.textContent=msg; t.classList.toggle("err",!!isErr); t.classList.add("show");
+  t.setAttribute("role", isErr?"alert":"status"); t.setAttribute("aria-live", isErr?"assertive":"polite");   // Screenreader-Ansage
   clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"), 2600);
 }
 
@@ -1106,7 +1107,40 @@ function renderGrader(){
 /* ============================================================
    Verdrahtung
    ============================================================ */
+/* Barrierefreiheit für ALLE Modale (.scrim), zentral und additiv – ohne Eingriff in
+   die verstreuten Öffnen-/zentralen Schließen-Wege: setzt role/aria-modal/aria-labelledby,
+   legt beim Öffnen den Fokus ins Modal (sofern nicht schon dort), gibt ihn beim Schließen
+   an den Auslöser zurück und hält Tab im Dialog (Fokusfalle). */
+function wireModalA11y(){
+  const FOC='input:not([type=hidden]):not([disabled]),select,textarea,button,[href],[tabindex]:not([tabindex="-1"])';
+  const ret=[];
+  document.querySelectorAll(".scrim").forEach(s=>{
+    const dlg = s.querySelector(".modal,.grader,[id$='Panel']") || s.firstElementChild;
+    if(dlg){
+      dlg.setAttribute("role","dialog"); dlg.setAttribute("aria-modal","true");
+      const t = dlg.querySelector(".gtitle,h3,h2");
+      if(t){ if(!t.id) t.id=(dlg.id||s.id||"dlg")+"Ttl"; dlg.setAttribute("aria-labelledby",t.id); }
+    }
+    new MutationObserver(()=>{
+      if(s.classList.contains("open")){
+        if(!s.__a11yOpen){ s.__a11yOpen=true; ret.push(document.activeElement);
+          if(!s.contains(document.activeElement)){ const f=s.querySelector(FOC);
+            if(f) setTimeout(()=>{ if(s.classList.contains("open") && !s.contains(document.activeElement)){ try{f.focus();}catch(e){} } }, 20); } }
+      } else if(s.__a11yOpen){ s.__a11yOpen=false; const p=ret.pop(); if(p && p.focus){ try{p.focus();}catch(e){} } }
+    }).observe(s,{attributes:true, attributeFilter:["class"]});
+  });
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="Tab") return;
+    const open=[...document.querySelectorAll(".scrim.open")].pop(); if(!open) return;
+    const f=[...open.querySelectorAll(FOC)].filter(x=>!x.disabled && x.offsetParent!==null);
+    if(!f.length) return;
+    const first=f[0], last=f[f.length-1];
+    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+  });
+}
 function wire(){
+  wireModalA11y();
   // »Verwaltung«: seltene Funktionen (Liste/Schema/Einstellungen/Sicherung) auf-/zuklappen
   $("#btnAdmin").onclick=()=>{
     const bar=$("#adminBar"), open=bar.hidden;
