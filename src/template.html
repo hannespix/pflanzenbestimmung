@@ -337,6 +337,17 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .segbtn:last-child{border-right:none}
 .segbtn:hover{background:#fff}
 .segbtn.on{background:var(--green); color:#f4f7f1; font-weight:600}
+/* Zwei Modi (Tabs), immer sichtbare Suche + eingeklappter Filter, dauerhaftes »Aktuelle Prüfung«-Panel */
+.modetabs{display:inline-flex; border:1px solid var(--rule-strong); border-radius:5px; overflow:hidden; margin:0 0 10px}
+.findbar{display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap; margin:14px 0 0}
+.findbar .field.search.big{flex:1 1 340px; min-width:220px}
+.findbar .field.search.big input{font-size:15px; padding-top:11px; padding-bottom:11px}
+.findbar .filterbar{flex:0 0 auto; margin:0}
+.cursel{margin:16px 0 0; border:1px solid var(--rule-strong); border-radius:6px; background:var(--surface); padding:12px 14px 14px}
+.cursel-head{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:8px}
+.cursel-h{margin:0; font-family:var(--serif); font-size:18px; color:var(--green-deep)}
+.cursel-meta{font-family:var(--mono); font-size:12px; color:var(--ink-soft)}
+body.m-manage .selbar, body.m-manage #currentSel{display:none}
 .gedge{width:44px; border:1px solid var(--rule-strong); border-radius:3px; padding:2px 4px; font-size:12px; font-family:var(--mono); text-align:right; background:#fff}
 .gedge:focus{outline:2px solid var(--madder); outline-offset:1px}
 .gnote{font-size:11px; color:var(--ink-faint); margin:11px 0 0; line-height:1.4; font-style:italic}
@@ -482,6 +493,10 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
       <div class="pfield"><label for="nivSelect">Ausbildung</label><select id="nivSelect" title="Ausbildung wählen: Gärtner/in (20 Pflanzen) oder Fachwerker/in (15 Pflanzen). Fachwerker haben eigene Listen."></select></div>
       <span class="profsub" id="profSub" title="Vorgabe dieses Profils: Anzahl Pflanzen je Prüfung und Höchstpunktzahl"></span>
     </div>
+    <div class="modetabs" role="tablist" aria-label="Ansicht">
+      <button class="segbtn on" id="tabExam" role="tab" aria-selected="true" title="Prüfung erstellen: ziehen, aktuelle Prüfung sehen und bearbeiten, Bogen drucken.">Prüfung erstellen</button>
+      <button class="segbtn" id="tabManage" role="tab" aria-selected="false" title="Liste verwalten: die Pflanzenliste durchsuchen, bearbeiten und importieren.">Liste verwalten</button>
+    </div>
     <div class="tools">
       <button class="btn" id="btnExams" title="Gespeicherte Prüfungen (nach Prüfungsdatum): aktuelle Auswahl sichern, laden, kopieren (z. B. für den nächsten Prüfungstag), aktualisieren, drucken, als JSON herunterladen, von einem anderen Gerät importieren oder löschen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Prüfungen</button>
       <button class="btn" id="btnGrade" title="Notenrechner: erreichte Punkte in eine Note umrechnen. Lineare Baden-Württemberg-Skala (Standard) oder IHK-Schlüssel; Notengrenzen einstellbar; zeigt Note, Prozent und Punktschwellen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h14a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 7h8M8 11h3M14 11h2M8 15h3M14 15h2"/></svg>Notenrechner</button>
@@ -569,24 +584,26 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
   </section>
   </div>
 
-  <details class="filterbar" id="filterOpts">
-    <summary title="Liste durchsuchen und filtern – wirkt auch auf das Zufalls-Ziehen (nur Treffer werden gezogen)">
-      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
-      <span class="fb-title">Filter</span><span class="fb-sub">Suche · Kategorie · nur ZP</span>
-      <span class="fb-caret" aria-hidden="true">▾</span>
-    </summary>
-    <div class="controls">
-      <div class="field search">
-        <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
-        <input id="q" type="search" placeholder="Suche: Gattung, Art, Familie, Name …" autocomplete="off" title="Live-Suche in Gattung, Art, Familie, deutschem Namen und Synonymen. Wirkt auch auf das Zufalls-Ziehen (nur Treffer werden gezogen).">
-      </div>
-      <div class="field">
-        <label for="cat">Kategorie</label>
-        <select id="cat" title="Liste auf eine Kategorie einschränken (z. B. Gemüsepflanzen, Gehölze, Stauden …). Wirkt auch auf das Zufalls-Ziehen."><option value="">alle</option></select>
-      </div>
-      <label class="switch" title="Nur ZP-relevante Arten anzeigen (für die Zwischenprüfung gekennzeichnet)."><input type="checkbox" id="onlyzp"><span class="track"></span>nur ZP-relevant</label>
+  <div class="findbar">
+    <div class="field search big">
+      <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+      <input id="q" type="search" placeholder="Suche: Gattung, Art, Familie, Name …" autocomplete="off" title="Live-Suche in Gattung, Art, Familie, deutschem Namen und Synonymen. Wirkt auch auf das Zufalls-Ziehen (nur Treffer werden gezogen).">
     </div>
-  </details>
+    <details class="filterbar" id="filterOpts">
+      <summary title="Zusätzliche Filter (Kategorie, ZP) – wirken auch auf das Zufalls-Ziehen (nur Treffer werden gezogen)">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
+        <span class="fb-title">Filter</span><span class="fb-sub">Kategorie · nur ZP</span>
+        <span class="fb-caret" aria-hidden="true">▾</span>
+      </summary>
+      <div class="controls">
+        <div class="field">
+          <label for="cat">Kategorie</label>
+          <select id="cat" title="Liste auf eine Kategorie einschränken (z. B. Gemüsepflanzen, Gehölze, Stauden …). Wirkt auch auf das Zufalls-Ziehen."><option value="">alle</option></select>
+        </div>
+        <label class="switch" title="Nur ZP-relevante Arten anzeigen (für die Zwischenprüfung gekennzeichnet)."><input type="checkbox" id="onlyzp"><span class="track"></span>nur ZP-relevant</label>
+      </div>
+    </details>
+  </div>
 
   <div class="selbar">
     <div class="draw">
@@ -701,6 +718,13 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
   </section>
   </div>
 
+  <section class="cursel" id="currentSel" aria-labelledby="curselH">
+    <div class="cursel-head">
+      <h2 class="cursel-h" id="curselH">Aktuelle Prüfung</h2>
+      <span class="cursel-meta"><b id="curselCount">0</b> Arten · max. <b id="curselPts">0 P.</b></span>
+    </div>
+    <div class="pvlist" id="currentSelList"></div>
+  </section>
   <main id="list"></main>
 
   <footer class="pagefoot">

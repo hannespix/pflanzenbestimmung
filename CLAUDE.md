@@ -1000,6 +1000,27 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       dauerhafter Speicher)«. Offizielle Leerbögen unberührt, offline-rein; alle vier
       Puppeteer-Tests grün.
 
+- [x] **Prüfwerkzeug – zwei Modi, »Aktuelle Prüfung«-Panel & immer sichtbare Suche
+      (UI-Audit, Schritt 7).** Der größte Umbau am Prüfungswerkzeug. **Dauerhaftes
+      »Aktuelle Prüfung«-Panel** (`#currentSel`): die gezogene Auswahl war bisher nur im
+      Vorschau-Modal sichtbar und lag sonst verstreut in der Gesamt-Datenbank – jetzt
+      steht sie **dauerhaft** unter der Ziehen-Leiste, nummeriert und voll bearbeitbar
+      (▲▼ · Bearbeiten · Entfernen). Umgesetzt über eine geteilte Zeilenvorlage `pvRowEl()`
+      (aus `renderPreview` extrahiert) + `renderCurrentSel()`, angehängt an `syncSelUI()` –
+      das Vorschau-Modal bleibt unangetastet. **Zwei Modi** über Tabs »Prüfung erstellen ⇄
+      Liste verwalten« (`#tabExam`/`#tabManage`, `setMode()` toggelt eine Body-Klasse
+      `m-exam`/`m-manage`, gemerkt im `localStorage`): »Liste verwalten« blendet Ziehen-
+      Leiste + `#currentSel` aus und stellt die Pflanzenliste zum Bearbeiten in den
+      Vordergrund; »Prüfung erstellen« zeigt Ziehen + aktuelle Prüfung + Drucken.
+      **Suche zentral & immer sichtbar** (Nutzerwunsch): das Suchfeld `#q` steckte im
+      eingeklappten Filter-Akkordeon – jetzt eine dauerhafte, prominente Suchleiste
+      (`.findbar`), das Akkordeon (`#filterOpts`) hält nur noch Kategorie/ZP; die Suche
+      bleibt in **beiden** Modi sichtbar (`syncFilterSummary` ohne Such-Term, Default
+      »Kategorie · nur ZP«). `#adminBar`/`#btnAdmin` und die offiziellen Leerbögen bleiben
+      unberührt; offline-rein. `tests/smoke.mjs` erweitert: Suche immer sichtbar (nicht im
+      Akkordeon), Ziehen füllt das Panel nummeriert, Modus-Umschaltung blendet Leiste+Panel
+      korrekt aus/ein, Suche bleibt in »Liste verwalten« sichtbar.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei
