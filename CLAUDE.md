@@ -955,6 +955,21 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Schritt 1.) Offline-rein; `tests/learn.mjs` prüft den Desktop-Fokus (`#stage` fixed,
       zentrierte Spalte ≤720px, Exit über »Zur Übersicht«).
 
+- [x] **Lern-Barrierefreiheit & Touch (UI-Audit, Schritt 4).** Der Kern-Modus war für
+      Tastatur/Screenreader unbedienbar (Karte = `<div onclick>`). Jetzt: die **Karteikarte
+      ist ein echter Button** (`role="button"`, `tabindex="0"`, Fokus beim Rendern), die
+      **Leertaste/Enter dreht um**, danach bewerten die Tasten **1/2/3** (Nochmal/Unsicher/
+      Gewusst) – ein globaler `cardKeys`-Listener, der nur im Karten-Modus greift; nach dem
+      Umdrehen wandert der Fokus auf »Nochmal«. **Rückmeldungen als `aria-live="polite"`**
+      (`#fb` in Quiz/Tippen/Bilder) → Screenreader sagt »Richtig!/Fast/Leider falsch« an.
+      **Modale barrierefrei:** Info- und Familien-Steckbrief bekommen beim Öffnen den Fokus
+      auf »Schließen«, eine **Tab-Fokusfalle** (Tab zykelt im Dialog) und geben den Fokus
+      beim Schließen an den Auslöser zurück (`infoReturnFocus`, `infoKey` um Tab erweitert).
+      **Touch:** sichtbarer Fokusring am Schalter (`.switch input:focus-visible + .track`)
+      und an der Karte; ≥44 px Tap-Ziele auf dem Handy (`.btn`/`.modes button`/`.modal-x`,
+      `.cattag`/`.sortbtn` ≥36). Offline-rein; `tests/learn.mjs` prüft Karten-Button,
+      Leertaste-Umdrehen + Bewertung, `aria-live` und den Modal-Fokus.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei

@@ -1183,14 +1183,27 @@ function finishSession(){
 function renderCard(){
   const c=current;
   const stage=$("#stage");
-  stage.innerHTML = sessionBar() + `<div class="card" id="card">
+  stage.innerHTML = sessionBar() + `<div class="card" id="card" role="button" tabindex="0" aria-label="Karteikarte – zum Umdrehen aktivieren">
       <span class="side-label">${esc(promptLabel())}</span>
       <div class="prompt">${promptHTML(c)}</div>
       ${promptSub(c)?`<div class="sub">${esc(promptSub(c))}</div>`:""}
-      <div class="flip-hint">Zum Umdrehen tippen</div>
+      <div class="flip-hint">Zum Umdrehen tippen · Leertaste</div>
     </div>`;
   $("#btnStop").onclick=finishSession;
   $("#card").onclick=()=>{ if(!flipped) flipCard(); };
+  try{ $("#card").focus(); }catch(e){}
+}
+/* Tastatur in Karteikarten: Leertaste/Enter dreht um, danach 1/2/3 bewerten
+   (Nochmal/Unsicher/Gewusst). Ein globaler Listener, der nur im Karten-Modus greift. */
+function cardKeys(e){
+  if(mode!=="cards" || !sess || !sess.active || !$("#card")) return;
+  if(e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  if(!flipped){
+    if(e.key===" " || e.key==="Enter" || e.key==="Spacebar"){ e.preventDefault(); flipCard(); }
+    return;
+  }
+  const sel = e.key==="1" ? ".r-again" : e.key==="2" ? ".r-hard" : e.key==="3" ? ".r-good" : null;
+  if(sel){ const b=document.querySelector(sel); if(b){ e.preventDefault(); b.click(); } }
 }
 function flipCard(){
   flipped=true; const c=current;
@@ -1213,6 +1226,7 @@ function flipCard(){
   rate.querySelector(".r-again").onclick=()=>{ grade(c,"again"); requeueCurrent(); advance(); };
   rate.querySelector(".r-hard").onclick =()=>{ grade(c,"hard"); advance(); };
   rate.querySelector(".r-good").onclick =()=>{ grade(c,"good"); advance(); };
+  try{ rate.querySelector(".r-again").focus(); }catch(e){}   // Tastatur: direkt bewerten (1/2/3 oder Tab)
 }
 
 function renderQuiz(){
@@ -1223,7 +1237,7 @@ function renderQuiz(){
     `<div class="qprompt">${promptHTML(c)}</div>
      ${promptSub(c)?`<div class="qsub">${esc(promptSub(c))}</div>`:""}
      <div class="options" id="opts"></div>
-     <div class="feedback" id="fb"></div>
+     <div class="feedback" id="fb" aria-live="polite"></div>
      <div class="nav" id="nav"></div>`;
   $("#btnStop").onclick=finishSession;
   const host=$("#opts");
@@ -1261,7 +1275,7 @@ function renderType(){
      ${promptSub(c)?`<div class="qsub">${esc(promptSub(c))}</div>`:""}
      <div class="typebox">
        <input id="typeIn" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${esc(answerLabel())} eingeben …">
-       <div class="feedback" id="fb"></div>
+       <div class="feedback" id="fb" aria-live="polite"></div>
      </div>
      <div class="nav" id="nav"><button class="btn primary" id="chk">Prüfen</button></div>`;
   $("#btnStop").onclick=finishSession;
@@ -1863,7 +1877,7 @@ function photoNotice(html){
 async function renderPhoto(){
   const c = current;
   $("#stage").innerHTML = sessionBar() + `<div class="photobox"><div class="ph-load">Bild wird geladen …</div></div>
-    <div class="options" id="opts"></div><div class="feedback" id="fb"></div><div class="nav" id="nav"></div>`;
+    <div class="options" id="opts"></div><div class="feedback" id="fb" aria-live="polite"></div><div class="nav" id="nav"></div>`;
   const stop=$("#btnStop"); if(stop) stop.onclick=finishSession;
   let p=null, netFail=false;
   try{ p = await photoFor(c); }catch(e){ netFail=true; }
@@ -2016,9 +2030,19 @@ function answerPhoto(btn, chosen, p){
   finishPhotoAnswer(ok, ok?"good":"again", p, `<span class="sol">${solutionLine(c)}</span>`);
 }
 
-let infoEl=null;
-function infoKey(e){ if(e.key==="Escape") closeInfo(); }
-function closeInfo(){ if(infoEl){ infoEl.remove(); infoEl=null; document.removeEventListener("keydown", infoKey); } }
+let infoEl=null, infoReturnFocus=null;
+function infoKey(e){
+  if(e.key==="Escape"){ closeInfo(); return; }
+  if(e.key==="Tab" && infoEl){                                   // Fokus im Dialog halten (Fokusfalle)
+    const f=[...infoEl.querySelectorAll('a[href],button:not([disabled]),input,select,[tabindex]:not([tabindex="-1"])')].filter(x=>x.offsetParent!==null);
+    if(!f.length) return;
+    const first=f[0], last=f[f.length-1];
+    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+  }
+}
+function closeInfo(){ if(infoEl){ infoEl.remove(); infoEl=null; document.removeEventListener("keydown", infoKey);
+  if(infoReturnFocus && infoReturnFocus.focus){ try{ infoReturnFocus.focus(); }catch(e){} } infoReturnFocus=null; } }
 function openInfo(card){
   if(!card) return;
   closeInfo();
@@ -2051,6 +2075,8 @@ function openInfo(card){
   else if(cached===null){ host.innerHTML='<div class="wp-note">Kein deutscher Wikipedia-Artikel gefunden. Die Links oben führen dich weiter.</div>'; btn.remove(); }
   else btn.onclick = ()=>loadWiki(card, host, btn);
   document.addEventListener("keydown", infoKey);
+  infoReturnFocus = document.activeElement;                       // Fokus nach dem Schließen zurückgeben
+  try{ $("#infoClose").focus(); }catch(e){}
 }
 const infoBtnHTML = label => `<button class="btn ghost infobtn" id="infoBtn" title="Quellen &amp; Online-Infos zu dieser Pflanze">ℹ ${esc(label||"Mehr")}</button>`;
 function wireInfoBtn(){ const b=$("#infoBtn"); if(b) b.onclick=e=>{ e.stopPropagation(); openInfo(current); }; }
@@ -2081,6 +2107,8 @@ function openFamilyInfo(famStr){
   scrim.addEventListener("click", e=>{ if(e.target===scrim) closeInfo(); });
   scrim.querySelector("#infoClose").onclick = closeInfo;
   document.addEventListener("keydown", infoKey);
+  infoReturnFocus = document.activeElement;
+  try{ scrim.querySelector("#infoClose").focus(); }catch(e){}
 }
 
 /* ---------- Profil-Wechsel ---------- */
@@ -2177,6 +2205,7 @@ function wire(){
   };
   $("#onlyzp").onchange=refreshView;
   if($("#sessLen")) $("#sessLen").oninput=syncOptsSummary;
+  document.addEventListener("keydown", cardKeys);   // Tastatur-Bedienung der Karteikarten
   if($("#examOnly")) $("#examOnly").onchange=()=>{
     examOnly=$("#examOnly").checked; store.set(LS_PREFIX+"examonly", examOnly?"1":"0");
     normalizeSort(); refreshView();

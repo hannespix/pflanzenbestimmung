@@ -158,6 +158,7 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .switch .track::after{content:""; position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%; background:#fff; transition:transform .15s}
 .switch input:checked + .track{background:var(--green)}
 .switch input:checked + .track::after{transform:translateX(15px)}
+.switch input:focus-visible + .track{outline:2px solid var(--madder); outline-offset:2px}
 /* Modus-Umschalter */
 .modes{display:flex; gap:0; border:1px solid var(--rule-strong); border-radius:5px; overflow:hidden; width:fit-content; max-width:100%; flex-wrap:wrap}
 .modes button{border:none; background:var(--surface-2); color:var(--ink-soft); padding:9px 15px; font-size:13.5px; border-right:1px solid var(--rule-strong); display:inline-flex; align-items:center; gap:7px}
@@ -215,6 +216,14 @@ main{margin-top:18px}
 
 /* Karteikarte */
 .card{border:1px solid var(--rule-strong); border-radius:8px; background:var(--surface); box-shadow:0 2px 10px var(--shadow); min-height:230px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:34px 26px; text-align:center; cursor:pointer; position:relative}
+.card:focus-visible{outline:2px solid var(--madder); outline-offset:3px}
+/* Größere Tap-Ziele auf dem Smartphone (Barrierefreiheit/Touch, ~44px) */
+@media (max-width:640px){
+  .btn{min-height:44px}
+  .modes button{min-height:48px}
+  .cattag,.sortbtn{min-height:36px}
+  .modal-x{min-width:44px; min-height:44px; font-size:26px}
+}
 .card .side-label{position:absolute; top:12px; left:16px; font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--sepia)}
 .card .prompt{font-family:var(--serif); font-size:clamp(22px,4vw,30px); color:var(--ink); line-height:1.2}
 .card .prompt .g{font-style:italic}
@@ -1911,14 +1920,27 @@ function finishSession(){
 function renderCard(){
   const c=current;
   const stage=$("#stage");
-  stage.innerHTML = sessionBar() + `<div class="card" id="card">
+  stage.innerHTML = sessionBar() + `<div class="card" id="card" role="button" tabindex="0" aria-label="Karteikarte – zum Umdrehen aktivieren">
       <span class="side-label">${esc(promptLabel())}</span>
       <div class="prompt">${promptHTML(c)}</div>
       ${promptSub(c)?`<div class="sub">${esc(promptSub(c))}</div>`:""}
-      <div class="flip-hint">Zum Umdrehen tippen</div>
+      <div class="flip-hint">Zum Umdrehen tippen · Leertaste</div>
     </div>`;
   $("#btnStop").onclick=finishSession;
   $("#card").onclick=()=>{ if(!flipped) flipCard(); };
+  try{ $("#card").focus(); }catch(e){}
+}
+/* Tastatur in Karteikarten: Leertaste/Enter dreht um, danach 1/2/3 bewerten
+   (Nochmal/Unsicher/Gewusst). Ein globaler Listener, der nur im Karten-Modus greift. */
+function cardKeys(e){
+  if(mode!=="cards" || !sess || !sess.active || !$("#card")) return;
+  if(e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  if(!flipped){
+    if(e.key===" " || e.key==="Enter" || e.key==="Spacebar"){ e.preventDefault(); flipCard(); }
+    return;
+  }
+  const sel = e.key==="1" ? ".r-again" : e.key==="2" ? ".r-hard" : e.key==="3" ? ".r-good" : null;
+  if(sel){ const b=document.querySelector(sel); if(b){ e.preventDefault(); b.click(); } }
 }
 function flipCard(){
   flipped=true; const c=current;
@@ -1941,6 +1963,7 @@ function flipCard(){
   rate.querySelector(".r-again").onclick=()=>{ grade(c,"again"); requeueCurrent(); advance(); };
   rate.querySelector(".r-hard").onclick =()=>{ grade(c,"hard"); advance(); };
   rate.querySelector(".r-good").onclick =()=>{ grade(c,"good"); advance(); };
+  try{ rate.querySelector(".r-again").focus(); }catch(e){}   // Tastatur: direkt bewerten (1/2/3 oder Tab)
 }
 
 function renderQuiz(){
@@ -1951,7 +1974,7 @@ function renderQuiz(){
     `<div class="qprompt">${promptHTML(c)}</div>
      ${promptSub(c)?`<div class="qsub">${esc(promptSub(c))}</div>`:""}
      <div class="options" id="opts"></div>
-     <div class="feedback" id="fb"></div>
+     <div class="feedback" id="fb" aria-live="polite"></div>
      <div class="nav" id="nav"></div>`;
   $("#btnStop").onclick=finishSession;
   const host=$("#opts");
@@ -1989,7 +2012,7 @@ function renderType(){
      ${promptSub(c)?`<div class="qsub">${esc(promptSub(c))}</div>`:""}
      <div class="typebox">
        <input id="typeIn" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${esc(answerLabel())} eingeben …">
-       <div class="feedback" id="fb"></div>
+       <div class="feedback" id="fb" aria-live="polite"></div>
      </div>
      <div class="nav" id="nav"><button class="btn primary" id="chk">Prüfen</button></div>`;
   $("#btnStop").onclick=finishSession;
@@ -2591,7 +2614,7 @@ function photoNotice(html){
 async function renderPhoto(){
   const c = current;
   $("#stage").innerHTML = sessionBar() + `<div class="photobox"><div class="ph-load">Bild wird geladen …</div></div>
-    <div class="options" id="opts"></div><div class="feedback" id="fb"></div><div class="nav" id="nav"></div>`;
+    <div class="options" id="opts"></div><div class="feedback" id="fb" aria-live="polite"></div><div class="nav" id="nav"></div>`;
   const stop=$("#btnStop"); if(stop) stop.onclick=finishSession;
   let p=null, netFail=false;
   try{ p = await photoFor(c); }catch(e){ netFail=true; }
@@ -2744,9 +2767,19 @@ function answerPhoto(btn, chosen, p){
   finishPhotoAnswer(ok, ok?"good":"again", p, `<span class="sol">${solutionLine(c)}</span>`);
 }
 
-let infoEl=null;
-function infoKey(e){ if(e.key==="Escape") closeInfo(); }
-function closeInfo(){ if(infoEl){ infoEl.remove(); infoEl=null; document.removeEventListener("keydown", infoKey); } }
+let infoEl=null, infoReturnFocus=null;
+function infoKey(e){
+  if(e.key==="Escape"){ closeInfo(); return; }
+  if(e.key==="Tab" && infoEl){                                   // Fokus im Dialog halten (Fokusfalle)
+    const f=[...infoEl.querySelectorAll('a[href],button:not([disabled]),input,select,[tabindex]:not([tabindex="-1"])')].filter(x=>x.offsetParent!==null);
+    if(!f.length) return;
+    const first=f[0], last=f[f.length-1];
+    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+  }
+}
+function closeInfo(){ if(infoEl){ infoEl.remove(); infoEl=null; document.removeEventListener("keydown", infoKey);
+  if(infoReturnFocus && infoReturnFocus.focus){ try{ infoReturnFocus.focus(); }catch(e){} } infoReturnFocus=null; } }
 function openInfo(card){
   if(!card) return;
   closeInfo();
@@ -2779,6 +2812,8 @@ function openInfo(card){
   else if(cached===null){ host.innerHTML='<div class="wp-note">Kein deutscher Wikipedia-Artikel gefunden. Die Links oben führen dich weiter.</div>'; btn.remove(); }
   else btn.onclick = ()=>loadWiki(card, host, btn);
   document.addEventListener("keydown", infoKey);
+  infoReturnFocus = document.activeElement;                       // Fokus nach dem Schließen zurückgeben
+  try{ $("#infoClose").focus(); }catch(e){}
 }
 const infoBtnHTML = label => `<button class="btn ghost infobtn" id="infoBtn" title="Quellen &amp; Online-Infos zu dieser Pflanze">ℹ ${esc(label||"Mehr")}</button>`;
 function wireInfoBtn(){ const b=$("#infoBtn"); if(b) b.onclick=e=>{ e.stopPropagation(); openInfo(current); }; }
@@ -2809,6 +2844,8 @@ function openFamilyInfo(famStr){
   scrim.addEventListener("click", e=>{ if(e.target===scrim) closeInfo(); });
   scrim.querySelector("#infoClose").onclick = closeInfo;
   document.addEventListener("keydown", infoKey);
+  infoReturnFocus = document.activeElement;
+  try{ scrim.querySelector("#infoClose").focus(); }catch(e){}
 }
 
 /* ---------- Profil-Wechsel ---------- */
@@ -2905,6 +2942,7 @@ function wire(){
   };
   $("#onlyzp").onchange=refreshView;
   if($("#sessLen")) $("#sessLen").oninput=syncOptsSummary;
+  document.addEventListener("keydown", cardKeys);   // Tastatur-Bedienung der Karteikarten
   if($("#examOnly")) $("#examOnly").onchange=()=>{
     examOnly=$("#examOnly").checked; store.set(LS_PREFIX+"examonly", examOnly?"1":"0");
     normalizeSort(); refreshView();
