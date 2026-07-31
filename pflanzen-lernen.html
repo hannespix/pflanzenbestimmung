@@ -1490,11 +1490,43 @@ function famName(f){                              // "Fabaceae · Schmetterlings
   return de ? lat+" · "+de : lat;
 }
 const botName = c => norm(c.g+" "+c.a);
-// Erster VOLLSTÄNDIGER deutscher Name für Anzeige/Antwort. deForms() löst die
-// Listen-Kurzschreibweisen auf (»Winter- / Staudenbohnenkraut« → »Staudenbohnenkraut«,
-// »Krauser / gewöhnlicher Rhabarber« → »gewöhnlicher Rhabarber«) – nie ein blankes
-// Präfix/Adjektiv. Fallback auf das rohe erste Segment nur, wenn nichts aufgelöst wird.
-const deMain  = c => deForms(c).names[0] || norm((c.de||"").split(/[,;/]/)[0]) || "—";
+// Abkürzungen, wie sie in den Quelllisten vorkommen → ausgeschriebene Anzeigeform
+// (nur fürs Lern-Tool; das Prüfungswerkzeug zeigt den amtlichen Namen unverändert).
+const DE_ABBR = { gew:"Gewöhnliche", amerik:"Amerikanische", austr:"Australische",
+  jap:"Japanische", japan:"Japanische", kriech:"Kriechender", einj:"Einjähriges",
+  treibh:"Treibhaus", "zurückgekr":"Zurückgekrümmter", strauchmarg:"Strauchmargerite" };
+function expandAbbr(s){
+  s = String(s==null?"":s).replace(/[\[\]]/g," ");           // eckige Qualifier-Klammern raus
+  s = s.replace(/\.(?=[A-Za-zÄÖÜäöüß])/g, ". ");              // fehlendes Leerzeichen nach Abk.-Punkt (»jap.Azalee«)
+  for(const k in DE_ABBR)
+    s = s.replace(new RegExp("\\b"+k+"\\.\\s*", "gi"), DE_ABBR[k]+" ");
+  return norm(s);
+}
+// Erster VOLLSTÄNDIGER deutscher Name für Anzeige/Antwort. Wählt aus der
+// klammerbereinigten Grundform und den von deForms() erkannten Vollformen die
+// erste, die weder ein hängender Stamm (»Gew. Hain-«) noch eine blanke Abkürzung
+// (»Treibh.«) ist, und schreibt Kürzel aus (»Gew.«→»Gewöhnliche«). So wird aus
+// »Gurke (Freiland / Treibh.)« → »Gurke« und »Gew. Zucker-Melone« → »Gewöhnliche
+// Zucker-Melone«, während »Krauser / gewöhnlicher Rhabarber« → »gewöhnlicher
+// Rhabarber« erhalten bleibt.
+function deMain(c){
+  const letters = x => (String(x).match(/[A-Za-zÄÖÜäöüß]/g)||[]).length;
+  const isAbbr  = s => /^[A-Za-zÄÖÜäöüß]{2,10}\.$/.test(String(s).trim());   // »Treibh.«, »Gew.«
+  const reduce = raw => {                                   // ein Synonym → saubere Vollform (oder "")
+    let s = norm(String(raw||"").replace(/[\[\]]/g," ").replace(/\s*\([^)]*\)\s*/g," "));   // Qualifier-Klammern raus
+    if(s.includes("/")){                                    // geteiltes Grundwort/Alternativen: letzte Vollform
+      const segs = s.split("/").map(norm).filter(Boolean);
+      s = segs[segs.length-1] || s;
+    }
+    return /[-–]$/.test(s) ? "" : norm(s);                  // hängender Stamm (»Gew. Hain-«) → verwerfen
+  };
+  const ok = s => s && !isAbbr(s) && letters(s)>=3;
+  const cands = (c.de||"").split(/[,;]/).map(reduce).filter(Boolean);
+  const pick = cands.find(ok) || cands[0]
+    || deForms(c).names.map(n=>norm(n)).find(ok)           // Fallback: von deForms aufgelöste Vollformen
+    || norm((c.de||"").split(/[,;/]/)[0]) || "—";
+  return expandAbbr(pick) || "—";
+}
 const deAll   = c => (c.de||"").split(/[,;]/).map(norm).filter(Boolean);   // Synonyme; »/«-Formen bleiben zusammen
 function promptHTML(c){                            // Vorderseite (im Bilder-Modus steht dort das Bild)
   return wantsDe() ? `<i>${esc(botName(c))}</i>` : esc(c.de||"—");   // gefragt wird nach allen geführten Namen
