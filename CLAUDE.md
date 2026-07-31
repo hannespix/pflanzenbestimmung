@@ -940,6 +940,21 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       **Sitzung** (pool) ein / filtert die **Liste nicht** (im Listenmodus ausgeblendet),
       und aktive Optionen erscheinen in der Kopfzeile.
 
+- [x] **Fokus-Modus auch am Desktop + ZP-Marker neutral (UI-Audit, Schritt 3).** Der
+      Vollbild-/Fokus-Modus (`body.stagefull`) galt bisher nur `@media (max-width:640px)`;
+      auf Desktop/Tablet lief die Sitzung inmitten des vollen Seitenchroms. Jetzt greift
+      das Overlay auf **allen Viewports** (Regeln aus der Mobile-Media-Query herausgezogen):
+      `#stage` wird `position:fixed; inset:0` und zentriert seinen Inhalt als **Lese-Spalte**
+      (`#stage>*{max-width:720px}`, `align-items:center`) – am Desktop ein ruhiger,
+      ablenkungsfreier »Lernraum«, am Handy unverändert randfüllend. Kein JS nötig
+      (`stageFull()` setzte die Klasse ohnehin schon überall; nur die CSS-Sperre fiel weg);
+      Bildhöhe im Bilder-Quiz zusätzlich auf `min(38vh,420px)` gedeckelt. **Konsistenz:**
+      der **ZP-Marker** (`.sp-zp`) war im selben Rot (`--madder`) wie Fehler/„Nochmal" –
+      jetzt neutrales Sepia, denn ZP ist ein sachlicher Relevanz-Hinweis, keine Warnung.
+      (Sessionbar-`flex-wrap` und der Abbruch-Titel »Sitzung beendet« kamen schon in
+      Schritt 1.) Offline-rein; `tests/learn.mjs` prüft den Desktop-Fokus (`#stage` fixed,
+      zentrierte Spalte ≤720px, Exit über »Zur Übersicht«).
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei
