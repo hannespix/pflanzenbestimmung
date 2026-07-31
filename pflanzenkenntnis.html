@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pflanzenkenntnis · Prüfungslisten (Gärtnerberufe)</title>
 <meta name="theme-color" content="#2b4f38">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121713">
+<script>/* Theme vor dem ersten Rendern setzen (kein Aufblitzen) */(function(){try{var t=localStorage.getItem("pbw.theme");if(t==="dark"||t==="light")document.documentElement.dataset.theme=t;}catch(e){}})();</script>
 <!-- PWA: installierbar + offline (Service Worker), ausschließlich eigene Herkunft -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -62,7 +64,7 @@ input,select{font-family:inherit; color:inherit}
 .profilerow{display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px; margin:14px 0 2px 8px}
 .pfield{display:flex; flex-direction:column; gap:4px}
 .pfield label{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia)}
-.pfield select{border:1.4px solid var(--green); background:#fff; border-radius:4px; padding:9px 30px 9px 12px; font-size:15px; font-family:var(--serif); font-weight:600; color:var(--green-deep);
+.pfield select{border:1.4px solid var(--green); background:var(--card); border-radius:4px; padding:9px 30px 9px 12px; font-size:15px; font-family:var(--serif); font-weight:600; color:var(--green-deep);
   appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%232b4f38' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 11px center}
 .profsub{font-family:var(--mono); font-size:12px; color:var(--ink-soft); padding-bottom:9px}
 /* Schema-Editor */
@@ -70,20 +72,20 @@ input,select{font-family:inherit; color:inherit}
 .gcard .left.noborder{border-right:none}
 .scwrap{display:flex; flex-wrap:wrap; gap:22px; align-items:flex-start}
 .gfld.scanz{max-width:170px}
-.gfld.scanz input{border:1px solid var(--rule-strong); border-radius:3px; padding:9px 11px; font-size:17px; font-family:var(--mono); background:#fff; width:100%}
+.gfld.scanz input{border:1px solid var(--rule-strong); border-radius:3px; padding:9px 11px; font-size:17px; font-family:var(--mono); background:var(--card); width:100%}
 .scgrid{display:flex; flex-direction:column; gap:8px; flex:1; padding-top:2px; max-width:440px}
 .scrow{display:flex; align-items:center; gap:10px; background:var(--surface-2); border:1px solid var(--rule); border-radius:4px; padding:6px 11px}
 .scorder{display:inline-flex; flex-direction:column; gap:2px; flex:none}
-.scmove{border:1px solid var(--rule-strong); background:#fff; color:var(--ink-soft); width:22px; height:16px; line-height:1; padding:0; border-radius:3px; font-size:9px; display:inline-flex; align-items:center; justify-content:center}
+.scmove{border:1px solid var(--rule-strong); background:var(--card); color:var(--ink-soft); width:22px; height:16px; line-height:1; padding:0; border-radius:3px; font-size:9px; display:inline-flex; align-items:center; justify-content:center}
 .scmove:hover:not(:disabled){border-color:var(--green); color:var(--green-deep)}
 .scmove:disabled{opacity:.3; cursor:not-allowed}
 .scname{font-family:var(--serif); font-size:14.5px; flex:1; min-width:110px}
-.scpts{width:56px; border:1px solid var(--rule-strong); border-radius:3px; padding:5px 7px; font-size:14px; font-family:var(--mono); text-align:right; background:#fff}
+.scpts{width:56px; border:1px solid var(--rule-strong); border-radius:3px; padding:5px 7px; font-size:14px; font-family:var(--mono); text-align:right; background:var(--card)}
 .scp{font-family:var(--mono); font-size:12px; color:var(--sepia)}
 /* Gespeicherte Prüfungen */
 .exsave{display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end; margin-bottom:4px}
 .gfld.exd{max-width:170px} .gfld.exl{flex:1; min-width:200px}
-.gfld.exd input,.gfld.exl input{border:1px solid var(--rule-strong); border-radius:3px; padding:8px 10px; font-size:14px; background:#fff; width:100%}
+.gfld.exd input,.gfld.exl input{border:1px solid var(--rule-strong); border-radius:3px; padding:8px 10px; font-size:14px; background:var(--card); width:100%}
 .exsave .btn.small,.exsave .btn.primary{height:36px}
 .exlist{display:flex; flex-direction:column; gap:8px; margin-top:12px}
 .exempty{font-size:13.5px; color:var(--ink-faint); font-style:italic; padding:8px 0}
@@ -100,11 +102,11 @@ input,select{font-family:inherit; color:inherit}
 .setgrid{display:flex; flex-direction:column; gap:12px; max-width:560px}
 .setrow{display:flex; flex-direction:column; gap:4px}
 .setrow label{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia)}
-.setrow input{border:1px solid var(--rule-strong); border-radius:3px; padding:8px 10px; font-size:14px; background:#fff; width:100%}
+.setrow input{border:1px solid var(--rule-strong); border-radius:3px; padding:8px 10px; font-size:14px; background:var(--card); width:100%}
 .setfoot{margin-top:14px}
 /* Auswahl-/Bogen-Vorschau */
 .pvlist{display:flex; flex-direction:column; margin-top:6px; border:1px solid var(--rule); border-radius:4px; overflow:hidden}
-.pvrow{display:grid; grid-template-columns:34px 1fr auto; gap:12px; align-items:center; padding:8px 12px; border-bottom:1px solid var(--rule); background:#fff}
+.pvrow{display:grid; grid-template-columns:34px 1fr auto; gap:12px; align-items:center; padding:8px 12px; border-bottom:1px solid var(--rule); background:var(--card)}
 .pvrow:last-child{border-bottom:none}
 .pvrow:nth-child(even){background:var(--surface-2)}
 .pvnum{font-family:var(--mono); font-weight:700; color:var(--sepia); text-align:center}
@@ -113,7 +115,7 @@ input,select{font-family:inherit; color:inherit}
 .pvacts .iconbtn{padding:5px}
 .pvacts .iconbtn:disabled{opacity:.3; cursor:not-allowed}
 .pvadd{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:12px}
-.pvadd input{flex:1; min-width:220px; border:1px solid var(--rule-strong); border-radius:3px; padding:8px 10px; font-size:14px; background:#fff}
+.pvadd input{flex:1; min-width:220px; border:1px solid var(--rule-strong); border-radius:3px; padding:8px 10px; font-size:14px; background:var(--card)}
 .btn.madder.small{background:var(--madder); border-color:#7e2e23; color:#fbeee9}
 .btn.madder.small:hover{background:#7e2e23}
 /* Kopfzeile: Titel + Hilfe + Speicherstatus */
@@ -152,7 +154,7 @@ input,select{font-family:inherit; color:inherit}
   padding:8px 13px; border-radius:3px; font-size:13.5px; font-weight:500;
   display:inline-flex; align-items:center; gap:7px; transition:background .12s,border-color .12s,transform .04s;
 }
-.btn:hover{background:#fff; border-color:var(--green)}
+.btn:hover{background:var(--card); border-color:var(--green)}
 .btn:active{transform:translateY(1px)}
 .btn .ic{width:15px; height:15px; flex:none}
 .btn.primary{background:var(--green); border-color:var(--green-deep); color:#f4f7f1}
@@ -195,7 +197,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .switch{display:inline-flex; align-items:center; gap:8px; font-size:13.5px; color:var(--ink); cursor:pointer; user-select:none}
 .switch input{position:absolute; opacity:0; width:0; height:0}
 .switch .track{width:34px; height:19px; border-radius:19px; background:var(--rule-strong); position:relative; transition:background .15s; flex:none}
-.switch .track::after{content:""; position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%; background:#fff; transition:transform .15s}
+.switch .track::after{content:""; position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%; background:var(--card); transition:transform .15s}
 .switch input:checked + .track{background:var(--green)}
 .switch input:checked + .track::after{transform:translateX(15px)}
 
@@ -213,7 +215,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 /* Ziehen-Gruppe: Anzahl + Zufällig ziehen (Start des Ablaufs) */
 .draw{display:flex; align-items:center; gap:8px; padding-right:14px; border-right:1px solid var(--rule)}
 .drawlab{font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--sepia)}
-.draw input{width:56px; border:1px solid var(--rule-strong); border-radius:3px; padding:7px 8px; font-size:15px; text-align:center; font-family:var(--mono); background:#fff}
+.draw input{width:56px; border:1px solid var(--rule-strong); border-radius:3px; padding:7px 8px; font-size:15px; text-align:center; font-family:var(--mono); background:var(--card)}
 .pts-pill{font-family:var(--mono); font-size:11px; color:var(--madder); background:var(--madder-tint); border:1px solid var(--madder-soft); border-radius:20px; padding:3px 9px; letter-spacing:.03em; align-self:center}
 .selacts{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
 
@@ -283,11 +285,11 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .pscrim > .grader{margin:0 auto; width:100%; max-width:920px; position:relative}
 .pscrim .gcard{box-shadow:0 18px 50px rgba(28,42,34,.30)}
 .pclose{position:absolute; top:7px; right:7px; z-index:1; border:1px solid var(--rule-strong); background:var(--surface); color:var(--ink-soft); width:28px; height:28px; border-radius:4px; font-size:17px; line-height:1; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; padding:0}
-.pclose:hover{border-color:var(--madder); color:var(--madder); background:#fff}
+.pclose:hover{border-color:var(--madder); color:var(--madder); background:var(--card)}
 /* Druck-Dialog: Auswahl direkt als Prüfung speichern */
 .prsave{display:flex; flex-direction:column; gap:9px; margin-top:14px; padding-top:13px; border-top:1px solid var(--rule)}
 .prsave .prfields{display:flex; gap:8px; flex-wrap:wrap}
-.prsave input[type="date"],.prsave input[type="text"]{border:1px solid var(--rule-strong); border-radius:3px; padding:7px 9px; font-size:13.5px; background:#fff}
+.prsave input[type="date"],.prsave input[type="text"]{border:1px solid var(--rule-strong); border-radius:3px; padding:7px 9px; font-size:13.5px; background:var(--card)}
 .prsave input[type="text"]{flex:1; min-width:160px}
 .prsave[hidden]{display:none}
 .modal{background:var(--surface); border:1px solid var(--rule-strong); border-radius:6px; max-width:520px; width:100%; box-shadow:0 18px 50px rgba(28,42,34,.28); overflow:hidden}
@@ -298,7 +300,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .modal .grid2{display:grid; grid-template-columns:1fr 1fr; gap:13px}
 .fld{display:flex; flex-direction:column; gap:4px}
 .fld label{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia)}
-.fld input,.fld select,.fld textarea{border:1px solid var(--rule-strong); border-radius:3px; padding:8px 10px; font-size:14px; background:#fff; width:100%}
+.fld input,.fld select,.fld textarea{border:1px solid var(--rule-strong); border-radius:3px; padding:8px 10px; font-size:14px; background:var(--card); width:100%}
 .fld textarea{resize:vertical; min-height:52px; font-family:inherit}
 .modal footer{padding:14px 22px 18px; display:flex; gap:10px; justify-content:flex-end; border-top:1px solid var(--rule)}
 .hint{font-size:12.5px; color:var(--ink-soft); background:var(--madder-tint); border-left:3px solid var(--madder-soft); padding:9px 12px; border-radius:0 4px 4px 0}
@@ -310,7 +312,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .rcard b{font-size:14px} .rcard span{font-size:12.5px; color:var(--ink-soft); display:block; margin-top:2px}
 /* Karten-Buttons (z. B. Druck-Dialog): wählbare Karte statt Radiobutton */
 .rcard-btn{background:var(--surface-2); text-align:left; width:100%; align-items:center; font:inherit; color:inherit; transition:background .12s,border-color .12s}
-.rcard-btn:hover{border-color:var(--green); background:#fff}
+.rcard-btn:hover{border-color:var(--green); background:var(--card)}
 .rcard-btn .ic{width:24px; height:24px; color:var(--green-deep); flex:none}
 .rcard-btn:last-child .ic{color:var(--madder)}
 
@@ -335,7 +337,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .modeswitch{display:flex; gap:0; margin:0 0 15px; border:1px solid var(--rule-strong); border-radius:4px; overflow:hidden; width:fit-content}
 .segbtn{border:none; background:var(--surface-2); color:var(--ink-soft); padding:7px 13px; font-size:12.5px; font-family:var(--sans); border-right:1px solid var(--rule-strong)}
 .segbtn:last-child{border-right:none}
-.segbtn:hover{background:#fff}
+.segbtn:hover{background:var(--card)}
 .segbtn.on{background:var(--green); color:#f4f7f1; font-weight:600}
 /* Zwei Modi (Tabs), immer sichtbare Suche + eingeklappter Filter, dauerhaftes »Aktuelle Prüfung«-Panel */
 .modetabs{display:inline-flex; border:1px solid var(--rule-strong); border-radius:5px; overflow:hidden; margin:0 0 10px}
@@ -350,13 +352,13 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .cursel-h{margin:0; font-family:var(--serif); font-size:18px; color:var(--green-deep)}
 .cursel-meta{font-family:var(--mono); font-size:12px; color:var(--ink-soft)}
 body.m-manage .selbar, body.m-manage #currentSel{display:none}
-.gedge{width:44px; border:1px solid var(--rule-strong); border-radius:3px; padding:2px 4px; font-size:12px; font-family:var(--mono); text-align:right; background:#fff}
+.gedge{width:44px; border:1px solid var(--rule-strong); border-radius:3px; padding:2px 4px; font-size:12px; font-family:var(--mono); text-align:right; background:var(--card)}
 .gedge:focus{outline:2px solid var(--madder); outline-offset:1px}
 .gnote{font-size:11px; color:var(--ink-faint); margin:11px 0 0; line-height:1.4; font-style:italic}
 .ginputs{display:flex; gap:14px; flex-wrap:wrap}
 .gfld{display:flex; flex-direction:column; gap:5px; flex:1; min-width:120px}
 .gfld label{font-family:var(--mono); font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--sepia)}
-.gfld input{border:1px solid var(--rule-strong); border-radius:3px; padding:9px 11px; font-size:18px; font-family:var(--mono); background:#fff; width:100%}
+.gfld input{border:1px solid var(--rule-strong); border-radius:3px; padding:9px 11px; font-size:18px; font-family:var(--mono); background:var(--card); width:100%}
 .maxrow{display:flex; gap:6px}
 .maxrow input{flex:1; min-width:0}
 .btn.small{padding:0 10px; font-size:12px; white-space:nowrap; font-family:var(--mono)}
@@ -410,7 +412,7 @@ body.m-manage .selbar, body.m-manage #currentSel{display:none}
    data/leerboegen/: Arial, schwarze Linien, 10-mm-Schreibzeilen, ohne Raster. */
 @media print{
   @page{size:A4 portrait; margin:8mm 15mm 10mm}
-  body{background:#fff; background-image:none}
+  body{background:var(--card); background-image:none}
   .wrap{display:none !important}
   .scrim{display:none !important}
   .toast{display:none !important}
@@ -474,6 +476,72 @@ body.m-manage .selbar, body.m-manage #currentSel{display:none}
   #sheet.sol-look .fscale{border-color:#a9ad98; background:#f6f7f1; border-radius:4pt; font-family:'Segoe UI',system-ui,sans-serif; color:#56604f}
   #sheet.sol-look .ffoot{color:#7a6a4f; font-family:'Segoe UI',system-ui,sans-serif}
 }
+
+/* ===== Herbarium 2.0 (2026-Refresh): Design-Token, Dark Mode, Glas & Tiefe =====
+   Botanische Identität bleibt (Grün, Serifen, Papier) – moderner umgesetzt:
+   weiche große Radien, mehrschichtige Schatten, Glas-Effekt auf Sticky-Leisten
+   und Modalen, Dark Mode (folgt dem System, per Knopf übersteuerbar). */
+:root{color-scheme:light; --card:#ffffff; --glass:rgba(246,247,241,.78); --glass-m:rgba(246,247,241,.92);
+  --shadow-1:0 1px 2px rgba(34,53,43,.07); --shadow-2:0 18px 44px -22px rgba(34,53,43,.38)}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#121713; --surface:#1a211c; --surface-2:#212923; --card:#28312a;
+  --ink:#e8ece4; --ink-soft:#b7c0b1; --ink-faint:#8c9584;
+  --green:#4f8f66; --green-deep:#a3d6b2; --green-tint:#233529;
+  --sepia:#b4a17f; --madder:#e08a79; --madder-soft:#b06253; --madder-tint:#3d2822;
+  --gold:#d0aa4f; --rule:#2f3830; --rule-strong:#475147; --shadow:rgba(0,0,0,.55);
+  --glass:rgba(18,23,19,.72); --glass-m:rgba(20,26,21,.9);
+  --shadow-1:0 1px 2px rgba(0,0,0,.45); --shadow-2:0 18px 44px -20px rgba(0,0,0,.6)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --paper:#121713; --surface:#1a211c; --surface-2:#212923; --card:#28312a;
+  --ink:#e8ece4; --ink-soft:#b7c0b1; --ink-faint:#8c9584;
+  --green:#4f8f66; --green-deep:#a3d6b2; --green-tint:#233529;
+  --sepia:#b4a17f; --madder:#e08a79; --madder-soft:#b06253; --madder-tint:#3d2822;
+  --gold:#d0aa4f; --rule:#2f3830; --rule-strong:#475147; --shadow:rgba(0,0,0,.55);
+  --glass:rgba(18,23,19,.72); --glass-m:rgba(20,26,21,.9);
+  --shadow-1:0 1px 2px rgba(0,0,0,.45); --shadow-2:0 18px 44px -20px rgba(0,0,0,.6)}}
+.themebtn{position:relative; border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--sepia);
+  width:36px; height:36px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+  cursor:pointer; padding:0; flex:none; transition:background .15s, transform .15s}
+.themebtn:hover{background:var(--card); transform:rotate(14deg)}
+.themebtn .ic{width:17px; height:17px}
+.themebtn .sun{display:none}
+:root[data-theme="dark"] .themebtn .sun{display:block}
+:root[data-theme="dark"] .themebtn .moon{display:none}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .themebtn .sun{display:block}
+  :root:not([data-theme="light"]) .themebtn .moon{display:none}}
+.themebtn.abs{position:absolute; top:14px; right:14px; z-index:2}
+
+/* Herbarium 2.0 – Prüfwerkzeug: Radien, Tiefe, Glas */
+.masthead{border-radius:18px}
+.selbar{border-radius:14px}
+.cursel{border-radius:16px}
+.filterbar{border-radius:12px}
+.admbar{border-radius:14px}
+.modetabs{border-radius:10px}
+.btn{border-radius:10px}
+select,input[type=number],input[type=search],input[type=text],input[type=date]{border-radius:9px}
+.search input{border-radius:12px}
+.pvlist{border-radius:12px}
+.grader,.modal{border-radius:18px; background:var(--glass-m); backdrop-filter:blur(16px) saturate(1.15); -webkit-backdrop-filter:blur(16px) saturate(1.15); box-shadow:var(--shadow-2)}
+.scrim{backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px)}
+.findbar{background:var(--glass); backdrop-filter:blur(12px) saturate(1.1); -webkit-backdrop-filter:blur(12px) saturate(1.1)}
+.btn.primary{box-shadow:0 8px 20px -10px rgba(43,79,56,.5)}
+.btn:hover{transform:translateY(-1px)} .btn:active{transform:translateY(0)}
+@media (prefers-reduced-motion:reduce){.btn:hover{transform:none}}
+
+/* Dark-Fixes für Flächen mit hellem Text (green-deep ist im Dark Mode ein heller Akzent) */
+:root[data-theme="dark"] .btn.primary:hover{background:var(--green); filter:brightness(1.12)}
+:root[data-theme="dark"] .toast{background:#2e5940}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .btn.primary:hover{background:var(--green); filter:brightness(1.12)}
+  :root:not([data-theme="light"]) .toast{background:#2e5940}}
+/* Druck bleibt immer hell (amtliche Bögen/Listen), egal welches Theme aktiv ist */
+@media print{:root,:root[data-theme="dark"]{color-scheme:light;
+  --paper:#fff; --card:#fff; --surface:#fff; --surface-2:#fff;
+  --ink:#000; --ink-soft:#333; --ink-faint:#666; --rule:#999; --rule-strong:#666}}
 </style>
 </head>
 <body>
@@ -486,6 +554,7 @@ body.m-manage .selbar, body.m-manage #currentSel{display:none}
       </div>
       <div class="mast-right">
         <a class="btn ghost" href="pflanzen-lernen.html" title="Zum Lern-Tool für Azubis (Karteikarten, Quiz, Tippen – ohne Prüfungslisten und Noten)">Lernversion&nbsp;→</a>
+        <button class="themebtn" id="btnTheme" type="button" aria-label="Dunkles oder helles Design umschalten" title="Dunkles/helles Design umschalten"><svg class="ic moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.5 14.5A8.5 8.5 0 019.5 3.5a8.5 8.5 0 1011 11z"/></svg><svg class="ic sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
         <button class="btn ghost" id="btnHelp" title="Kurzanleitung und Erklärung aller Funktionen öffnen (Fenster; Schließen mit ×, Esc oder Klick daneben)"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5"/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/></svg>Hilfe</button>
         <span class="dbstatus" title="Speicherstatus dieser Liste im Browser: hinterlegte Standardliste oder im Browser gespeicherte Änderungen"><span class="dot" id="dbdot"></span><span id="dbname">Standardliste</span></span>
       </div>
@@ -2237,5 +2306,6 @@ window.resetToDefault=resetToDefault;
 window.importJsonData=importJsonData; // für Datei-Import und Smoke-Test
 
 </script>
+<script>/* Hell/Dunkel-Umschalter: übersteuert die System-Einstellung, Wahl wird gespeichert */(function(){var b=document.getElementById("btnTheme");if(!b)return;b.addEventListener("click",function(){var r=document.documentElement,sys=window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light",cur=r.dataset.theme||sys,nx=cur==="dark"?"light":"dark";r.dataset.theme=nx;try{localStorage.setItem("pbw.theme",nx);}catch(e){}});})();</script>
 </body>
 </html>

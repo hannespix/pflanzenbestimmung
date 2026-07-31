@@ -168,6 +168,19 @@ async function main() {
   assert(a11y.fbLive, "Quiz-/Tipp-Feedback muss aria-live=polite sein (Screenreader-Ansage): " + JSON.stringify(a11y));
   assert(a11y.modalFocus, "Info-Modal muss den Fokus auf den »Schließen«-Knopf setzen: " + JSON.stringify(a11y));
 
+  // Herbarium 2.0: Hell/Dunkel-Umschalter setzt data-theme und merkt die Wahl
+  const theme = await page.evaluate(() => {
+    const b = document.querySelector("#btnTheme");
+    if (!b) return { has: false };
+    b.click();
+    const afterOne = document.documentElement.dataset.theme, saved = localStorage.getItem("pbw.theme");
+    b.click();
+    const afterTwo = document.documentElement.dataset.theme;
+    return { has: true, afterOne, saved, afterTwo };
+  });
+  assert(theme.has && theme.afterOne === "dark" && theme.saved === "dark" && theme.afterTwo === "light",
+    "Theme-Umschalter muss dunkel/hell wechseln und die Wahl speichern: " + JSON.stringify(theme));
+
   // Hinweis vor den Lektionen: automatisch/KI-erzeugte Inhalte, keine Gewähr –
   // muss ohne Aufklappen sichtbar sein und im Listenmodus verschwinden
   const note = await page.evaluate(() => {
