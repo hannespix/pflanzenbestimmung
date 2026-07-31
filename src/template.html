@@ -630,6 +630,30 @@ select{appearance:none; -webkit-appearance:none;
 #currentSel{view-transition-name:pcursel}
 ::view-transition-old(plist),::view-transition-old(pcursel){animation:h3SlideOut .18s cubic-bezier(.4,0,1,1) both}
 ::view-transition-new(plist),::view-transition-new(pcursel){animation:h3SlideIn .3s cubic-bezier(.16,1,.3,1) both}
+
+/* ===== Herbarium 2.0 · Stufe 3b: Feinschliff (Mobil-Praxistest) =====
+   1) Modale deutlich deckender + stärker verwischt – klarer Textkontrast, kein
+      Geistertext der dahinterliegenden Liste. 2) Sticky-Suchband läuft randlos
+      über die volle Breite (kein hartes Kästchen). 3) Fallback ohne
+      backdrop-filter: Modale werden voll deckend. */
+:root{--glass-modal:rgba(250,251,247,.97); --scrimdim:rgba(20,32,26,.45)}
+:root[data-theme="dark"]{--glass-modal:rgba(19,24,20,.96); --scrimdim:rgba(0,0,0,.5)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--glass-modal:rgba(19,24,20,.96); --scrimdim:rgba(0,0,0,.5)}}
+body{overflow-x:clip}
+
+.grader,.modal{background-color:var(--glass-modal);
+  backdrop-filter:blur(22px) saturate(1.15); -webkit-backdrop-filter:blur(22px) saturate(1.15)}
+.scrim{background:var(--scrimdim);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .grader,.modal{background-color:var(--card)}}
+.findbar{margin-inline:calc(50% - 50vw); padding-inline:calc(50vw - 50%)}
+/* geöffnete Filter-Klappe passt aufs Handy: volle Zeile, Inhalte umbrechen */
+.filterbar .controls{flex-wrap:wrap; max-width:100%}
+@media (max-width:640px){
+  .findbar{row-gap:8px}
+  .findbar .filterbar{flex:1 1 100%; width:100%}
+}
 </style>
 </head>
 <body>
