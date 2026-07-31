@@ -2665,11 +2665,16 @@ function wikiPage(d){                                  // erste Seite der Antwor
   const k = Object.keys(pg)[0]; if(!k || k==="-1") return null;
   const p = pg[k]; return (p && p.missing===undefined) ? p : null;
 }
-/* Verbreitungskarten, Diagramme und Wappen taugen nicht zum Erkennen. */
+/* Verbreitungskarten, Diagramme, Wappen – und Buchdeckel/Titelseiten/Scans aus
+   digitalisierten Werken – taugen nicht zum Erkennen. Vorsicht bei »buch«:
+   Bu-che (Fagus) und Bu-chs-baum (Buxus) dürfen NICHT matchen, deshalb nur
+   eindeutige Wörter (einband, buchdeckel, \bbook\b, \bcover\b …). */
 function usablePhoto(file){
   if(!file) return true;
   if(/\.svg$/i.test(file)) return false;
-  return !/(map|karte|distribution|range|verbreitung|locator|diagram|chart|wappen|logo|signature)/i.test(file);
+  if(/(map|karte|distribution|range|verbreitung|locator|diagram|chart|wappen|logo|signature)/i.test(file)) return false;
+  const f = String(file).replace(/[_\-.]+/g, " ");   // _-. sind Wortzeichen – erst normalisieren, sonst greift \b nicht (Book_cover)
+  return !/(\bcover\b|einband|buchdeckel|deckblatt|titelblatt|titelseite|\btitle ?page\b|frontispi[sz]|manuscript|manuskript|handschrift|codex|\bbook\b|\bscans?\b|\bscanned\b)/i.test(f);
 }
 /* ---------- Welches Bild gehört wirklich zu DIESER Art? ----------
    Das Artikelbild der Wikipedia allein reicht nicht:
@@ -2691,7 +2696,7 @@ function infraEpithet(a){ const m = INFRA_RE.exec(norm(a||"")); return m ? m[1].
 function isCultivarName(a){ a = norm(a||""); return INFRA_RE.test(a) || GRP_RE.test(a); }
 function looksIllustration(file){                     // alte Tafeln/Sammelbilder statt Foto
   const f = deacc(String(file||"").toLowerCase());    // »Köhler–s Medizinal-Pflanzen« → koehler…
-  return /(illustration|kohler|koehler|koeh_|medizinal|sturm|thome|liebig|plate|drawing|zeichnung|botanical|tafel|gravure|lithograph)/.test(f);
+  return /(illustration|kohler|koehler|koeh_|medizinal|sturm|thome|liebig|plate|drawing|zeichnung|botanical|tafel|gravure|lithograph|herbarium|herbarbeleg|specimen|exsiccat|woodcut|holzschnitt|engraving|abbildung)/.test(f);
 }
 function fileMentionsOther(file, card){               // Dateiname nennt eine andere Art derselben Gattung
   const gen = norm(card.g||"").toLowerCase(); if(!gen) return false;
