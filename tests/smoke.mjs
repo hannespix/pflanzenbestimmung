@@ -71,19 +71,47 @@ async function main() {
   //     »Filter«-Klappe; ein aktiver Filter bleibt in der Zusammenfassung sichtbar (nicht unbemerkt aktiv)
   const filt = await page.evaluate(() => {
     const d = document.querySelector("#filterOpts");
-    const holds = d ? ["#q", "#cat", "#onlyzp"].every((s) => d.querySelector(s)) : false;
+    const search = document.querySelector("#q");
+    const searchAlwaysVisible = !!search && !search.closest("details");   // Suche NICHT im eingeklappten Akkordeon
+    const holds = d ? ["#cat", "#onlyzp"].every((s) => d.querySelector(s)) : false;
     const closed = d && !d.open;
     const z = document.querySelector("#onlyzp"); z.checked = true; z.dispatchEvent(new Event("change"));
     const sub = (document.querySelector("#filterOpts .fb-sub") || {}).textContent || "";
     const flagged = document.querySelector("#filterOpts").classList.contains("filter-on");
     z.checked = false; z.dispatchEvent(new Event("change"));
     const subReset = (document.querySelector("#filterOpts .fb-sub") || {}).textContent || "";
-    return { isDetails: d && d.tagName === "DETAILS", closed, holds, sub, flagged, subReset };
+    return { isDetails: d && d.tagName === "DETAILS", closed, holds, searchAlwaysVisible, sub, flagged, subReset };
   });
-  assert(filt.isDetails && filt.closed, "Filter sollte in einer standardmäßig zugeklappten Klappe stecken");
-  assert(filt.holds, "Die Filter-Klappe muss Suche, Kategorie und ZP-Schalter enthalten");
+  assert(filt.isDetails && filt.closed, "Filter (Kategorie/ZP) sollte in einer standardmäßig zugeklappten Klappe stecken");
+  assert(filt.searchAlwaysVisible, "Die Suche muss immer sichtbar sein (nicht im eingeklappten Filter-Akkordeon)");
+  assert(filt.holds, "Die Filter-Klappe muss Kategorie und ZP-Schalter enthalten");
   assert(/nur ZP/.test(filt.sub) && filt.flagged, "Aktiver Filter muss in der Zusammenfassung sichtbar/markiert sein: " + filt.sub);
-  assert(/Suche · Kategorie · nur ZP/.test(filt.subReset), "Nach Rücknahme muss die Zusammenfassung zurückgesetzt werden: " + filt.subReset);
+  assert(/Kategorie · nur ZP/.test(filt.subReset), "Nach Rücknahme muss die Zusammenfassung zurückgesetzt werden: " + filt.subReset);
+
+  // 1e) Zwei Modi + dauerhaftes »Aktuelle Prüfung«-Panel: Ziehen füllt das Panel nummeriert;
+  //     »Liste verwalten« blendet Ziehen-Leiste + Panel aus, die Suche bleibt immer sichtbar.
+  const modes = await page.evaluate(() => {
+    setMode("exam");
+    drawRandom();
+    const panelRows = document.querySelectorAll("#currentSelList .pvrow").length;
+    const cnt = +document.querySelector("#curselCount").textContent;
+    const selVisExam = getComputedStyle(document.querySelector(".selbar")).display;
+    const curVisExam = getComputedStyle(document.querySelector("#currentSel")).display;
+    setMode("manage");
+    const selVisManage = getComputedStyle(document.querySelector(".selbar")).display;
+    const curVisManage = getComputedStyle(document.querySelector("#currentSel")).display;
+    const q = document.querySelector("#q");
+    const searchVisManage = getComputedStyle(q).display !== "none" && q.offsetParent !== null;
+    setMode("exam"); clearSel();
+    return { panelRows, cnt, selVisExam, curVisExam, selVisManage, curVisManage, searchVisManage };
+  });
+  assert(modes.panelRows > 0 && modes.cnt === modes.panelRows,
+    "»Aktuelle Prüfung«-Panel muss die gezogene Auswahl nummeriert zeigen: " + JSON.stringify(modes));
+  assert(modes.selVisExam !== "none" && modes.curVisExam !== "none",
+    "Im Modus »Prüfung erstellen« müssen Ziehen-Leiste und Panel sichtbar sein: " + JSON.stringify(modes));
+  assert(modes.selVisManage === "none" && modes.curVisManage === "none",
+    "Im Modus »Liste verwalten« müssen Ziehen-Leiste und Panel ausgeblendet sein: " + JSON.stringify(modes));
+  assert(modes.searchVisManage, "Die Suche muss auch im Modus »Liste verwalten« sichtbar bleiben: " + JSON.stringify(modes));
 
   // 1b) Modul als Modal: Öffnen markiert den Button, ×/Esc/Scrim-Klick schließen
   const active = await page.evaluate(() => {

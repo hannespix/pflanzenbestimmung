@@ -507,14 +507,25 @@ function katRank(k){ const i=KAT_ORDER.indexOf(k); return i<0?99:i; }
    unbemerkt eingeklappt aktiv bleibt (»Filter · nur ZP«, hervorgehoben). */
 function syncFilterSummary(){
   const d=$("#filterOpts"); if(!d) return;
-  const q=norm($("#q").value), cat=$("#cat").value, zp=$("#onlyzp").checked;
+  const cat=$("#cat").value, zp=$("#onlyzp").checked;   // Suche ist jetzt immer sichtbar → nicht mehr in die Zusammenfassung
   const bits=[];
-  if(q) bits.push("Suche: "+q);
   if(cat) bits.push(cat);
   if(zp) bits.push("nur ZP");
   const sub=d.querySelector(".fb-sub");
-  if(sub) sub.textContent = bits.length ? bits.join(" · ") : "Suche · Kategorie · nur ZP";
+  if(sub) sub.textContent = bits.length ? bits.join(" · ") : "Kategorie · nur ZP";
   d.classList.toggle("filter-on", bits.length>0);
+}
+/* Zwei Modi: »Prüfung erstellen« (ziehen · aktuelle Prüfung · drucken) und
+   »Liste verwalten« (Pflanzenliste bearbeiten). Umschaltung über eine Body-Klasse;
+   die Suche bleibt in beiden Modi immer sichtbar. */
+function setMode(m){
+  const manage = m==="manage";
+  document.body.classList.toggle("m-manage", manage);
+  document.body.classList.toggle("m-exam", !manage);
+  const te=$("#tabExam"), tm=$("#tabManage");
+  if(te){ te.classList.toggle("on",!manage); te.setAttribute("aria-selected", String(!manage)); }
+  if(tm){ tm.classList.toggle("on",manage); tm.setAttribute("aria-selected", String(manage)); }
+  try{ store.set(LS_PREFIX+"examMode", manage?"manage":"exam"); }catch(e){}
 }
 
 function renderList(){
@@ -615,6 +626,7 @@ function syncSelUI(){
     renderGrader();
   }
   if(panelOpen("#previewScrim")) renderPreview();
+  if($("#currentSelList")) renderCurrentSel();   // dauerhaftes »Aktuelle Prüfung«-Panel mitziehen
 }
 
 /* ---------- Bearbeiten / Hinzufügen / Löschen ---------- */
@@ -952,9 +964,13 @@ function renderPreview(){
     .map(p=>`<option value="${esc(p.gattung+" "+p.art+(p.deutscher_name?" — "+p.deutscher_name:""))}">`).join("");
   const host=$("#previewList"); host.innerHTML="";
   if(!plants.length){ host.innerHTML='<div class="exempty">Noch nichts ausgewählt. Ziehe eine Liste oder füge unten Arten hinzu.</div>'; return; }
-  plants.forEach((p,idx)=>{
-    const row=el("div","pvrow");
-    row.innerHTML=`<span class="pvnum">${idx+1}</span>
+  plants.forEach((p,idx)=> host.appendChild(pvRowEl(p,idx,plants.length)));
+}
+/* Eine Auswahl-Zeile (nummeriert · ▲▼ · Bearbeiten · Entfernen) – geteilt von der
+   Bogen-Vorschau (Modal) und dem dauerhaften »Aktuelle Prüfung«-Panel. */
+function pvRowEl(p, idx, n){
+  const row=el("div","pvrow");
+  row.innerHTML=`<span class="pvnum">${idx+1}</span>
       <div class="pvname">
         <div class="binom"><span class="g">${esc(p.gattung)}</span> <span class="a">${esc(p.art)}</span></div>
         <div class="meta">
@@ -967,17 +983,29 @@ function renderPreview(){
       </div>
       <div class="pvacts">
         <button class="iconbtn" data-a="up" title="nach oben" aria-label="nach oben"${idx===0?" disabled":""}><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 15l6-6 6 6"/></svg></button>
-        <button class="iconbtn" data-a="down" title="nach unten" aria-label="nach unten"${idx===plants.length-1?" disabled":""}><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+        <button class="iconbtn" data-a="down" title="nach unten" aria-label="nach unten"${idx===n-1?" disabled":""}><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
         <button class="iconbtn" data-a="edit" title="Bearbeiten (wird in die Liste übernommen)" aria-label="Bearbeiten"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16zM14 6l4 4"/></svg></button>
         <button class="iconbtn del" data-a="rm" title="Aus Auswahl entfernen" aria-label="Entfernen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>`;
-    const id=p.id;
-    row.querySelector('[data-a="up"]').onclick=()=>movePreview(idx,-1);
-    row.querySelector('[data-a="down"]').onclick=()=>movePreview(idx,1);
-    row.querySelector('[data-a="edit"]').onclick=()=>openEdit(id);
-    row.querySelector('[data-a="rm"]').onclick=()=>pvRemove(id);
-    host.appendChild(row);
-  });
+  const id=p.id;
+  row.querySelector('[data-a="up"]').onclick=()=>movePreview(idx,-1);
+  row.querySelector('[data-a="down"]').onclick=()=>movePreview(idx,1);
+  row.querySelector('[data-a="edit"]').onclick=()=>openEdit(id);
+  row.querySelector('[data-a="rm"]').onclick=()=>pvRemove(id);
+  return row;
+}
+/* Dauerhaftes »Aktuelle Prüfung«-Panel unter der Ziehen-Leiste (im Modus »Prüfung
+   erstellen«): zeigt die gezogene Auswahl nummeriert und bearbeitbar. Wird über
+   syncSelUI() nach jeder Selektionsänderung aktualisiert. */
+function renderCurrentSel(){
+  const host=$("#currentSelList"); if(!host) return;
+  const plants=selectedPlants();
+  const cnt=$("#curselCount"), pts=$("#curselPts");
+  if(cnt) cnt.textContent=plants.length;
+  if(pts) pts.textContent=fmtPts(plants.length*ptsPer())+" P.";
+  host.innerHTML="";
+  if(!plants.length){ host.innerHTML='<div class="exempty">Noch nichts gezogen. Oben »Zufällig ziehen« – die gezogene Prüfung erscheint dann hier (Reihenfolge ▲▼, Bearbeiten, Entfernen).</div>'; return; }
+  plants.forEach((p,idx)=> host.appendChild(pvRowEl(p,idx,plants.length)));
 }
 
 /* ============================================================
@@ -1141,6 +1169,9 @@ function wireModalA11y(){
 }
 function wire(){
   wireModalA11y();
+  if($("#tabExam")) $("#tabExam").onclick=()=>setMode("exam");
+  if($("#tabManage")) $("#tabManage").onclick=()=>setMode("manage");
+  setMode(store.get(LS_PREFIX+"examMode")||"exam");
   // »Verwaltung«: seltene Funktionen (Liste/Schema/Einstellungen/Sicherung) auf-/zuklappen
   $("#btnAdmin").onclick=()=>{
     const bar=$("#adminBar"), open=bar.hidden;
