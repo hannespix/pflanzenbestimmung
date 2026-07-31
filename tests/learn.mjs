@@ -622,7 +622,14 @@ async function main() {
     const rha = "Krauser / gewöhnlicher Rhabarber";
     const fen = "Knollen- / Gemüsefenchel";
     const kar = "Karotte / Möhre / Gelbe Rübe";
+    // Angezeigter/als Antwort gewerteter Name (deMain) muss VOLLSTÄNDIG sein,
+    // nie ein blankes Präfix/Adjektiv (»Winter-«, »Krauser«).
+    const dm = (de) => deMain({ g: "X", a: "y", de, fam: "", syn: "" });
+    const mBohne = dm("Winter- / Staudenbohnenkraut");
+    const mRha = dm(rha), mFen = dm(fen), mNorm = dm("Liebstöckel"), mKomma = dm("Kopfsalat, Eissalat");
     return {
+      deMainBohne: mBohne, deMainRha: mRha, deMainFen: mFen, deMainNorm: mNorm, deMainKomma: mKomma,
+      deMainKeinPrefix: ![mBohne, mRha, mFen].some((s) => /[-\s]$/.test(s) || /^(Winter|Krauser|Knollen)$/.test(s)),
       // Muster »Adjektiv / Adjektiv Grundwort«: Grundwort und beide Vollformen gelten
       rhaHead: t(rha, "Rhabarber"), rhaA: t(rha, "Krauser Rhabarber"), rhaB: t(rha, "gewöhnlicher Rhabarber"),
       rhaAdjAlone: t(rha, "Krauser"), rhaWrong: t(rha, "Spinat"),
@@ -644,6 +651,11 @@ async function main() {
     "»Rhabarber« und beide Vollformen müssen gelten: " + JSON.stringify(deChk));
   assert(!deChk.rhaAdjAlone && !deChk.rhaWrong,
     "Ein blankes Adjektiv (»Krauser«) darf nicht als Name zählen: " + JSON.stringify(deChk));
+  assert(deChk.deMainBohne === "Staudenbohnenkraut" && deChk.deMainRha === "gewöhnlicher Rhabarber"
+    && deChk.deMainFen === "Gemüsefenchel" && deChk.deMainNorm === "Liebstöckel" && deChk.deMainKomma === "Kopfsalat",
+    "deMain muss den vollständigen Namen liefern (nicht »Winter-«/»Krauser«): " + JSON.stringify(deChk));
+  assert(deChk.deMainKeinPrefix,
+    "deMain darf nie ein blankes Präfix/Adjektiv als Quiz-Antwort zeigen: " + JSON.stringify(deChk));
   assert(deChk.fenA && deChk.fenB && !deChk.fenWrong,
     "Geteiltes Grundwort (Knollen-/Gemüsefenchel) nicht korrekt aufgelöst: " + JSON.stringify(deChk));
   assert(deChk.karA && deChk.karB && deChk.karC,
