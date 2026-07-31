@@ -1314,7 +1314,8 @@ function dimValues(){ // Werte der aktuellen Gruppier-Dimension (+ Anzahl), für
 function listFiltered(){
   const raw = $("#listSearch") ? $("#listSearch").value : "";
   const term = deacc(norm(raw)).toLowerCase();
-  let p = pool();  // ZP-Filter; in der Liste filtern die Tags der aktuellen Ansicht, nicht das Dropdown
+  const zpOnly = $("#onlyzp") && $("#onlyzp").checked;
+  let p = allCards.filter(c => !zpOnly || c.zp);  // Liste: nur ZP-Filter – Themen/Familien laufen über die Ansicht-Tags, nicht über das »Auswahl«-Dropdown (das ist im Listenmodus ausgeblendet). Ein Filtermodell.
   if(groupsView() && listCats.size) p = p.filter(c => listCats.has(dimKey(c)));
   if(term){
     const hay = c => deacc(c.g+" "+c.a+" "+c.de+" "+c.fam+" "+c.syn).toLowerCase();
@@ -1500,15 +1501,31 @@ function printList(){
 }
 
 /* Modus anwenden: Liste zeigt sofort die Nachschlage-Liste (ohne »Sitzung starten«) */
+/* Aktive, vom Standard abweichende Optionen in die zugeklappte »Optionen«-Kopfzeile
+   spiegeln (wie die Filter-Zusammenfassung im Prüfungswerkzeug) – so sieht man ohne
+   Aufklappen, was gerade gilt. Ohne Abweichung steht dort die neutrale Beschreibung. */
+function syncOptsSummary(){
+  const sub = $("#setOpts") && $("#setOpts").querySelector(".opts-sub"); if(!sub) return;
+  const bits=[];
+  const d=curDir();
+  if(mode!=="list" && d!=="de2bot" && d!=="img2bot") bits.push(DIRS[d].label);   // umgekehrte Abfragerichtung
+  if(mode!=="list"){ const sc=$("#cat"); if(sc && sc.value) bits.push(norm(sc.options[sc.selectedIndex].textContent).replace(/\s*\(\d+\)\s*$/,"")); }
+  if($("#onlyzp") && $("#onlyzp").checked) bits.push("nur ZP");
+  if($("#examOnly") && $("#examOnly").checked && $("#examOnlyWrap") && !$("#examOnlyWrap").hidden) bits.push("nur Prüfungsstoff");
+  const sl=parseInt($("#sessLen") && $("#sessLen").value)||20; if(sl!==20) bits.push(sl+" Karten");
+  sub.textContent = bits.length ? bits.join(" · ") : "Abfrage · Auswahl · ZP · Sitzungslänge";
+  sub.classList.toggle("active", bits.length>0);
+}
 function applyMode(){
   const isList = mode==="list";
   sess.active=false; qStart=0; clockRun(false); stageFull(false);   // Moduswechsel bricht die Sitzung ab
   const sr=$("#startRow"), lsr=$("#listSearchRow"), lc=$("#listControls");
   if(sr) sr.hidden = isList;
   const ln=$("#learnNote"); if(ln) ln.hidden = isList;   // Hinweis gehört zu den Lektionen, nicht zur Liste
+  const cf=$("#cat") && $("#cat").closest(".field"); if(cf) cf.hidden = isList;  // »Auswahl«-Scope filtert die Liste nicht – im Listenmodus ausblenden (Suche + Ansicht-Tags reichen)
   if(lsr) lsr.hidden = !isList;
   if(lc) lc.hidden = !isList;
-  syncDirUI();
+  syncDirUI(); syncOptsSummary();
   if(isList){ $("#progress").hidden = true; renderListControls(); renderList(); }
   else { renderProgress(); startHintOnly(); }
 }
@@ -2140,12 +2157,12 @@ function profSub(){
 }
 function applyProfile(){
   const id=$("#frSelect").value+"_"+$("#nivSelect").value;
-  loadProfile(id); profSub();
+  loadProfile(id); profSub(); syncOptsSummary();
 }
 
 /* ---------- Verdrahtung ---------- */
 function wire(){
-  const refreshView = ()=>{ if(mode==="list"){ renderListControls(); renderList(); } else renderProgress(); };
+  const refreshView = ()=>{ syncOptsSummary(); if(mode==="list"){ renderListControls(); renderList(); } else renderProgress(); };
   $("#frSelect").onchange=applyProfile;
   $("#nivSelect").onchange=applyProfile;
   $("#cat").onchange=refreshView;
@@ -2159,6 +2176,7 @@ function wire(){
     refreshView();
   };
   $("#onlyzp").onchange=refreshView;
+  if($("#sessLen")) $("#sessLen").oninput=syncOptsSummary;
   if($("#examOnly")) $("#examOnly").onchange=()=>{
     examOnly=$("#examOnly").checked; store.set(LS_PREFIX+"examonly", examOnly?"1":"0");
     normalizeSort(); refreshView();

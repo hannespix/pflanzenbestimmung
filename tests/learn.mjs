@@ -87,6 +87,20 @@ async function main() {
   assert(declutter.holdsControls, "Die Optionen-Klappe muss Kategorie, ZP und Sitzungslänge enthalten");
   assert(declutter.modesVisible && declutter.startVisible, "Modi und »Sitzung starten« müssen ohne Aufklappen sichtbar sein");
 
+  // Aktive, vom Standard abweichende Optionen erscheinen in der zugeklappten »Optionen«-Kopfzeile (grün hervorgehoben)
+  const optsSum = await page.evaluate(() => {
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    const sub = document.querySelector("#setOpts .opts-sub");
+    const base = sub.textContent;
+    const zp = document.querySelector("#onlyzp"); zp.checked = true; zp.dispatchEvent(new Event("change"));
+    const withZp = sub.textContent, activeCls = sub.classList.contains("active");
+    zp.checked = false; zp.dispatchEvent(new Event("change"));
+    return { base, withZp, activeCls, back: sub.textContent };
+  });
+  assert(/Abfrage · Auswahl/.test(optsSum.base), "Ohne Abweichung neutrale Beschreibung in der Optionen-Kopfzeile: " + JSON.stringify(optsSum));
+  assert(/nur ZP/.test(optsSum.withZp) && optsSum.activeCls, "Aktive Option »nur ZP« muss in der zugeklappten Kopfzeile erscheinen (grün): " + JSON.stringify(optsSum));
+  assert(/Abfrage · Auswahl/.test(optsSum.back), "Nach Rücknahme wieder neutrale Beschreibung: " + JSON.stringify(optsSum));
+
   // Hinweis vor den Lektionen: automatisch/KI-erzeugte Inhalte, keine Gewähr –
   // muss ohne Aufklappen sichtbar sein und im Listenmodus verschwinden
   const note = await page.evaluate(() => {
@@ -1032,18 +1046,26 @@ async function main() {
 
   // Lernstoff eingrenzen (»Optionen · Auswahl«): alle Arten · Thema · Pflanzenfamilie
   const themeSess = await page.evaluate(() => {
+    // »Auswahl«/#cat grenzt den LERNSTOFF DER SITZUNG ein (pool), nicht die Nachschlage-Liste.
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
     const sel = document.querySelector("#cat");
     const opts = [...sel.options].map((o) => o.value);
     const groups = [...sel.querySelectorAll("optgroup")].map((g) => g.label);
-    const pick = (v) => { sel.value = v; sel.dispatchEvent(new Event("change"));
-      return [...document.querySelectorAll("#stage .sprow .sp-bot")].map((e) => e.textContent.trim()); };
-    const baum = pick("t:Große Laubbäume");
-    const rosa = pick("f:Rosaceae");
+    const setCat = (v) => { sel.value = v; sel.dispatchEvent(new Event("change")); return pool().length; };
+    const back = setCat("");
+    const nTheme = setCat("t:Große Laubbäume");
+    const nFam = setCat("f:Rosaceae");
+    setCat("");
+    // Ein Filtermodell: im Listenmodus ist »Auswahl« ausgeblendet und filtert die Liste NICHT (Tags übernehmen)
+    document.querySelector('#modeTabs button[data-mode="list"]').click();
+    const catHiddenInList = sel.closest(".field").hidden === true;
+    sel.value = "t:Große Laubbäume"; sel.dispatchEvent(new Event("change"));   // im Listenmodus wirkungslos
+    const listAll = document.querySelectorAll("#stage .sprow").length;
     sel.value = ""; sel.dispatchEvent(new Event("change"));
-    const back = document.querySelectorAll("#stage .sprow").length;
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
     return { groups, hasTheme: opts.includes("t:Große Laubbäume"), hasFam: opts.includes("f:Rosaceae"),
       noVagueOpt: !opts.includes("t:Laubgehölze"), allLabel: sel.options[0].textContent,
-      nTheme: baum.length, nFam: rosa.length, themeSample: baum.slice(0, 3), famSample: rosa.slice(0, 3), back };
+      nTheme, nFam, back, catHiddenInList, listAll };
   });
   assert(themeSess.hasTheme && themeSess.noVagueOpt,
     "Themen-Auswahl der Sitzung fehlt oder enthält noch Roh-Kategorien: " + JSON.stringify(themeSess));
@@ -1052,9 +1074,11 @@ async function main() {
   assert(/^alle Arten \(\d+\)/.test(themeSess.allLabel),
     "Erste Option sollte »alle Arten (n)« sein, war: " + themeSess.allLabel);
   assert(themeSess.nTheme > 5 && themeSess.nTheme < themeSess.back,
-    "Themen-Auswahl grenzt den Lernstoff nicht ein: " + JSON.stringify(themeSess));
+    "»Auswahl« muss den Lernstoff der Sitzung (pool) eingrenzen: " + JSON.stringify(themeSess));
   assert(themeSess.nFam > 3 && themeSess.nFam < themeSess.back,
-    "Familien-Auswahl grenzt den Lernstoff nicht ein: " + JSON.stringify(themeSess));
+    "Familien-Auswahl muss die Sitzung eingrenzen: " + JSON.stringify(themeSess));
+  assert(themeSess.catHiddenInList && themeSess.listAll > themeSess.nTheme,
+    "Ein Filtermodell: im Listenmodus ist »Auswahl« ausgeblendet und filtert die Liste nicht: " + JSON.stringify(themeSess));
 
   // Familienname auf der Kartenrückseite: Latein · Deutsch, ohne Dopplung –
   // egal ob die Quelle "Fabaceae" oder "Fabaceae/Schmetterlingsblütler" liefert
