@@ -700,6 +700,17 @@ body{overflow-x:clip}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
   .modal{background-color:var(--card)}}
 .listsearchrow{margin-inline:calc(50% - 50vw); padding-inline:calc(50vw - 50%)}
+/* ===== Herbarium 2.0 · Stufe 3c: Fokus-Kopfleiste als randloser App-Bar =====
+   Im Vollbild-Fokus schwebte die Fortschrittsleiste als Kasten mit Papier-
+   streifen darüber/daneben (Stage-Innenabstand). Jetzt schließt sie bündig mit
+   der Oberkante ab und läuft über die volle Breite; der Notch-Bereich gehört
+   zur Leiste (Safe-Area-Padding wandert vom Stage in die Leiste). */
+body.stagefull #stage{padding-top:0}
+body.stagefull #stage>.sessionbar{
+  align-self:stretch; width:auto; max-width:none; top:0;
+  margin:0 calc(-1*(env(safe-area-inset-right,0px) + 16px)) 14px calc(-1*(env(safe-area-inset-left,0px) + 16px));
+  padding:calc(env(safe-area-inset-top,0px) + 10px) calc(env(safe-area-inset-right,0px) + 18px) 12px calc(env(safe-area-inset-left,0px) + 18px);
+}
 </style>
 </head>
 <body>
