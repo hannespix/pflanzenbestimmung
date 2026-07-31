@@ -1128,11 +1128,26 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       **dünne runde Scrollbalken**, Toast mit Spring-Pop. Offline-rein; Druck-Guard
       unberührt; alle vier Puppeteer-Tests grün.
 
+- [x] **Fehlende Quelllisten-Angaben reproduzierbar nachgetragen.** Systematischer
+      Scan über alle **2114** Arten: genau **eine** echte Lücke – die in der Excel
+      leere **Familie** zu *Chimonanthus praecox* (`garten_und_landschaftsbau_gaertner`);
+      korrekt **Calycanthaceae** (Gewürzstrauchgewächse, botanisch eindeutig, steht im
+      Baumschul-Seed derselben Art bereits so). Die vier leeren **Art**-Felder sind
+      dagegen legitim (Hybrid-Gruppen *Fuchsia-/Rosa-/Freesia-/Hippeastrum-Hybriden*
+      ohne Art-Epitheton) und bleiben. Nachgetragen **nicht** von Hand im Seed (ein
+      Neubau aus der Original-Excel würde es verwerfen), sondern über einen neuen,
+      idempotenten Schritt `tools/fix_source_gaps.py`: füllt ausschließlich **leere**
+      Felder, nur bei exaktem Gattung+Art-Treffer, zentrale `CORRECTIONS`-Tabelle mit
+      Quellenkommentar, `--check`-Report. In `tools/rebuild_seeds.sh` **nach** der
+      Excel-Konvertierung und `categorize_seeds.py` eingehängt – so überlebt die
+      Korrektur jeden Rebuild. Build + Offline-Check + alle vier Smoke-Tests grün.
+
 ## Offene Aufgaben (TODO)
 
-- [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei
-      `garten_und_landschaftsbau_gaertner` die Familie zu *Chimonanthus praecox* –
-      so in der Excel; im Tool nachtragbar).
+- [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein
+      Vollscan (2114 Arten) fand nur die inzwischen geschlossene Familien-Lücke zu
+      *Chimonanthus praecox*; künftige Lücken über die `CORRECTIONS`-Tabelle in
+      `tools/fix_source_gaps.py` nachtragen (nicht direkt im Seed – siehe Erledigt).
 - [ ] Bei künftigen Listen-Updates: Excel nach `data/<profil-id>.<ext>` legen,
       `tools/rebuild_seeds.sh` (oder Konverter je Datei) laufen lassen, bauen,
       Offline-Check + Smoke-Test.
