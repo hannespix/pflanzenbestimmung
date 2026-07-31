@@ -342,11 +342,11 @@ function importJsonFile(){
 function setStatus(s){
   const dot=$("#dbdot"), name=$("#dbname");
   const map={
-    seed:   ["dot",       "Standardliste · hinterlegte Daten"],
+    seed:   ["dot",       "Standardliste"],
     empty:  ["dot",       "Keine hinterlegte Liste · Excel importieren"],
-    dirty:  ["dot dirty", "Browser-Speicher · sichert …"],
-    saved:  ["dot saved", "Im Browser gespeichert"],
-    session:["dot dirty", "Nur diese Sitzung · Browser-Speicher nicht verfügbar"],
+    dirty:  ["dot dirty", "Wird gespeichert …"],
+    saved:  ["dot saved", "Auf diesem Gerät gespeichert"],
+    session:["dot dirty", "Nur für diese Sitzung (kein dauerhafter Speicher)"],
     err:    ["dot dirty", "Speichern fehlgeschlagen"]
   };
   const [cls,txt]=map[s]||map.seed;
@@ -600,7 +600,7 @@ function shuffleSel(){
 function clearSel(){ selection=[]; loadedExamId=null; syncExamControls(); renderList(); syncSelUI(); }
 function syncSelUI(){
   $("#selN").textContent=selection.length;
-  $("#selTarget").textContent=$("#drawCount").value||drawTarget();
+  $("#selTarget").textContent=drawTarget();   // festes Profil-Soll (nicht das Eingabefeld) – »18 / 20« liest sich als Fortschritt, nicht als Fehler
   $("#ptsPill").textContent="max. "+fmtPts(selection.length*ptsPer())+" P.";
   document.querySelectorAll(".row").forEach(r=>{
     const on=selection.includes(+r.dataset.id);
