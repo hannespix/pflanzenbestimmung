@@ -921,6 +921,25 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Teilen bleiben im Overlay (`btnOverview` + Teilen-Block sichtbar), Exit über »Zur
       Übersicht« beendet den Fokus-Modus.
 
+- [x] **Lern-Start aufgeräumt + ein Filtermodell (UI-Audit, Schritt 2).** Drei ruhigere
+      Bausteine im Lern-Tool. (1) **KI-/Haftungshinweis eingeklappt:** der lange Absatz
+      unter »Sitzung starten« ist jetzt ein natives `<details class="learnnote">` –
+      Einzeiler »Bitte beachten: Inhalte teils KI-erzeugt, ohne Gewähr (mehr)«, Volltext
+      auf Klick. Die Startansicht ist damit deutlich kürzer (Fortschrittsbox rückt nach
+      oben). (2) **Ein Filtermodell in der Liste:** früher filterte im Listenmodus
+      **zusätzlich** das »Optionen · Auswahl«-Dropdown (`#cat`-Scope via `pool()`) neben
+      den »Ansicht & Filter«-Tags – zwei stille Systeme fürs selbe Ziel. Jetzt speist sich
+      die Liste allein aus Suche + Ansicht-Tags (+ ZP); `listFiltered()` nutzt nur noch den
+      ZP-Filter, und `#cat` (»Auswahl«) ist im Listenmodus ausgeblendet (`applyMode`). Der
+      Scope bleibt für **Sitzungen** erhalten (grenzt den Lernstoff auf Thema/Familie ein).
+      (3) **Aktive Optionen sichtbar:** `syncOptsSummary()` spiegelt vom Standard
+      abweichende Einstellungen (umgekehrte Abfrage, Thema/Familie, »nur ZP«, »nur
+      Prüfungsstoff«, abweichende Kartenzahl) grün in die **zugeklappte** »Optionen«-
+      Kopfzeile – man sieht ohne Aufklappen, was gilt (wie `syncFilterSummary` im
+      Prüfungswerkzeug). Offline-rein; `tests/learn.mjs` prüft: Auswahl grenzt die
+      **Sitzung** (pool) ein / filtert die **Liste nicht** (im Listenmodus ausgeblendet),
+      und aktive Optionen erscheinen in der Kopfzeile.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei
