@@ -57,6 +57,9 @@ async function main() {
       t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
+    // Erst-Einweisung standardmäßig als »gesehen« markieren, damit sie die übrigen
+    // Tests nicht überlagert; ein eigener Test setzt sie gezielt zurück.
+    try { localStorage.setItem("pflanzenlernen.introSeen", "1"); } catch (e) {}
   });
   const errs = [];
   page.on("pageerror", (e) => errs.push(String(e.message || e)));
@@ -86,6 +89,28 @@ async function main() {
   assert(declutter.isDetails && declutter.closed, "Optionen sollten in einer standardmäßig zugeklappten Klappe stecken");
   assert(declutter.holdsControls, "Die Optionen-Klappe muss Kategorie, ZP und Sitzungslänge enthalten");
   assert(declutter.modesVisible && declutter.startVisible, "Modi und »Sitzung starten« müssen ohne Aufklappen sichtbar sein");
+
+  // Lernpfad: Modi nach Schwierigkeit sortiert (Bilder zuerst) mit Schwierigkeits-Tags;
+  // Erst-Einweisung über »So funktioniert der Lernpfad« öffnen/schließen (merkt »gesehen«).
+  const lp = await page.evaluate(() => {
+    const order = [...document.querySelectorAll("#modeTabs button")].map((b) => b.dataset.mode);
+    const tags = [...document.querySelectorAll("#modeTabs button .mdiff")].map((t) => t.textContent);
+    document.querySelector("#btnIntro").click();
+    const introOpen = !!document.querySelector("#introScrim .intro");
+    const steps = document.querySelectorAll("#introScrim .intro-steps li").length;
+    document.querySelector("#introGo").click();
+    const introClosed = !document.querySelector("#introScrim");
+    const seen = localStorage.getItem("pflanzenlernen.introSeen");
+    return { order, tags, introOpen, steps, introClosed, seen };
+  });
+  assert(lp.order.join(",") === "photo,quiz,cards,type,list",
+    "Modi müssen nach Schwierigkeit sortiert sein (Bilder→Quiz→Karteikarten→Tippen→Liste): " + lp.order.join(","));
+  assert(lp.tags[0] === "leicht" && lp.tags[3] === "prüfungsnah",
+    "Modi brauchen Schwierigkeits-Tags (leicht … prüfungsnah): " + JSON.stringify(lp.tags));
+  assert(lp.introOpen && lp.steps === 4,
+    "»So funktioniert der Lernpfad« muss die Einführung mit vier Stufen öffnen: " + JSON.stringify(lp));
+  assert(lp.introClosed && lp.seen === "1",
+    "»Los geht's« muss die Einführung schließen und als gesehen merken: " + JSON.stringify(lp));
 
   // Aktive, vom Standard abweichende Optionen erscheinen in der zugeklappten »Optionen«-Kopfzeile (grün hervorgehoben)
   const optsSum = await page.evaluate(() => {

@@ -166,6 +166,23 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .modes button:hover{background:#fff}
 .modes button.on{background:var(--green); color:#f4f7f1; font-weight:600}
 .modes .ic{width:15px; height:15px}
+/* Lernpfad: Modi nach Schwierigkeit, mit dezentem Schwierigkeits-Tag unter dem Namen */
+.modes button{flex-wrap:wrap; justify-content:center; row-gap:1px}
+.mdiff{flex-basis:100%; text-align:center; font-family:var(--mono); font-size:9px; letter-spacing:.06em; text-transform:uppercase; color:var(--sepia); line-height:1.2; margin-top:1px}
+.modes button.on .mdiff{color:#e2efdd}
+.introlink{display:inline-block; margin:8px 0 0; padding:2px 0; border:none; background:none; cursor:pointer; font-size:12.5px; color:var(--green-deep); text-decoration:underline; text-underline-offset:2px; font-family:inherit}
+.introlink:hover{color:var(--green)}
+/* Erst-Einweisung (einmalig, danach über den Link erreichbar) */
+.modal.intro{max-width:460px}
+.intro-h{font-family:var(--serif); font-size:20px; color:var(--green-deep); margin:0 30px 4px 0}
+.intro-lead{margin:0 0 13px; color:var(--ink-soft); font-size:13.5px; line-height:1.45}
+.intro-steps{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px}
+.intro-steps li{display:flex; gap:11px; align-items:flex-start; font-size:13px; line-height:1.4}
+.intro-steps .is-ic{flex:none; width:26px; height:26px; border-radius:7px; background:var(--surface-2); border:1px solid var(--rule-strong); color:var(--green-deep); display:flex; align-items:center; justify-content:center; font-size:14px; margin-top:1px}
+.intro-steps b{color:var(--ink)}
+.is-tag{font-family:var(--mono); font-size:8.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--sepia); border:1px solid var(--rule-strong); border-radius:3px; padding:0 4px; margin-left:5px; white-space:nowrap}
+.intro-foot{margin:13px 0 0; font-size:12.5px; color:var(--ink-soft); background:var(--surface-2); border-radius:6px; padding:10px 12px; line-height:1.45}
+.intro-cta{margin-top:14px; text-align:center}
 .startrow{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
 /* Hinweis vor dem Lernen: automatisch/KI-erzeugte Inhalte, keine Gewähr */
 .learnnote{margin:12px 0 0; padding:9px 12px; border-left:3px solid var(--gold); border-radius:0 5px 5px 0;
@@ -520,12 +537,13 @@ main{margin-top:22px}
 
   <div class="setup">
     <div class="modes" id="modeTabs">
-      <button data-mode="cards" class="on" title="Karteikarten mit Selbsteinschätzung und verteiltem Wiederholen (Leitner/Spaced Repetition)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="14" height="12" rx="2"/><path d="M7 9h6M7 13h4M21 8v9a2 2 0 01-2 2H8"/></svg>Karteikarten</button>
-      <button data-mode="quiz" title="Multiple-Choice-Quiz: aus vier Optionen die richtige wählen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5M12 17h.01"/></svg>Quiz</button>
-      <button data-mode="type" title="Tippen: den Namen selbst eingeben (tippfehler-tolerant)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8"/></svg>Tippen</button>
-      <button data-mode="photo" title="Bilder-Quiz: die Pflanze am Bild erkennen und den richtigen botanischen Namen wählen. Braucht Internet – die Bilder kommen von Wikipedia."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.6"/><path d="M4 17.5l4.5-4.5 3 3 3-3 5 5"/></svg>Bilder</button>
-      <button data-mode="list" title="Liste zum Nachschlagen: alle Arten nach Thema, Familie oder A–Z sortiert, durchsuchbar; zum Öffnen von Quellen und Infos antippen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>Liste</button>
+      <button data-mode="photo" class="on" title="Bilder-Quiz: die Pflanze am Bild erkennen und den richtigen botanischen Namen wählen. Braucht Internet – die Bilder kommen von Wikipedia."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.6"/><path d="M4 17.5l4.5-4.5 3 3 3-3 5 5"/></svg>Bilder<small class="mdiff">leicht</small></button>
+      <button data-mode="quiz" title="Multiple-Choice-Quiz: zum deutschen Namen den richtigen botanischen aus vier Optionen wählen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5M12 17h.01"/></svg>Quiz<small class="mdiff">leicht</small></button>
+      <button data-mode="cards" title="Karteikarten mit Selbsteinschätzung und verteiltem Wiederholen (Leitner/Spaced Repetition)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="14" height="12" rx="2"/><path d="M7 9h6M7 13h4M21 8v9a2 2 0 01-2 2H8"/></svg>Karteikarten<small class="mdiff">mittel</small></button>
+      <button data-mode="type" title="Tippen: den botanischen Namen selbst eingeben (tippfehler-tolerant) – am nächsten an der Prüfung."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8"/></svg>Tippen<small class="mdiff">prüfungsnah</small></button>
+      <button data-mode="list" title="Liste zum Nachschlagen: alle Arten nach Thema, Familie oder A–Z sortiert, durchsuchbar; zum Öffnen von Quellen und Infos antippen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>Liste<small class="mdiff">nachschlagen</small></button>
     </div>
+    <button class="introlink" id="btnIntro" type="button" title="Kurze Einführung: der Lernpfad von leicht bis prüfungsreif">So funktioniert der Lernpfad&nbsp;›</button>
     <details class="setopts" id="setOpts">
       <summary title="Optionale Feineinstellungen ein- oder ausklappen">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M6 12h12M10 18h4"/></svg>

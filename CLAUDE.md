@@ -1028,6 +1028,23 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       (dezenter Schatten + Trennlinie). Offline-rein; `tests/smoke.mjs` prüft
       `position:sticky`.
 
+- [x] **Lernpfad: Modi nach Schwierigkeit + Erst-Einweisung (Lern-Tool).** Die Modi sind
+      jetzt als **Lernpfad von leicht bis prüfungsreif** sortiert: **Bilder (leicht) →
+      Quiz (leicht) → Karteikarten (mittel) → Tippen (prüfungsnah) → Liste (nachschlagen)**;
+      jeder Tab trägt ein dezentes Schwierigkeits-Tag (`.mdiff`, Mono-Kapitälchen unter dem
+      Namen). Neue Nutzer starten im leichtesten Modus (Default `photo` statt `cards`; wer
+      schon einen Modus gewählt hat, behält ihn via `localStorage`). **Erst-Einweisung**
+      (`openIntro()` in `learn.js`): beim **ersten Besuch** öffnet einmalig ein Modal »So
+      wirst du prüfungsreif« mit den vier Stufen samt Tags und dem Ziel (Gattung/Art/Familie
+      sicher benennen); »Los geht's«/×/Esc/Scrim schließen und merken `pflanzenlernen.introSeen`
+      – danach ist die Einführung **nie mehr im Weg**, bleibt aber über den dezenten Link
+      **»So funktioniert der Lernpfad ›«** (`#btnIntro`, unter den Modus-Tabs) jederzeit
+      erreichbar. Bei Duell-Links (`#c=…`) erscheint sie nicht (Challenge geht vor). Fokus
+      beim Öffnen auf »Los geht's«, Rückgabe beim Schließen. Offline-rein; `tests/learn.mjs`
+      setzt `introSeen` global vorab (damit die übrigen Tests unberührt bleiben) und prüft:
+      Modi-Reihenfolge `photo,quiz,cards,type,list`, Tags (leicht … prüfungsnah), Intro
+      öffnet mit vier Stufen, »Los geht's« schließt und merkt »gesehen«.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei
