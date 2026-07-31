@@ -518,6 +518,18 @@ function syncFilterSummary(){
 /* Zwei Modi: »Prüfung erstellen« (ziehen · aktuelle Prüfung · drucken) und
    »Liste verwalten« (Pflanzenliste bearbeiten). Umschaltung über eine Body-Klasse;
    die Suche bleibt in beiden Modi immer sichtbar. */
+/* View-Transition-Helfer: diskrete Zustandswechsel (Filter, Modus, Profil, Ziehen)
+   blenden weich über statt hart zu springen. Fällt ohne API, bei reduzierter
+   Bewegung oder im Test (window.__noVT) auf sofortiges Rendern zurück. */
+function vt(cb){
+  try{
+    if(document.startViewTransition && !window.__noVT &&
+       !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)){
+      document.startViewTransition(cb); return;
+    }
+  }catch(e){}
+  cb();
+}
 function setMode(m){
   const manage = m==="manage";
   document.body.classList.toggle("m-manage", manage);
@@ -1169,8 +1181,8 @@ function wireModalA11y(){
 }
 function wire(){
   wireModalA11y();
-  if($("#tabExam")) $("#tabExam").onclick=()=>setMode("exam");
-  if($("#tabManage")) $("#tabManage").onclick=()=>setMode("manage");
+  if($("#tabExam")) $("#tabExam").onclick=()=>vt(()=>setMode("exam"));     // Moduswechsel blendet weich über
+  if($("#tabManage")) $("#tabManage").onclick=()=>vt(()=>setMode("manage"));
   setMode(store.get(LS_PREFIX+"examMode")||"exam");
   const fb=$(".findbar");   // Suchleiste klebt beim Scrollen oben; »stuck« nur, wenn wirklich angepinnt (dezenter Schatten)
   if(fb){ const upd=()=>fb.classList.toggle("stuck", fb.getBoundingClientRect().top<=0.5);
@@ -1192,10 +1204,10 @@ function wire(){
   $("#btnSave").onclick=exportBackup;
   $("#btnReset").onclick=resetToDefault;
   $("#q").addEventListener("input",()=>{ renderList(); syncSelUI(); syncFilterSummary(); });
-  $("#cat").addEventListener("change",()=>{ renderList(); syncSelUI(); syncFilterSummary(); });
-  $("#onlyzp").addEventListener("change",()=>{ renderList(); syncSelUI(); syncFilterSummary(); });
+  $("#cat").addEventListener("change",()=>{ vt(()=>{ renderList(); syncSelUI(); }); syncFilterSummary(); });   // Gefiltertes gleitet heraus/herein
+  $("#onlyzp").addEventListener("change",()=>{ vt(()=>{ renderList(); syncSelUI(); }); syncFilterSummary(); });
   $("#drawCount").addEventListener("input",()=>{ $("#selTarget").textContent=$("#drawCount").value||drawTarget(); });
-  $("#btnDraw").onclick=drawRandom;
+  $("#btnDraw").onclick=()=>vt(drawRandom);   // gezogene Prüfung gleitet ins Panel
   $("#btnShuffle").onclick=shuffleSel;
   $("#btnClear").onclick=clearSel;
   $("#btnPrint").onclick=()=>askPrintMode();
@@ -1216,8 +1228,8 @@ function wire(){
   // Hilfe
   $("#btnHelp").onclick=openHelp;
   // Profil-Auswahl
-  $("#frSelect").addEventListener("change",()=>applyProfileSelect());
-  $("#nivSelect").addEventListener("change",()=>applyProfileSelect());
+  $("#frSelect").addEventListener("change",()=>vt(applyProfileSelect));
+  $("#nivSelect").addEventListener("change",()=>vt(applyProfileSelect));
   $("#btnSchema").onclick=openSchema;
 
   // Import-Dialog

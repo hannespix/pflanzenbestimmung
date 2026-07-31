@@ -1107,6 +1107,27 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Screenshots (Start, Prüfwerkzeug, Lern-Setup, Intro-Modal) + Dark-Gegenprobe
       verifiziert.
 
+- [x] **Herbarium 2.0 · Stufe 3 – Fluidität: View-Transitions, gleitende Klappen,
+      moderne Controls.** Alles fühlt sich flüssiger/organischer an: **(1) View-
+      Transitions** – diskrete Zustandswechsel blenden weich über statt hart zu
+      springen: Kategorie-/ZP-Filter (Gefiltertes gleitet heraus/herein), Ansicht-/
+      Tag-Wechsel der Lernliste, Modus-Tabs (beide Tools), Profilwechsel, »Zufällig
+      ziehen« (Prüfung gleitet ins Panel) und der **Theme-Umschalter** (ganzseitiger
+      Crossfade). Zentraler Helfer `vt(cb)` in `app.js`/`learn.js` (Fallback: sofort
+      rendern ohne API, bei `prefers-reduced-motion` und im Test via `window.__noVT` –
+      die Puppeteer-Harnische setzen das Flag, weil VT asynchron rendert; ein echter
+      Async-Check bestätigt Filter/Modus/Theme im VT-Betrieb). Slide-Animationen über
+      `view-transition-name` auf `#stage` (Lern) bzw. `#list`/`#currentSel` (Prüf);
+      Suchfelder bleiben bewusst instant (VT je Tastendruck wäre flackerig).
+      **(2) `<details>`-Klappen gleiten** auf/zu (`interpolate-size:allow-keywords` +
+      `::details-content`-Height-Transition – progressive enhancement). **(3) Moderne
+      Controls:** Dropdowns mit eigenem SVG-Chevron (`appearance:none`, Daten-URI,
+      dunkle Variante), einheitliche Feld-Hintergründe über `:where(...)`-Regeln
+      (Null-Spezifität → bestehende Styles gewinnen), größere federnde **Schalter**
+      (42×24, Spring-Kurve, Grün-Verlauf), `accent-color` für Checkboxen/Radios,
+      **dünne runde Scrollbalken**, Toast mit Spring-Pop. Offline-rein; Druck-Guard
+      unberührt; alle vier Puppeteer-Tests grün.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei

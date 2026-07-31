@@ -60,6 +60,9 @@ async function main() {
     // Erst-Einweisung standardmäßig als »gesehen« markieren, damit sie die übrigen
     // Tests nicht überlagert; ein eigener Test setzt sie gezielt zurück.
     try { localStorage.setItem("pflanzenlernen.introSeen", "1"); } catch (e) {}
+    // View-Transitions deaktivieren: sie rendern asynchron und würden die
+    // synchronen Assertions des Tests unzuverlässig machen (vt()-Fallback).
+    window.__noVT = 1;
   });
   const errs = [];
   page.on("pageerror", (e) => errs.push(String(e.message || e)));
