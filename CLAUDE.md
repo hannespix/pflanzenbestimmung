@@ -1045,6 +1045,20 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Modi-Reihenfolge `photo,quiz,cards,type,list`, Tags (leicht … prüfungsnah), Intro
       öffnet mit vier Stufen, »Los geht's« schließt und merkt »gesehen«.
 
+- [x] **Intro-Feintuning-Hinweis + Sticky-Listen-Suche (Lern-Tool).** (1) Die
+      Erst-Einweisung (»So wirst du prüfungsreif«) erklärt jetzt zusätzlich die
+      **Feineinstellung**: Unter »Optionen« lässt sich jede Stufe anpassen – vom
+      **deutschen Namen** allein bis zur prüfungsechten Abfrage von **Gattung, Art und
+      Familie** (Felder einzeln wählbar), dazu Lernstoff/ZP/Sitzungslänge (`.intro-tip`
+      in `openIntro`). (2) **Listen-Suche klebt beim Scrollen** (Konsistenz zum
+      Prüfwerkzeug): `#listSearchRow` (+ `#listControls`) wurden aus der `.setup`-Karte
+      auf **Seitenebene** verschoben (sticky endet sonst an der Unterkante des Eltern-
+      elements), `position:sticky; top:0` + `.stuck`-Schatten via Scroll-Listener in
+      `wire()`; IDs unverändert, `applyMode` funktioniert weiter. **Design-Entscheid**
+      (Nutzer): Im Prüfwerkzeug bleibt die Datenbank-Liste im Modus »Prüfung erstellen«
+      sichtbar (praktisch fürs Nachlegen). `tests/learn.mjs` prüft den Optionen-Hinweis
+      im Intro und sticky + Position außerhalb `.setup`.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen (z. B. fehlt bei

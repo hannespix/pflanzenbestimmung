@@ -2191,6 +2191,9 @@ function applyProfile(){
 /* ---------- Verdrahtung ---------- */
 function wire(){
   const refreshView = ()=>{ syncOptsSummary(); if(mode==="list"){ renderListControls(); renderList(); } else renderProgress(); };
+  const lsr=$("#listSearchRow");   // Listen-Suche klebt beim Scrollen oben; »stuck« nur, wenn wirklich angepinnt (dezenter Schatten)
+  if(lsr){ const upd=()=>lsr.classList.toggle("stuck", !lsr.hidden && lsr.getBoundingClientRect().top<=0.5);
+    window.addEventListener("scroll", upd, {passive:true}); window.addEventListener("resize", upd, {passive:true}); }
   $("#frSelect").onchange=applyProfile;
   $("#nivSelect").onchange=applyProfile;
   $("#cat").onchange=refreshView;
@@ -2242,6 +2245,7 @@ function openIntro(auto){
       <li><span class="is-ic" aria-hidden="true">🗂️</span><div><b>Karteikarten</b><span class="is-tag">mittel</span><br>Selbst abrufen und ehrlich bewerten – Wiederholung nach Plan (Spaced Repetition).</div></li>
       <li><span class="is-ic" aria-hidden="true">⌨️</span><div><b>Tippen</b><span class="is-tag">prüfungsnah</span><br>Gattung und Art frei schreiben – so wie in der Abschlussprüfung.</div></li>
     </ol>
+    <p class="intro-tip"><span aria-hidden="true">⚙️</span> Jede Stufe kannst du unter <b>»Optionen«</b> feiner einstellen: was gefragt wird – vom <b>deutschen Namen</b> allein bis zur prüfungsechten Abfrage von <b>Gattung, Art und Familie</b> (Felder einzeln wählbar) – dazu Lernstoff, ZP-Filter und Sitzungslänge.</p>
     <p class="intro-foot"><b>Ziel:</b> Du benennst Gattung, Art und Familie sicher. Diese Einführung findest du jederzeit über <b>»So funktioniert der Lernpfad«</b> wieder.</p>
     <div class="intro-cta"><button class="btn primary" id="introGo">Los geht's</button></div>
   </div>`;

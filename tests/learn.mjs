@@ -98,10 +98,12 @@ async function main() {
     document.querySelector("#btnIntro").click();
     const introOpen = !!document.querySelector("#introScrim .intro");
     const steps = document.querySelectorAll("#introScrim .intro-steps li").length;
+    const tipTxt = (document.querySelector("#introScrim .intro-tip") || {}).textContent || "";
+    const optTip = /Optionen/.test(tipTxt) && /deutschen Namen/.test(tipTxt) && /Gattung, Art und Familie/.test(tipTxt);
     document.querySelector("#introGo").click();
     const introClosed = !document.querySelector("#introScrim");
     const seen = localStorage.getItem("pflanzenlernen.introSeen");
-    return { order, tags, introOpen, steps, introClosed, seen };
+    return { order, tags, introOpen, steps, optTip, introClosed, seen };
   });
   assert(lp.order.join(",") === "photo,quiz,cards,type,list",
     "Modi müssen nach Schwierigkeit sortiert sein (Bilder→Quiz→Karteikarten→Tippen→Liste): " + lp.order.join(","));
@@ -109,8 +111,22 @@ async function main() {
     "Modi brauchen Schwierigkeits-Tags (leicht … prüfungsnah): " + JSON.stringify(lp.tags));
   assert(lp.introOpen && lp.steps === 4,
     "»So funktioniert der Lernpfad« muss die Einführung mit vier Stufen öffnen: " + JSON.stringify(lp));
+  assert(lp.optTip,
+    "Die Einführung muss auf die Feineinstellung unter »Optionen« hinweisen (deutscher Name … Gattung/Art/Familie): " + JSON.stringify(lp));
   assert(lp.introClosed && lp.seen === "1",
     "»Los geht's« muss die Einführung schließen und als gesehen merken: " + JSON.stringify(lp));
+
+  // Listen-Suche klebt beim Scrollen oben (sticky, auf Seitenebene – Konsistenz zum Prüfwerkzeug)
+  const listSticky = await page.evaluate(() => {
+    document.querySelector('#modeTabs button[data-mode="list"]').click();
+    const r = document.querySelector("#listSearchRow");
+    const pos = getComputedStyle(r).position;
+    const outsideSetup = !r.closest(".setup");   // muss außerhalb der Setup-Karte liegen, sonst endet sticky an deren Unterkante
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    return { pos, outsideSetup };
+  });
+  assert(listSticky.pos === "sticky" && listSticky.outsideSetup,
+    "Die Listen-Suche muss sticky und außerhalb der Setup-Karte sein: " + JSON.stringify(listSticky));
 
   // Aktive, vom Standard abweichende Optionen erscheinen in der zugeklappten »Optionen«-Kopfzeile (grün hervorgehoben)
   const optsSum = await page.evaluate(() => {

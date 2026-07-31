@@ -181,7 +181,9 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .intro-steps .is-ic{flex:none; width:26px; height:26px; border-radius:7px; background:var(--surface-2); border:1px solid var(--rule-strong); color:var(--green-deep); display:flex; align-items:center; justify-content:center; font-size:14px; margin-top:1px}
 .intro-steps b{color:var(--ink)}
 .is-tag{font-family:var(--mono); font-size:8.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--sepia); border:1px solid var(--rule-strong); border-radius:3px; padding:0 4px; margin-left:5px; white-space:nowrap}
-.intro-foot{margin:13px 0 0; font-size:12.5px; color:var(--ink-soft); background:var(--surface-2); border-radius:6px; padding:10px 12px; line-height:1.45}
+.intro-tip{margin:12px 0 0; padding:0 2px; font-size:12.5px; color:var(--ink-soft); line-height:1.45}
+.intro-tip b{color:var(--ink)}
+.intro-foot{margin:11px 0 0; font-size:12.5px; color:var(--ink-soft); background:var(--surface-2); border-radius:6px; padding:10px 12px; line-height:1.45}
 .intro-cta{margin-top:14px; text-align:center}
 .startrow{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
 /* Hinweis vor dem Lernen: automatisch/KI-erzeugte Inhalte, keine Gewähr */
@@ -305,7 +307,9 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .toast.err{background:var(--madder)}
 
 /* Liste / Nachschlagen (durchsuchbar, kategorisiert) */
-.listsearchrow{display:flex; align-items:stretch; gap:8px; flex-wrap:wrap}
+.listsearchrow{display:flex; align-items:stretch; gap:8px; flex-wrap:wrap; margin:14px 0 10px;
+  position:sticky; top:0; z-index:40; background:var(--paper); padding:8px 0}
+.listsearchrow.stuck{box-shadow:0 6px 14px -6px var(--shadow); border-bottom:1px solid var(--rule-strong)}   /* dezent abheben, sobald sie beim Scrollen klebt */
 .searchbox{display:flex; align-items:center; gap:8px; border:1.4px solid var(--rule-strong); background:#fff; border-radius:6px; padding:0 12px; flex:1; min-width:220px}
 .listsearchrow:focus-within{border-color:var(--green)}
 .listsearchrow .lsic{width:17px; height:17px; color:var(--ink-faint); flex:none}
@@ -571,16 +575,6 @@ main{margin-top:22px}
         Haftung für Richtigkeit oder Vollständigkeit. Verbindlich sind allein die offiziellen Prüfungslisten;
         im Zweifel bitte dort und in der Fachliteratur nachprüfen.</p>
     </details>
-    <div class="listsearchrow" id="listSearchRow" hidden>
-      <div class="searchbox">
-        <svg class="lsic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-        <input id="listSearch" class="listsearch" type="search" autocomplete="off" spellcheck="false" placeholder="Liste durchsuchen – Name, Familie, Synonym …" aria-label="Liste durchsuchen">
-      </div>
-      <button class="btn printbtn" id="btnPrintList" title="Die aktuell gefilterte Liste drucken – als Tabelle in der Form des Prüfungsbogens (gleiche Spalten, Beschriftung und Punktangaben wie in der Prüfung, in der gewählten Ansicht sortiert: Wuchsform, Familie oder A–Z, mit ZP-Spalte).">
-        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>Liste drucken
-      </button>
-    </div>
-    <div class="listcontrols" id="listControls" hidden></div>
   </div>
 
   <section class="helppanel" id="helpPanel" hidden>
@@ -728,6 +722,19 @@ main{margin-top:22px}
   </section>
 
   <section class="progress" id="progress" hidden></section>
+
+  <!-- Listen-Suche auf Seitenebene (nicht in der Setup-Karte), damit sie beim
+       Scrollen der langen Liste als kleiner sticky Header oben kleben kann. -->
+  <div class="listsearchrow" id="listSearchRow" hidden>
+    <div class="searchbox">
+      <svg class="lsic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input id="listSearch" class="listsearch" type="search" autocomplete="off" spellcheck="false" placeholder="Liste durchsuchen – Name, Familie, Synonym …" aria-label="Liste durchsuchen">
+    </div>
+    <button class="btn printbtn" id="btnPrintList" title="Die aktuell gefilterte Liste drucken – als Tabelle in der Form des Prüfungsbogens (gleiche Spalten, Beschriftung und Punktangaben wie in der Prüfung, in der gewählten Ansicht sortiert: Wuchsform, Familie oder A–Z, mit ZP-Spalte).">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>Liste drucken
+    </button>
+  </div>
+  <div class="listcontrols" id="listControls" hidden></div>
 
   <main id="stage"></main>
 
@@ -2946,6 +2953,9 @@ function applyProfile(){
 /* ---------- Verdrahtung ---------- */
 function wire(){
   const refreshView = ()=>{ syncOptsSummary(); if(mode==="list"){ renderListControls(); renderList(); } else renderProgress(); };
+  const lsr=$("#listSearchRow");   // Listen-Suche klebt beim Scrollen oben; »stuck« nur, wenn wirklich angepinnt (dezenter Schatten)
+  if(lsr){ const upd=()=>lsr.classList.toggle("stuck", !lsr.hidden && lsr.getBoundingClientRect().top<=0.5);
+    window.addEventListener("scroll", upd, {passive:true}); window.addEventListener("resize", upd, {passive:true}); }
   $("#frSelect").onchange=applyProfile;
   $("#nivSelect").onchange=applyProfile;
   $("#cat").onchange=refreshView;
@@ -2997,6 +3007,7 @@ function openIntro(auto){
       <li><span class="is-ic" aria-hidden="true">🗂️</span><div><b>Karteikarten</b><span class="is-tag">mittel</span><br>Selbst abrufen und ehrlich bewerten – Wiederholung nach Plan (Spaced Repetition).</div></li>
       <li><span class="is-ic" aria-hidden="true">⌨️</span><div><b>Tippen</b><span class="is-tag">prüfungsnah</span><br>Gattung und Art frei schreiben – so wie in der Abschlussprüfung.</div></li>
     </ol>
+    <p class="intro-tip"><span aria-hidden="true">⚙️</span> Jede Stufe kannst du unter <b>»Optionen«</b> feiner einstellen: was gefragt wird – vom <b>deutschen Namen</b> allein bis zur prüfungsechten Abfrage von <b>Gattung, Art und Familie</b> (Felder einzeln wählbar) – dazu Lernstoff, ZP-Filter und Sitzungslänge.</p>
     <p class="intro-foot"><b>Ziel:</b> Du benennst Gattung, Art und Familie sicher. Diese Einführung findest du jederzeit über <b>»So funktioniert der Lernpfad«</b> wieder.</p>
     <div class="intro-cta"><button class="btn primary" id="introGo">Los geht's</button></div>
   </div>`;
