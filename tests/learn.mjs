@@ -307,15 +307,24 @@ async function main() {
   assert(info.newtab, "Info-Modal: Quell-Links müssen target=_blank (neuer Tab) sein");
   assert(info.hasLoad, "Info-Modal: »Online-Infos laden«-Knopf fehlt");
 
-  // Namensherleitung (Merkhilfe): dezentes, standardmäßig zugeklapptes Akkordeon im Info-Modal,
-  // erklärt Gattung + Epitheton (Latein/Griechisch → Deutsch); bei Unbekanntem gar nicht sichtbar.
+  // Namensherleitung (Merkhilfe): Akkordeon im Info-Modal, standardmäßig AUFGEKLAPPT;
+  // manuelles Zuklappen wird global gemerkt (alle folgenden Karten öffnen zugeklappt,
+  // Wiederaufklappen stellt den Standard her). Bei Unbekanntem gar nicht sichtbar.
   const etym = await page.evaluate(() => {
     const mk = (g, a) => ({ g, a, de: "Test", fam: "", thema: "", key: g + " " + a, syn: "" });
     openInfo(mk("Bellis", "perennis"));
     const det = document.querySelector("#infoScrim .etym");
     const items = [...document.querySelectorAll("#infoScrim .etym-list li")].map((li) => li.textContent);
-    const collapsed = det ? !det.open : null;
+    const openDefault = det ? det.open : null;
     const botItalic = !!(det && det.querySelector(".etym-list li i"));
+    det.open = false; det.dispatchEvent(new Event("toggle"));       // manuell zuklappen
+    const storedClosed = localStorage.getItem("pflanzenlernen.etyopen") === "0";
+    closeInfo();
+    openInfo(mk("Rosa", "canina"));                                 // nächste Karte folgt dem gemerkten Zustand
+    const det2 = document.querySelector("#infoScrim .etym");
+    const staysClosed = !!det2 && !det2.open;
+    det2.open = true; det2.dispatchEvent(new Event("toggle"));      // wieder aufklappen → Standard zurück
+    const storedOpen = localStorage.getItem("pflanzenlernen.etyopen") === "1";
     closeInfo();
     openInfo(mk("Xyzus", "qqqzz"));                       // unbekannt → kein Akkordeon
     const noneShown = !!document.querySelector("#infoScrim .etym");
@@ -340,10 +349,12 @@ async function main() {
     const person = nameEtymology("Thuja", "zzztestii").some((p) => /Person/.test(p.d));      // Fallback -ii
     const place = nameEtymology("Thuja", "zzztestensis").some((p) => /Fundort/.test(p.d));    // Fallback -ensis
     const stellaria = nameEtymology("Stellaria", "media").length;                            // neue Gattung + Epitheton
-    return { has: !!det, collapsed, items, botItalic, noneShown, lav, dup, ficus, hyb, fullPct, person, place, stellaria };
+    return { has: !!det, openDefault, storedClosed, staysClosed, storedOpen, items, botItalic, noneShown, lav, dup, ficus, hyb, fullPct, person, place, stellaria };
   });
-  assert(etym.has && etym.collapsed && etym.botItalic,
-    "Namensherleitung muss als zugeklapptes Akkordeon mit kursivem Botanik-Teil erscheinen: " + JSON.stringify(etym));
+  assert(etym.has && etym.openDefault && etym.botItalic,
+    "Namensherleitung muss standardmäßig AUFGEKLAPPT mit kursivem Botanik-Teil erscheinen: " + JSON.stringify({ has: etym.has, openDefault: etym.openDefault }));
+  assert(etym.storedClosed && etym.staysClosed && etym.storedOpen,
+    "Zuklapp-Zustand muss global gemerkt werden (zu → gemerkt → nächste Karte zu → wieder auf): " + JSON.stringify({ sc: etym.storedClosed, st: etym.staysClosed, so: etym.storedOpen }));
   assert(etym.items.some((t) => /Bellis/.test(t)) && etym.items.some((t) => /ausdauernd|mehrjährig/.test(t)),
     "Herleitung muss Gattung (Bellis) und Epitheton (perennis) erklären: " + JSON.stringify(etym.items));
   assert(!etym.noneShown, "Bei unbekanntem Namen darf kein Herleitungs-Akkordeon erscheinen: " + JSON.stringify(etym));

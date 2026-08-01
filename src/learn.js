@@ -3072,7 +3072,10 @@ function openInfo(card){
     `<a href="${esc(l.u)}" target="_blank" rel="noopener">${esc(l.n)}<span class="ext">↗</span></a>`).join("");
   const fam = [card.fam, card.thema].filter(Boolean).join(" · ");
   const ety = nameEtymology(card.g, card.a);                       // Namensherleitung (Merkhilfe, offline)
-  const etyHTML = ety.length ? `<details class="etym">
+  // Standardmäßig aufgeklappt; klappt man sie zu, merkt sich das Gerät den Zustand
+  // global – alle folgenden Infokarten öffnen dann zugeklappt (und umgekehrt).
+  const etyOpen = store.get(LS_PREFIX+"etyopen")!=="0";
+  const etyHTML = ety.length ? `<details class="etym"${etyOpen?" open":""}>
        <summary><span class="etym-ic" aria-hidden="true">📖</span> Name-Herkunft · Merkhilfe</summary>
        <ul class="etym-list">${ety.map(p=>`<li><i>${esc(p.t)}</i> — ${esc(p.d)}</li>`).join("")}</ul>
        <div class="etym-note">Kurzherleitung (Latein/Griechisch → Deutsch), kuratiert – ohne Gewähr.</div>
@@ -3097,6 +3100,8 @@ function openInfo(card){
    </div>`;
   document.body.appendChild(scrim); infoEl=scrim;
   scrim.addEventListener("click", e=>{ if(e.target===scrim) closeInfo(); });
+  const etyD = scrim.querySelector("details.etym");                // Auf-/Zuklappen global merken
+  if(etyD) etyD.addEventListener("toggle", ()=>store.set(LS_PREFIX+"etyopen", etyD.open?"1":"0"));
   $("#infoClose").onclick = closeInfo;
   const host = scrim.querySelector("#wpHost"), btn = scrim.querySelector("#wpLoad");
   const cached = wikiCache.get(card.key);
