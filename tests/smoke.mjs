@@ -603,6 +603,11 @@ async function main() {
     const openBtn = [...document.querySelectorAll("#list .row .rowacts .iconbtn")]
       .find(b => /Mehr zur Pflanze/.test(b.title));
     if (!openBtn) return { ok: false, why: "kein ℹ-Knopf in der Auswahl-Liste" };
+    // ℹ muss OHNE Hover sichtbar sein (auffindbar); Bearbeiten/Löschen bleiben hover-gated
+    const row = openBtn.closest(".row");
+    const editBtn = [...row.querySelectorAll(".rowacts .iconbtn")].find(b => !b.classList.contains("info"));
+    const infoOpacity = getComputedStyle(openBtn).opacity;
+    const editOpacity = editBtn ? getComputedStyle(editBtn).opacity : "1";
     openBtn.click();
     const box = document.querySelector(".infoscrim .infobox");
     const links = [...document.querySelectorAll(".infoscrim .srcgrid a")].map(a => a.textContent.replace(/[↗\s]+$/, ""));
@@ -613,7 +618,8 @@ async function main() {
       links,
       hasWpBtn: !!document.querySelector(".infoscrim #wpLoad"),
       etyPresent: !!document.querySelector(".infoscrim details.etym"),
-      leakedScrimOpen: document.querySelectorAll(".scrim.open").length   // Info-Modal darf kein Panel öffnen
+      leakedScrimOpen: document.querySelectorAll(".scrim.open").length,   // Info-Modal darf kein Panel öffnen
+      infoOpacity, editOpacity
     };
     const x = document.querySelector(".infoscrim .infobox-x"); if (x) x.click();
     res.closedByX = !document.querySelector(".infoscrim");
@@ -627,6 +633,8 @@ async function main() {
   });
   assert(info.ok && info.role === "dialog" && info.hasHead,
     "Info-Modal öffnet nicht korrekt aus der Auswahl-Liste: " + JSON.stringify(info));
+  assert(info.infoOpacity === "1" && info.editOpacity === "0",
+    "ℹ muss ohne Hover sichtbar sein (opacity 1), Bearbeiten/Löschen hover-gated (opacity 0): " + JSON.stringify(info));
   assert(JSON.stringify(info.links) === JSON.stringify(["Wikipedia", "NaturaDB", "iNaturalist"]),
     "Info-Modal muss die neutralen Deep-Links (Wikipedia/NaturaDB/iNaturalist) zeigen: " + JSON.stringify(info.links));
   assert(info.hasWpBtn, "Info-Modal muss den opt-in »Online-Infos laden«-Knopf (Wikipedia) haben: " + JSON.stringify(info));

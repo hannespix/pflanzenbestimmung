@@ -253,11 +253,15 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .tag.zp{color:var(--gold); border:1px solid var(--gold); background:#f6efdc}
 .zpnote{display:flex; align-items:center; gap:7px; margin:4px 0 10px 2px; font-size:12px; color:var(--ink-faint); font-family:var(--sans)}
 .tag.bem{color:var(--sepia); border:1px dashed var(--rule-strong)}
-.rowacts{display:flex; gap:2px; opacity:0; transition:opacity .1s}
-.row:hover .rowacts,.row:focus-within .rowacts{opacity:1}
+.rowacts{display:flex; gap:2px}
+/* ℹ »Mehr zur Pflanze« ist dauerhaft sichtbar (auffindbar wie im Lern-Tool);
+   nur Bearbeiten/Löschen (die selteneren Verwaltungs-Aktionen) erscheinen auf Hover. */
+.rowacts .iconbtn:not(.info){opacity:0; transition:opacity .1s}
+.row:hover .rowacts .iconbtn:not(.info),.row:focus-within .rowacts .iconbtn:not(.info){opacity:1}
+.iconbtn.info{color:var(--green-deep)}
 /* Touch/Tablet (kein Hover): Zeilen-Aktionen dauerhaft sichtbar, größere Tap-Ziele (~44px) */
 @media (hover:none){
-  .rowacts{opacity:1}
+  .rowacts .iconbtn{opacity:1}
   .iconbtn,.pclose,.scmove{min-width:40px; min-height:40px}
   .btn.small{min-height:40px}
 }
@@ -439,7 +443,8 @@ body.m-manage .selbar, body.m-manage #currentSel{display:none}
   .draw{border-right:none; padding-right:0}
   .selacts{border-left:none; padding-left:0}
   .row{grid-template-columns:24px 1fr; gap:10px}
-  .rowacts{grid-column:1/-1; opacity:1; justify-content:flex-end}
+  .rowacts{grid-column:1/-1; justify-content:flex-end}
+  .rowacts .iconbtn{opacity:1}
   .modal .grid2{grid-template-columns:1fr}
   /* Kopf: Titel und Status/Hilfe stapeln, damit die Status-Pille die
      Überschrift nicht überlagert */
@@ -1641,7 +1646,7 @@ function rowEl(p){
       ${p.bemerkungen?`<span class="tag bem" title="${esc(p.bemerkungen)}">Bemerkung</span>`:""}
     </div>`;
   const acts=el("div","rowacts");
-  const inf=el("button","iconbtn"); inf.title="Mehr zur Pflanze (Namensherkunft, Quellen, Wikipedia)"; inf.setAttribute("aria-label","Mehr zur Pflanze"); inf.innerHTML=`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r=".9" fill="currentColor" stroke="none"/></svg>`;
+  const inf=el("button","iconbtn info"); inf.title="Mehr zur Pflanze (Namensherkunft, Quellen, Wikipedia)"; inf.setAttribute("aria-label","Mehr zur Pflanze"); inf.innerHTML=`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r=".9" fill="currentColor" stroke="none"/></svg>`;
   inf.addEventListener("click",()=>openInfo(infoCard(p)));
   const ed=el("button","iconbtn"); ed.title="Bearbeiten"; ed.innerHTML=`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16zM14 6l4 4"/></svg>`;
   ed.addEventListener("click",()=>openEdit(p.id));
@@ -2059,7 +2064,7 @@ function pvRowEl(p, idx, n){
         </div>
       </div>
       <div class="pvacts">
-        <button class="iconbtn" data-a="info" title="Mehr zur Pflanze (Namensherkunft, Quellen, Wikipedia)" aria-label="Mehr zur Pflanze"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r=".9" fill="currentColor" stroke="none"/></svg></button>
+        <button class="iconbtn info" data-a="info" title="Mehr zur Pflanze (Namensherkunft, Quellen, Wikipedia)" aria-label="Mehr zur Pflanze"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r=".9" fill="currentColor" stroke="none"/></svg></button>
         <button class="iconbtn" data-a="up" title="nach oben" aria-label="nach oben"${idx===0?" disabled":""}><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 15l6-6 6 6"/></svg></button>
         <button class="iconbtn" data-a="down" title="nach unten" aria-label="nach unten"${idx===n-1?" disabled":""}><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
         <button class="iconbtn" data-a="edit" title="Bearbeiten (wird in die Liste übernommen)" aria-label="Bearbeiten"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16zM14 6l4 4"/></svg></button>

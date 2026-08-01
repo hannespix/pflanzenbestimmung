@@ -253,11 +253,15 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .tag.zp{color:var(--gold); border:1px solid var(--gold); background:#f6efdc}
 .zpnote{display:flex; align-items:center; gap:7px; margin:4px 0 10px 2px; font-size:12px; color:var(--ink-faint); font-family:var(--sans)}
 .tag.bem{color:var(--sepia); border:1px dashed var(--rule-strong)}
-.rowacts{display:flex; gap:2px; opacity:0; transition:opacity .1s}
-.row:hover .rowacts,.row:focus-within .rowacts{opacity:1}
+.rowacts{display:flex; gap:2px}
+/* ℹ »Mehr zur Pflanze« ist dauerhaft sichtbar (auffindbar wie im Lern-Tool);
+   nur Bearbeiten/Löschen (die selteneren Verwaltungs-Aktionen) erscheinen auf Hover. */
+.rowacts .iconbtn:not(.info){opacity:0; transition:opacity .1s}
+.row:hover .rowacts .iconbtn:not(.info),.row:focus-within .rowacts .iconbtn:not(.info){opacity:1}
+.iconbtn.info{color:var(--green-deep)}
 /* Touch/Tablet (kein Hover): Zeilen-Aktionen dauerhaft sichtbar, größere Tap-Ziele (~44px) */
 @media (hover:none){
-  .rowacts{opacity:1}
+  .rowacts .iconbtn{opacity:1}
   .iconbtn,.pclose,.scmove{min-width:40px; min-height:40px}
   .btn.small{min-height:40px}
 }
@@ -439,7 +443,8 @@ body.m-manage .selbar, body.m-manage #currentSel{display:none}
   .draw{border-right:none; padding-right:0}
   .selacts{border-left:none; padding-left:0}
   .row{grid-template-columns:24px 1fr; gap:10px}
-  .rowacts{grid-column:1/-1; opacity:1; justify-content:flex-end}
+  .rowacts{grid-column:1/-1; justify-content:flex-end}
+  .rowacts .iconbtn{opacity:1}
   .modal .grid2{grid-template-columns:1fr}
   /* Kopf: Titel und Status/Hilfe stapeln, damit die Status-Pille die
      Überschrift nicht überlagert */
