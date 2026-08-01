@@ -1407,6 +1407,10 @@ async function main() {
     $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
     document.querySelector('#modeTabs button[data-mode="list"]').click();
     const panelHidden0 = document.querySelector("#printOpts").hidden;   // Panel zunächst zu
+    // Regressionsschutz: das Zahnrad muss sichtbar gerendert sein (Icon bemessen, kein leerer Kasten)
+    const gearSvg = document.querySelector("#btnPrintOpts .ic");
+    const gr = gearSvg ? gearSvg.getBoundingClientRect() : { width: 0, height: 0 };
+    const gearVisible = gr.width >= 14 && gr.width <= 40 && gr.height >= 14 && gr.height <= 40;
     document.querySelector("#btnPrintOpts").click();               // Zahnrad öffnet das Panel
     const panelOpen = !document.querySelector("#printOpts").hidden && document.querySelector("#btnPrintOpts").getAttribute("aria-expanded") === "true";
     const off = (k) => { const cb = document.querySelector(`#printCols input[data-k="${k}"]`); cb.checked = false; cb.dispatchEvent(new Event("change")); };
@@ -1423,10 +1427,11 @@ async function main() {
     const hasOneCol = hasHeadCol(/Deutscher Name/);
     on("fam"); on("zp"); on("g"); on("a"); buildPrintList();       // zurücksetzen
     const restored = hasHeadCol(/Familienname/) && hasZPcol();
-    return { panelHidden0, panelOpen, famGone, zpGone, gelerntStill,
+    return { panelHidden0, panelOpen, gearVisible, famGone, zpGone, gelerntStill,
       storedHasFam: stored.includes("fam") && stored.includes("zp"), deStays, hasOneCol, restored };
   });
   assert(pcol.panelHidden0 && pcol.panelOpen, "Druckoptionen: Zahnrad muss das (anfangs eingeklappte) Panel öffnen");
+  assert(pcol.gearVisible, "Druckoptionen: Zahnrad-Icon muss sichtbar bemessen sein (kein leerer Kasten)");
   assert(pcol.famGone && pcol.zpGone && pcol.gelerntStill, "Druckoptionen: abgewählte Spalten (Familie/ZP) erscheinen weiter im Kopf: " + JSON.stringify(pcol));
   assert(pcol.storedHasFam, "Druckoptionen: Auswahl wird nicht in localStorage gemerkt");
   assert(pcol.deStays && pcol.hasOneCol, "Druckoptionen: die letzte Bogen-Spalte darf nicht abwählbar sein");
