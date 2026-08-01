@@ -171,9 +171,10 @@ async function main() {
   assert(a11y.fbLive, "Quiz-/Tipp-Feedback muss aria-live=polite sein (Screenreader-Ansage): " + JSON.stringify(a11y));
   assert(a11y.modalFocus, "Info-Modal muss den Fokus auf den »Schließen«-Knopf setzen: " + JSON.stringify(a11y));
 
-  // Herbarium 2.0: Hell/Dunkel-Umschalter setzt data-theme und merkt die Wahl
+  // Herbarium 2.0: Hell/Dunkel-Umschalter setzt data-theme und merkt die Wahl.
+  // Sitzt jetzt in den »Optionen« (Sitzung) statt im Kopf – Delegation auf .themetoggle.
   const theme = await page.evaluate(() => {
-    const b = document.querySelector("#btnTheme");
+    const b = document.querySelector(".themetoggle");
     if (!b) return { has: false };
     b.click();
     const afterOne = document.documentElement.dataset.theme, saved = localStorage.getItem("pbw.theme");
@@ -183,6 +184,24 @@ async function main() {
   });
   assert(theme.has && theme.afterOne === "dark" && theme.saved === "dark" && theme.afterTwo === "light",
     "Theme-Umschalter muss dunkel/hell wechseln und die Wahl speichern: " + JSON.stringify(theme));
+
+  // Kopf-Umbau: Startseite-Link statt Prüfungsversion, Hilfe dezent, Design-Umschalter in den Optionen
+  const head = await page.evaluate(() => {
+    const home = document.querySelector(".mast-right .homelink");
+    const help = document.querySelector(".mast-right .helplink");
+    return {
+      homeHref: home ? home.getAttribute("href") : null,
+      noExam: !document.querySelector(".mast-right .examlink") && !document.querySelector('.mast-right a[href="pflanzenkenntnis.html"]'),
+      helpDezent: !!(help && help.id === "btnHelp"),
+      toggleInHead: !!document.querySelector(".mast-right .themetoggle"),
+      toggleInOpts: !!document.querySelector("#setOpts .themetoggle")
+    };
+  });
+  assert(head.homeHref === "index.html", "Kopf muss einen »Startseite«-Link (index.html) tragen: " + JSON.stringify(head));
+  assert(head.noExam, "Kopf darf keinen Prüfungsversion-Link mehr tragen: " + JSON.stringify(head));
+  assert(head.helpDezent, "»Hilfe« muss als dezenter .helplink im Kopf stehen: " + JSON.stringify(head));
+  assert(!head.toggleInHead && head.toggleInOpts,
+    "Design-Umschalter muss in den Optionen sitzen, nicht mehr im Kopf: " + JSON.stringify(head));
 
   // Bilder-Quiz: Buchdeckel/Titelseiten/Scans digitalisierter Werke werden verworfen
   // (Praxisfall: Buchdeckel statt Majoran-Foto); Herbarbelege gelten als Tafel.
