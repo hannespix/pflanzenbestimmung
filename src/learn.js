@@ -1460,6 +1460,12 @@ function renderListControls(){
       <div class="po-cols" id="printCols" role="group" aria-label="Spalten für den Druck"></div>
       <label class="po-ety" title="Zu jeder Pflanze eine kurze Merkzeile mit der Herkunft/Bedeutung des botanischen Namens mitdrucken (Latein/Griechisch → Deutsch, kuratiert – ohne Gewähr)."><input type="checkbox" id="printEty"${printEtyOn()?" checked":""}> Namensherkunft mitdrucken</label>
     </div>`;
+  // Design-Umschalter auch im Listenmodus erreichbar (die Sitzungs-Optionen mit dem
+  // Umschalter sind hier ausgeblendet). Klick wird per Delegation (.themetoggle) behandelt.
+  const secDesign=`<div class="lc-sec">
+      <div class="lc-h">Design</div>
+      <button class="themetoggle" type="button" aria-label="Helles oder dunkles Design umschalten" title="Zwischen hellem und dunklem Design wechseln – die Wahl gilt für alle Seiten auf diesem Gerät"><svg class="ic moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.5 14.5A8.5 8.5 0 019.5 3.5a8.5 8.5 0 1011 11z"/></svg><svg class="ic sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span class="tt-dark">Dunkles Design</span><span class="tt-light">Helles Design</span></button>
+    </div>`;
   host.classList.toggle("open", open);
   host.innerHTML=`
     <button class="lc-toggle" id="lcToggle" aria-expanded="${open?"true":"false"}">
@@ -1471,6 +1477,7 @@ function renderListControls(){
       ${secAnsicht}
       ${secFilter}
       ${secPrint}
+      ${secDesign}
     </div>`;
   $("#lcToggle").onclick=()=>{ host.dataset.open = open?"0":"1"; renderListControls(); };
   host.querySelectorAll(".sortbtn").forEach(b=>b.onclick=()=>{
