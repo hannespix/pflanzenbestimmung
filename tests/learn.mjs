@@ -306,6 +306,31 @@ async function main() {
   assert(!info.hasBaumkunde, "Info-Modal: defekter Baumkunde-Link (403) muss entfernt sein");
   assert(info.newtab, "Info-Modal: Quell-Links müssen target=_blank (neuer Tab) sein");
   assert(info.hasLoad, "Info-Modal: »Online-Infos laden«-Knopf fehlt");
+
+  // Namensherleitung (Merkhilfe): dezentes, standardmäßig zugeklapptes Akkordeon im Info-Modal,
+  // erklärt Gattung + Epitheton (Latein/Griechisch → Deutsch); bei Unbekanntem gar nicht sichtbar.
+  const etym = await page.evaluate(() => {
+    const mk = (g, a) => ({ g, a, de: "Test", fam: "", thema: "", key: g + " " + a, syn: "" });
+    openInfo(mk("Bellis", "perennis"));
+    const det = document.querySelector("#infoScrim .etym");
+    const items = [...document.querySelectorAll("#infoScrim .etym-list li")].map((li) => li.textContent);
+    const collapsed = det ? !det.open : null;
+    const botItalic = !!(det && det.querySelector(".etym-list li i"));
+    closeInfo();
+    openInfo(mk("Xyzus", "qqqzz"));                       // unbekannt → kein Akkordeon
+    const noneShown = !!document.querySelector("#infoScrim .etym");
+    closeInfo();
+    const lav = nameEtymology("Lavandula", "angustifolia").map((p) => p.t + "=" + p.d).join(" · ");
+    const dup = nameEtymology("Alyssum", "montanum subsp. montanum").filter((p) => p.t === "montanum").length;
+    return { has: !!det, collapsed, items, botItalic, noneShown, lav, dup };
+  });
+  assert(etym.has && etym.collapsed && etym.botItalic,
+    "Namensherleitung muss als zugeklapptes Akkordeon mit kursivem Botanik-Teil erscheinen: " + JSON.stringify(etym));
+  assert(etym.items.some((t) => /Bellis/.test(t)) && etym.items.some((t) => /ausdauernd|mehrjährig/.test(t)),
+    "Herleitung muss Gattung (Bellis) und Epitheton (perennis) erklären: " + JSON.stringify(etym.items));
+  assert(!etym.noneShown, "Bei unbekanntem Namen darf kein Herleitungs-Akkordeon erscheinen: " + JSON.stringify(etym));
+  assert(/schmalblättrig/.test(etym.lav), "Kompositum »angustifolia« muss als »schmalblättrig« aufgelöst werden: " + etym.lav);
+  assert(etym.dup === 1, "Autonyme (montanum subsp. montanum) dürfen die Herleitung nicht doppeln: " + etym.dup);
   assert(info.closed, "Info-Modal schließt nicht");
 
   // Wikipedia-Auflösung: Sorten-GRUPPE (kein Rang var./ssp.) findet das reine Binom,

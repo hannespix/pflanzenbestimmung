@@ -378,6 +378,17 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .mh-bot{font-family:var(--serif); font-size:22px; font-style:italic; color:var(--ink); line-height:1.15; overflow-wrap:anywhere}
 .mh-de{font-family:var(--serif); font-size:17px; color:var(--green-deep); margin-top:2px}
 .mh-fam{font-family:var(--mono); font-size:11px; letter-spacing:.04em; color:var(--sepia); text-transform:uppercase; margin-top:6px}
+/* Namensherleitung (Merkhilfe) – dezentes Akkordeon unter dem botanischen Namen */
+.etym{margin:0 0 14px; border:1px solid var(--rule); border-radius:10px; background:var(--surface-2); overflow:hidden}
+.etym>summary{cursor:pointer; list-style:none; padding:9px 13px; font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); user-select:none}
+.etym>summary::-webkit-details-marker{display:none}
+.etym>summary:hover{color:var(--green-deep)}
+.etym[open]>summary{border-bottom:1px solid var(--rule); color:var(--green-deep)}
+.etym .etym-ic{font-size:12px; margin-right:5px}
+.etym-list{margin:0; padding:10px 15px 6px 30px; display:flex; flex-direction:column; gap:5px}
+.etym-list li{font-family:var(--serif); font-size:14.5px; color:var(--ink); line-height:1.35}
+.etym-list li i{color:var(--green-deep)}
+.etym-note{padding:2px 15px 11px; font-size:11px; color:var(--ink-faint); font-style:italic}
 .srclabel{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); margin-bottom:8px}
 .srcgrid{display:flex; flex-wrap:wrap; gap:8px}
 .srcgrid a{display:inline-flex; align-items:center; gap:6px; text-decoration:none; border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); border-radius:5px; padding:7px 11px; font-size:13px; font-weight:500}

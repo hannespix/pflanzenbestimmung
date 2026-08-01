@@ -1598,6 +1598,257 @@ function binomEpithet(a){
   return (norm(a).split(" ").filter(w=> w && !/^([×x]|var\.|subsp\.|ssp\.|f\.|cv\.|convar\.)$/i.test(w))[0]) || "";
 }
 function searchName(c){ return norm(c.g+" "+binomEpithet(c.a)); }
+/* ---------- Botanische Namensherleitung (Merkhilfe, offline & kuratiert) ----------
+   Latein/Griechisch → Deutsch: kurze Bedeutung von Gattung und Art-Epitheton, damit
+   sich die botanischen Namen leichter merken lassen. Ganzwort-Wörterbuch plus
+   Kompositions-Bausteine (»macro«+»phylla« → großblättrig). Gegen alle 2114 Arten
+   geprüft; Unbekanntes wird einfach weggelassen. Rein lokal, kein Netzabruf. */
+/* Art-Epitheta als Ganzwörter (die häufigen/unregelmäßigen). */
+const LAT_EPI = {
+  // Verbreitung/Status
+  vulgaris:"gewöhnlich, verbreitet", vulgare:"gewöhnlich, verbreitet", communis:"gemein, häufig",
+  officinalis:"Heil-, Arznei- (aus der Apotheke)", officinale:"Heil-, Arznei-",
+  sativus:"angebaut, Kultur-", sativa:"angebaut, Kultur-", sativum:"angebaut, Kultur-",
+  oleracea:"Gemüse-, Küchen-", oleraceus:"Gemüse-, Küchen-", hortensis:"Garten-", hortorum:"der Gärten",
+  domestica:"Haus-, kultiviert", domesticus:"Haus-, kultiviert", esculentus:"essbar", esculentum:"essbar",
+  edulis:"essbar", tinctoria:"Färber- (zum Färben)", tinctorius:"Färber-",
+  // Größe/Form
+  major:"größer", majus:"größer", maior:"größer", minor:"kleiner", minus:"kleiner",
+  maxima:"sehr groß", maximus:"sehr groß", minima:"sehr klein", minimus:"sehr klein",
+  media:"mittel(groß)", medius:"mittel", nana:"zwergig, klein", nanus:"zwergig, klein", nana_:"zwergig",
+  gracilis:"zierlich, schlank", gracile:"zierlich", compacta:"gedrungen, dicht", compactus:"gedrungen",
+  elegans:"zierlich, elegant", spectabilis:"ansehnlich, prächtig", nobilis:"edel", speciosa:"prächtig", speciosus:"prächtig",
+  // Farben
+  alba:"weiß", albus:"weiß", album:"weiß", nigra:"schwarz", niger:"schwarz", nigrum:"schwarz",
+  rubra:"rot", ruber:"rot", rubrum:"rot", rubens:"rötlich", rubra_:"rot",
+  lutea:"gelb", luteus:"gelb", luteum:"gelb", flava:"gelb", flavus:"gelb", aurea:"golden", aureus:"golden", aureum:"golden",
+  caerulea:"blau", caeruleus:"blau", caeruleum:"blau", azurea:"himmelblau",
+  purpurea:"purpurn", purpureus:"purpurn", purpureum:"purpurn", violacea:"violett", violaceus:"violett",
+  rosea:"rosenrot, rosa", roseus:"rosa", rosa_:"rosa", carnea:"fleischfarben, zartrosa", carneus:"fleischfarben",
+  viridis:"grün", viride:"grün", virens:"grünend", glauca:"blaugrün, bereift", glaucus:"blaugrün, bereift", glaucum:"blaugrün",
+  argentea:"silbrig", argenteus:"silbrig", argenteum:"silbrig", cinerea:"aschgrau", cinereus:"aschgrau",
+  candida:"schneeweiß", candidum:"schneeweiß", incana:"grauweiß behaart", incanus:"grauweiß",
+  variegata:"buntlaubig, gescheckt", variegatus:"buntlaubig", versicolor:"farbwechselnd, bunt", discolor:"zweifarbig",
+  atropurpurea:"dunkelpurpurn", atropurpureum:"dunkelpurpurn", sanguinea:"blutrot", sanguineus:"blutrot",
+  // Lebensraum
+  sylvatica:"Wald-, im Wald wachsend", sylvaticus:"Wald-", silvatica:"Wald-", sylvestris:"wild, im Wald", silvestris:"wild, Wald-",
+  pratensis:"Wiesen-", pratense:"Wiesen-", palustris:"Sumpf-, im Sumpf", palustre:"Sumpf-",
+  montana:"Berg-", montanus:"Berg-", montanum:"Berg-", alpina:"Alpen-, hochgebirgig", alpinus:"Alpen-", alpinum:"Alpen-",
+  maritima:"Meeres-, am Meer", maritimus:"Meeres-", arvensis:"Acker-, auf Feldern", arvense:"Acker-",
+  campestris:"Feld-, Flur-", campestre:"Feld-", aquatica:"Wasser-, im Wasser", aquaticus:"Wasser-", aquaticum:"Wasser-",
+  rupestris:"Felsen-, auf Felsen", rupestre:"Felsen-", saxatilis:"auf Steinen wachsend", nemorosa:"Hain-, im Wäldchen", nemorosus:"Hain-",
+  paludosa:"sumpfig", littoralis:"Ufer-, Küsten-", riparia:"Ufer-", ruderalis:"Schutt-, an Wegen",
+  // Herkunft
+  japonica:"aus Japan", japonicus:"aus Japan", japonicum:"aus Japan", sinensis:"aus China", sinense:"aus China", chinensis:"aus China", chinense:"aus China",
+  europaea:"europäisch", europaeus:"europäisch", europaeum:"europäisch", americana:"amerikanisch", americanus:"amerikanisch",
+  orientalis:"östlich, orientalisch", orientale:"östlich", occidentalis:"westlich", occidentale:"westlich",
+  canadensis:"aus Kanada", virginiana:"aus Virginia", californica:"aus Kalifornien", carolina:"aus Carolina",
+  persica:"aus Persien, Pfirsich-", persicum:"aus Persien", indica:"aus Indien", indicus:"aus Indien",
+  germanica:"deutsch", germanicus:"deutsch", helvetica:"schweizerisch", austriaca:"österreichisch",
+  hispanica:"spanisch", italica:"italienisch", graeca:"griechisch", tatarica:"tatarisch, aus Zentralasien",
+  sibirica:"aus Sibirien", sibiricum:"aus Sibirien", caucasica:"aus dem Kaukasus", himalensis:"aus dem Himalaya",
+  // Wuchs/Habitus
+  repens:"kriechend", reptans:"kriechend", procumbens:"niederliegend", prostrata:"niederliegend", prostratus:"niederliegend",
+  pendula:"hängend, überhängend", pendulus:"hängend", pendulum:"hängend", nutans:"nickend, überhängend",
+  erecta:"aufrecht", erectus:"aufrecht", erectum:"aufrecht", scandens:"kletternd", volubilis:"windend",
+  fastigiata:"säulenförmig, aufstrebend", fastigiatum:"säulenförmig", columnaris:"säulenförmig",
+  fruticosa:"strauchig", fruticosus:"strauchig", arborea:"baumartig", arborescens:"baumartig werdend",
+  caespitosa:"horstbildend, rasig", caespitosus:"horstbildend", stolonifera:"Ausläufer treibend", stoloniferus:"Ausläufer treibend",
+  // Blätter/Textur
+  tomentosa:"filzig behaart", tomentosus:"filzig", tomentosum:"filzig", pubescens:"flaumig behaart",
+  hirsuta:"rauhaarig", hirsutus:"rauhaarig", hirta:"behaart", villosa:"zottig behaart", villosus:"zottig",
+  glabra:"kahl, unbehaart", glaber:"kahl", glabrum:"kahl", glabra_:"kahl", laevis:"glatt", laevigata:"glatt",
+  spinosa:"dornig", spinosus:"dornig", spinosum:"dornig", inermis:"wehrlos, dornenlos",
+  serrata:"gesägt (Blattrand)", serratus:"gesägt", serrulata:"feingesägt", dentata:"gezähnt", dentatus:"gezähnt",
+  crispa:"kraus, gewellt", crispus:"kraus", crispum:"kraus", crispa_:"kraus",
+  sempervirens:"immergrün", perennis:"ausdauernd, mehrjährig", perenne:"ausdauernd",
+  annua:"einjährig", annuus:"einjährig", annuum:"einjährig", biennis:"zweijährig",
+  // Blüte/Frucht/Zahl
+  paniculata:"rispenblütig", paniculatum:"rispenblütig", spicata:"ährenblütig", spicatum:"ährig", racemosa:"traubenblütig", racemosus:"traubig",
+  umbellata:"doldenblütig", capitata:"kopfig (Blüten in Köpfchen)", capitatum:"kopfig", corymbosa:"doldentraubig",
+  baccata:"beerentragend", baccatus:"beerentragend", fruticans:"strauchig blühend",
+  floribunda:"reichblütig", floribundus:"reichblütig", multiflora:"vielblütig", multiflorum:"vielblütig",
+  grandiflora:"großblütig", grandiflorum:"großblütig", grandiflorus:"großblütig", parviflora:"kleinblütig", parviflorum:"kleinblütig",
+  // Duft/Sonstiges
+  odorata:"duftend", odoratus:"duftend", odoratum:"duftend", fragrans:"wohlriechend", graveolens:"stark riechend",
+  moschata:"moschusduftend", moschatus:"moschusduftend", suaveolens:"lieblich duftend", foetida:"übelriechend", foetidus:"übelriechend",
+  dioica:"zweihäusig (Männchen/Weibchen getrennt)", dioicus:"zweihäusig", mas:"männlich", femina:"weiblich",
+  aquifolium:"Stechpalme (‚Nadelblatt‘)", helix:"gewunden (Efeu-Ranke)", avellana:"aus Avella (Haselnuss)",
+  regia:"königlich, prächtig", regius:"königlich", imperialis:"kaiserlich, prächtig",
+  intermedia:"dazwischenstehend, Übergangsform", intermedium:"dazwischenstehend", hybrida:"Kreuzung, Hybride", hybridus:"Hybride",
+  aestivalis:"sommerlich", autumnalis:"herbstblühend", autumnale:"herbstblühend", verna:"Frühlings-", vernalis:"Frühlings-", vernus:"Frühlings-",
+  praecox:"frühblühend, früh reifend", montana_:"Berg-", officinarum:"der Apotheken, Heil-",
+  bulbosa:"knollig, mit Zwiebel", bulbosus:"knollig", tuberosa:"knollentragend", tuberosus:"knollig",
+  reflexa:"zurückgebogen", reflexum:"zurückgebogen", recurva:"zurückgekrümmt", divaricata:"sparrig, weit abstehend",
+  horizontalis:"waagerecht ausgebreitet", horizontale:"waagerecht", radicans:"wurzelnd", filifera:"fadentragend",
+  // Ergänzungen aus dem Abdeckungsreport (häufige echte Epitheta)
+  terminalis:"endständig (Blüten am Triebende)", terminale:"endständig",
+  palmata:"handförmig gelappt", palmatum:"handförmig gelappt", palmatus:"handförmig gelappt",
+  mollis:"weich(haarig)", molle:"weich", avium:"der Vögel, Vogel-",
+  laurocerasus:"‚Lorbeerkirsche‘ (Kirschlorbeer)", cordata:"herzförmig (Blatt)", cordatum:"herzförmig", cordatus:"herzförmig",
+  calycina:"großkelchig", calycinum:"großkelchig", sanguineum:"blutrot",
+  peltata:"schildförmig (Blatt)", peltatum:"schildförmig", pseudonarcissus:"‚falsche Narzisse‘ (Osterglocke)",
+  hippocastanum:"‚Rosskastanie‘ (griech. hippos ‚Pferd‘)", betulus:"birkenähnlich (Hainbuche)", biloba:"zweilappig (Blatt)",
+  cerasifera:"kirschtragend", robur:"‚Kraft, Stärke‘ (hartes Holz, Stiel-Eiche)", pseudoacacia:"‚Scheinakazie‘ (Robinie)",
+  canina:"Hunds- (gemein)", caninus:"Hunds-", opulus:"alter Name des Schneeballs", deliciosa:"köstlich", deliciosus:"köstlich",
+  ternata:"dreizählig (Blätter zu dritt)", ternatum:"dreizählig", pumila:"zwergig, niedrig", pumilus:"zwergig", pumilum:"zwergig",
+  rugosa:"runzelig (Blatt)", rugosum:"runzelig", caprea:"Ziegen- (Sal-Weide)", nivalis:"Schnee-, früh blühend", nivale:"Schnee-",
+  patula:"ausgebreitet, sparrig", patulus:"ausgebreitet", veris:"des Frühlings (Schlüsselblume)",
+  tremula:"zitternd (Espe)", tremulus:"zitternd", decidua:"laubabwerfend", deciduus:"laubabwerfend",
+  pungens:"stechend, stachelspitzig", stricta:"straff aufrecht", strictus:"straff aufrecht",
+  plicata:"gefaltet", plicatum:"gefaltet", viminalis:"Ruten-, biegsam", incarnata:"fleischrot", incarnatus:"fleischrot",
+  mucronata:"stachelspitzig", laciniata:"schlitzblättrig", laciniatum:"schlitzblättrig",
+  abies:"‚Tanne‘ (alter Name; hier: Fichte)", mugo:"Name der Berg-Kiefer",
+  napus:"‚Steckrübe‘ (Raps)", rapa:"‚Rübe‘", cepa:"‚Zwiebel‘", porrum:"‚Lauch‘",
+  // Personen-Epitheta (‚nach …‘)
+  fortunei:"nach dem Pflanzensammler Robert Fortune", davidii:"nach dem Sammler Armand David",
+  wilsonii:"nach dem Sammler E. H. Wilson", arendsii:"nach dem Züchter Georg Arends",
+  dammeri:"nach dem Botaniker Udo Dammer", thunbergii:"nach dem Botaniker C. P. Thunberg",
+  sargentii:"nach dem Dendrologen C. S. Sargent", henryi:"nach dem Sammler Augustine Henry",
+  delavayi:"nach dem Sammler J. M. Delavay", nordmanniana:"nach dem Zoologen A. v. Nordmann",
+  lawsoniana:"nach der Baumschule Lawson", hookeri:"nach dem Botaniker J. D. Hooker",
+  walleriana:"nach dem Sammler H. Waller", bodnantense:"nach dem Garten Bodnant",
+  lamarckii:"nach dem Naturforscher J.-B. de Lamarck", selloana:"nach dem Sammler F. Sellow (Pampasgras)",
+  // weitere häufige Standard-Epitheta
+  barbata:"bärtig (Haare)", barbatus:"bärtig", barbatum:"bärtig", acaulis:"stängellos (fast bodennah)", acaule:"stängellos",
+  stellata:"sternförmig", stellatum:"sternförmig", stellaris:"sternförmig", coccinea:"scharlachrot", coccineum:"scharlachrot", coccineus:"scharlachrot",
+  aucuparia:"‚Vogelfang‘ (Vögel fressen die Beeren)", obtusa:"stumpf (Blattspitze)", obtusum:"stumpf", obtusus:"stumpf",
+  nitida:"glänzend", nitidum:"glänzend", nitidus:"glänzend", verticillata:"quirlständig (Blätter im Kranz)", verticillatum:"quirlständig",
+  cornuta:"gehörnt (gespornt)", cornutum:"gehörnt", cornutus:"gehörnt", subulata:"pfriemlich (schmal-spitz)", subulatum:"pfriemlich",
+  majalis:"im Mai blühend", majale:"im Mai blühend", italicum:"italienisch", syriaca:"aus Syrien", syriacus:"aus Syrien",
+  koreana:"aus Korea", koreanum:"aus Korea", koreensis:"aus Korea", podagraria:"gegen Gicht (Giersch)",
+  cineraria:"aschgrau (Blätter)", florida:"reich blühend", floridum:"reich blühend", floridus:"reich blühend",
+  caryophyllus:"nelkenartig (Gewürznelken-Duft)", caryophyllea:"nelkenartig", zonale:"gezont (Blattzeichnung)", zonalis:"gezont",
+  amellus:"antiker Name der Berg-Aster", platyphyllos:"breitblättrig", macrorrhizum:"großwurzelig",
+  platanoides:"platanenähnlich (Blatt)", bignonioides:"trompetenbaumähnlich", jasminoides:"jasminähnlich", rhamnoides:"kreuzdornähnlich (Sanddorn)",
+  telephium:"antiker Name (Große Fetthenne)", filipendulina:"‚fadenhängend‘ (Knöllchen an Wurzeln)",
+  endivia:"aus dem Namen für Endivie", coum:"von der Insel Kos", erinus:"antiker Pflanzenname",
+  cerasus:"‚Kirsche‘ (nach der Stadt Kerasos)", laevigata:"glatt (kahl)",
+  excelsior:"höher, hochragend (Esche)", excelsa:"hochragend", excelsum:"hochragend",
+  monogyna:"eingriffelig (ein Griffel, Weißdorn)", pseudoplatanus:"platanenähnlich (Berg-Ahorn)",
+  vinifera:"weintragend (Weinrebe)", tuberosum:"knollentragend", foliosum:"reich beblättert", foliosus:"reich beblättert",
+  piperita:"pfefferminzartig, scharf", schoenoprasum:"‚Binsenlauch‘ (Schnittlauch)", cerefolium:"‚Freudenblatt‘ (Kerbel)",
+  crenata:"gekerbt (Blattrand)", crenatum:"gekerbt", oblonga:"länglich", oblongum:"länglich", oblongus:"länglich",
+  alata:"geflügelt (Kork-/Stängelleisten)", alatus:"geflügelt", alatum:"geflügelt", scabra:"rau(haarig)", scabrum:"rau",
+  coronaria:"Kranz-, zum Bekränzen", coronarius:"Kranz-", armeniaca:"aus Armenien (Aprikose)",
+  nudiflorum:"nacktblütig (Blüte vor dem Laub)", squamata:"schuppig", squamatum:"schuppig",
+  colurna:"antiker Name (Baum-Hasel)", vanhouttei:"nach dem Gärtner L. Van Houtte", fraseri:"nach dem Sammler J. Fraser",
+  atlantica:"aus dem Atlasgebirge", antarctica:"südlich (aus dem Süden)", tricuspidata:"dreispitzig (Blattlappen)",
+  nummularia:"‚Münzen-‘ (rundliche Blätter, Pfennigkraut)", intybus:"antiker Name (Wegwarte)", styraciflua:"‚Storaxfluss‘ (Harz, Amberbaum)",
+};
+
+/* Kompositions-Bausteine für zusammengesetzte Epitheta (Vorderteil + Nachsilbe). */
+const LAT_PRE = {
+  grandi:"groß", magni:"groß", macro:"groß", mega:"groß", parvi:"klein", micro:"klein",
+  angusti:"schmal", steno:"schmal", lati:"breit", platy:"breit", longi:"lang", brevi:"kurz", brachy:"kurz",
+  rotundi:"rund", ovali:"oval", cordi:"herzförmig", reni:"nieren-", sagitti:"pfeil-",
+  tenui:"dünn, zart", crassi:"dick", multi:"viel", poly:"viel", pauci:"wenig", mono:"ein", uni:"ein",
+  pinnati:"gefiedert", palmati:"handförmig", denti:"gezähnt", serrati:"gesägt", integri:"ganzrandig",
+  laevi:"glatt", glabri:"kahl", tomentosi:"filzig", leuco:"weiß", chloro:"grün", erythro:"rot",
+  melano:"schwarz", chryso:"gold", cyano:"blau", purpureo:"purpurn", flori:"blüten-", folii:"blatt-",
+  hetero:"verschieden", homo:"gleich", tri:"drei", bi:"zwei", quadri:"vier", quinque:"fünf",
+};
+const LAT_SUF = {
+  folia:"blättrig", folius:"blättrig", folium:"blättrig", phylla:"blättrig", phyllus:"blättrig", phyllum:"blättrig", phyllos:"blättrig",
+  flora:"blütig", florus:"blütig", florum:"blütig", flos:"-blütig", anthos:"blütig", antha:"blütig", anthum:"blütig", anthus:"blütig",
+  carpa:"früchtig", carpus:"früchtig", carpum:"früchtig", carpos:"früchtig",
+  caulis:"stängelig", caule:"stängelig", nervis:"nervig", nervia:"nervig", spina:"dornig", spinus:"dornig",
+  petala:"blütenblättrig", stachya:"ährig", stachys:"ährig", pogon:"bärtig", rhiza:"wurzelig",
+};
+
+/* Gattungsnamen – Bedeutung/Merkhilfe (die häufigsten/bekanntesten). */
+const LAT_GEN = {
+  Acer:"lat. für Ahorn (‚scharf‘ – hartes Holz)", Quercus:"lat. für Eiche", Fagus:"lat. für Buche",
+  Betula:"lat. für Birke", Alnus:"lat. für Erle", Salix:"lat. für Weide (‚springen, wachsen‘)",
+  Populus:"lat. für Pappel", Tilia:"lat. für Linde", Ulmus:"lat. für Ulme", Fraxinus:"lat. für Esche",
+  Carpinus:"lat. für Hainbuche", Corylus:"lat. für Hasel", Castanea:"nach der Stadt Kastanaia (Edelkastanie)",
+  Juglans:"‚Jupiters Eichel‘ (Walnuss)", Aesculus:"röm. Eichenart (Rosskastanie)", Robinia:"nach dem Gärtner J. Robin",
+  Prunus:"lat. für Pflaume/Kirsche", Malus:"lat. für Apfel", Pyrus:"lat. für Birne", Cydonia:"nach der Stadt Kydonia (Quitte)",
+  Rosa:"lat. für Rose", Rubus:"lat. für Brombeere/Himbeere", Fragaria:"‚duftend‘ (Erdbeere)", Crataegus:"‚Kraft, hart‘ (Weißdorn)",
+  Sorbus:"lat. für Vogelbeere/Mehlbeere", Cotoneaster:"‚quittenartig‘ (Zwergmispel)", Amelanchier:"altfranz. Name (Felsenbirne)",
+  Ribes:"vom arabischen ‚ribas‘ (Johannisbeere)", Vaccinium:"lat. für Heidelbeere",
+  Picea:"lat. für Fichte (‚Pech‘)", Abies:"lat. für Tanne", Pinus:"lat. für Kiefer/Föhre", Larix:"lat. für Lärche",
+  Taxus:"lat. für Eibe", Juniperus:"lat. für Wacholder", Thuja:"griech. ‚thyia‘ (Lebensbaum)", Cedrus:"griech. für Zeder",
+  Fabaceae:"", // Platzhalter, nicht genutzt
+  Allium:"lat. für Knoblauch/Lauch", Lilium:"lat. für Lilie", Tulipa:"von türk. ‚tülbend‘ (Turban)", Narcissus:"nach der griech. Sagengestalt",
+  Iris:"griech. Regenbogen (Farbenpracht)", Crocus:"griech. ‚krokos‘ (Safran)", Hyacinthus:"nach der griech. Sagengestalt",
+  Aster:"griech. ‚Stern‘ (Blütenform)", Bellis:"lat. ‚hübsch‘ (Gänseblümchen)", Chrysanthemum:"griech. ‚Goldblume‘",
+  Helianthus:"griech. ‚Sonnenblume‘", Solidago:"‚heilen, festigen‘ (Goldrute)", Achillea:"nach Achilles (Schafgarbe)",
+  Campanula:"lat. ‚Glöckchen‘ (Glockenblume)", Digitalis:"lat. ‚Fingerhut‘", Salvia:"‚heilen‘ (Salbei)",
+  Lavandula:"‚waschen‘ (Lavendel, für Bäder)", Thymus:"griech. ‚thymon‘ (Thymian)", Mentha:"nach der Nymphe Minthe (Minze)",
+  Sedum:"lat. ‚sitzen‘ (Mauerpfeffer, sitzt auf Steinen)", Sempervivum:"‚immer lebend‘ (Hauswurz)",
+  Hedera:"lat. für Efeu", Vinca:"‚binden, umschlingen‘ (Immergrün)", Clematis:"griech. ‚Ranke‘ (Waldrebe)",
+  Hydrangea:"griech. ‚Wassergefäß‘ (Hortensie)", Rhododendron:"griech. ‚Rosenbaum‘", Erica:"griech. für Heide",
+  Viburnum:"lat. für Schneeball", Sambucus:"lat. für Holunder", Lonicera:"nach dem Botaniker A. Lonitzer (Heckenkirsche)",
+  Cornus:"lat. ‚Horn‘ (hartes Holz, Hartriegel)", Euonymus:"griech. ‚gut benannt‘ (Pfaffenhütchen)",
+  Berberis:"vom arab. Namen (Berberitze)", Ligustrum:"lat. für Liguster", Buxus:"griech./lat. für Buchsbaum",
+  Ilex:"lat. für Stechpalme", Magnolia:"nach dem Botaniker P. Magnol", Forsythia:"nach dem Gärtner W. Forsyth",
+  Brassica:"lat. für Kohl", Beta:"lat. für Rübe/Bete", Daucus:"griech. für Möhre", Apium:"lat. für Sellerie/Eppich",
+  Lactuca:"‚Milch‘ (Milchsaft, Salat)", Cichorium:"vom griech. Namen (Zichorie)", Petroselinum:"griech. ‚Felsen-Eppich‘ (Petersilie)",
+  Solanum:"lat. Nachtschatten", Cucumis:"lat. für Gurke/Melone", Cucurbita:"lat. für Kürbis", Phaseolus:"griech. für Bohne",
+  Pisum:"lat. für Erbse", Allium_:"", Spinacia:"vom pers. Namen (Spinat)",
+  Carex:"lat. für Segge", Festuca:"lat. ‚Halm‘ (Schwingel)", Poa:"griech. ‚Gras, Futter‘ (Rispengras)",
+  Primula:"‚die Erste‘ (Frühblüher, Schlüsselblume)", Viola:"lat. für Veilchen", Bergenia:"nach dem Botaniker K. v. Bergen",
+  Hosta:"nach dem Botaniker N. Host (Funkie)", Astilbe:"griech. ‚ohne Glanz‘", Geranium:"griech. ‚Kranich‘ (Storchschnabel)",
+  Dianthus:"griech. ‚Götterblume‘ (Nelke)", Paeonia:"nach dem Arzt Paion (Pfingstrose)", Papaver:"lat. für Mohn",
+  Anemone:"griech. ‚Wind‘ (Windröschen)", Ranunculus:"lat. ‚Fröschlein‘ (Hahnenfuß, feuchte Standorte)",
+  Begonia:"nach dem Förderer M. Bégon", Pelargonium:"griech. ‚Storch‘ (Geranie)", Fuchsia:"nach dem Botaniker L. Fuchs",
+  Ginkgo:"vom japan. Namen (Fächerblattbaum)", Camellia:"nach dem Botaniker G. Kamel", Syringa:"griech. ‚Röhre‘ (Flieder)",
+  Wisteria:"nach dem Anatomen C. Wistar (Blauregen)", Weigela:"nach dem Botaniker C. E. Weigel",
+  Deutzia:"nach dem Förderer J. van der Deutz", Spiraea:"griech. ‚Spirale‘ (Spierstrauch)", Philadelphus:"griech. ‚Bruderliebe‘ (Pfeifenstrauch)",
+  Potentilla:"lat. ‚kleine Kraft‘ (Fingerkraut, Heilpflanze)", Hypericum:"griech. Name (Johanniskraut)", Mahonia:"nach dem Gärtner B. McMahon",
+  Pachysandra:"griech. ‚dicke Staubblätter‘ (Ysander)", Pulmonaria:"lat. ‚Lunge‘ (Lungenkraut, Heilpflanze)",
+  Brunnera:"nach dem Botaniker S. Brunner", Heuchera:"nach dem Mediziner J. H. Heucher (Purpurglöckchen)",
+  Epimedium:"alter griech. Pflanzenname (Elfenblume)", Helleborus:"griech. Name (Christrose, giftig)",
+  Aquilegia:"lat. ‚Adler‘ (Akelei, gespornte Blüten)", Delphinium:"griech. ‚Delfin‘ (Rittersporn, Knospenform)",
+  Aconitum:"griech. Name (Eisenhut, sehr giftig)", Phlox:"griech. ‚Flamme‘ (Flammenblume)",
+  Echinacea:"griech. ‚Igel‘ (stacheliger Blütenboden)", Rudbeckia:"nach dem Botaniker O. Rudbeck (Sonnenhut)",
+  Lupinus:"lat. ‚Wolf‘ (Lupine, ‚zehrt den Boden aus‘)", Nepeta:"nach der Stadt Nepete (Katzenminze)",
+  Stachys:"griech. ‚Ähre‘ (Ziest)", Ajuga:"Name des Günsels", Verbena:"lat. für heiliges Kraut (Eisenkraut)",
+  Anthemis:"griech. ‚Blüte‘ (Hundskamille)", Matricaria:"lat. ‚Mutter‘ (Kamille, Frauenheilkunde)",
+  Calendula:"lat. ‚kleiner Kalender‘ (Ringelblume, blüht lange)", Tagetes:"nach dem etrusk. Gott Tages (Studentenblume)",
+  Hemerocallis:"griech. ‚Tagesschönheit‘ (Taglilie)", Convallaria:"lat. ‚Tal‘ (Maiglöckchen)",
+  Galanthus:"griech. ‚Milchblume‘ (Schneeglöckchen)", Muscari:"‚Moschus‘ (Traubenhyazinthe, Duft)",
+  Fritillaria:"lat. ‚Würfelbecher‘ (Schachblume, Musterung)", Colchicum:"nach der Landschaft Kolchis (Herbstzeitlose)",
+  Cyclamen:"griech. ‚Kreis‘ (Alpenveilchen, gedrehte Stiele)", Impatiens:"lat. ‚ungeduldig‘ (schleudernde Samen)",
+  Petunia:"vom Tupí-Wort für Tabak", Viola_:"", Antirrhinum:"griech. ‚Nasenähnlich‘ (Löwenmäulchen)",
+  Cotinus:"griech. Name (Perückenstrauch)", Hibiscus:"griech./lat. Name (Eibisch)", Laburnum:"lat. Name (Goldregen, giftig)",
+  Ostrya:"griech. Name (Hopfenbuche)", Platanus:"griech. ‚breit‘ (Platane, breite Blätter)", Liquidambar:"lat. ‚flüssiger Bernstein‘ (Amberbaum, Harz)",
+};
+
+// ---- Glossierung ----
+function stripEnd(w){ return String(w).toLowerCase().replace(/[.,;)('"«»]+$/,"").replace(/^[.,;)('"«»-]+/,""); }
+function latGloss(word){
+  let w = stripEnd(word);
+  if(!w || w.length<3) return null;
+  if(LAT_EPI[w]) return LAT_EPI[w];
+  // Kompositum: bekannte Nachsilbe + bekanntes Vorderteil
+  for(const suf in LAT_SUF){
+    if(w.length>suf.length+2 && w.endsWith(suf)){
+      let pre = w.slice(0, -suf.length).replace(/[io]$/,m=>m);   // Bindevokal behalten
+      if(LAT_PRE[pre]) return LAT_PRE[pre]+LAT_SUF[suf];
+      // Bindevokal wegnehmen und erneut prüfen (angustifolia: angusti|folia; latifolia: lati|folia)
+      const pre2 = w.slice(0, -suf.length).replace(/[io]$/,"");
+      if(LAT_PRE[pre2]) return LAT_PRE[pre2]+LAT_SUF[suf];
+    }
+  }
+  return null;
+}
+const RANK = new Set(["var","ssp","subsp","cv","convar","sect","grp","group","gruppe",
+  "cultivars","cultivar","sorten","sorte","hybriden","hybride","aggr","agg","nothosubsp"]);
+function nameEtymology(g, a){
+  const parts = [], seen = new Set();
+  if(g && LAT_GEN[g]) parts.push({ t:g, d:LAT_GEN[g] });
+  for(const raw of String(a||"").split(/\s+/)){
+    const w = stripEnd(raw);
+    if(!w || w.length<3 || seen.has(w) || RANK.has(w.toLowerCase()) || /[^a-zäöüß-]/.test(w)) continue;
+    if(/^[A-ZÄÖÜ]/.test(raw)) continue;              // Sortennamen (großgeschrieben) auslassen
+    const d = latGloss(w);
+    if(d){ parts.push({ t:w, d }); seen.add(w); }    // Autonyme (montanum subsp. montanum) nicht doppeln
+  }
+  return parts;
+}
+
 function deepLinks(c){
   const full = encodeURIComponent(norm(c.g+" "+c.a));  // Wikipedia: FEIN – exakter Name inkl. Sorte/Unterart (Wikipedia löst das auf und 404t nie)
   const q = encodeURIComponent(searchName(c));          // andere Quellen: GROB – reines Binom (zu fein → oft 0 Treffer/404; mehrere Treffer sind hier ok)
@@ -2100,6 +2351,12 @@ function openInfo(card){
   const links = deepLinks(card).map(l=>
     `<a href="${esc(l.u)}" target="_blank" rel="noopener">${esc(l.n)}<span class="ext">↗</span></a>`).join("");
   const fam = [card.fam, card.thema].filter(Boolean).join(" · ");
+  const ety = nameEtymology(card.g, card.a);                       // Namensherleitung (Merkhilfe, offline)
+  const etyHTML = ety.length ? `<details class="etym">
+       <summary><span class="etym-ic" aria-hidden="true">📖</span> Name-Herkunft · Merkhilfe</summary>
+       <ul class="etym-list">${ety.map(p=>`<li><i>${esc(p.t)}</i> — ${esc(p.d)}</li>`).join("")}</ul>
+       <div class="etym-note">Kurzherleitung (Latein/Griechisch → Deutsch), kuratiert – ohne Gewähr.</div>
+     </details>` : "";
   const scrim = el("div","scrim"); scrim.id="infoScrim";
   scrim.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Pflanzen-Info">
      <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
@@ -2108,6 +2365,7 @@ function openInfo(card){
        ${card.de?`<div class="mh-de">${esc(card.de)}</div>`:""}
        ${fam?`<div class="mh-fam">${esc(fam)}</div>`:""}
      </div>
+     ${etyHTML}
      <div class="srcblock">
        <div class="srclabel">Nachschlagen · öffnet neuen Tab</div>
        <div class="srcgrid">${links}</div>
@@ -2387,6 +2645,7 @@ window.celebrate=celebrate;
 window.deHeadCounts=()=>deHeadCount;   // für Tests: Grundwort → Artenzahl im Profil
 window.deForms=deForms;
 window.deMain=deMain;
+window.nameEtymology=nameEtymology;   // für Tests: botanische Namensherleitung
 window.examFieldList=examFieldList;
 window.wikiPhoto=wikiPhoto;
 /* Bild-Quelle austauschbar + Bild-Cache leerbar: Die Tests laufen ohne Netz. */
