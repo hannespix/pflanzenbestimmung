@@ -820,8 +820,9 @@ body.stagefull #stage>.sessionbar{
       <dt>Quiz</dt><dd>Zum deutschen Namen den richtigen <b>botanischen Namen</b> aus vier Möglichkeiten
         wählen. Die Ablenker stammen bevorzugt aus demselben Thema – das macht die Auswahl
         anspruchsvoller und schult den Blick fürs Unterscheiden.</dd>
-      <dt>Tippen</dt><dd>Zum deutschen Namen den <b>botanischen Namen</b> selbst eingeben;
-        Gattung und Art werden getrennt geprüft. <b>Die Schreibweise zählt:</b> erlaubt ist genau
+      <dt>Tippen</dt><dd>Zum deutschen Namen den <b>botanischen Namen</b> selbst eingeben – in
+        <b>getrennten Feldern für Gattung und Art</b> (wie auf dem Prüfungsbogen), mit <b>Enter</b>
+        springst du ins nächste Feld. Jedes Feld wird einzeln geprüft. <b>Die Schreibweise zählt:</b> erlaubt ist genau
         <b>ein</b> falsches Zeichen und das erst ab fünf Buchstaben – kurze Namen (<i>Acer</i>, <i>Rosa</i>)
         müssen sitzen, und der <b>Anfangsbuchstabe muss stimmen</b> (»Bollensellerie« ist kein
         Knollensellerie). Alles knapp daneben ist kein »falsch«, sondern ein <b>»Fast«</b> (s. u.).
@@ -2279,31 +2280,65 @@ function answerQuiz(btn, chosen, opts){
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
 }
 
+/* Tippen: die Namensbestandteile in EINZELNE Felder – wie im Bilder-Quiz »wie in der
+   Prüfung«. Richtungsabhängig: deutscher Name gegeben → Gattung + Art tippen; botanisch
+   gegeben → deutschen Namen tippen. Je Feld tippfehlertolerant über fieldJudge(). */
+const TYPE_PH = { g:"Gattung", a:"Art (Epitheton)", fam:"Familie", de:"deutscher Name" };
+function typeFields(c){
+  if(wantsDe()) return ["de"];                            // botanisch gegeben → deutschen Namen tippen
+  return norm(c.a) ? ["g","a"] : ["g"];                   // Hybrid-Gruppen ohne Art-Epitheton: nur Gattung
+}
 function renderType(){
-  const c=current;
+  const c=current, keys=typeFields(c);
   const stage=$("#stage");
   stage.innerHTML = sessionBar() +
     `<div class="qprompt">${promptHTML(c)}</div>
      ${promptSub(c)?`<div class="qsub">${esc(promptSub(c))}</div>`:""}
-     <div class="typebox">
-       <input id="typeIn" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${esc(answerLabel())} eingeben …">
-       <div class="feedback" id="fb" aria-live="polite"></div>
-     </div>
+     <div class="examform" id="typeForm">`+
+       keys.map((k,i)=>`<label class="exrow" for="ty_${k}">
+           <span class="exlab">${esc(FIELD_LABEL[k]||k)}</span>
+           <input id="ty_${k}" data-k="${k}" type="text" autocomplete="off" autocapitalize="${k==="de"?"sentences":"off"}"
+                  spellcheck="false" placeholder="${esc(TYPE_PH[k]||"")}" ${i===0?"autofocus":""}>
+           <span class="exmark" id="tmk_${k}"></span>
+         </label>`).join("")+
+     `</div>
+     <div class="feedback" id="fb" aria-live="polite"></div>
      <div class="nav" id="nav"><button class="btn primary" id="chk">Prüfen</button></div>`;
   $("#btnStop").onclick=finishSession;
-  const inp=$("#typeIn"); inp.focus();
-  inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); $("#chk").click(); }});
-  $("#chk").onclick=()=>submitType(inp);
+  const ins=[...document.querySelectorAll("#typeForm input")];
+  if(ins[0]) ins[0].focus();
+  ins.forEach((inp,i)=>inp.addEventListener("keydown",e=>{       // Enter: nächstes Feld, am Ende prüfen
+    if(e.key!=="Enter") return;
+    e.preventDefault();
+    if(i<ins.length-1) ins[i+1].focus(); else { const b=$("#chk"); if(b) b.click(); }
+  }));
+  $("#chk").onclick=()=>submitType(ins);
   clockStart();
 }
-function submitType(inp){
+function submitType(ins){
   clockStop();
-  const c=current, j=judgeTyped(inp.value, c), ok=j.lvl==="ok";
-  inp.disabled=true; inp.classList.add(ok?"ok":j.lvl==="near"?"near":"no");
-  grade(c, ok?"good":j.lvl==="near"?"hard":"again");
-  if(ok) sess.correct++; else requeueCurrent();
-  $("#fb").innerHTML = typeFeedback(j, c, inp.value);
-  if(ok) celebrate($("#fb"), 1);
+  const c=current;
+  let right=0, near=0;
+  ins.forEach(inp=>{
+    const k=inp.dataset.k, lvl=fieldJudge(k, inp.value, c);
+    if(lvl==="ok") right++; else if(lvl==="near") near++;
+    inp.disabled=true; inp.classList.add(lvl==="ok"?"ok":lvl==="near"?"near":"no");
+    const mk=$("#tmk_"+k);
+    if(mk) mk.innerHTML = lvl==="ok" ? `<span class="ex-ok">✓</span>`
+      : lvl==="near" ? `<span class="ex-near">≈</span> <span class="ex-sol">${markDiff(fieldSolution(k,c), inp.value)}</span>`
+      : `<span class="ex-no">✗</span> <span class="ex-sol">${esc(fieldSolution(k,c))}</span>`;
+  });
+  const all = right===ins.length;
+  grade(c, all ? "good" : (right||near) ? "hard" : "again");
+  if(all) sess.correct++; else requeueCurrent();
+  $("#fb").innerHTML = `<span class="sol">`+
+    (all ? `<span class="good">Richtig!</span>`
+      : (right||near) ? `<span class="near">Teilweise richtig.</span>`
+      : `<span class="bad">Leider falsch.</span>`)+
+    (all ? "" : " · "+solutionLine(c))+
+    (near && !all ? ` · <b>≈</b> Schreibfehler – die markierte Stelle zeigt die richtige Form` : "")+
+    `</span>`;
+  if(all) celebrate($("#fb"), 1);
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
 }
