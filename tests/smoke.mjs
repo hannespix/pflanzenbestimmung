@@ -593,6 +593,49 @@ async function main() {
     localStorage.removeItem("pflanzenkenntnis.settings");
   });
 
+  // 8i) Pflanzen-Info-Modal (aus dem Lern-Tool portiert): ℹ in der Auswahl-Liste und
+  //     in der »Aktuellen Prüfung« öffnet die Info-Karte (Namensherleitung + neutrale
+  //     Deep-Links + opt-in Wikipedia-Knopf); eigener Namensraum .infoscrim/.infobox,
+  //     die bestehenden .scrim/.modal-Panels bleiben unberührt.
+  await page.setViewport({ width: 1000, height: 900, deviceScaleFactor: 1 });
+  await page.waitForFunction("document.querySelectorAll('#list .row').length>0", { timeout: 10000 });
+  const info = await page.evaluate(() => {
+    const openBtn = [...document.querySelectorAll("#list .row .rowacts .iconbtn")]
+      .find(b => /Mehr zur Pflanze/.test(b.title));
+    if (!openBtn) return { ok: false, why: "kein ℹ-Knopf in der Auswahl-Liste" };
+    openBtn.click();
+    const box = document.querySelector(".infoscrim .infobox");
+    const links = [...document.querySelectorAll(".infoscrim .srcgrid a")].map(a => a.textContent.replace(/[↗\s]+$/, ""));
+    const res = {
+      ok: !!box,
+      role: box && box.getAttribute("role"),
+      hasHead: !!document.querySelector(".infoscrim .mh-bot"),
+      links,
+      hasWpBtn: !!document.querySelector(".infoscrim #wpLoad"),
+      etyPresent: !!document.querySelector(".infoscrim details.etym"),
+      leakedScrimOpen: document.querySelectorAll(".scrim.open").length   // Info-Modal darf kein Panel öffnen
+    };
+    const x = document.querySelector(".infoscrim .infobox-x"); if (x) x.click();
+    res.closedByX = !document.querySelector(".infoscrim");
+    // aus der »Aktuellen Prüfung« heraus
+    if (window.drawRandom) window.drawRandom();
+    const cur = document.querySelector('#currentSelList .pvrow [data-a="info"]');
+    if (cur) { cur.click(); res.fromCurrent = !!document.querySelector(".infoscrim .infobox"); }
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    res.closedByEsc = !document.querySelector(".infoscrim");
+    return res;
+  });
+  assert(info.ok && info.role === "dialog" && info.hasHead,
+    "Info-Modal öffnet nicht korrekt aus der Auswahl-Liste: " + JSON.stringify(info));
+  assert(JSON.stringify(info.links) === JSON.stringify(["Wikipedia", "NaturaDB", "iNaturalist"]),
+    "Info-Modal muss die neutralen Deep-Links (Wikipedia/NaturaDB/iNaturalist) zeigen: " + JSON.stringify(info.links));
+  assert(info.hasWpBtn, "Info-Modal muss den opt-in »Online-Infos laden«-Knopf (Wikipedia) haben: " + JSON.stringify(info));
+  assert(info.etyPresent, "Info-Modal muss die Namensherleitung (Merkhilfe) enthalten: " + JSON.stringify(info));
+  assert(info.leakedScrimOpen === 0, "Info-Modal darf kein .scrim-Panel öffnen (Namensraum-Trennung): " + JSON.stringify(info));
+  assert(info.closedByX, "Info-Modal schließt nicht über ×: " + JSON.stringify(info));
+  assert(info.fromCurrent, "ℹ in der »Aktuellen Prüfung« öffnet die Info-Karte nicht: " + JSON.stringify(info));
+  assert(info.closedByEsc, "Info-Modal schließt nicht über Esc: " + JSON.stringify(info));
+
   // 9) Mobile-Layout: Status-Pille überlagert die Überschrift nicht (schmale Breite)
   await page.setViewport({ width: 360, height: 720, deviceScaleFactor: 1 });
   const mobile = await page.evaluate(() => {
@@ -606,7 +649,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Smoke-Test OK – Boot, Modul-Modals (öffnen/×/Esc, aktive Buttons), Hilfe + Tooltips, Profilwechsel (148/248), Schema-Matrix, Ziehen, Bogen (offizielle Formulare), Druck-Dialog speichert/aktualisiert Prüfung, Prüfungen (speichern/laden/kopieren/aktualisieren), Prüfungs-JSON-Import (Gerätewechsel), Sicherung mit Profilwechsel, Einstellungen, Vorschau, Persistenz, Mobile-Kopf.");
+  console.log("Smoke-Test OK – Boot, Modul-Modals (öffnen/×/Esc, aktive Buttons), Hilfe + Tooltips, Profilwechsel (148/248), Schema-Matrix, Ziehen, Bogen (offizielle Formulare), Druck-Dialog speichert/aktualisiert Prüfung, Prüfungen (speichern/laden/kopieren/aktualisieren), Prüfungs-JSON-Import (Gerätewechsel), Sicherung mit Profilwechsel, Einstellungen, Vorschau, Info-Karte (ℹ in Liste + Aktueller Prüfung: Namensherleitung, Deep-Links, opt-in Wikipedia, ×/Esc), Persistenz, Mobile-Kopf.");
 }
 
 main().catch((e) => { console.error("Smoke-Test FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
