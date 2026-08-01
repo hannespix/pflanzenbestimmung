@@ -324,8 +324,23 @@ async function main() {
     const dup = nameEtymology("Alyssum", "montanum subsp. montanum").filter((p) => p.t === "montanum").length;
     const ficus = nameEtymology("Ficus", "benjamina").length;            // vorher unerklärte Gattung
     const hyb = nameEtymology("Fuchsia-Hybriden", "").map((p) => p.t).join();  // Hybrid-Gruppe → Basisgattung
-    const covered = allCards.filter((c) => nameEtymology(c.g, c.a).length > 0).length;
-    return { has: !!det, collapsed, items, botItalic, noneShown, lav, dup, ficus, hyb, coverPct: Math.round(100 * covered / allCards.length) };
+    // »ALLE Namensbestandteile erklärt«: für jede Karte Gattung UND jedes Epitheton glossiert
+    const rank = new Set(["var", "ssp", "subsp", "cv", "convar", "sect", "grp", "group", "gruppe", "cultivars", "cultivar", "sorten", "sorte", "hybriden", "hybride", "aggr", "agg", "nothosubsp"]);
+    const allParts = (c) => {
+      const e = nameEtymology(c.g, c.a), gk = String(c.g || "").replace(/-Hybride[nr]?$/i, "").trim();
+      if (!e.some((p) => p.t === c.g || p.t === gk)) return false;
+      for (const raw of String(c.a || "").split(/\s+/)) {
+        const w = raw.toLowerCase().replace(/[.,;)('"«»]+$/, "").replace(/^[-]+/, "");
+        if (!w || w.length < 3 || rank.has(w) || /[^a-zäöüß-]/.test(w) || /^[A-ZÄÖÜ]/.test(raw)) continue;
+        if (!e.some((p) => p.t.toLowerCase() === w || p.t.toLowerCase() === w.replace(/-(gruppe|grp|group|gp)$/, ""))) return false;
+      }
+      return true;
+    };
+    const fullPct = Math.round(100 * allCards.filter(allParts).length / allCards.length);
+    const person = nameEtymology("Thuja", "zzztestii").some((p) => /Person/.test(p.d));      // Fallback -ii
+    const place = nameEtymology("Thuja", "zzztestensis").some((p) => /Fundort/.test(p.d));    // Fallback -ensis
+    const stellaria = nameEtymology("Stellaria", "media").length;                            // neue Gattung + Epitheton
+    return { has: !!det, collapsed, items, botItalic, noneShown, lav, dup, ficus, hyb, fullPct, person, place, stellaria };
   });
   assert(etym.has && etym.collapsed && etym.botItalic,
     "Namensherleitung muss als zugeklapptes Akkordeon mit kursivem Botanik-Teil erscheinen: " + JSON.stringify(etym));
@@ -336,8 +351,10 @@ async function main() {
   assert(etym.dup === 1, "Autonyme (montanum subsp. montanum) dürfen die Herleitung nicht doppeln: " + etym.dup);
   assert(etym.ficus > 0 && /Fuchsia/.test(etym.hyb),
     "Gattungs-Wörterbuch muss vervollständigt sein (Ficus) und »-Hybriden« auf die Basisgattung auflösen: " + JSON.stringify({ ficus: etym.ficus, hyb: etym.hyb }));
-  assert(etym.coverPct === 100,
-    "Jede Art des Profils muss mindestens eine Herleitung bekommen (100 %): war " + etym.coverPct + "%");
+  assert(etym.fullPct === 100,
+    "ALLE Namensbestandteile jeder Art (Gattung UND jedes Epitheton) müssen erklärt sein (100 %): war " + etym.fullPct + "%");
+  assert(etym.person && etym.place && etym.stellaria === 2,
+    "Struktur-Fallbacks (Person/Fundort) und neue Gattung (Stellaria) müssen greifen: " + JSON.stringify({ person: etym.person, place: etym.place, stellaria: etym.stellaria }));
   assert(info.closed, "Info-Modal schließt nicht");
 
   // Wikipedia-Auflösung: Sorten-GRUPPE (kein Rang var./ssp.) findet das reine Binom,
