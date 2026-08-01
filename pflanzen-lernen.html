@@ -812,6 +812,10 @@ body.stagefull #stage>.sessionbar{
       </div>
       <div class="exfields" id="examFieldsRow" hidden></div>
     </details>
+    <!-- Listen-Optionen: gleicher Platz wie die Sitzungs-Optionen darüber – applyMode()
+         blendet je Modus die passende Klappe ein, damit »Optionen« immer an derselben
+         Stelle unter den Modus-Tabs sitzt (homogen über alle Modi). -->
+    <div class="listcontrols" id="listControls" hidden></div>
     <div class="startrow" id="startRow">
       <button class="btn primary big" id="btnStart" title="Neue Lernsitzung mit den aktuellen Einstellungen starten">Sitzung starten</button>
       <span class="hint" id="startHint"></span>
@@ -992,7 +996,6 @@ body.stagefull #stage>.sessionbar{
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>Liste drucken
     </button>
   </div>
-  <div class="listcontrols" id="listControls" hidden></div>
 
   <main id="stage"></main>
 
