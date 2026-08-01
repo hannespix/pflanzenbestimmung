@@ -317,6 +317,8 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .listsearchrow .lsic{width:17px; height:17px; color:var(--ink-faint); flex:none}
 .listsearch{flex:1; border:none; outline:none; background:transparent; padding:11px 4px; font-size:15px; color:var(--ink)}
 .listsearch::-webkit-search-cancel-button{cursor:pointer}
+.printety{display:flex; align-items:center; gap:7px; flex:none; white-space:nowrap; font-size:13px; color:var(--ink-soft); cursor:pointer; padding:0 6px}
+.printety input{accent-color:var(--green); width:16px; height:16px; cursor:pointer; flex:none}
 /* Listen-Steuerung: einklappbares Akkordion mit Ansicht (Wuchsform/Familie/A–Z) + Filter-Tags */
 .listcontrols{margin-top:12px}
 .listcontrols[hidden]{display:none}
@@ -420,6 +422,7 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
   .modes button:last-child{grid-column:1/-1; border-right:none; border-bottom:none}
   /* Listen-Suche: Druck-Knopf rutscht in voller Breite unter das Suchfeld */
   .listsearchrow .printbtn{width:100%; justify-content:center}
+  .printety{width:100%; justify-content:center; padding:4px 0}
   /* Setup-Felder: volle Breite, Selects schrumpfen mit (kein Überlauf) */
   .setrow{gap:12px}
   .setrow .field{width:100%}
@@ -519,13 +522,22 @@ main{margin-top:22px}
   table.ptab thead th{background:#2b4f38; color:#f4f7f1; font-family:'Segoe UI',system-ui,sans-serif; font-weight:600; font-size:9.5pt; vertical-align:top; border-color:#2b4f38}
   table.ptab thead th .pp{display:block; font-weight:400; font-size:8.5pt; margin-top:1pt; color:#c9d8c4}
   table.ptab thead th.pnum,table.ptab thead th.pzp{vertical-align:middle}
-  table.ptab tbody tr:nth-of-type(even) td{background:#eef3ec}            /* Zebrastreifen */
+  table.ptab:not(.ety) tbody tr:nth-of-type(even) td{background:#eef3ec}  /* Zebrastreifen (ohne Merkzeile) */
   table.ptab td.pnum{text-align:center; width:6%; font-family:'Segoe UI',system-ui,sans-serif; color:#7a6a4f; background:#f6f7f1}
   table.ptab th.pzp,table.ptab td.pzp{text-align:center; width:6%; color:#3d6b4d; font-weight:600}
   table.ptab td.bot{font-style:italic}
   /* Themen-Zwischenzeile: dezent grün hervorgehoben, quer über die Tabelle */
   table.ptab tr.pcat td{font-family:'Segoe UI',system-ui,sans-serif; font-weight:700; font-size:9pt; letter-spacing:.03em; color:#2b4f38; background:#dbe7d8 !important; border-color:#a9ad98; padding:4pt 6pt}
   table.ptab tr{break-inside:avoid}
+  /* Optionale Namensherkunft-Merkzeile je Pflanze: Zebra pro Pflanze (Name + Merkzeile
+     gleich schattiert), Merkzeile bleibt beim Namen (kein Seitenumbruch dazwischen). */
+  table.ptab.ety tr.pz>td{background:#eef3ec}
+  table.ptab.ety tr.pmain>td{border-bottom:none}
+  table.ptab.ety tr.pety{break-before:avoid}
+  table.ptab.ety tr.pety>td{border-top:none}
+  table.ptab.ety td.pety-c{font-family:'Segoe UI',system-ui,sans-serif; font-size:8pt; line-height:1.3; color:#5a5a45; padding:0 6pt 3pt}
+  table.ptab.ety td.pety-c i{font-style:italic; color:#2b4f38}
+  table.ptab.ety td.pety-c .pety-lab{color:#7a6a4f; font-style:normal}
   .pfoot{font-family:'Segoe UI',system-ui,sans-serif; font-size:8pt; margin-top:6pt; color:#7a6a4f}
 }
 
@@ -873,7 +885,9 @@ body.stagefull #stage>.sessionbar{
         den Filter auf). Ein Klick auf eine Art öffnet die Info. In der <b>Familien-Ansicht</b> öffnet
         das <b>ℹ</b> neben dem Familiennamen einen kurzen <b>Steckbrief</b> – was die Arten der Familie
         gemeinsam haben und ein <b>Lerntipp</b> zum Erkennen. Über <b>»Liste drucken«</b> kommt die
-        aktuell gefilterte Liste als Tabelle in der <b>Form des Prüfungsbogens</b> aufs Papier.</dd>
+        aktuell gefilterte Liste als Tabelle in der <b>Form des Prüfungsbogens</b> aufs Papier. Setzt du
+        vorher das Häkchen <b>»Namensherkunft«</b>, erscheint unter jeder Pflanze eine kleine <b>Merkzeile</b>
+        mit der Bedeutung des botanischen Namens (Latein/Griechisch → Deutsch, kuratiert – ohne Gewähr).</dd>
     </dl>
 
     <h4>Einstellungen</h4>
@@ -943,7 +957,10 @@ body.stagefull #stage>.sessionbar{
       <svg class="lsic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
       <input id="listSearch" class="listsearch" type="search" autocomplete="off" spellcheck="false" placeholder="Liste durchsuchen – Name, Familie, Synonym …" aria-label="Liste durchsuchen">
     </div>
-    <button class="btn printbtn" id="btnPrintList" title="Die aktuell gefilterte Liste drucken – als Tabelle in der Form des Prüfungsbogens (gleiche Spalten, Beschriftung und Punktangaben wie in der Prüfung, in der gewählten Ansicht sortiert: Wuchsform, Familie oder A–Z, mit ZP-Spalte).">
+    <label class="printety" id="printEtyWrap" title="Zu jeder Pflanze eine kurze Merkzeile mit der Herkunft/Bedeutung des botanischen Namens mitdrucken (Latein/Griechisch → Deutsch, kuratiert – ohne Gewähr).">
+      <input type="checkbox" id="printEty"> Namensherkunft
+    </label>
+    <button class="btn printbtn" id="btnPrintList" title="Die aktuell gefilterte Liste drucken – als Tabelle in der Form des Prüfungsbogens (gleiche Spalten, Beschriftung und Punktangaben wie in der Prüfung, in der gewählten Ansicht sortiert: Wuchsform, Familie oder A–Z, mit ZP-Spalte). Mit »Namensherkunft« erscheint unter jeder Pflanze eine Merkzeile zur Namensbedeutung.">
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>Liste drucken
     </button>
   </div>
@@ -2525,11 +2542,24 @@ function buildPrintList(){
   const heads=`<th class="pnum"></th>`+
     cols.map(c=>`<th>${esc(c[1])}<span class="pp">${esc(c[2])}</span></th>`).join("")+
     `<th class="pzp" title="prüfungsrelevant für die Zwischenprüfung">ZP</th>`;
+  const wantEty = !!($("#printEty") && $("#printEty").checked);   // opt-in: Namensherkunft-Merkzeile je Pflanze
   let n=0, rows="";
   const band = label => `<tr class="pcat"><td colspan="${cols.length+2}">${esc(label)}</td></tr>`;
-  const rowFor = c => { n++; return `<tr><td class="pnum">${n}</td>`+
-    cols.map(k=>`<td class="${k[0]==="g"||k[0]==="a"?"bot":""}">${esc(c[k[0]]||"")}</td>`).join("")+
-    `<td class="pzp">${c.zp?"×":""}</td></tr>`; };
+  const rowFor = c => { n++;
+    const cls = wantEty ? ` class="pmain${n%2===0?" pz":""}"` : "";
+    let tr = `<tr${cls}><td class="pnum">${n}</td>`+
+      cols.map(k=>`<td class="${k[0]==="g"||k[0]==="a"?"bot":""}">${esc(c[k[0]]||"")}</td>`).join("")+
+      `<td class="pzp">${c.zp?"×":""}</td></tr>`;
+    if(wantEty){                                                  // Merkzeile aus der Namensherleitung (offline, kuratiert)
+      const parts=nameEtymology(c.g, c.a);
+      if(parts.length){
+        const inline=parts.map(pp=>`<i>${esc(pp.t)}</i> — ${esc(pp.d)}`).join(" · ");
+        tr += `<tr class="pety${n%2===0?" pz":""}"><td class="pnum"></td>`+
+          `<td class="pety-c" colspan="${cols.length+1}"><span class="pety-lab">Name:</span> ${inline}</td></tr>`;
+      }
+    }
+    return tr;
+  };
 
   // Gruppierung/Reihenfolge folgt der in der Liste gewählten Ansicht (listSort)
   if(listSort==="bot" || listSort==="de"){
@@ -2560,8 +2590,8 @@ function buildPrintList(){
     ${fam==="fw"?`<div class="psub">Gartenbaufachwerker/in</div>`:""}
     <div class="pmeta">Fachrichtung ${esc(frLabel)} · ${esc(nivLabel)} · ${n} ${n===1?"Art":"Arten"}
       · sortiert nach ${esc(SORT_LABEL[listSort]||"Thema")}${filt.length?` · ${esc(filt.join(" · "))}`:""} · Stand ${esc(heute)}</div>
-    <table class="ptab"><thead><tr>${heads}</tr></thead><tbody>${rows}</tbody></table>
-    <div class="pfoot">${hasZP?"ZP = für die Zwischenprüfung relevant · ":""}Pflanzenkenntnis · Lernliste in der Form des Prüfungsbogens (Spalten und Punkte wie in der Prüfung)</div>`;
+    <table class="ptab${wantEty?" ety":""}"><thead><tr>${heads}</tr></thead><tbody>${rows}</tbody></table>
+    <div class="pfoot">${hasZP?"ZP = für die Zwischenprüfung relevant · ":""}Pflanzenkenntnis · Lernliste in der Form des Prüfungsbogens (Spalten und Punkte wie in der Prüfung)${wantEty?" · Namensherkunft: Kurzherleitung (Latein/Griechisch → Deutsch), kuratiert – ohne Gewähr":""}</div>`;
   return n;
 }
 function printList(){
@@ -4144,6 +4174,10 @@ function wire(){
   };
   $("#listSearch").oninput=()=>{ if(mode==="list") renderList(); };
   if($("#btnPrintList")) $("#btnPrintList").onclick=printList;
+  if($("#printEty")){                                             // Druck-Option »Namensherkunft« merken
+    $("#printEty").checked = store.get(LS_PREFIX+"printety")==="1";
+    $("#printEty").onchange=()=>store.set(LS_PREFIX+"printety", $("#printEty").checked?"1":"0");
+  }
   $("#modeTabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{
     mode=b.dataset.mode; store.set(LS_PREFIX+"mode",mode);
     $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));

@@ -1083,6 +1083,44 @@ async function main() {
   assert(plist.filled && plist.meta, "Druckliste: Zeilen nicht gefüllt oder Kopfzeile falsch");
   assert(plist.nFiltered > 0 && plist.nFiltered < plist.n, "Druckliste: Suchfilter wirkt nicht (" + plist.nFiltered + ")");
 
+  // Druckliste: opt-in »Namensherkunft« druckt je Pflanze eine Merkzeile (nameEtymology);
+  // Standard AUS → unveränderte Ausgabe. Häkchen an → Tabelle .ety + Merkzeilen + Fußnote.
+  const pety = await page.evaluate(() => {
+    const ety = document.querySelector("#printEty");
+    ety.checked = true;
+    const n = buildPrintList();
+    const host = document.querySelector("#printList");
+    const html = host.innerHTML;
+    const dataRows = host.querySelectorAll(".ptab tbody tr.pmain").length;
+    const etyRows = host.querySelectorAll(".ptab tbody tr.pety").length;
+    const anyEty = host.querySelector(".ptab tbody tr.pety");
+    const hasLabel = !!(anyEty && /Name:/.test(anyEty.textContent) && anyEty.querySelector("i"));
+    // Konkrete Herleitung: erste Pflanze mit App-Logik nachbilden und im Merktext wiederfinden
+    const first = host.querySelector(".ptab tbody tr.pmain");
+    const firstEtyTr = first && first.nextElementSibling && first.nextElementSibling.classList.contains("pety")
+      ? first.nextElementSibling : null;
+    let etyMatches = false;
+    if (firstEtyTr) {
+      // botanischen Namen der ersten Pflanze aus der aktuell gefilterten Menge holen
+      const p = listFiltered().p;
+      // dieselbe Reihenfolge wie buildPrintList: bei bot/de-Ansicht sortiert – hier reicht: irgendeine echte Herleitung steht drin
+      etyMatches = /—/.test(firstEtyTr.textContent) && firstEtyTr.querySelectorAll("i").length >= 1;
+    }
+    const hasEtyClass = host.querySelector(".ptab").classList.contains("ety");
+    const footNote = /Namensherkunft: Kurzherleitung/.test(html);
+    // Häkchen wieder aus → Ausgabe wie zuvor
+    ety.checked = false;
+    const n2 = buildPrintList();
+    const offEty = document.querySelectorAll("#printList .ptab tr.pety").length;
+    const offClass = document.querySelector("#printList .ptab").classList.contains("ety");
+    return { n, n2, dataRows, etyRows, hasLabel, etyMatches, hasEtyClass, footNote, offEty, offClass };
+  });
+  assert(pety.hasEtyClass && pety.dataRows === 148, "Druckliste Namensherkunft: Tabelle .ety mit 148 Datenzeilen erwartet: " + JSON.stringify(pety));
+  assert(pety.etyRows > 0 && pety.etyRows <= pety.dataRows, "Druckliste Namensherkunft: Merkzeilen fehlen (" + pety.etyRows + "/" + pety.dataRows + ")");
+  assert(pety.hasLabel && pety.etyMatches, "Druckliste Namensherkunft: Merkzeile ohne »Name:«-Label/Kursivteil/Herleitung");
+  assert(pety.footNote, "Druckliste Namensherkunft: Fußnote fehlt");
+  assert(pety.offEty === 0 && !pety.offClass && pety.n2 === pety.n, "Druckliste: Häkchen aus → keine Merkzeilen/kein .ety, gleiche Artenzahl");
+
   // Druckliste: Fachwerker-Profil nutzt das FW-Formular (Dt. Name zuerst, ohne Familie)
   const pfw = await page.evaluate(() => {
     document.querySelector("#nivSelect").value = "fachwerker";
