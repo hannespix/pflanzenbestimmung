@@ -399,51 +399,47 @@ async function main() {
   assert(quiz.found, "Quiz: richtige Option nicht gefunden");
   assert(quiz.good && quiz.correct >= 1, "Quiz: richtige Antwort nicht als korrekt gewertet");
 
-  // Tippen: korrekte Antwort eingeben -> »Richtig«
+  // Tippen: die Namensbestandteile stehen in EINZELNEN Feldern (Gattung + Art), kein Sammelfeld
   const typed = await page.evaluate(() => {
     document.querySelector('#modeTabs button[data-mode="type"]').click();
     startSession();
-    const inp = document.querySelector("#typeIn");
-    inp.value = answerText(current);
+    const ins = [...document.querySelectorAll("#typeForm input")];
+    const keys = ins.map((i) => i.dataset.k).join(",");
+    ins.forEach((inp) => { inp.value = current[inp.dataset.k]; });    // alle Felder korrekt füllen
     document.querySelector("#chk").click();
-    return { good: /Richtig!/.test(($("#fb") || {}).innerHTML || "") };
+    return { nFields: ins.length, keys, hasSingle: !!document.querySelector("#typeIn"),
+      good: /Richtig!/.test(($("#fb") || {}).innerHTML || "") };
   });
-  assert(typed.good, "Tippen: korrekte Eingabe nicht als richtig gewertet");
+  assert(typed.nFields >= 2 && !typed.hasSingle && typed.keys === "g,a",
+    "Tippen muss die Namensbestandteile in Einzelfelder (Gattung + Art) aufteilen, nicht ein Sammelfeld: " + JSON.stringify(typed));
+  assert(typed.good, "Tippen: alle Felder korrekt → nicht als richtig gewertet");
 
-  // Tippen, drei Stufen: richtig · fast (mit korrekter Form) · noch nicht.
-  // Dazu die kleine Belohnung: Partikel nur bei einem Treffer.
+  // Drei Ausgänge im Feld-Modus (richtig · teilweise · falsch), je Feld ✓/≈/✗; Partikel nur bei Volltreffer
   const stufen = await page.evaluate(() => {
-    const probe = (mach) => {
+    const probe = (fill) => {
       document.querySelectorAll(".conf-host").forEach((h) => h.remove());
-      const inp = document.querySelector("#typeIn"); if (!inp) return null;
-      const soll = answerText(current), c = current;
-      inp.value = mach(c, soll);
+      const ins = [...document.querySelectorAll("#typeForm input")], c = current;
+      ins.forEach((inp) => { inp.value = fill(inp.dataset.k, c); });
       document.querySelector("#chk").click();
       const fb = document.querySelector("#fb");
-      const r = { soll, ein: inp.value, txt: fb.textContent,
-        stufe: fb.querySelector(".good") ? "ok" : fb.querySelector(".near") ? "near" : "no",
-        dif: (fb.querySelector(".dif") || {}).textContent || "",
-        partikel: document.querySelectorAll(".conf-host .conf").length,
-        box: (progress[c.key] || {}).box || 0 };
+      const r = { stufe: fb.querySelector(".good") ? "ok" : fb.querySelector(".near") ? "near" : "no",
+        marks: [...document.querySelectorAll("#typeForm .exmark")].map((m) => m.textContent.trim().charAt(0)).join(""),
+        partikel: document.querySelectorAll(".conf-host .conf").length };
       document.querySelector("#wt").click();
       return r;
     };
     startSession();
-    const exakt = probe((c, s) => s);                                  // exakt richtig
-    const tippfehler = probe((c, s) => s.slice(0, -1) + "x");          // ein Buchstabe daneben → toleriert
-    const nurGattung = probe((c) => c.g);                              // Gattung stimmt, Art fehlt → »fast«
-    const daneben = probe((c) => "Zzzz qqqq");                         // nichts davon
-    return { exakt, tippfehler, nurGattung, daneben };
+    const exakt = probe((k, c) => c[k]);                             // alle Felder richtig
+    const teils = probe((k, c) => (k === "g" ? c.g : "qqqzzz"));     // Gattung richtig, Art falsch
+    const daneben = probe(() => "Zzzz");                             // nichts davon
+    return { exakt, teils, daneben };
   });
   assert(stufen.exakt.stufe === "ok" && stufen.exakt.partikel > 0,
-    "Tippen: exakte Antwort muss »richtig« sein und die Partikel auslösen: " + JSON.stringify(stufen.exakt));
-  assert(stufen.tippfehler.stufe === "ok" && /Schreibweise/.test(stufen.tippfehler.txt) && stufen.tippfehler.dif,
-    "Tippen: kleiner Tippfehler zählt als richtig, muss aber die saubere Schreibweise zeigen: " + JSON.stringify(stufen.tippfehler));
-  assert(stufen.nurGattung.stufe === "near" && /Gattung stimmt/.test(stufen.nurGattung.txt)
-    && /richtig wäre/i.test(stufen.nurGattung.txt) && stufen.nurGattung.partikel === 0,
-    "Tippen: nur die Gattung muss »fast« ergeben – mit Lob für das Richtige und ohne Partikel: " + JSON.stringify(stufen.nurGattung));
-  assert(stufen.daneben.stufe === "no" && /Noch nicht/.test(stufen.daneben.txt),
-    "Tippen: klar falsche Eingabe muss »noch nicht« ergeben: " + JSON.stringify(stufen.daneben));
+    "Tippen: alle Felder richtig muss »Richtig!« sein und die Partikel auslösen: " + JSON.stringify(stufen.exakt));
+  assert(stufen.teils.stufe === "near" && /✓/.test(stufen.teils.marks) && /✗/.test(stufen.teils.marks) && stufen.teils.partikel === 0,
+    "Tippen: ein Feld richtig, eins falsch → »Teilweise« mit ✓/✗ je Feld und ohne Partikel: " + JSON.stringify(stufen.teils));
+  assert(stufen.daneben.stufe === "no",
+    "Tippen: alle Felder falsch → »Leider falsch«: " + JSON.stringify(stufen.daneben));
 
   // Bewertung der Stufen (Leitner) und die Feld-Variante der Prüfungsantwort
   const stufenLogik = await page.evaluate(() => {
@@ -954,7 +950,7 @@ async function main() {
     const c2 = current;
     const variants = (c2.de || "").split(/[,;/]/).map((x) => x.trim()).filter(Boolean);
     const alt = variants[variants.length - 1];                 // auch der letzte Zweitname zählt
-    document.querySelector("#typeIn").value = alt.replace(/-/g, "");  // ohne Bindestrich getippt
+    document.querySelector("#ty_de").value = alt.replace(/-/g, "");  // bot→de: ein Feld (Deutscher Name), ohne Bindestrich
     document.querySelector("#chk").click();
     const typeGood = /Richtig!/.test(document.querySelector("#fb").innerHTML);
     return { optIsDe, quizGood, typeGood, alt, opts: opts.slice(0, 4) };
