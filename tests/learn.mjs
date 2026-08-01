@@ -322,7 +322,10 @@ async function main() {
     closeInfo();
     const lav = nameEtymology("Lavandula", "angustifolia").map((p) => p.t + "=" + p.d).join(" · ");
     const dup = nameEtymology("Alyssum", "montanum subsp. montanum").filter((p) => p.t === "montanum").length;
-    return { has: !!det, collapsed, items, botItalic, noneShown, lav, dup };
+    const ficus = nameEtymology("Ficus", "benjamina").length;            // vorher unerklärte Gattung
+    const hyb = nameEtymology("Fuchsia-Hybriden", "").map((p) => p.t).join();  // Hybrid-Gruppe → Basisgattung
+    const covered = allCards.filter((c) => nameEtymology(c.g, c.a).length > 0).length;
+    return { has: !!det, collapsed, items, botItalic, noneShown, lav, dup, ficus, hyb, coverPct: Math.round(100 * covered / allCards.length) };
   });
   assert(etym.has && etym.collapsed && etym.botItalic,
     "Namensherleitung muss als zugeklapptes Akkordeon mit kursivem Botanik-Teil erscheinen: " + JSON.stringify(etym));
@@ -331,6 +334,10 @@ async function main() {
   assert(!etym.noneShown, "Bei unbekanntem Namen darf kein Herleitungs-Akkordeon erscheinen: " + JSON.stringify(etym));
   assert(/schmalblättrig/.test(etym.lav), "Kompositum »angustifolia« muss als »schmalblättrig« aufgelöst werden: " + etym.lav);
   assert(etym.dup === 1, "Autonyme (montanum subsp. montanum) dürfen die Herleitung nicht doppeln: " + etym.dup);
+  assert(etym.ficus > 0 && /Fuchsia/.test(etym.hyb),
+    "Gattungs-Wörterbuch muss vervollständigt sein (Ficus) und »-Hybriden« auf die Basisgattung auflösen: " + JSON.stringify({ ficus: etym.ficus, hyb: etym.hyb }));
+  assert(etym.coverPct === 100,
+    "Jede Art des Profils muss mindestens eine Herleitung bekommen (100 %): war " + etym.coverPct + "%");
   assert(info.closed, "Info-Modal schließt nicht");
 
   // Wikipedia-Auflösung: Sorten-GRUPPE (kein Rang var./ssp.) findet das reine Binom,
