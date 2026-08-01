@@ -1411,6 +1411,10 @@ async function main() {
     // konsolidiert: Sitzungs-Optionen weg, keine Zahnrad-Reste, alles im Akkordeon
     const oneAccordion = document.querySelector("#setOpts").hidden === true
       && !document.querySelector("#btnPrintOpts") && !document.querySelector("#printOpts");
+    // homogene Position: die Listen-Optionen sitzen im selben Karten-Slot wie die
+    // Sitzungs-Optionen (direkt nach #setOpts in der Setup-Karte, unter den Modus-Tabs)
+    const inCard = !!document.querySelector(".setup #listControls")
+      && document.querySelector("#setOpts").nextElementSibling === document.querySelector("#listControls");
     const lc = document.querySelector("#listControls"); lc.dataset.open = "1"; renderListControls();
     const inAccordion = !!lc.querySelector("#printCols") && !!lc.querySelector("#printEty") && !!lc.querySelector("#lcZp");
     const noExamOnlyForGaertner = !lc.querySelector("#lcExamOnly");   // Spiegel nur bei Fachwerkern
@@ -1436,11 +1440,12 @@ async function main() {
     const hasOneCol = hasHeadCol(/Deutscher Name/);
     on("fam"); on("zp"); on("g"); on("a"); buildPrintList();       // zurücksetzen
     const restored = hasHeadCol(/Familienname/) && hasZPcol();
-    return { oneAccordion, inAccordion, noExamOnlyForGaertner, zpMirror, zpInSub, zpBack,
+    return { oneAccordion, inCard, inAccordion, noExamOnlyForGaertner, zpMirror, zpInSub, zpBack,
       famGone, zpGone, gelerntStill,
       storedHasFam: stored.includes("fam") && stored.includes("zp"), deStays, hasOneCol, restored };
   });
   assert(pcol.oneAccordion, "Listenmodus: Sitzungs-Optionen müssen ausgeblendet sein, Zahnrad/Panel entfernt (EIN Akkordeon)");
+  assert(pcol.inCard, "Listen-Optionen müssen im Setup-Karten-Slot der Sitzungs-Optionen sitzen (homogene Position)");
   assert(pcol.inAccordion && pcol.noExamOnlyForGaertner, "Listen-Akkordeon: Drucken (Spalten + Namensherkunft) und ZP-Filter müssen darin stecken (Prüfungsstoff nur bei FW)");
   assert(pcol.zpMirror && pcol.zpInSub && pcol.zpBack, "Listen-Akkordeon: ZP-Spiegel muss #onlyzp schalten und in der Kopfzeile erscheinen");
   assert(pcol.famGone && pcol.zpGone && pcol.gelerntStill, "Druckoptionen: abgewählte Spalten (Familie/ZP) erscheinen weiter im Kopf: " + JSON.stringify(pcol));
