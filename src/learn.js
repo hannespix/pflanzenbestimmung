@@ -1308,13 +1308,18 @@ function answerQuiz(btn, chosen, opts){
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
 }
 
-/* Tippen: die Namensbestandteile in EINZELNE Felder – wie im Bilder-Quiz »wie in der
-   Prüfung«. Richtungsabhängig: deutscher Name gegeben → Gattung + Art tippen; botanisch
-   gegeben → deutschen Namen tippen. Je Feld tippfehlertolerant über fieldJudge(). */
-const TYPE_PH = { g:"Gattung", a:"Art (Epitheton)", fam:"Familie", de:"deutscher Name" };
+/* Tippen = »wie in der Prüfung« als Text: für JEDEN bewerteten Bogen-Bestandteil ein
+   eigenes Feld (analog zur Prüfungstabelle), mit Punkten. Es werden genau die Felder
+   abgefragt, die der Prompt NICHT schon zeigt – deutscher Name gegeben → Gattung/Art/
+   Familie; botanisch gegeben → Familie/deutscher Name. Punkte, Teilpunkte (halbe bei
+   Schreibfehler) und Punktekonto wie im Bilder-Quiz »wie in der Prüfung«. */
+const TYPE_PH = { g:"z. B. Allium", a:"Art (Epitheton)", fam:"lat. oder deutsch", de:"deutscher Name" };
 function typeFields(c){
-  if(wantsDe()) return ["de"];                            // botanisch gegeben → deutschen Namen tippen
-  return norm(c.a) ? ["g","a"] : ["g"];                   // Hybrid-Gruppen ohne Art-Epitheton: nur Gattung
+  if(!examFields) loadExamFields();
+  const given = wantsDe() ? ["g","a"] : ["de"];           // was der Prompt bereits zeigt
+  let keys = examFieldList().filter(k=>!given.includes(k));
+  keys = keys.filter(k => k!=="a" || norm(c.a));          // Hybrid-Gruppen: kein leeres Art-Feld
+  return keys.length ? keys : (wantsDe() ? ["de"] : ["g"]);
 }
 function renderType(){
   const c=current, keys=typeFields(c);
@@ -1324,7 +1329,7 @@ function renderType(){
      ${promptSub(c)?`<div class="qsub">${esc(promptSub(c))}</div>`:""}
      <div class="examform" id="typeForm">`+
        keys.map((k,i)=>`<label class="exrow" for="ty_${k}">
-           <span class="exlab">${esc(FIELD_LABEL[k]||k)}</span>
+           <span class="exlab">${esc(FIELD_LABEL[k]||k)}<span class="expts">${nfmt(examPts(k))} P.</span></span>
            <input id="ty_${k}" data-k="${k}" type="text" autocomplete="off" autocapitalize="${k==="de"?"sentences":"off"}"
                   spellcheck="false" placeholder="${esc(TYPE_PH[k]||"")}" ${i===0?"autofocus":""}>
            <span class="exmark" id="tmk_${k}"></span>
@@ -1346,10 +1351,12 @@ function renderType(){
 function submitType(ins){
   clockStop();
   const c=current;
-  let right=0, near=0;
+  let got=0, max=0, right=0, near=0;
   ins.forEach(inp=>{
-    const k=inp.dataset.k, lvl=fieldJudge(k, inp.value, c);
-    if(lvl==="ok") right++; else if(lvl==="near") near++;
+    const k=inp.dataset.k, lvl=fieldJudge(k, inp.value, c), pts=examPts(k);
+    max+=pts;
+    if(lvl==="ok"){ got+=pts; right++; }
+    else if(lvl==="near"){ got+=pts/2; near++; }                 // Schreibfehler: halbe Punkte (wie auf dem Bogen)
     inp.disabled=true; inp.classList.add(lvl==="ok"?"ok":lvl==="near"?"near":"no");
     const mk=$("#tmk_"+k);
     if(mk) mk.innerHTML = lvl==="ok" ? `<span class="ex-ok">✓</span>`
@@ -1357,15 +1364,14 @@ function submitType(ins){
       : `<span class="ex-no">✗</span> <span class="ex-sol">${esc(fieldSolution(k,c))}</span>`;
   });
   const all = right===ins.length;
+  const buch = bookPoints(c, got, max);                          // Punkte gutschreiben (Rest bei der Wiederholung)
   grade(c, all ? "good" : (right||near) ? "hard" : "again");
   if(all) sess.correct++; else requeueCurrent();
-  $("#fb").innerHTML = `<span class="sol">`+
-    (all ? `<span class="good">Richtig!</span>`
-      : (right||near) ? `<span class="near">Teilweise richtig.</span>`
-      : `<span class="bad">Leider falsch.</span>`)+
-    (all ? "" : " · "+solutionLine(c))+
-    (near && !all ? ` · <b>≈</b> Schreibfehler – die markierte Stelle zeigt die richtige Form` : "")+
-    `</span>`;
+  $("#fb").innerHTML = `<span class="sol">${nfmt(got)} von ${nfmt(max)} Punkten`+
+    (buch.nach>0 ? ` · <b>+${nfmt(buch.nach)}</b> nachträglich gutgeschrieben` : "")+
+    (near&&!all ? ` · <b>≈</b> Schreibfehler zählen halb – schreibst du es gleich fehlerfrei, gibt es den Rest`
+                : near ? ` · <b>≈</b> Schreibfehler zählen halb – so steht es auf dem Prüfungsbogen` : "")+
+    (all?"":" · "+solutionLine(c))+`</span>`;
   if(all) celebrate($("#fb"), 1);
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
@@ -2920,7 +2926,7 @@ function bookPoints(card, got, max){
   sess.pts.je[k] = Math.max(sess.pts.je[k]||0, got);
   return { nach: alt===undefined ? 0 : nach, sum:sess.pts.sum, max:sess.pts.max };
 }
-function examScoring(){ return mode==="photo" && photoAnswer==="exam"; }   // Modus mit Punkten
+function examScoring(){ return mode==="type" || (mode==="photo" && photoAnswer==="exam"); }   // Modi mit Punkten (Tippen zählt wie der Bogen)
 /* Gemeinsamer Abschluss: bewerten, Rückmeldung, Bildnachweis, »Weiter« */
 function finishPhotoAnswer(ok, g, p, solHTML, full){
   clockStop();                                        // gilt für alle drei Antwortarten
@@ -3096,7 +3102,7 @@ function syncDirUI(){
 }
 function syncExamFieldsUI(){
   const row=$("#examFieldsRow"); if(!row) return;
-  const show = mode==="photo" && photoAnswer==="exam";
+  const show = mode==="type" || (mode==="photo" && photoAnswer==="exam");   // Tippen fragt jetzt den ganzen Bogen ab
   row.hidden = !show;
   if(!show) return;
   if(!examFields) loadExamFields();
@@ -3191,7 +3197,7 @@ function openIntro(auto){
       <li><span class="is-ic" aria-hidden="true">🖼️</span><div><b>Bilder</b><span class="is-tag">leicht</span><br>Pflanze am Foto erkennen und den richtigen Namen wählen.</div></li>
       <li><span class="is-ic" aria-hidden="true">✔️</span><div><b>Quiz</b><span class="is-tag">leicht</span><br>Zum deutschen Namen den richtigen botanischen aus vier Optionen wählen.</div></li>
       <li><span class="is-ic" aria-hidden="true">🗂️</span><div><b>Karteikarten</b><span class="is-tag">mittel</span><br>Selbst abrufen und ehrlich bewerten – Wiederholung nach Plan (Spaced Repetition).</div></li>
-      <li><span class="is-ic" aria-hidden="true">⌨️</span><div><b>Tippen</b><span class="is-tag">prüfungsnah</span><br>Gattung und Art frei schreiben – so wie in der Abschlussprüfung.</div></li>
+      <li><span class="is-ic" aria-hidden="true">⌨️</span><div><b>Tippen</b><span class="is-tag">prüfungsnah</span><br>Jedes bewertete Feld frei schreiben (Gattung, Art, Familie) – mit Punkten, wie in der Prüfungstabelle.</div></li>
     </ol>
     <p class="intro-tip"><span aria-hidden="true">⚙️</span> Jede Stufe kannst du unter <b>»Optionen«</b> feiner einstellen: was gefragt wird – vom <b>deutschen Namen</b> allein bis zur prüfungsechten Abfrage von <b>Gattung, Art und Familie</b> (Felder einzeln wählbar) – dazu Lernstoff, ZP-Filter und Sitzungslänge.</p>
     <p class="intro-foot"><b>Ziel:</b> Du benennst Gattung, Art und Familie sicher. Diese Einführung findest du jederzeit über <b>»So funktioniert der Lernpfad«</b> wieder.</p>

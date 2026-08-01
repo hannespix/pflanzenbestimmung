@@ -399,47 +399,53 @@ async function main() {
   assert(quiz.found, "Quiz: richtige Option nicht gefunden");
   assert(quiz.good && quiz.correct >= 1, "Quiz: richtige Antwort nicht als korrekt gewertet");
 
-  // Tippen: die Namensbestandteile stehen in EINZELNEN Feldern (Gattung + Art), kein Sammelfeld
+  // Tippen = »wie in der Prüfung«: je bewertetem Bogen-Bestandteil ein Feld MIT Punkten
+  // (analog zur Prüfungstabelle); der vom Prompt gezeigte deutsche Name wird nicht abgefragt.
+  const numPts = (s) => Number(String(s || "").replace(",", "."));
   const typed = await page.evaluate(() => {
     document.querySelector('#modeTabs button[data-mode="type"]').click();
     startSession();
     const ins = [...document.querySelectorAll("#typeForm input")];
     const keys = ins.map((i) => i.dataset.k).join(",");
+    const hasPts = document.querySelectorAll("#typeForm .expts").length === ins.length;
     ins.forEach((inp) => { inp.value = current[inp.dataset.k]; });    // alle Felder korrekt füllen
     document.querySelector("#chk").click();
-    return { nFields: ins.length, keys, hasSingle: !!document.querySelector("#typeIn"),
-      good: /Richtig!/.test(($("#fb") || {}).innerHTML || "") };
+    const marks = [...document.querySelectorAll("#typeForm .exmark")].map((m) => m.textContent.trim().charAt(0)).join("");
+    return { nFields: ins.length, keys, hasPts, hasSingle: !!document.querySelector("#typeIn"), marks,
+      pts: (document.querySelector("#fb").textContent.match(/([\d,]+) von ([\d,]+) Punkten/) || []).slice(1) };
   });
-  assert(typed.nFields >= 2 && !typed.hasSingle && typed.keys === "g,a",
-    "Tippen muss die Namensbestandteile in Einzelfelder (Gattung + Art) aufteilen, nicht ein Sammelfeld: " + JSON.stringify(typed));
-  assert(typed.good, "Tippen: alle Felder korrekt → nicht als richtig gewertet");
+  assert(typed.nFields >= 2 && !typed.hasSingle && /^g,a/.test(typed.keys) && !/(^|,)de(,|$)/.test(typed.keys),
+    "Tippen muss die Bogen-Bestandteile in Einzelfelder aufteilen (Gattung/Art/…, ohne den gegebenen dt. Namen): " + JSON.stringify(typed));
+  assert(typed.hasPts, "Tippen »wie in der Prüfung«: je Feld müssen Punkte stehen (analog zur Prüfungstabelle): " + JSON.stringify(typed));
+  assert(/^✓+$/.test(typed.marks) && typed.pts[0] === typed.pts[1],
+    "Tippen: alle Felder korrekt → alle ✓ und volle Punktzahl: " + JSON.stringify(typed));
 
-  // Drei Ausgänge im Feld-Modus (richtig · teilweise · falsch), je Feld ✓/≈/✗; Partikel nur bei Volltreffer
+  // Drei Ausgänge mit Punkten (voll · Teilpunkte · null), je Feld ✓/≈/✗; Partikel nur bei Volltreffer
   const stufen = await page.evaluate(() => {
     const probe = (fill) => {
       document.querySelectorAll(".conf-host").forEach((h) => h.remove());
       const ins = [...document.querySelectorAll("#typeForm input")], c = current;
       ins.forEach((inp) => { inp.value = fill(inp.dataset.k, c); });
       document.querySelector("#chk").click();
-      const fb = document.querySelector("#fb");
-      const r = { stufe: fb.querySelector(".good") ? "ok" : fb.querySelector(".near") ? "near" : "no",
-        marks: [...document.querySelectorAll("#typeForm .exmark")].map((m) => m.textContent.trim().charAt(0)).join(""),
-        partikel: document.querySelectorAll(".conf-host .conf").length };
+      const r = { marks: [...document.querySelectorAll("#typeForm .exmark")].map((m) => m.textContent.trim().charAt(0)).join(""),
+        partikel: document.querySelectorAll(".conf-host .conf").length,
+        pts: (document.querySelector("#fb").textContent.match(/([\d,]+) von ([\d,]+) Punkten/) || []).slice(1) };
       document.querySelector("#wt").click();
       return r;
     };
     startSession();
     const exakt = probe((k, c) => c[k]);                             // alle Felder richtig
-    const teils = probe((k, c) => (k === "g" ? c.g : "qqqzzz"));     // Gattung richtig, Art falsch
+    const teils = probe((k, c) => (k === "g" ? c.g : "qqqzzz"));     // Gattung richtig, Rest falsch
     const daneben = probe(() => "Zzzz");                             // nichts davon
     return { exakt, teils, daneben };
   });
-  assert(stufen.exakt.stufe === "ok" && stufen.exakt.partikel > 0,
-    "Tippen: alle Felder richtig muss »Richtig!« sein und die Partikel auslösen: " + JSON.stringify(stufen.exakt));
-  assert(stufen.teils.stufe === "near" && /✓/.test(stufen.teils.marks) && /✗/.test(stufen.teils.marks) && stufen.teils.partikel === 0,
-    "Tippen: ein Feld richtig, eins falsch → »Teilweise« mit ✓/✗ je Feld und ohne Partikel: " + JSON.stringify(stufen.teils));
-  assert(stufen.daneben.stufe === "no",
-    "Tippen: alle Felder falsch → »Leider falsch«: " + JSON.stringify(stufen.daneben));
+  assert(/^✓+$/.test(stufen.exakt.marks) && stufen.exakt.partikel > 0 && stufen.exakt.pts[0] === stufen.exakt.pts[1],
+    "Tippen: alle Felder richtig → alle ✓, volle Punkte, Partikel: " + JSON.stringify(stufen.exakt));
+  assert(/✓/.test(stufen.teils.marks) && /✗/.test(stufen.teils.marks) && stufen.teils.partikel === 0
+    && numPts(stufen.teils.pts[0]) > 0 && numPts(stufen.teils.pts[0]) < numPts(stufen.teils.pts[1]),
+    "Tippen: ein Feld richtig, Rest falsch → ✓/✗ je Feld, Teilpunkte, keine Partikel: " + JSON.stringify(stufen.teils));
+  assert(/^✗+$/.test(stufen.daneben.marks) && stufen.daneben.pts[0] === "0",
+    "Tippen: alle Felder falsch → alle ✗, 0 Punkte: " + JSON.stringify(stufen.daneben));
 
   // Bewertung der Stufen (Leitner) und die Feld-Variante der Prüfungsantwort
   const stufenLogik = await page.evaluate(() => {
@@ -950,9 +956,12 @@ async function main() {
     const c2 = current;
     const variants = (c2.de || "").split(/[,;/]/).map((x) => x.trim()).filter(Boolean);
     const alt = variants[variants.length - 1];                 // auch der letzte Zweitname zählt
-    document.querySelector("#ty_de").value = alt.replace(/-/g, "");  // bot→de: ein Feld (Deutscher Name), ohne Bindestrich
+    // bot→de: abgefragt werden Familie + Deutscher Name; dt. Name ohne Bindestrich getippt
+    [...document.querySelectorAll("#typeForm input")].forEach((inp) => {
+      const k = inp.dataset.k; inp.value = k === "de" ? alt.replace(/-/g, "") : c2[k];
+    });
     document.querySelector("#chk").click();
-    const typeGood = /Richtig!/.test(document.querySelector("#fb").innerHTML);
+    const typeGood = /✓/.test((document.querySelector("#tmk_de") || {}).textContent || "");  // dt.-Name-Feld akzeptiert die Schreibweise
     return { optIsDe, quizGood, typeGood, alt, opts: opts.slice(0, 4) };
   });
   assert(revPlay.optIsDe, "bot→de: Quiz-Optionen müssen deutsche Namen sein: " + JSON.stringify(revPlay.opts));
