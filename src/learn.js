@@ -1440,15 +1440,27 @@ function renderListControls(){
   }
   // Filter + Drucken gehören mit ins EINE Akkordeon (die Sitzungs-Optionen sind im
   // Listenmodus ausgeblendet; ZP/Prüfungsstoff spiegeln deren Schalter – gleiche Quelle).
+  // Aufbau: klar getrennte Sektionen mit Überschrift – Ansicht (+ Eingrenzen-Tags),
+  // Filter, Drucken; die geöffnete Klappe wird als EINE Karte gerahmt (CSS .open).
   const exWrap=$("#examOnlyWrap");
-  const filterRow=`<div class="sortrow"><span class="sortlab">Filter</span>
-      <label class="po-ety" title="Nur Arten zeigen, die für die Zwischenprüfung relevant sind"><input type="checkbox" id="lcZp"${zpOn?" checked":""}> nur ZP-relevant</label>
-      ${exWrap && !exWrap.hidden ? `<label class="po-ety" title="Nur die in der Fachwerker-Prüfung bewerteten Angaben zeigen (ohne Familie)"><input type="checkbox" id="lcExamOnly"${examOnly?" checked":""}> nur Prüfungsstoff</label>` : ""}
+  const secAnsicht=`<div class="lc-sec">
+      <div class="lc-h">Ansicht</div>
+      <div class="sortbtns" role="group" aria-label="Ansicht">${sorts}</div>
+      ${groupsView() ? `<div class="lc-h lc-h2">${listSort==="familie"?"Nach Familie eingrenzen":"Nach Thema eingrenzen"}</div>${tags}` : ""}
     </div>`;
-  const printRow=`<div class="sortrow"><span class="sortlab">Drucken</span>
+  const secFilter=`<div class="lc-sec">
+      <div class="lc-h">Filter</div>
+      <div class="lc-checks">
+        <label class="po-ety" title="Nur Arten zeigen, die für die Zwischenprüfung relevant sind"><input type="checkbox" id="lcZp"${zpOn?" checked":""}> nur ZP-relevant</label>
+        ${exWrap && !exWrap.hidden ? `<label class="po-ety" title="Nur die in der Fachwerker-Prüfung bewerteten Angaben zeigen (ohne Familie)"><input type="checkbox" id="lcExamOnly"${examOnly?" checked":""}> nur Prüfungsstoff</label>` : ""}
+      </div>
+    </div>`;
+  const secPrint=`<div class="lc-sec">
+      <div class="lc-h">Drucken</div>
       <div class="po-cols" id="printCols" role="group" aria-label="Spalten für den Druck"></div>
-      <label class="po-ety" title="Zu jeder Pflanze eine kurze Merkzeile mit der Herkunft/Bedeutung des botanischen Namens mitdrucken (Latein/Griechisch → Deutsch, kuratiert – ohne Gewähr)."><input type="checkbox" id="printEty"${printEtyOn()?" checked":""}> Namensherkunft</label>
+      <label class="po-ety" title="Zu jeder Pflanze eine kurze Merkzeile mit der Herkunft/Bedeutung des botanischen Namens mitdrucken (Latein/Griechisch → Deutsch, kuratiert – ohne Gewähr)."><input type="checkbox" id="printEty"${printEtyOn()?" checked":""}> Namensherkunft mitdrucken</label>
     </div>`;
+  host.classList.toggle("open", open);
   host.innerHTML=`
     <button class="lc-toggle" id="lcToggle" aria-expanded="${open?"true":"false"}">
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
@@ -1456,10 +1468,9 @@ function renderListControls(){
       <span class="lc-caret" aria-hidden="true">▾</span>
     </button>
     <div class="lc-body"${open?"":" hidden"}>
-      <div class="sortrow"><span class="sortlab">Ansicht</span><div class="sortbtns" role="group" aria-label="Ansicht">${sorts}</div></div>
-      ${tags}
-      ${filterRow}
-      ${printRow}
+      ${secAnsicht}
+      ${secFilter}
+      ${secPrint}
     </div>`;
   $("#lcToggle").onclick=()=>{ host.dataset.open = open?"0":"1"; renderListControls(); };
   host.querySelectorAll(".sortbtn").forEach(b=>b.onclick=()=>{

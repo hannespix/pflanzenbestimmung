@@ -325,7 +325,9 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .pocol input{accent-color:var(--green); width:14px; height:14px; cursor:pointer}
 .po-ety{display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--ink-soft); cursor:pointer}
 .po-ety input{accent-color:var(--green); width:15px; height:15px; cursor:pointer; flex:none}
-/* Listen-Steuerung: einklappbares Akkordion mit Ansicht (Wuchsform/Familie/A–Z) + Filter-Tags */
+/* Listen-Steuerung: EIN Options-Akkordeon (Ansicht + Eingrenzen · Filter · Drucken).
+   Geöffnet wird die ganze Klappe zu EINER Karte: Kopfzeile als Header mit Trennlinie,
+   der Inhalt in klar getrennten Sektionen mit einheitlichen Überschriften. */
 .listcontrols{margin-top:12px}
 .listcontrols[hidden]{display:none}
 .lc-toggle{display:flex; align-items:center; gap:10px; width:100%; text-align:left; border:1.3px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); border-radius:8px; padding:9px 13px; cursor:pointer; font-family:var(--sans); font-size:13.5px; transition:border-color .12s,background .12s}
@@ -335,16 +337,23 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .lc-sub{font-family:var(--mono); font-size:11px; color:var(--sepia); margin-left:2px}
 .lc-caret{margin-left:auto; color:var(--ink-faint); transition:transform .15s}
 .lc-toggle[aria-expanded="true"] .lc-caret{transform:rotate(180deg)}
-.lc-body{display:flex; flex-direction:column; gap:12px; padding:13px 4px 4px}
+.listcontrols.open{border:1.3px solid var(--rule-strong); border-radius:12px; background:var(--card); box-shadow:var(--shadow-1); overflow:hidden}
+.listcontrols.open .lc-toggle{border:none; border-bottom:1px solid var(--rule); border-radius:0; background:var(--surface-2)}
+.lc-body{padding:2px 14px 14px}
 .lc-body[hidden]{display:none}
-.cattags{display:flex; flex-wrap:wrap; gap:7px}
-.cattag{font-family:var(--sans); font-size:12.5px; border:1.3px solid var(--rule-strong); background:var(--surface-2); color:var(--ink-soft); border-radius:16px; padding:5px 12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:background .12s,border-color .12s,color .12s}
+.lc-sec{padding:12px 0 2px}
+.lc-sec + .lc-sec{border-top:1px solid var(--rule)}
+.lc-h{font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); margin:0 0 8px}
+.lc-h.lc-h2{margin-top:12px; color:var(--ink-faint)}
+.lc-checks{display:flex; flex-wrap:wrap; gap:8px 18px}
+.lc-sec .po-ety{margin-top:2px}
+.po-cols + .po-ety{margin-top:10px}
+.cattags{display:flex; flex-wrap:wrap; gap:6px}
+.cattag{font-family:var(--sans); font-size:12px; border:1.2px solid var(--rule-strong); background:var(--surface-2); color:var(--ink-soft); border-radius:16px; padding:4px 10px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:background .12s,border-color .12s,color .12s}
 .cattag:hover{border-color:var(--green); color:var(--green-deep)}
 .cattag.on{background:var(--green); border-color:var(--green-deep); color:#f4f7f1; font-weight:600}
 .cattag .ct-n{font-family:var(--mono); font-size:10.5px; opacity:.7}
 .cattag.on .ct-n{opacity:.85}
-.sortrow{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
-.sortlab{font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--sepia)}
 .sortbtns{display:inline-flex; border:1.3px solid var(--rule-strong); border-radius:6px; overflow:hidden}
 .sortbtn{font-family:var(--sans); font-size:12.5px; border:none; border-right:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink-soft); padding:6px 12px; cursor:pointer; transition:background .12s,color .12s}
 .sortbtn:last-child{border-right:none}
@@ -435,10 +444,9 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
   .setrow .field select.mini{flex:1; min-width:0}
   /* Sortier-Umschalter: Buttons dürfen umbrechen statt zu überlaufen */
   .sortbtns{flex-wrap:wrap}
-  .sortrow{align-items:flex-start}
   /* Ansicht-/Filter-Panel und Tags bleiben im Rahmen */
-  .cattags{gap:6px}
-  .cattag{font-size:12px; padding:5px 10px}
+  .cattags{gap:5px}
+  .cattag{font-size:11.5px; padding:4px 9px}
 
 }
 /* ===== Fokus-Modus: die laufende Lektion füllt den ganzen Schirm (alle Viewports) =====
