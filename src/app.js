@@ -578,7 +578,7 @@ function rowEl(p){
       ${p.bemerkungen?`<span class="tag bem" title="${esc(p.bemerkungen)}">Bemerkung</span>`:""}
     </div>`;
   const acts=el("div","rowacts");
-  const inf=el("button","iconbtn"); inf.title="Mehr zur Pflanze (Namensherkunft, Quellen, Wikipedia)"; inf.setAttribute("aria-label","Mehr zur Pflanze"); inf.innerHTML=`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r=".9" fill="currentColor" stroke="none"/></svg>`;
+  const inf=el("button","iconbtn info"); inf.title="Mehr zur Pflanze (Namensherkunft, Quellen, Wikipedia)"; inf.setAttribute("aria-label","Mehr zur Pflanze"); inf.innerHTML=`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r=".9" fill="currentColor" stroke="none"/></svg>`;
   inf.addEventListener("click",()=>openInfo(infoCard(p)));
   const ed=el("button","iconbtn"); ed.title="Bearbeiten"; ed.innerHTML=`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16zM14 6l4 4"/></svg>`;
   ed.addEventListener("click",()=>openEdit(p.id));
@@ -996,7 +996,7 @@ function pvRowEl(p, idx, n){
         </div>
       </div>
       <div class="pvacts">
-        <button class="iconbtn" data-a="info" title="Mehr zur Pflanze (Namensherkunft, Quellen, Wikipedia)" aria-label="Mehr zur Pflanze"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r=".9" fill="currentColor" stroke="none"/></svg></button>
+        <button class="iconbtn info" data-a="info" title="Mehr zur Pflanze (Namensherkunft, Quellen, Wikipedia)" aria-label="Mehr zur Pflanze"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r=".9" fill="currentColor" stroke="none"/></svg></button>
         <button class="iconbtn" data-a="up" title="nach oben" aria-label="nach oben"${idx===0?" disabled":""}><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 15l6-6 6 6"/></svg></button>
         <button class="iconbtn" data-a="down" title="nach unten" aria-label="nach unten"${idx===n-1?" disabled":""}><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
         <button class="iconbtn" data-a="edit" title="Bearbeiten (wird in die Liste übernommen)" aria-label="Bearbeiten"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16zM14 6l4 4"/></svg></button>
