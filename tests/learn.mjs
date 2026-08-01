@@ -1099,8 +1099,10 @@ async function main() {
   // Druckliste: opt-in »Namensherkunft« druckt je Pflanze eine Merkzeile (nameEtymology);
   // Standard AUS → unveränderte Ausgabe. Häkchen an → Tabelle .ety + Merkzeilen + Fußnote.
   const pety = await page.evaluate(() => {
+    // Die Namensherkunft-Checkbox lebt im Listen-Akkordeon (»Optionen«) – öffnen, umlegen
+    const lc0 = document.querySelector("#listControls"); lc0.dataset.open = "1"; renderListControls();
     const ety = document.querySelector("#printEty");
-    ety.checked = true;
+    ety.checked = true; ety.dispatchEvent(new Event("change"));
     const n = buildPrintList();
     const host = document.querySelector("#printList");
     const html = host.innerHTML;
@@ -1122,7 +1124,7 @@ async function main() {
     const hasEtyClass = host.querySelector(".ptab").classList.contains("ety");
     const footNote = /Namensherkunft: Kurzherleitung/.test(html);
     // Häkchen wieder aus → Ausgabe wie zuvor
-    ety.checked = false;
+    ety.checked = false; ety.dispatchEvent(new Event("change"));
     const n2 = buildPrintList();
     const offEty = document.querySelectorAll("#printList .ptab tr.pety").length;
     const offClass = document.querySelector("#printList .ptab").classList.contains("ety");
@@ -1400,19 +1402,26 @@ async function main() {
   const after = await page.evaluate(() => Object.keys(progress).length);
   assert(after >= before && after > 0, "Lernfortschritt überlebte den Reload nicht: " + before + " -> " + after);
 
-  // Druckoptionen: dezentes Zahnrad klappt das Panel auf; Spaltenauswahl lässt Spalten weg
-  // (nicht alle müssen gedruckt werden). Selbst-enthaltend am Ende, damit es die übrigen
-  // Tests nicht stört. Standardansicht ist jetzt »Thema«.
+  // EIN Options-Akkordeon im Listenmodus: Sitzungs-Optionen ausgeblendet, kein separates
+  // Zahnrad/Panel mehr; Ansicht + Filter (ZP-Spiegel) + Drucken (Spaltenauswahl,
+  // Namensherkunft) stecken zusammen im Listen-Akkordeon. Selbst-enthaltend am Ende.
   const pcol = await page.evaluate(() => {
     $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
     document.querySelector('#modeTabs button[data-mode="list"]').click();
-    const panelHidden0 = document.querySelector("#printOpts").hidden;   // Panel zunächst zu
-    // Regressionsschutz: das Zahnrad muss sichtbar gerendert sein (Icon bemessen, kein leerer Kasten)
-    const gearSvg = document.querySelector("#btnPrintOpts .ic");
-    const gr = gearSvg ? gearSvg.getBoundingClientRect() : { width: 0, height: 0 };
-    const gearVisible = gr.width >= 14 && gr.width <= 40 && gr.height >= 14 && gr.height <= 40;
-    document.querySelector("#btnPrintOpts").click();               // Zahnrad öffnet das Panel
-    const panelOpen = !document.querySelector("#printOpts").hidden && document.querySelector("#btnPrintOpts").getAttribute("aria-expanded") === "true";
+    // konsolidiert: Sitzungs-Optionen weg, keine Zahnrad-Reste, alles im Akkordeon
+    const oneAccordion = document.querySelector("#setOpts").hidden === true
+      && !document.querySelector("#btnPrintOpts") && !document.querySelector("#printOpts");
+    const lc = document.querySelector("#listControls"); lc.dataset.open = "1"; renderListControls();
+    const inAccordion = !!lc.querySelector("#printCols") && !!lc.querySelector("#printEty") && !!lc.querySelector("#lcZp");
+    const noExamOnlyForGaertner = !lc.querySelector("#lcExamOnly");   // Spiegel nur bei Fachwerkern
+    // ZP-Spiegel wirkt auf die echte Quelle (#onlyzp) und zurück
+    lc.querySelector("#lcZp").checked = true;
+    lc.querySelector("#lcZp").dispatchEvent(new Event("change"));
+    const zpMirror = document.querySelector("#onlyzp").checked === true;
+    const zpInSub = /nur ZP/.test(document.querySelector("#lcToggle .lc-sub").textContent);
+    document.querySelector("#listControls #lcZp").checked = false;    // Re-Render → frisch selektieren
+    document.querySelector("#listControls #lcZp").dispatchEvent(new Event("change"));
+    const zpBack = document.querySelector("#onlyzp").checked === false;
     const off = (k) => { const cb = document.querySelector(`#printCols input[data-k="${k}"]`); cb.checked = false; cb.dispatchEvent(new Event("change")); };
     const on  = (k) => { const cb = document.querySelector(`#printCols input[data-k="${k}"]`); cb.checked = true;  cb.dispatchEvent(new Event("change")); };
     const hasHeadCol = (re) => [...document.querySelectorAll("#printList .ptab thead th")].some((th) => re.test(th.textContent));
@@ -1427,11 +1436,13 @@ async function main() {
     const hasOneCol = hasHeadCol(/Deutscher Name/);
     on("fam"); on("zp"); on("g"); on("a"); buildPrintList();       // zurücksetzen
     const restored = hasHeadCol(/Familienname/) && hasZPcol();
-    return { panelHidden0, panelOpen, gearVisible, famGone, zpGone, gelerntStill,
+    return { oneAccordion, inAccordion, noExamOnlyForGaertner, zpMirror, zpInSub, zpBack,
+      famGone, zpGone, gelerntStill,
       storedHasFam: stored.includes("fam") && stored.includes("zp"), deStays, hasOneCol, restored };
   });
-  assert(pcol.panelHidden0 && pcol.panelOpen, "Druckoptionen: Zahnrad muss das (anfangs eingeklappte) Panel öffnen");
-  assert(pcol.gearVisible, "Druckoptionen: Zahnrad-Icon muss sichtbar bemessen sein (kein leerer Kasten)");
+  assert(pcol.oneAccordion, "Listenmodus: Sitzungs-Optionen müssen ausgeblendet sein, Zahnrad/Panel entfernt (EIN Akkordeon)");
+  assert(pcol.inAccordion && pcol.noExamOnlyForGaertner, "Listen-Akkordeon: Drucken (Spalten + Namensherkunft) und ZP-Filter müssen darin stecken (Prüfungsstoff nur bei FW)");
+  assert(pcol.zpMirror && pcol.zpInSub && pcol.zpBack, "Listen-Akkordeon: ZP-Spiegel muss #onlyzp schalten und in der Kopfzeile erscheinen");
   assert(pcol.famGone && pcol.zpGone && pcol.gelerntStill, "Druckoptionen: abgewählte Spalten (Familie/ZP) erscheinen weiter im Kopf: " + JSON.stringify(pcol));
   assert(pcol.storedHasFam, "Druckoptionen: Auswahl wird nicht in localStorage gemerkt");
   assert(pcol.deStays && pcol.hasOneCol, "Druckoptionen: die letzte Bogen-Spalte darf nicht abwählbar sein");
