@@ -1550,11 +1550,24 @@ function buildPrintList(){
   const heads=`<th class="pnum"></th>`+
     cols.map(c=>`<th>${esc(c[1])}<span class="pp">${esc(c[2])}</span></th>`).join("")+
     `<th class="pzp" title="prüfungsrelevant für die Zwischenprüfung">ZP</th>`;
+  const wantEty = !!($("#printEty") && $("#printEty").checked);   // opt-in: Namensherkunft-Merkzeile je Pflanze
   let n=0, rows="";
   const band = label => `<tr class="pcat"><td colspan="${cols.length+2}">${esc(label)}</td></tr>`;
-  const rowFor = c => { n++; return `<tr><td class="pnum">${n}</td>`+
-    cols.map(k=>`<td class="${k[0]==="g"||k[0]==="a"?"bot":""}">${esc(c[k[0]]||"")}</td>`).join("")+
-    `<td class="pzp">${c.zp?"×":""}</td></tr>`; };
+  const rowFor = c => { n++;
+    const cls = wantEty ? ` class="pmain${n%2===0?" pz":""}"` : "";
+    let tr = `<tr${cls}><td class="pnum">${n}</td>`+
+      cols.map(k=>`<td class="${k[0]==="g"||k[0]==="a"?"bot":""}">${esc(c[k[0]]||"")}</td>`).join("")+
+      `<td class="pzp">${c.zp?"×":""}</td></tr>`;
+    if(wantEty){                                                  // Merkzeile aus der Namensherleitung (offline, kuratiert)
+      const parts=nameEtymology(c.g, c.a);
+      if(parts.length){
+        const inline=parts.map(pp=>`<i>${esc(pp.t)}</i> — ${esc(pp.d)}`).join(" · ");
+        tr += `<tr class="pety${n%2===0?" pz":""}"><td class="pnum"></td>`+
+          `<td class="pety-c" colspan="${cols.length+1}"><span class="pety-lab">Name:</span> ${inline}</td></tr>`;
+      }
+    }
+    return tr;
+  };
 
   // Gruppierung/Reihenfolge folgt der in der Liste gewählten Ansicht (listSort)
   if(listSort==="bot" || listSort==="de"){
@@ -1585,8 +1598,8 @@ function buildPrintList(){
     ${fam==="fw"?`<div class="psub">Gartenbaufachwerker/in</div>`:""}
     <div class="pmeta">Fachrichtung ${esc(frLabel)} · ${esc(nivLabel)} · ${n} ${n===1?"Art":"Arten"}
       · sortiert nach ${esc(SORT_LABEL[listSort]||"Thema")}${filt.length?` · ${esc(filt.join(" · "))}`:""} · Stand ${esc(heute)}</div>
-    <table class="ptab"><thead><tr>${heads}</tr></thead><tbody>${rows}</tbody></table>
-    <div class="pfoot">${hasZP?"ZP = für die Zwischenprüfung relevant · ":""}Pflanzenkenntnis · Lernliste in der Form des Prüfungsbogens (Spalten und Punkte wie in der Prüfung)</div>`;
+    <table class="ptab${wantEty?" ety":""}"><thead><tr>${heads}</tr></thead><tbody>${rows}</tbody></table>
+    <div class="pfoot">${hasZP?"ZP = für die Zwischenprüfung relevant · ":""}Pflanzenkenntnis · Lernliste in der Form des Prüfungsbogens (Spalten und Punkte wie in der Prüfung)${wantEty?" · Namensherkunft: Kurzherleitung (Latein/Griechisch → Deutsch), kuratiert – ohne Gewähr":""}</div>`;
   return n;
 }
 function printList(){
@@ -3169,6 +3182,10 @@ function wire(){
   };
   $("#listSearch").oninput=()=>{ if(mode==="list") renderList(); };
   if($("#btnPrintList")) $("#btnPrintList").onclick=printList;
+  if($("#printEty")){                                             // Druck-Option »Namensherkunft« merken
+    $("#printEty").checked = store.get(LS_PREFIX+"printety")==="1";
+    $("#printEty").onchange=()=>store.set(LS_PREFIX+"printety", $("#printEty").checked?"1":"0");
+  }
   $("#modeTabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{
     mode=b.dataset.mode; store.set(LS_PREFIX+"mode",mode);
     $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
