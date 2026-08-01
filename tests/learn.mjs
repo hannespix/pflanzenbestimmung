@@ -1022,14 +1022,19 @@ async function main() {
   assert(list.backToAll === list.allRows, "Liste: Leeren der Suche stellt nicht alle Zeilen wieder her");
   assert(list.modalOpen, "Liste: Klick auf eine Art öffnet kein Info-Modal");
 
-  // Ansicht & Filter (Akkordion): Standard ist A–Z (flach, keine Filter-Tags);
-  // Umschalten auf »Thema« zeigt Filter-Tags, ein Tag filtert die Liste
+  // Ansicht & Filter (Akkordion): Standard ist jetzt »Thema« (Themen-Header + Filter-Tags);
+  // A–Z bleibt verfügbar (flach, keine Tags); ein Themen-Tag filtert die Liste
   const tagsort = await page.evaluate(() => {
     const total = document.querySelectorAll("#stage .sprow").length;
-    // Standard: alphabetisch → Buchstaben-Header, keine Themen-Tags
+    // Standardansicht = Thema: Themen-Header + Filter-Tags der Dimension Thema
+    const themeDefault = listSort === "thema"
+      && document.querySelectorAll("#stage .cathead").length >= 2
+      && [...document.querySelectorAll("#listControls .cattag")].filter((b) => b.dataset.cat).length >= 1;
+    // A–Z-Ansicht: flach, Buchstaben-Header, keine Filter-Tags
+    document.querySelector('#listControls .sortbtn[data-sort="bot"]').click();
     const botHeads = [...document.querySelectorAll("#stage .cathead")].map((e) => e.textContent.trim());
     const alphabetical = botHeads.length >= 2 && botHeads.every((h) => h.length === 1);
-    const noTagsDefault = document.querySelectorAll("#listControls .cattag").length === 0;
+    const noTagsBot = document.querySelectorAll("#listControls .cattag").length === 0;
     // auf Thema umschalten → Filter-Tags erscheinen
     document.querySelector('#listControls .sortbtn[data-sort="thema"]').click();
     const tagEls = [...document.querySelectorAll("#listControls .cattag")].filter((b) => b.dataset.cat);
@@ -1040,13 +1045,15 @@ async function main() {
     // Familie-Ansicht: Tags wechseln zur Dimension Familie, Filter wird zurückgesetzt
     document.querySelector('#listControls .sortbtn[data-sort="familie"]').click();
     const famReset = document.querySelectorAll("#stage .sprow").length === total;
-    // zurück auf Standard (alle)
+    // zurück auf A–Z (alle)
     document.querySelector('#listControls .sortbtn[data-sort="bot"]').click();
     const backAll = document.querySelectorAll("#stage .sprow").length;
-    return { total, alphabetical, noTagsDefault, hasTags, afterFilter, onlyOneGroup, famReset, backAll };
+    return { total, themeDefault, alphabetical, noTagsBot, hasTags, afterFilter, onlyOneGroup, famReset, backAll };
   });
-  assert(tagsort.alphabetical && tagsort.noTagsDefault,
-    "Standard-Listenansicht sollte alphabetisch (Buchstaben-Header) und ohne Filter-Tags sein: " + JSON.stringify(tagsort));
+  assert(tagsort.themeDefault,
+    "Standard-Listenansicht sollte »Thema« sein (Themen-Header + Filter-Tags): " + JSON.stringify(tagsort));
+  assert(tagsort.alphabetical && tagsort.noTagsBot,
+    "A–Z-Ansicht sollte alphabetisch (Buchstaben-Header) und ohne Filter-Tags sein: " + JSON.stringify(tagsort));
   assert(tagsort.hasTags, "Umschalten auf Thema zeigt keine Filter-Tags");
   assert(tagsort.afterFilter > 0 && tagsort.afterFilter < tagsort.total && tagsort.onlyOneGroup,
     "Themen-Tag filtert die Liste nicht auf ein Thema: " + JSON.stringify(tagsort));
@@ -1073,7 +1080,11 @@ async function main() {
       heads: /Gattungsname/.test(html) && /Familienname/.test(html) && /3 Punkte \(G\)/.test(html),
       zpCol: />ZP<\/th>/.test(html),
       filled: firstCells[1] !== "" && firstCells[0] === "1",
-      meta: /Fachrichtung Gemüsebau/.test(html) && /148 Arten/.test(html)
+      meta: /Fachrichtung Gemüsebau/.test(html) && /148 Arten/.test(html),
+      // didaktisches Studienblatt: Abhak-Spalte (ein Kästchen je Art), grüner ZP-Punkt, botanischer Name als bot-Spalte
+      chkCol: /gelernt<\/th>/.test(html) && host.querySelectorAll(".ptab td.pchk .box").length === dataRows,
+      zpDot: host.querySelectorAll(".ptab td.pzp .zpdot").length >= 1,
+      botMark: host.querySelectorAll(".ptab td.bot").length >= 1
     };
   });
   assert(plist.n === 148 && plist.dataRows === 148, "Druckliste: 148 Datenzeilen erwartet, war " + plist.dataRows);
@@ -1081,6 +1092,8 @@ async function main() {
   assert(plist.title && plist.heads, "Druckliste: Titel/Spaltenköpfe entsprechen nicht dem Prüfungsbogen (Produktion)");
   assert(plist.zpCol, "Druckliste: ZP-Spalte fehlt");
   assert(plist.filled && plist.meta, "Druckliste: Zeilen nicht gefüllt oder Kopfzeile falsch");
+  assert(plist.chkCol, "Druckliste: »gelernt«-Abhakspalte fehlt oder unvollständig (ein Kästchen je Art)");
+  assert(plist.zpDot && plist.botMark, "Druckliste: grüner ZP-Punkt bzw. hervorgehobener botanischer Name (td.bot) fehlt");
   assert(plist.nFiltered > 0 && plist.nFiltered < plist.n, "Druckliste: Suchfilter wirkt nicht (" + plist.nFiltered + ")");
 
   // Druckliste: opt-in »Namensherkunft« druckt je Pflanze eine Merkzeile (nameEtymology);
@@ -1373,19 +1386,51 @@ async function main() {
   assert(exo.labelsOff.includes("Familie"), "Ausgeschaltet: Familie muss auf der Kartenrückseite wieder erscheinen");
   assert(exo.famRowsOff > 0 && exo.famBtnOff, "Ausgeschaltet: Familie/-Ansicht müssen in der Liste wiederkommen");
 
-  // zurück auf Standardprofil
+  // zurück auf Standardprofil (fr + Niveau explizit)
   await page.evaluate(() => {
-    document.querySelector("#frSelect").value = "gemuesebau";
-    document.querySelector("#frSelect").dispatchEvent(new Event("change"));
+    if (location.hash) history.replaceState(null, "", location.pathname);   // evtl. Challenge-Hash entfernen → Reload bootet normal
+    $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
   });
 
   // Fortschritt-Persistenz über einen Reload
   await page.waitForFunction("localStorage.getItem('pflanzenlernen.progress.gemuesebau_gaertner')!=null", { timeout: 5000 });
   const before = await page.evaluate(() => Object.keys(progress).length);
   await page.reload({ waitUntil: "load" });
-  await page.waitForFunction("window.startSession!=null", { timeout: 10000 });
+  await page.waitForFunction("window.startSession!=null && typeof progress!=='undefined' && Object.keys(progress).length>0", { timeout: 10000 });
   const after = await page.evaluate(() => Object.keys(progress).length);
   assert(after >= before && after > 0, "Lernfortschritt überlebte den Reload nicht: " + before + " -> " + after);
+
+  // Druckoptionen: dezentes Zahnrad klappt das Panel auf; Spaltenauswahl lässt Spalten weg
+  // (nicht alle müssen gedruckt werden). Selbst-enthaltend am Ende, damit es die übrigen
+  // Tests nicht stört. Standardansicht ist jetzt »Thema«.
+  const pcol = await page.evaluate(() => {
+    $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    document.querySelector('#modeTabs button[data-mode="list"]').click();
+    const panelHidden0 = document.querySelector("#printOpts").hidden;   // Panel zunächst zu
+    document.querySelector("#btnPrintOpts").click();               // Zahnrad öffnet das Panel
+    const panelOpen = !document.querySelector("#printOpts").hidden && document.querySelector("#btnPrintOpts").getAttribute("aria-expanded") === "true";
+    const off = (k) => { const cb = document.querySelector(`#printCols input[data-k="${k}"]`); cb.checked = false; cb.dispatchEvent(new Event("change")); };
+    const on  = (k) => { const cb = document.querySelector(`#printCols input[data-k="${k}"]`); cb.checked = true;  cb.dispatchEvent(new Event("change")); };
+    const hasHeadCol = (re) => [...document.querySelectorAll("#printList .ptab thead th")].some((th) => re.test(th.textContent));
+    const hasZPcol   = () => !!document.querySelector("#printList .ptab thead th.pzp");
+    const hasChkCol  = () => !!document.querySelector("#printList .ptab thead th.pchk");
+    off("fam"); off("zp"); buildPrintList();
+    const stored = JSON.parse(localStorage.getItem("pflanzenlernen.printcols") || "[]");
+    const famGone = !hasHeadCol(/Familienname/), zpGone = !hasZPcol(), gelerntStill = hasChkCol();
+    off("g"); off("a"); off("de");                                 // Guard: die letzte Bogen-Spalte bleibt
+    const deStays = document.querySelector('#printCols input[data-k="de"]').checked;
+    buildPrintList();
+    const hasOneCol = hasHeadCol(/Deutscher Name/);
+    on("fam"); on("zp"); on("g"); on("a"); buildPrintList();       // zurücksetzen
+    const restored = hasHeadCol(/Familienname/) && hasZPcol();
+    return { panelHidden0, panelOpen, famGone, zpGone, gelerntStill,
+      storedHasFam: stored.includes("fam") && stored.includes("zp"), deStays, hasOneCol, restored };
+  });
+  assert(pcol.panelHidden0 && pcol.panelOpen, "Druckoptionen: Zahnrad muss das (anfangs eingeklappte) Panel öffnen");
+  assert(pcol.famGone && pcol.zpGone && pcol.gelerntStill, "Druckoptionen: abgewählte Spalten (Familie/ZP) erscheinen weiter im Kopf: " + JSON.stringify(pcol));
+  assert(pcol.storedHasFam, "Druckoptionen: Auswahl wird nicht in localStorage gemerkt");
+  assert(pcol.deStays && pcol.hasOneCol, "Druckoptionen: die letzte Bogen-Spalte darf nicht abwählbar sein");
+  assert(pcol.restored, "Druckoptionen: Wiedereinschalten stellt die Spalten nicht her");
 
   // Disclaimer: dezenter Hinweis (RP-Bezug, Stand, KI-Kategorien, keine Gewähr)
   const disc = await page.evaluate(() => {

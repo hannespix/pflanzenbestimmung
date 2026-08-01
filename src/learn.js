@@ -423,13 +423,14 @@ let queue = [], qi = 0, current = null, flipped = false;
 let sess = { total:0, done:0, correct:0, ms:0, pts:null, active:false };
 let qStart = 0, clockTimer = null;   // Zeitmessung: Start der offenen Frage · Anzeige-Takt
 let listCats = new Set();     // aktive Filter-Tags der laufenden Dimension (leer = alle)
-let listSort = "bot";         // Ansicht: bot | de | kategorie | familie (Standard: alphabetisch, ohne Gruppen)
+let listSort = "thema";       // Ansicht: bot | de | thema | familie (Standard: nach Thema gruppiert)
 let pendingChallenge = null;  // aus der URL (#c=…) dekodierte, noch nicht angenommene Herausforderung
 let examOnly = false;         // opt-in: nur Prüfungsstoff (Fachwerker) – Familie/Synonyme ausblenden
 let dirText  = "de2bot";      // Abfragerichtung für Karteikarten/Quiz/Tippen
 let dirPhoto = "img2bot";     // Abfragerichtung für den Bilder-Quiz
 let photoAnswer = "mc";       // Antwortart im Bilder-Quiz: mc | type | exam
 let examFields = null;        // Felder im Modus »wie in der Prüfung« (je Profil merkbar)
+let printColsOff = null;      // beim Lernlisten-Druck abgewählte Spalten (Set von Schlüsseln: g/a/fam/de/zp/chk)
 
 /* Nur-Prüfungsstoff-Modus: Die Fachwerker-Abschlussprüfung bewertet ausschließlich
    Deutscher Name, Gattung und Art (keine Familie). Diese opt-in Option blendet in
@@ -437,7 +438,7 @@ let examFields = null;        // Felder im Modus »wie in der Prüfung« (je Pro
    weniger Lernstoff, nur das Geprüfte. Nur bei Fachwerker-Profilen aktivierbar. */
 function isFachwerker(){ return /_fachwerker$/.test(profileId); }
 function examOnlyActive(){ return examOnly && isFachwerker(); }
-function normalizeSort(){ if(examOnlyActive() && listSort==="familie"){ listSort="bot"; store.set(LS_PREFIX+"listsort",listSort); } }
+function normalizeSort(){ if(examOnlyActive() && listSort==="familie"){ listSort="thema"; store.set(LS_PREFIX+"listsort",listSort); } }
 function syncExamOnlyUI(){
   const wrap=$("#examOnlyWrap"); if(wrap) wrap.hidden = !isFachwerker();   // Schalter nur bei Fachwerker zeigen
   const cb=$("#examOnly"); if(cb) cb.checked = examOnly;
@@ -1531,10 +1532,40 @@ const PRINT_COLS={ // [Feld, Beschriftung, Punktangabe im Wortlaut der Bögen, P
   gala:[["g","Gattungsname","1 Punkt (G)",1],["a","Artname","1 Punkt (G)",1],["de","Deutscher Name","2 Punkte (G)",2]],
   prod:[["g","Gattungsname","3 Punkte (G)",3],["a","Artname","3 Punkte (G)",3],["fam","Familienname","1 Punkt (G)",1],["de","Deutscher Name","3 Punkte (G)",3]]
 };
+/* ---------- Druck-Spaltenauswahl ---------- */
+/* Der Nutzer kann in den Druckoptionen einzelne Spalten abwählen (nicht alle müssen
+   gedruckt werden). Merkt sich die ABGEWÄHLTEN Schlüssel geräteweit; Zusatzspalten
+   ZP und »gelernt« sind ebenfalls abschaltbar. Mindestens eine Bogen-Spalte bleibt. */
+const printColKeys = () => PRINT_COLS[printFamily()].map(c=>c[0]).concat(["zp","chk"]);
+const printColLabel = k => k==="zp" ? "ZP" : k==="chk" ? "gelernt" : (FIELD_LABEL[k]||k);
+function loadPrintColsOff(){
+  let v=null; try{ v=JSON.parse(store.get(LS_PREFIX+"printcols")||"null"); }catch(e){ v=null; }
+  printColsOff = new Set(Array.isArray(v)?v:[]);
+}
+function savePrintColsOff(){ try{ store.set(LS_PREFIX+"printcols", JSON.stringify([...printColsOff])); }catch(e){} }
+function printColOn(k){ if(!printColsOff) loadPrintColsOff(); return !printColsOff.has(k); }
+function renderPrintCols(){
+  const host=$("#printCols"); if(!host) return;
+  if(!printColsOff) loadPrintColsOff();
+  host.innerHTML = printColKeys().map(k=>{
+    const on=!printColsOff.has(k);
+    return `<label class="pocol${on?" on":""}"><input type="checkbox" data-k="${k}"${on?" checked":""}> ${esc(printColLabel(k))}</label>`;
+  }).join("");
+  host.querySelectorAll("input").forEach(cb=>cb.onchange=()=>{
+    const k=cb.dataset.k;
+    if(cb.checked) printColsOff.delete(k); else printColsOff.add(k);
+    const dataKeys = PRINT_COLS[printFamily()].map(c=>c[0]);          // mind. eine Bogen-Spalte muss bleiben
+    if(dataKeys.every(dk=>printColsOff.has(dk))){ printColsOff.delete(k); cb.checked=true; toast("Mindestens eine Spalte muss gedruckt werden",true); return; }
+    savePrintColsOff(); renderPrintCols();
+  });
+}
 function buildPrintList(){
   const host=$("#printList"); if(!host) return 0;
   const fam=printFamily();
-  const cols=PRINT_COLS[fam];
+  if(!printColsOff) loadPrintColsOff();
+  const cols=PRINT_COLS[fam].filter(c=>!printColsOff.has(c[0]));   // nur gewählte Bogen-Spalten
+  const showZP=!printColsOff.has("zp"), showChk=!printColsOff.has("chk");
+  const extra=(showZP?1:0)+(showChk?1:0), tCols=1+cols.length+extra;   // Gesamtspalten (pnum + Daten + ZP + gelernt)
   const { p, raw, term } = listFiltered();
   const frLabel=$("#frSelect").selectedOptions[0]?$("#frSelect").selectedOptions[0].textContent:"";
   const nivLabel=$("#nivSelect").selectedOptions[0]?$("#nivSelect").selectedOptions[0].textContent:"";
@@ -1549,21 +1580,23 @@ function buildPrintList(){
 
   const heads=`<th class="pnum"></th>`+
     cols.map(c=>`<th>${esc(c[1])}<span class="pp">${esc(c[2])}</span></th>`).join("")+
-    `<th class="pzp" title="prüfungsrelevant für die Zwischenprüfung">ZP</th>`;
+    (showZP?`<th class="pzp" title="prüfungsrelevant für die Zwischenprüfung">ZP</th>`:"")+
+    (showChk?`<th class="pchk" title="zum Abhaken, was schon sitzt">gelernt</th>`:"");
   const wantEty = !!($("#printEty") && $("#printEty").checked);   // opt-in: Namensherkunft-Merkzeile je Pflanze
   let n=0, rows="";
-  const band = label => `<tr class="pcat"><td colspan="${cols.length+2}">${esc(label)}</td></tr>`;
+  const band = label => `<tr class="pcat"><td colspan="${tCols}">${esc(label)}</td></tr>`;
   const rowFor = c => { n++;
     const cls = wantEty ? ` class="pmain${n%2===0?" pz":""}"` : "";
     let tr = `<tr${cls}><td class="pnum">${n}</td>`+
       cols.map(k=>`<td class="${k[0]==="g"||k[0]==="a"?"bot":""}">${esc(c[k[0]]||"")}</td>`).join("")+
-      `<td class="pzp">${c.zp?"×":""}</td></tr>`;
+      (showZP?`<td class="pzp">${c.zp?'<span class="zpdot"></span>':""}</td>`:"")+
+      (showChk?`<td class="pchk"><span class="box"></span></td>`:"")+`</tr>`;
     if(wantEty){                                                  // Merkzeile aus der Namensherleitung (offline, kuratiert)
       const parts=nameEtymology(c.g, c.a);
       if(parts.length){
         const inline=parts.map(pp=>`<i>${esc(pp.t)}</i> — ${esc(pp.d)}`).join(" · ");
         tr += `<tr class="pety${n%2===0?" pz":""}"><td class="pnum"></td>`+
-          `<td class="pety-c" colspan="${cols.length+1}"><span class="pety-lab">Name:</span> ${inline}</td></tr>`;
+          `<td class="pety-c" colspan="${tCols-1}"><span class="pety-lab">Name:</span> ${inline}</td></tr>`;
       }
     }
     return tr;
@@ -1593,13 +1626,21 @@ function buildPrintList(){
     }
   }
   const hasZP = p.some(c=>c.zp);
+  const showBot = cols.some(c=>c[0]==="g"||c[0]==="a");            // botanischer Name überhaupt gedruckt?
+  const legend=[
+    (showZP&&hasZP)?"ZP = für die Zwischenprüfung relevant":"",
+    showChk?"Spalte »gelernt« zum Abhaken, was sitzt":"",
+    showBot?"Botanischer Name (grün) = Lernziel":"",
+    "Pflanzenkenntnis · Lernliste in der Form des Prüfungsbogens (Spalten und Punkte wie in der Prüfung)",
+    wantEty?"Namensherkunft: Kurzherleitung (Latein/Griechisch → Deutsch), kuratiert – ohne Gewähr":""
+  ].filter(Boolean).join(" · ");
   host.innerHTML=`
     <h1 class="ptitle${fam==="fw"?" pb":""}">${esc(title)} — Lernliste</h1>
     ${fam==="fw"?`<div class="psub">Gartenbaufachwerker/in</div>`:""}
     <div class="pmeta">Fachrichtung ${esc(frLabel)} · ${esc(nivLabel)} · ${n} ${n===1?"Art":"Arten"}
       · sortiert nach ${esc(SORT_LABEL[listSort]||"Thema")}${filt.length?` · ${esc(filt.join(" · "))}`:""} · Stand ${esc(heute)}</div>
     <table class="ptab${wantEty?" ety":""}"><thead><tr>${heads}</tr></thead><tbody>${rows}</tbody></table>
-    <div class="pfoot">${hasZP?"ZP = für die Zwischenprüfung relevant · ":""}Pflanzenkenntnis · Lernliste in der Form des Prüfungsbogens (Spalten und Punkte wie in der Prüfung)${wantEty?" · Namensherkunft: Kurzherleitung (Latein/Griechisch → Deutsch), kuratiert – ohne Gewähr":""}</div>`;
+    <div class="pfoot">${legend}</div>`;
   return n;
 }
 function printList(){
@@ -1627,14 +1668,16 @@ function syncOptsSummary(){
 function applyMode(){
   const isList = mode==="list";
   sess.active=false; qStart=0; clockRun(false); stageFull(false);   // Moduswechsel bricht die Sitzung ab
-  const sr=$("#startRow"), lsr=$("#listSearchRow"), lc=$("#listControls");
+  const sr=$("#startRow"), lsr=$("#listSearchRow"), lc=$("#listControls"), po=$("#printOpts");
   if(sr) sr.hidden = isList;
   const ln=$("#learnNote"); if(ln) ln.hidden = isList;   // Hinweis gehört zu den Lektionen, nicht zur Liste
   const cf=$("#cat") && $("#cat").closest(".field"); if(cf) cf.hidden = isList;  // »Auswahl«-Scope filtert die Liste nicht – im Listenmodus ausblenden (Suche + Ansicht-Tags reichen)
   if(lsr) lsr.hidden = !isList;
   if(lc) lc.hidden = !isList;
+  if(po) po.hidden = true;                               // Druckoptionen-Panel bleibt beim Moduswechsel eingeklappt (dezent)
+  const pob=$("#btnPrintOpts"); if(pob) pob.setAttribute("aria-expanded","false");
   syncDirUI(); syncOptsSummary();
-  if(isList){ $("#progress").hidden = true; renderListControls(); renderList(); }
+  if(isList){ $("#progress").hidden = true; renderPrintCols(); renderListControls(); renderList(); }
   else { renderProgress(); startHintOnly(); }
 }
 
@@ -3182,6 +3225,12 @@ function wire(){
   };
   $("#listSearch").oninput=()=>{ if(mode==="list") renderList(); };
   if($("#btnPrintList")) $("#btnPrintList").onclick=printList;
+  if($("#btnPrintOpts")) $("#btnPrintOpts").onclick=()=>{        // Zahnrad klappt das dezente Druckoptionen-Panel auf/zu
+    const po=$("#printOpts"), willOpen=po.hidden;
+    if(willOpen) renderPrintCols();                              // Spalten passend zur aktuellen Fachrichtung
+    po.hidden=!willOpen;
+    $("#btnPrintOpts").setAttribute("aria-expanded", String(willOpen));
+  };
   if($("#printEty")){                                             // Druck-Option »Namensherkunft« merken
     $("#printEty").checked = store.get(LS_PREFIX+"printety")==="1";
     $("#printEty").onchange=()=>store.set(LS_PREFIX+"printety", $("#printEty").checked?"1":"0");
@@ -3235,9 +3284,9 @@ function openIntro(auto){
   try{
     $("#frSelect").innerHTML=FR_LIST.map(f=>`<option value="${slug(f)}">${esc(f)}</option>`).join("");
     $("#nivSelect").innerHTML=NIVEAUS.map(n=>`<option value="${n.key}">${esc(n.label)}</option>`).join("");
-    listSort = store.get(LS_PREFIX+"listsort") || "bot";
+    listSort = store.get(LS_PREFIX+"listsort") || "thema";    // Standardansicht: nach Thema gruppiert
     if(listSort==="kategorie") listSort="thema";              // frühere Ansicht »Wuchsform/Kategorie«
-    if(!SORT_LABEL[listSort]) listSort="bot";
+    if(!SORT_LABEL[listSort]) listSort="thema";
     examOnly = store.get(LS_PREFIX+"examonly")==="1";
     dirText  = DIRS_TEXT.includes(store.get(LS_PREFIX+"dirtext"))   ? store.get(LS_PREFIX+"dirtext")  : "de2bot";
     dirPhoto = DIRS_PHOTO.includes(store.get(LS_PREFIX+"dirphoto")) ? store.get(LS_PREFIX+"dirphoto") : "img2bot";
