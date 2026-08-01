@@ -515,15 +515,20 @@ const DIRS = {
   de2bot : { label:"Deutscher Name → botanisch", prompt:"Deutscher Name",    answer:"Botanischer Name" },
   bot2de : { label:"Botanisch → deutscher Name", prompt:"Botanischer Name",  answer:"Deutscher Name"   },
   img2bot: { label:"Bild → botanischer Name",    prompt:"Bild",              answer:"Botanischer Name" },
-  img2de : { label:"Bild → deutscher Name",      prompt:"Bild",              answer:"Deutscher Name"   }
+  img2de : { label:"Bild → deutscher Name",      prompt:"Bild",              answer:"Deutscher Name"   },
+  img2both:{ label:"Bild → voller Name (botanisch + deutsch)", prompt:"Bild", answer:"Voller Name"      }
 };
-const DIRS_TEXT  = ["de2bot","bot2de"];           // Karteikarten · Quiz · Tippen
-const DIRS_PHOTO = ["img2bot","img2de"];          // Bilder-Quiz
-function dirsFor(m){ return (m||mode)==="photo" ? DIRS_PHOTO : DIRS_TEXT; }
+const DIRS_TEXT  = ["de2bot","bot2de"];               // Karteikarten · Quiz · Tippen
+const DIRS_PHOTO = ["img2bot","img2de","img2both"];   // Bilder-Quiz (img2both nur beim Auswahl-Quiz)
+function dirsFor(m){                                    // gültige Richtungen für Modus/Antwortart
+  if((m||mode)!=="photo") return DIRS_TEXT;
+  return photoAnswer==="mc" ? DIRS_PHOTO : DIRS_PHOTO.filter(d=>d!=="img2both");  // »voller Name« braucht die 4 Auswahl-Optionen
+}
 function curDir(){                                 // gültige Richtung für den aktuellen Modus
   const d = mode==="photo" ? dirPhoto : dirText;
   return dirsFor().includes(d) ? d : dirsFor()[0];
 }
+const wantsBoth = () => curDir()==="img2both";                     // gesucht ist der volle Name (botanisch + deutsch)
 const wantsDe = () => curDir()==="bot2de" || curDir()==="img2de";   // gesucht ist der deutsche Name
 function famName(f){                              // "Fabaceae · Schmetterlingsblütler" (dt. Name aus Daten oder FAM_INFO)
   const lat=famKey(f); if(!lat) return f||"";
@@ -531,6 +536,7 @@ function famName(f){                              // "Fabaceae · Schmetterlings
   return de ? lat+" · "+de : lat;
 }
 const botName = c => norm(c.g+" "+c.a);
+const fullName = c => botName(c)+" · "+deMain(c);   // voller Name: botanisch · deutsch (Bilder-Quiz »voller Name«)
 // Abkürzungen, wie sie in den Quelllisten vorkommen → ausgeschriebene Anzeigeform
 // (nur fürs Lern-Tool; das Prüfungswerkzeug zeigt den amtlichen Namen unverändert).
 const DE_ABBR = { gew:"Gewöhnliche", amerik:"Amerikanische", austr:"Australische",
@@ -573,7 +579,7 @@ function promptHTML(c){                            // Vorderseite (im Bilder-Mod
   return wantsDe() ? `<i>${esc(botName(c))}</i>` : esc(c.de||"—");   // gefragt wird nach allen geführten Namen
 }
 function promptSub(c){ return ""; }                // kein Hinweis vorne
-function answerText(c){ return wantsDe() ? deMain(c) : botName(c); }
+function answerText(c){ return wantsBoth() ? fullName(c) : wantsDe() ? deMain(c) : botName(c); }
 function answerLabel(){ return DIRS[curDir()].answer; }
 function promptLabel(){ return DIRS[curDir()].prompt; }
 /* Lösungszeile für Quiz/Tippen/Bilder: Gesuchtes zuerst, die andere Seite dahinter. */
@@ -1049,7 +1055,10 @@ function nivNameOf(pid){ return /_fachwerker$/.test(pid)?"Fachwerker/in":"Gärtn
 function challengeURL(){                  // aktuelle Sitzung als Herausforderungs-Link kodieren
   const idx = (sess.cards||[]).map(c=>allCards.indexOf(c)).filter(i=>i>=0);
   // z = Denkzeit in Sekunden; ältere Links ohne z werden weiterhin verstanden.
-  const payload = { v:CH_VER, p:profileId, m:mode, r:curDir(), i:idx, s:sess.correct, t:sess.done,
+  // »voller Name« (img2both) passt nicht in die 2-Bit-Richtungskodierung – als
+  // Herausforderung botanisch (img2bot) teilen; die Karten bleiben exakt dieselben.
+  const r = curDir()==="img2both" ? "img2bot" : curDir();
+  const payload = { v:CH_VER, p:profileId, m:mode, r, i:idx, s:sess.correct, t:sess.done,
                     z:Math.round((sess.ms||0)/1000), n:duelName() };
   return location.href.split("#")[0] + "#c=" + chEncode(payload);
 }
@@ -1947,11 +1956,16 @@ async function renderPhoto(){
   prefetchPhoto();                                     // nächstes Bild schon im Hintergrund holen
 }
 /* Antwort 1: Auswahl aus vier Namen */
+function optLabelHTML(o){                            // im »voller Name«-Quiz den botanischen Teil kursiv setzen
+  if(!wantsBoth()) return esc(o);
+  const i = String(o).indexOf(" · ");
+  return i<0 ? esc(o) : `<i>${esc(o.slice(0,i))}</i> · ${esc(o.slice(i+3))}`;
+}
 function renderPhotoChoice(p){
   const c=current, opts=shuffle([answerText(c), ...distractors(c,3)]);
   const host=$("#opts"), letters=["A","B","C","D","E"];
   opts.forEach((o,i)=>{
-    const b=el("button","opt"); b.innerHTML=`<span class="k">${letters[i]}</span><span>${esc(o)}</span>`;
+    const b=el("button","opt"); b.innerHTML=`<span class="k">${letters[i]}</span><span>${optLabelHTML(o)}</span>`;
     b.onclick=()=>answerPhoto(b,o,p);
     host.appendChild(b);
   });

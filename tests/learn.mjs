@@ -631,6 +631,38 @@ async function main() {
     const e = document.querySelector("#phAnswer"); e.value = "mc"; e.dispatchEvent(new Event("change"));
   });
 
+  // Bilder-Quiz, Abfrage »voller Name« (botanisch + deutsch): die vier Optionen zeigen
+  // BEIDE Namen (botanischer Teil kursiv); die Richtung ist nur beim Auswahl-Quiz wählbar.
+  const phBoth = await page.evaluate(async (PX) => {
+    __clearPhotoCache();
+    __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g + " " + card.a, file: "T.jpg", url: "https://x/y" }));
+    const set = (id, v) => { const e = document.querySelector(id); e.value = v; e.dispatchEvent(new Event("change")); };
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();
+    set("#phAnswer", "mc");
+    const dirOptsMc = [...document.querySelectorAll("#dir option")].map((o) => o.value);
+    set("#dir", "img2both");
+    startSession();
+    await new Promise((r) => setTimeout(r, 60));
+    const c = current, correctFull = answerText(c);          // "Gattung art · Deutscher Name"
+    const opts = [...document.querySelectorAll("#opts .opt")].map((b) => b.querySelector("span:last-child").textContent);
+    const italics = document.querySelectorAll("#opts .opt i").length;   // botanischer Teil je Option kursiv
+    const before = sess.correct;
+    const btn = [...document.querySelectorAll("#opts .opt")].find((b) => b.querySelector("span:last-child").textContent.toLowerCase() === correctFull.toLowerCase());
+    if (btn) btn.click();
+    const good = /Richtig!/.test((document.querySelector("#fb") || {}).innerHTML || "");
+    const scored = sess.correct === before + 1;
+    set("#phAnswer", "type");                                // bei »tippen« darf »voller Name« NICHT wählbar sein
+    const dirOptsType = [...document.querySelectorAll("#dir option")].map((o) => o.value);
+    set("#phAnswer", "mc"); set("#dir", "img2bot");          // Zustand für folgende Tests zurücksetzen
+    return { dirOptsMc, dirOptsType, correctFull, opts, italics, hasCorrect: !!btn, good, scored };
+  }, PX);
+  assert(phBoth.dirOptsMc.includes("img2both") && !phBoth.dirOptsType.includes("img2both"),
+    "»voller Name« muss beim Auswahl-Quiz wählbar sein, bei »tippen« nicht: " + JSON.stringify({ mc: phBoth.dirOptsMc, type: phBoth.dirOptsType }));
+  assert(/ · /.test(phBoth.correctFull) && phBoth.opts.length === 4 && phBoth.opts.every((o) => / · /.test(o)),
+    "Bilder-Quiz »voller Name«: alle vier Optionen müssen botanisch · deutsch zeigen: " + JSON.stringify(phBoth.opts));
+  assert(phBoth.italics === 4 && phBoth.hasCorrect && phBoth.good && phBoth.scored,
+    "Bilder-Quiz »voller Name«: botanischer Teil kursiv, richtige volle Option wertbar: " + JSON.stringify(phBoth));
+
   // Bilder-Quiz ohne Netz: klare Ansage statt kaputter Ansicht
   const photoOff = await page.evaluate(async () => {
     __clearPhotoCache();
@@ -811,19 +843,26 @@ async function main() {
 
   // Abfragerichtung wählbar: Text-Modi de↔bot, Bilder-Modus Bild→bot/de
   const dirUI = await page.evaluate(() => {
+    const set = (id, v) => { const e = document.querySelector(id); e.value = v; e.dispatchEvent(new Event("change")); };
     document.querySelector('#modeTabs button[data-mode="cards"]').click();
     const textOpts = [...document.querySelectorAll("#dir option")].map((o) => o.value);
     document.querySelector('#modeTabs button[data-mode="photo"]').click();
-    const photoOpts = [...document.querySelectorAll("#dir option")].map((o) => o.value);
+    set("#phAnswer", "mc");
+    const photoOptsMc = [...document.querySelectorAll("#dir option")].map((o) => o.value);
+    set("#phAnswer", "type");                                 // »voller Name« ist beim Tippen gegenstandslos
+    const photoOptsType = [...document.querySelectorAll("#dir option")].map((o) => o.value);
+    set("#phAnswer", "mc");
     document.querySelector('#modeTabs button[data-mode="list"]').click();
     const hiddenInList = document.querySelector("#dirField").hidden;
     document.querySelector('#modeTabs button[data-mode="cards"]').click();
-    return { textOpts, photoOpts, hiddenInList, back: document.querySelector("#dir").value };
+    return { textOpts, photoOptsMc, photoOptsType, hiddenInList, back: document.querySelector("#dir").value };
   });
   assert(dirUI.textOpts.join() === "de2bot,bot2de",
     "Text-Modi brauchen genau beide Richtungen: " + JSON.stringify(dirUI.textOpts));
-  assert(dirUI.photoOpts.join() === "img2bot,img2de",
-    "Bilder-Modus braucht Bild→botanisch und Bild→deutsch: " + JSON.stringify(dirUI.photoOpts));
+  assert(dirUI.photoOptsMc.join() === "img2bot,img2de,img2both",
+    "Bilder-Auswahl-Quiz braucht Bild→botanisch, →deutsch und →voller Name: " + JSON.stringify(dirUI.photoOptsMc));
+  assert(dirUI.photoOptsType.join() === "img2bot,img2de",
+    "»voller Name« darf nur beim Auswahl-Quiz erscheinen, nicht bei »tippen«: " + JSON.stringify(dirUI.photoOptsType));
   assert(dirUI.hiddenInList, "Im Listenmodus ist die Abfragerichtung gegenstandslos und gehört ausgeblendet");
   assert(dirUI.back === "de2bot", "Standard muss die prüfungsnahe Richtung bleiben, war " + dirUI.back);
 
