@@ -1422,10 +1422,11 @@ function listFiltered(){
 function renderListControls(){
   const host=$("#listControls"); if(!host) return;
   const open = host.dataset.open==="1";
+  const zpOn = !!($("#onlyzp") && $("#onlyzp").checked);
   // Zusammenfassung für die (eingeklappte) Kopfzeile des Akkordions
-  const sub = groupsView()
+  const sub = (groupsView()
     ? (listCats.size ? `${SORT_LABEL[listSort]} · ${listCats.size} ausgewählt` : `${SORT_LABEL[listSort]} · alle`)
-    : SORT_LABEL[listSort];
+    : SORT_LABEL[listSort]) + (zpOn ? " · nur ZP" : "");
   // im Prüfungsstoff-Modus (Fachwerker) entfällt die Familien-Ansicht (Familie ist ausgeblendet)
   const sortKeys=Object.keys(SORT_LABEL).filter(s=> !(examOnlyActive() && s==="familie"));
   const sorts=sortKeys.map(s=>`<button class="sortbtn${listSort===s?" on":""}" data-sort="${s}">${SORT_LABEL[s]}</button>`).join("");
@@ -1437,15 +1438,28 @@ function renderListControls(){
       vals.map(([k,n])=>`<button class="cattag${listCats.has(k)?" on":""}" data-cat="${esc(k)}">${esc(k)}<span class="ct-n">${n}</span></button>`).join("")+
       `</div>`;
   }
+  // Filter + Drucken gehören mit ins EINE Akkordeon (die Sitzungs-Optionen sind im
+  // Listenmodus ausgeblendet; ZP/Prüfungsstoff spiegeln deren Schalter – gleiche Quelle).
+  const exWrap=$("#examOnlyWrap");
+  const filterRow=`<div class="sortrow"><span class="sortlab">Filter</span>
+      <label class="po-ety" title="Nur Arten zeigen, die für die Zwischenprüfung relevant sind"><input type="checkbox" id="lcZp"${zpOn?" checked":""}> nur ZP-relevant</label>
+      ${exWrap && !exWrap.hidden ? `<label class="po-ety" title="Nur die in der Fachwerker-Prüfung bewerteten Angaben zeigen (ohne Familie)"><input type="checkbox" id="lcExamOnly"${examOnly?" checked":""}> nur Prüfungsstoff</label>` : ""}
+    </div>`;
+  const printRow=`<div class="sortrow"><span class="sortlab">Drucken</span>
+      <div class="po-cols" id="printCols" role="group" aria-label="Spalten für den Druck"></div>
+      <label class="po-ety" title="Zu jeder Pflanze eine kurze Merkzeile mit der Herkunft/Bedeutung des botanischen Namens mitdrucken (Latein/Griechisch → Deutsch, kuratiert – ohne Gewähr)."><input type="checkbox" id="printEty"${printEtyOn()?" checked":""}> Namensherkunft</label>
+    </div>`;
   host.innerHTML=`
     <button class="lc-toggle" id="lcToggle" aria-expanded="${open?"true":"false"}">
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
-      <span class="lc-title">Ansicht &amp; Filter</span><span class="lc-sub">${esc(sub)}</span>
+      <span class="lc-title">Optionen</span><span class="lc-sub">${esc(sub)}</span>
       <span class="lc-caret" aria-hidden="true">▾</span>
     </button>
     <div class="lc-body"${open?"":" hidden"}>
       <div class="sortrow"><span class="sortlab">Ansicht</span><div class="sortbtns" role="group" aria-label="Ansicht">${sorts}</div></div>
       ${tags}
+      ${filterRow}
+      ${printRow}
     </div>`;
   $("#lcToggle").onclick=()=>{ host.dataset.open = open?"0":"1"; renderListControls(); };
   host.querySelectorAll(".sortbtn").forEach(b=>b.onclick=()=>{
@@ -1458,6 +1472,10 @@ function renderListControls(){
     else { if(listCats.has(k)) listCats.delete(k); else listCats.add(k); }
     vt(()=>{ renderListControls(); renderList(); });   // Gefiltertes gleitet heraus/herein
   });
+  renderPrintCols();
+  const zp=$("#lcZp"); if(zp) zp.onchange=()=>{ const src=$("#onlyzp"); if(src){ src.checked=zp.checked; src.dispatchEvent(new Event("change")); } };
+  const ex=$("#lcExamOnly"); if(ex) ex.onchange=()=>{ const src=$("#examOnly"); if(src){ src.checked=ex.checked; src.dispatchEvent(new Event("change")); } };
+  const pe=$("#printEty"); if(pe) pe.onchange=()=>store.set(LS_PREFIX+"printety", pe.checked?"1":"0");
 }
 function renderList(){
   const stage=$("#stage");
@@ -1543,6 +1561,7 @@ function loadPrintColsOff(){
   printColsOff = new Set(Array.isArray(v)?v:[]);
 }
 function savePrintColsOff(){ try{ store.set(LS_PREFIX+"printcols", JSON.stringify([...printColsOff])); }catch(e){} }
+function printEtyOn(){ return store.get(LS_PREFIX+"printety")==="1"; }   // Quelle: Speicher (Checkbox lebt nur im offenen Akkordeon)
 function printColOn(k){ if(!printColsOff) loadPrintColsOff(); return !printColsOff.has(k); }
 function renderPrintCols(){
   const host=$("#printCols"); if(!host) return;
@@ -1582,7 +1601,7 @@ function buildPrintList(){
     cols.map(c=>`<th>${esc(c[1])}<span class="pp">${esc(c[2])}</span></th>`).join("")+
     (showZP?`<th class="pzp" title="prüfungsrelevant für die Zwischenprüfung">ZP</th>`:"")+
     (showChk?`<th class="pchk" title="zum Abhaken, was schon sitzt">gelernt</th>`:"");
-  const wantEty = !!($("#printEty") && $("#printEty").checked);   // opt-in: Namensherkunft-Merkzeile je Pflanze
+  const wantEty = printEtyOn();                                   // opt-in: Namensherkunft-Merkzeile je Pflanze
   let n=0, rows="";
   const band = label => `<tr class="pcat"><td colspan="${tCols}">${esc(label)}</td></tr>`;
   const rowFor = c => { n++;
@@ -1668,16 +1687,17 @@ function syncOptsSummary(){
 function applyMode(){
   const isList = mode==="list";
   sess.active=false; qStart=0; clockRun(false); stageFull(false);   // Moduswechsel bricht die Sitzung ab
-  const sr=$("#startRow"), lsr=$("#listSearchRow"), lc=$("#listControls"), po=$("#printOpts");
+  const sr=$("#startRow"), lsr=$("#listSearchRow"), lc=$("#listControls");
   if(sr) sr.hidden = isList;
   const ln=$("#learnNote"); if(ln) ln.hidden = isList;   // Hinweis gehört zu den Lektionen, nicht zur Liste
   const cf=$("#cat") && $("#cat").closest(".field"); if(cf) cf.hidden = isList;  // »Auswahl«-Scope filtert die Liste nicht – im Listenmodus ausblenden (Suche + Ansicht-Tags reichen)
+  // Im Listenmodus gibt es EIN Options-Akkordeon: die Sitzungs-Optionen sind ausgeblendet,
+  // ihre listenrelevanten Schalter (ZP, Prüfungsstoff) stehen gespiegelt im Listen-Akkordeon.
+  const so=$("#setOpts"); if(so) so.hidden = isList;
   if(lsr) lsr.hidden = !isList;
   if(lc) lc.hidden = !isList;
-  if(po) po.hidden = true;                               // Druckoptionen-Panel bleibt beim Moduswechsel eingeklappt (dezent)
-  const pob=$("#btnPrintOpts"); if(pob) pob.setAttribute("aria-expanded","false");
   syncDirUI(); syncOptsSummary();
-  if(isList){ $("#progress").hidden = true; renderPrintCols(); renderListControls(); renderList(); }
+  if(isList){ $("#progress").hidden = true; renderListControls(); renderList(); }
   else { renderProgress(); startHintOnly(); }
 }
 
@@ -3225,16 +3245,7 @@ function wire(){
   };
   $("#listSearch").oninput=()=>{ if(mode==="list") renderList(); };
   if($("#btnPrintList")) $("#btnPrintList").onclick=printList;
-  if($("#btnPrintOpts")) $("#btnPrintOpts").onclick=()=>{        // Zahnrad klappt das dezente Druckoptionen-Panel auf/zu
-    const po=$("#printOpts"), willOpen=po.hidden;
-    if(willOpen) renderPrintCols();                              // Spalten passend zur aktuellen Fachrichtung
-    po.hidden=!willOpen;
-    $("#btnPrintOpts").setAttribute("aria-expanded", String(willOpen));
-  };
-  if($("#printEty")){                                             // Druck-Option »Namensherkunft« merken
-    $("#printEty").checked = store.get(LS_PREFIX+"printety")==="1";
-    $("#printEty").onchange=()=>store.set(LS_PREFIX+"printety", $("#printEty").checked?"1":"0");
-  }
+  // Druckoptionen (Spalten, Namensherkunft) leben im Listen-Akkordeon (renderListControls)
   $("#modeTabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{
     mode=b.dataset.mode; store.set(LS_PREFIX+"mode",mode);
     $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
