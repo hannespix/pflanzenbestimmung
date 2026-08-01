@@ -303,6 +303,48 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .fld input,.fld select,.fld textarea{border:1px solid var(--rule-strong); border-radius:3px; padding:8px 10px; font-size:14px; background:var(--card); width:100%}
 .fld textarea{resize:vertical; min-height:52px; font-family:inherit}
 .modal footer{padding:14px 22px 18px; display:flex; gap:10px; justify-content:flex-end; border-top:1px solid var(--rule)}
+/* ---- Pflanzen-Info-Modal (aus dem Lern-Tool portiert; opt-in Wikipedia) ----
+   Eigener Namensraum .infoscrim/.infobox, damit die neun Panel-Modale (.scrim/.modal,
+   via .open sichtbar) unberührt bleiben – dieses Modal wird per JS erzeugt und ist
+   sichtbar, sobald es im DOM hängt. Wikipedia lädt nur auf Knopfdruck (JSONP). */
+.infoscrim{position:fixed; inset:0; background:var(--scrimdim,rgba(28,42,34,.55)); display:flex; align-items:flex-start; justify-content:center; padding:5vh 16px; z-index:80; overflow:auto; animation:h2FadeIn .18s ease both; backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px)}
+.infobox{background:var(--surface); border:1px solid var(--rule-strong); border-radius:16px; box-shadow:var(--shadow-2,0 18px 50px rgba(28,42,34,.28)); width:100%; max-width:560px; padding:22px 22px 20px; position:relative; animation:h2ModalIn .3s cubic-bezier(.16,1,.3,1) both}
+.infobox-x{position:absolute; top:8px; right:10px; border:none; background:transparent; font-size:24px; line-height:1; color:var(--ink-soft); cursor:pointer; padding:4px 9px; border-radius:8px}
+.infobox-x:hover{background:var(--surface-2); color:var(--ink)}
+.infobox .modal-head{border-bottom:1px solid var(--rule); padding:0 28px 12px 0; margin-bottom:14px}
+.infobox .mh-bot{font-family:var(--serif); font-size:22px; font-style:italic; color:var(--ink); line-height:1.15; overflow-wrap:anywhere}
+.infobox .mh-de{font-family:var(--serif); font-size:17px; color:var(--green-deep); margin-top:2px}
+.infobox .mh-fam{font-family:var(--mono); font-size:11px; letter-spacing:.04em; color:var(--sepia); text-transform:uppercase; margin-top:6px}
+.infobox .etym{margin:0 0 14px; border:1px solid var(--rule); border-radius:10px; background:var(--surface-2); overflow:hidden}
+.infobox .etym>summary{cursor:pointer; list-style:none; padding:9px 13px; font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); user-select:none}
+.infobox .etym>summary::-webkit-details-marker{display:none}
+.infobox .etym>summary:hover{color:var(--green-deep)}
+.infobox .etym[open]>summary{border-bottom:1px solid var(--rule); color:var(--green-deep)}
+.infobox .etym .etym-ic{font-size:12px; margin-right:5px}
+.infobox .etym-list{margin:0; padding:10px 15px 6px 30px; display:flex; flex-direction:column; gap:5px}
+.infobox .etym-list li{font-family:var(--serif); font-size:14.5px; color:var(--ink); line-height:1.35}
+.infobox .etym-list li i{color:var(--green-deep)}
+.infobox .etym-note{padding:2px 15px 11px; font-size:11px; color:var(--ink-faint); font-style:italic}
+.infobox .srclabel{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); margin-bottom:8px}
+.infobox .srcgrid{display:flex; flex-wrap:wrap; gap:8px}
+.infobox .srcgrid a{display:inline-flex; align-items:center; gap:6px; text-decoration:none; border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); border-radius:8px; padding:7px 11px; font-size:13px; font-weight:500; transition:background .14s, border-color .14s, transform .08s}
+.infobox .srcgrid a:hover{background:var(--card); border-color:var(--green); transform:translateY(-1px)}
+.infobox .srcgrid a .ext{font-family:var(--mono); font-size:11px; color:var(--ink-faint)}
+.infobox .wpblock{margin-top:16px; border-top:1px solid var(--rule); padding-top:14px}
+.infobox .wphost{margin-top:12px}
+.infobox .wphost img{float:left; width:132px; max-width:42%; height:auto; border-radius:8px; border:1px solid var(--rule); margin:2px 14px 8px 0}
+.infobox .wp-text{font-size:14px; color:var(--ink); line-height:1.5}
+.infobox .wp-src{clear:both; font-family:var(--mono); font-size:11px; color:var(--ink-faint); margin-top:12px}
+.infobox .wp-src a{color:var(--green-deep)}
+.infobox .wp-note{font-size:13px; color:var(--ink-soft); font-style:italic}
+@media (max-width:640px){
+  .infobox .wphost img{float:none; display:block; width:100%; max-width:220px; margin:0 auto 12px}
+  .infoscrim{padding:3vh 12px}
+  .infobox{padding:18px 16px}
+  .infobox .mh-bot{font-size:20px}
+  .infobox .srcgrid a{font-size:12.5px; padding:7px 10px}
+}
+@media (prefers-reduced-motion:reduce){.infoscrim,.infobox{animation:none !important}}
 .hint{font-size:12.5px; color:var(--ink-soft); background:var(--madder-tint); border-left:3px solid var(--madder-soft); padding:9px 12px; border-radius:0 4px 4px 0}
 .radio-cards{display:grid; gap:10px}
 .rcard{border:1px solid var(--rule-strong); border-radius:5px; padding:12px 14px; cursor:pointer; display:flex; gap:11px; align-items:flex-start}
@@ -415,6 +457,7 @@ body.m-manage .selbar, body.m-manage #currentSel{display:none}
   body{background:var(--card); background-image:none}
   .wrap{display:none !important}
   .scrim{display:none !important}
+  .infoscrim{display:none !important}
   .toast{display:none !important}
   #sheet{display:block !important; color:#000; font-family:Arial,Helvetica,'Liberation Sans',sans-serif; line-height:1.25}
   .ftitle{font-size:16pt; font-weight:400; text-align:center; margin:0}

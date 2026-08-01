@@ -19,16 +19,21 @@ Bitte alle Antworten und Commit-/PR-Texte **auf Deutsch**.
   *Wortwahl in der Oberfläche:* nicht »vollständig offline« schreiben – bei einer
   Webseite klingt das widersprüchlich. Stattdessen »läuft im Browser, auch ohne
   Internet« bzw. »nach dem ersten Aufruf ohne Internet nutzbar«.
-- **Zwei bewusste Ausnahmen, beide nur im Lern-Tool und beide opt-in:**
+- **Zwei bewusste Ausnahmen, beide opt-in:**
   (1) Das »ℹ Mehr zur Pflanze«-Modal bietet **optionale** Online-Infos (deutsche
-  Wikipedia, nur auf Knopfdruck). (2) Der **Lernmodus »Bilder«** lädt Bilder von
-  Wikipedia/Wikimedia Commons – aber erst, wenn der Modus gestartet wird.
+  Wikipedia, nur auf Knopfdruck) – **in beiden Werkzeugen** (Lern-Tool und
+  Prüfungswerkzeug; die Info-Karte ist identisch, im Prüfungswerkzeug über die
+  ℹ-Knöpfe in der Auswahl-Liste und in der »Aktuellen Prüfung«). (2) Der **Lernmodus
+  »Bilder«** lädt Bilder von Wikipedia/Wikimedia Commons – aber erst, wenn der Modus
+  gestartet wird (**nur im Lern-Tool**).
   Beide laden **nichts beim Seitenaufbau** und nutzen **JSONP** (zur Laufzeit
   erzeugtes `<script>`) statt `fetch`/`XHR` – dadurch bleibt `check_offline.py` grün.
-  Der Kern (**Karteikarten/Quiz/Tippen/Liste**) funktioniert **ohne Netz** vollständig
-  weiter; ohne Verbindung sagt der Bilder-Modus das klar an. Die Deep-Link-Buttons
-  öffnen bloß einen neuen Tab. **Das Prüfungswerkzeug bleibt strikt offline** – dort
-  keine Online-Funktion.
+  Der Kern (**Karteikarten/Quiz/Tippen/Liste** bzw. Ziehen/Bogen/Musterlösung/Noten)
+  funktioniert **ohne Netz** vollständig weiter; ohne Verbindung sagt es der Bilder-
+  Modus bzw. der Wikipedia-Knopf klar an. Die Deep-Link-Buttons öffnen bloß einen
+  neuen Tab. **Der Prüfungsbogen selbst bleibt strikt offline** – der Druck (Leerbogen
+  und Musterlösung) und die Notenberechnung rufen nichts nach; die Wikipedia-
+  Anreicherung sitzt ausschließlich im optionalen ℹ-Modal, nie im Bogen.
 - **Kein Framework, kein Build-Tool-Zoo.** Reines Vanilla-JS, eine `app.js`, ein
   `template.html`. Kein React/Vue/Svelte, kein npm-Bundler, kein TypeScript.
   Node wird nur für das Konverter-Skript (`tools/xlsx_to_seed.mjs`) gebraucht.
@@ -1141,6 +1146,26 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Quellenkommentar, `--check`-Report. In `tools/rebuild_seeds.sh` **nach** der
       Excel-Konvertierung und `categorize_seeds.py` eingehängt – so überlebt die
       Korrektur jeden Rebuild. Build + Offline-Check + alle vier Smoke-Tests grün.
+
+- [x] **Info-Karte auch im Prüfungswerkzeug** (»ℹ Mehr zur Pflanze«, wie im Lern-Tool):
+      In der Auswahl-Liste (`rowEl`) und in der »Aktuellen Prüfung«/Vorschau (`pvRowEl`)
+      öffnet ein ℹ-Knopf dasselbe Info-Modal – **botanische Namensherleitung** (offline,
+      kuratiert), **neutrale Deep-Links** (Wikipedia/NaturaDB/iNaturalist, öffnen neuen
+      Tab) und **opt-in** »Online-Infos laden« (deutscher Wikipedia-Kurztext + Vorschau-
+      bild via **JSONP**, kein `fetch`/`XHR` → `check_offline.py` bleibt grün). Die Logik
+      (Namensherleitung `LAT_EPI/PRE/SUF/GEN`+`nameEtymology`, Wikipedia-Kandidaten,
+      `loadWiki`, `openInfo`) ist **1:1 aus `learn.js`** übernommen; ein Mapper
+      `infoCard(p)` bringt die Prüfwerkzeug-Pflanze (lange Feldnamen) auf die kompakten
+      Schlüssel der Info-Logik. Das Modal läuft im **eigenen Namensraum**
+      `.infoscrim`/`.infobox` (per JS erzeugt, sichtbar im DOM), damit die neun
+      bestehenden `.scrim`/`.modal`-Panels (über `.open` sichtbar) unberührt bleiben; der
+      Panel-Esc-Handler tritt zurück, solange das Info-Modal offen ist. **Der Prüfungs-
+      bogen selbst bleibt strikt offline** – die Anreicherung sitzt nur im ℹ-Modal, nie
+      im Druck/Noten. `CLAUDE.md`-Regel (»nicht verhandelbar«) und Datenschutzseite
+      entsprechend angepasst (Online-Info jetzt in **beiden** Werkzeugen; »Bilder«-Modus
+      weiterhin nur im Lern-Tool). `tests/smoke.mjs` prüft: ℹ öffnet aus Liste **und**
+      Aktueller Prüfung, Namensherleitung + drei Deep-Links + Wikipedia-Knopf vorhanden,
+      kein `.scrim`-Panel geöffnet (Namensraum-Trennung), Schließen per ×/Esc.
 
 ## Offene Aufgaben (TODO)
 

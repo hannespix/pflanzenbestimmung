@@ -303,6 +303,48 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .fld input,.fld select,.fld textarea{border:1px solid var(--rule-strong); border-radius:3px; padding:8px 10px; font-size:14px; background:var(--card); width:100%}
 .fld textarea{resize:vertical; min-height:52px; font-family:inherit}
 .modal footer{padding:14px 22px 18px; display:flex; gap:10px; justify-content:flex-end; border-top:1px solid var(--rule)}
+/* ---- Pflanzen-Info-Modal (aus dem Lern-Tool portiert; opt-in Wikipedia) ----
+   Eigener Namensraum .infoscrim/.infobox, damit die neun Panel-Modale (.scrim/.modal,
+   via .open sichtbar) unberührt bleiben – dieses Modal wird per JS erzeugt und ist
+   sichtbar, sobald es im DOM hängt. Wikipedia lädt nur auf Knopfdruck (JSONP). */
+.infoscrim{position:fixed; inset:0; background:var(--scrimdim,rgba(28,42,34,.55)); display:flex; align-items:flex-start; justify-content:center; padding:5vh 16px; z-index:80; overflow:auto; animation:h2FadeIn .18s ease both; backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px)}
+.infobox{background:var(--surface); border:1px solid var(--rule-strong); border-radius:16px; box-shadow:var(--shadow-2,0 18px 50px rgba(28,42,34,.28)); width:100%; max-width:560px; padding:22px 22px 20px; position:relative; animation:h2ModalIn .3s cubic-bezier(.16,1,.3,1) both}
+.infobox-x{position:absolute; top:8px; right:10px; border:none; background:transparent; font-size:24px; line-height:1; color:var(--ink-soft); cursor:pointer; padding:4px 9px; border-radius:8px}
+.infobox-x:hover{background:var(--surface-2); color:var(--ink)}
+.infobox .modal-head{border-bottom:1px solid var(--rule); padding:0 28px 12px 0; margin-bottom:14px}
+.infobox .mh-bot{font-family:var(--serif); font-size:22px; font-style:italic; color:var(--ink); line-height:1.15; overflow-wrap:anywhere}
+.infobox .mh-de{font-family:var(--serif); font-size:17px; color:var(--green-deep); margin-top:2px}
+.infobox .mh-fam{font-family:var(--mono); font-size:11px; letter-spacing:.04em; color:var(--sepia); text-transform:uppercase; margin-top:6px}
+.infobox .etym{margin:0 0 14px; border:1px solid var(--rule); border-radius:10px; background:var(--surface-2); overflow:hidden}
+.infobox .etym>summary{cursor:pointer; list-style:none; padding:9px 13px; font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); user-select:none}
+.infobox .etym>summary::-webkit-details-marker{display:none}
+.infobox .etym>summary:hover{color:var(--green-deep)}
+.infobox .etym[open]>summary{border-bottom:1px solid var(--rule); color:var(--green-deep)}
+.infobox .etym .etym-ic{font-size:12px; margin-right:5px}
+.infobox .etym-list{margin:0; padding:10px 15px 6px 30px; display:flex; flex-direction:column; gap:5px}
+.infobox .etym-list li{font-family:var(--serif); font-size:14.5px; color:var(--ink); line-height:1.35}
+.infobox .etym-list li i{color:var(--green-deep)}
+.infobox .etym-note{padding:2px 15px 11px; font-size:11px; color:var(--ink-faint); font-style:italic}
+.infobox .srclabel{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); margin-bottom:8px}
+.infobox .srcgrid{display:flex; flex-wrap:wrap; gap:8px}
+.infobox .srcgrid a{display:inline-flex; align-items:center; gap:6px; text-decoration:none; border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); border-radius:8px; padding:7px 11px; font-size:13px; font-weight:500; transition:background .14s, border-color .14s, transform .08s}
+.infobox .srcgrid a:hover{background:var(--card); border-color:var(--green); transform:translateY(-1px)}
+.infobox .srcgrid a .ext{font-family:var(--mono); font-size:11px; color:var(--ink-faint)}
+.infobox .wpblock{margin-top:16px; border-top:1px solid var(--rule); padding-top:14px}
+.infobox .wphost{margin-top:12px}
+.infobox .wphost img{float:left; width:132px; max-width:42%; height:auto; border-radius:8px; border:1px solid var(--rule); margin:2px 14px 8px 0}
+.infobox .wp-text{font-size:14px; color:var(--ink); line-height:1.5}
+.infobox .wp-src{clear:both; font-family:var(--mono); font-size:11px; color:var(--ink-faint); margin-top:12px}
+.infobox .wp-src a{color:var(--green-deep)}
+.infobox .wp-note{font-size:13px; color:var(--ink-soft); font-style:italic}
+@media (max-width:640px){
+  .infobox .wphost img{float:none; display:block; width:100%; max-width:220px; margin:0 auto 12px}
+  .infoscrim{padding:3vh 12px}
+  .infobox{padding:18px 16px}
+  .infobox .mh-bot{font-size:20px}
+  .infobox .srcgrid a{font-size:12.5px; padding:7px 10px}
+}
+@media (prefers-reduced-motion:reduce){.infoscrim,.infobox{animation:none !important}}
 .hint{font-size:12.5px; color:var(--ink-soft); background:var(--madder-tint); border-left:3px solid var(--madder-soft); padding:9px 12px; border-radius:0 4px 4px 0}
 .radio-cards{display:grid; gap:10px}
 .rcard{border:1px solid var(--rule-strong); border-radius:5px; padding:12px 14px; cursor:pointer; display:flex; gap:11px; align-items:flex-start}
@@ -415,6 +457,7 @@ body.m-manage .selbar, body.m-manage #currentSel{display:none}
   body{background:var(--card); background-image:none}
   .wrap{display:none !important}
   .scrim{display:none !important}
+  .infoscrim{display:none !important}
   .toast{display:none !important}
   #sheet{display:block !important; color:#000; font-family:Arial,Helvetica,'Liberation Sans',sans-serif; line-height:1.25}
   .ftitle{font-size:16pt; font-weight:400; text-align:center; margin:0}
@@ -1598,11 +1641,13 @@ function rowEl(p){
       ${p.bemerkungen?`<span class="tag bem" title="${esc(p.bemerkungen)}">Bemerkung</span>`:""}
     </div>`;
   const acts=el("div","rowacts");
+  const inf=el("button","iconbtn"); inf.title="Mehr zur Pflanze (Namensherkunft, Quellen, Wikipedia)"; inf.setAttribute("aria-label","Mehr zur Pflanze"); inf.innerHTML=`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r=".9" fill="currentColor" stroke="none"/></svg>`;
+  inf.addEventListener("click",()=>openInfo(infoCard(p)));
   const ed=el("button","iconbtn"); ed.title="Bearbeiten"; ed.innerHTML=`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16zM14 6l4 4"/></svg>`;
   ed.addEventListener("click",()=>openEdit(p.id));
   const dl=el("button","iconbtn del"); dl.title="Löschen"; dl.innerHTML=`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>`;
   dl.addEventListener("click",()=>delPlant(p.id,p));
-  acts.append(ed,dl);
+  acts.append(inf,ed,dl);
   row.append(cb,name,acts);
   return row;
 }
@@ -2014,12 +2059,14 @@ function pvRowEl(p, idx, n){
         </div>
       </div>
       <div class="pvacts">
+        <button class="iconbtn" data-a="info" title="Mehr zur Pflanze (Namensherkunft, Quellen, Wikipedia)" aria-label="Mehr zur Pflanze"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r=".9" fill="currentColor" stroke="none"/></svg></button>
         <button class="iconbtn" data-a="up" title="nach oben" aria-label="nach oben"${idx===0?" disabled":""}><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 15l6-6 6 6"/></svg></button>
         <button class="iconbtn" data-a="down" title="nach unten" aria-label="nach unten"${idx===n-1?" disabled":""}><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
         <button class="iconbtn" data-a="edit" title="Bearbeiten (wird in die Liste übernommen)" aria-label="Bearbeiten"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16zM14 6l4 4"/></svg></button>
         <button class="iconbtn del" data-a="rm" title="Aus Auswahl entfernen" aria-label="Entfernen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>`;
   const id=p.id;
+  row.querySelector('[data-a="info"]').onclick=()=>openInfo(infoCard(p));
   row.querySelector('[data-a="up"]').onclick=()=>movePreview(idx,-1);
   row.querySelector('[data-a="down"]').onclick=()=>movePreview(idx,1);
   row.querySelector('[data-a="edit"]').onclick=()=>openEdit(id);
@@ -2038,6 +2085,1062 @@ function renderCurrentSel(){
   host.innerHTML="";
   if(!plants.length){ host.innerHTML='<div class="exempty">Noch nichts gezogen. Oben »Zufällig ziehen« – die gezogene Prüfung erscheint dann hier (Reihenfolge ▲▼, Bearbeiten, Entfernen).</div>'; return; }
   plants.forEach((p,idx)=> host.appendChild(pvRowEl(p,idx,plants.length)));
+}
+
+/* ---------- Pflanzen-Info-Modal (aus dem Lern-Tool portiert) ----------
+   Dieselbe Info-Karte wie im Lern-Tool: botanische Namensherleitung (offline,
+   kuratiert), neutrale Nachschlage-Deep-Links und – OPT-IN per Knopf – ein
+   deutscher Wikipedia-Kurztext + Vorschaubild via JSONP (kein fetch/XHR, damit
+   der Offline-Kern und check_offline.py unberührt bleiben). Der Prüfungsbogen
+   selbst bleibt strikt offline; diese Anreicherung ist rein optional und öffnet
+   höchstens einen neuen Tab bzw. lädt erst auf Knopfdruck.
+   Das Modal ist im eigenen Namensraum .infoscrim/.infobox gehalten, damit die
+   bestehenden .scrim/.modal-Panels (über .open sichtbar) unberührt bleiben. */
+/* Prüfwerkzeug-Pflanze (lange Feldnamen) → kompakte Schlüssel der Info-Logik. */
+function infoCard(p){
+  if(!p) return null;
+  return { g:p.gattung||"", a:p.art||"", fam:p.familie||"", de:p.deutscher_name||"",
+    syn:p.synonyme||"", thema:"", key:norm((p.gattung||"")+" "+(p.art||"")) };
+}
+
+// ---- Namensherleitung (Latein/Griechisch → Deutsch) ----
+function binomEpithet(a){
+  return (norm(a).split(" ").filter(w=> w && !/^([×x]|var\.|subsp\.|ssp\.|f\.|cv\.|convar\.)$/i.test(w))[0]) || "";
+}
+function searchName(c){ return norm(c.g+" "+binomEpithet(c.a)); }
+/* ---------- Botanische Namensherleitung (Merkhilfe, offline & kuratiert) ----------
+   Latein/Griechisch → Deutsch: kurze Bedeutung von Gattung und Art-Epitheton, damit
+   sich die botanischen Namen leichter merken lassen. Ganzwort-Wörterbuch plus
+   Kompositions-Bausteine (»macro«+»phylla« → großblättrig). Gegen alle 2114 Arten
+   geprüft; Unbekanntes wird einfach weggelassen. Rein lokal, kein Netzabruf. */
+/* Art-Epitheta als Ganzwörter (die häufigen/unregelmäßigen). */
+const LAT_EPI = {
+  // Verbreitung/Status
+  vulgaris:"gewöhnlich, verbreitet", vulgare:"gewöhnlich, verbreitet", communis:"gemein, häufig",
+  officinalis:"Heil-, Arznei- (aus der Apotheke)", officinale:"Heil-, Arznei-",
+  sativus:"angebaut, Kultur-", sativa:"angebaut, Kultur-", sativum:"angebaut, Kultur-",
+  oleracea:"Gemüse-, Küchen-", oleraceus:"Gemüse-, Küchen-", hortensis:"Garten-", hortorum:"der Gärten",
+  domestica:"Haus-, kultiviert", domesticus:"Haus-, kultiviert", esculentus:"essbar", esculentum:"essbar",
+  edulis:"essbar", tinctoria:"Färber- (zum Färben)", tinctorius:"Färber-",
+  // Größe/Form
+  major:"größer", majus:"größer", maior:"größer", minor:"kleiner", minus:"kleiner",
+  maxima:"sehr groß", maximus:"sehr groß", minima:"sehr klein", minimus:"sehr klein",
+  media:"mittel(groß)", medius:"mittel", nana:"zwergig, klein", nanus:"zwergig, klein", nana_:"zwergig",
+  gracilis:"zierlich, schlank", gracile:"zierlich", compacta:"gedrungen, dicht", compactus:"gedrungen",
+  elegans:"zierlich, elegant", spectabilis:"ansehnlich, prächtig", nobilis:"edel", speciosa:"prächtig", speciosus:"prächtig",
+  // Farben
+  alba:"weiß", albus:"weiß", album:"weiß", nigra:"schwarz", niger:"schwarz", nigrum:"schwarz",
+  rubra:"rot", ruber:"rot", rubrum:"rot", rubens:"rötlich", rubra_:"rot",
+  lutea:"gelb", luteus:"gelb", luteum:"gelb", flava:"gelb", flavus:"gelb", aurea:"golden", aureus:"golden", aureum:"golden",
+  caerulea:"blau", caeruleus:"blau", caeruleum:"blau", azurea:"himmelblau",
+  purpurea:"purpurn", purpureus:"purpurn", purpureum:"purpurn", violacea:"violett", violaceus:"violett",
+  rosea:"rosenrot, rosa", roseus:"rosa", rosa_:"rosa", carnea:"fleischfarben, zartrosa", carneus:"fleischfarben",
+  viridis:"grün", viride:"grün", virens:"grünend", glauca:"blaugrün, bereift", glaucus:"blaugrün, bereift", glaucum:"blaugrün",
+  argentea:"silbrig", argenteus:"silbrig", argenteum:"silbrig", cinerea:"aschgrau", cinereus:"aschgrau",
+  candida:"schneeweiß", candidum:"schneeweiß", incana:"grauweiß behaart", incanus:"grauweiß",
+  variegata:"buntlaubig, gescheckt", variegatus:"buntlaubig", versicolor:"farbwechselnd, bunt", discolor:"zweifarbig",
+  atropurpurea:"dunkelpurpurn", atropurpureum:"dunkelpurpurn", sanguinea:"blutrot", sanguineus:"blutrot",
+  // Lebensraum
+  sylvatica:"Wald-, im Wald wachsend", sylvaticus:"Wald-", silvatica:"Wald-", sylvestris:"wild, im Wald", silvestris:"wild, Wald-",
+  pratensis:"Wiesen-", pratense:"Wiesen-", palustris:"Sumpf-, im Sumpf", palustre:"Sumpf-",
+  montana:"Berg-", montanus:"Berg-", montanum:"Berg-", alpina:"Alpen-, hochgebirgig", alpinus:"Alpen-", alpinum:"Alpen-",
+  maritima:"Meeres-, am Meer", maritimus:"Meeres-", arvensis:"Acker-, auf Feldern", arvense:"Acker-",
+  campestris:"Feld-, Flur-", campestre:"Feld-", aquatica:"Wasser-, im Wasser", aquaticus:"Wasser-", aquaticum:"Wasser-",
+  rupestris:"Felsen-, auf Felsen", rupestre:"Felsen-", saxatilis:"auf Steinen wachsend", nemorosa:"Hain-, im Wäldchen", nemorosus:"Hain-",
+  paludosa:"sumpfig", littoralis:"Ufer-, Küsten-", riparia:"Ufer-", ruderalis:"Schutt-, an Wegen",
+  // Herkunft
+  japonica:"aus Japan", japonicus:"aus Japan", japonicum:"aus Japan", sinensis:"aus China", sinense:"aus China", chinensis:"aus China", chinense:"aus China",
+  europaea:"europäisch", europaeus:"europäisch", europaeum:"europäisch", americana:"amerikanisch", americanus:"amerikanisch",
+  orientalis:"östlich, orientalisch", orientale:"östlich", occidentalis:"westlich", occidentale:"westlich",
+  canadensis:"aus Kanada", virginiana:"aus Virginia", californica:"aus Kalifornien", carolina:"aus Carolina",
+  persica:"aus Persien, Pfirsich-", persicum:"aus Persien", indica:"aus Indien", indicus:"aus Indien",
+  germanica:"deutsch", germanicus:"deutsch", helvetica:"schweizerisch", austriaca:"österreichisch",
+  hispanica:"spanisch", italica:"italienisch", graeca:"griechisch", tatarica:"tatarisch, aus Zentralasien",
+  sibirica:"aus Sibirien", sibiricum:"aus Sibirien", caucasica:"aus dem Kaukasus", himalensis:"aus dem Himalaya",
+  // Wuchs/Habitus
+  repens:"kriechend", reptans:"kriechend", procumbens:"niederliegend", prostrata:"niederliegend", prostratus:"niederliegend",
+  pendula:"hängend, überhängend", pendulus:"hängend", pendulum:"hängend", nutans:"nickend, überhängend",
+  erecta:"aufrecht", erectus:"aufrecht", erectum:"aufrecht", scandens:"kletternd", volubilis:"windend",
+  fastigiata:"säulenförmig, aufstrebend", fastigiatum:"säulenförmig", columnaris:"säulenförmig",
+  fruticosa:"strauchig", fruticosus:"strauchig", arborea:"baumartig", arborescens:"baumartig werdend",
+  caespitosa:"horstbildend, rasig", caespitosus:"horstbildend", stolonifera:"Ausläufer treibend", stoloniferus:"Ausläufer treibend",
+  // Blätter/Textur
+  tomentosa:"filzig behaart", tomentosus:"filzig", tomentosum:"filzig", pubescens:"flaumig behaart",
+  hirsuta:"rauhaarig", hirsutus:"rauhaarig", hirta:"behaart", villosa:"zottig behaart", villosus:"zottig",
+  glabra:"kahl, unbehaart", glaber:"kahl", glabrum:"kahl", glabra_:"kahl", laevis:"glatt", laevigata:"glatt",
+  spinosa:"dornig", spinosus:"dornig", spinosum:"dornig", inermis:"wehrlos, dornenlos",
+  serrata:"gesägt (Blattrand)", serratus:"gesägt", serrulata:"feingesägt", dentata:"gezähnt", dentatus:"gezähnt",
+  crispa:"kraus, gewellt", crispus:"kraus", crispum:"kraus", crispa_:"kraus",
+  sempervirens:"immergrün", perennis:"ausdauernd, mehrjährig", perenne:"ausdauernd",
+  annua:"einjährig", annuus:"einjährig", annuum:"einjährig", biennis:"zweijährig",
+  // Blüte/Frucht/Zahl
+  paniculata:"rispenblütig", paniculatum:"rispenblütig", spicata:"ährenblütig", spicatum:"ährig", racemosa:"traubenblütig", racemosus:"traubig",
+  umbellata:"doldenblütig", capitata:"kopfig (Blüten in Köpfchen)", capitatum:"kopfig", corymbosa:"doldentraubig",
+  baccata:"beerentragend", baccatus:"beerentragend", fruticans:"strauchig blühend",
+  floribunda:"reichblütig", floribundus:"reichblütig", multiflora:"vielblütig", multiflorum:"vielblütig",
+  grandiflora:"großblütig", grandiflorum:"großblütig", grandiflorus:"großblütig", parviflora:"kleinblütig", parviflorum:"kleinblütig",
+  // Duft/Sonstiges
+  odorata:"duftend", odoratus:"duftend", odoratum:"duftend", fragrans:"wohlriechend", graveolens:"stark riechend",
+  moschata:"moschusduftend", moschatus:"moschusduftend", suaveolens:"lieblich duftend", foetida:"übelriechend", foetidus:"übelriechend",
+  dioica:"zweihäusig (Männchen/Weibchen getrennt)", dioicus:"zweihäusig", mas:"männlich", femina:"weiblich",
+  aquifolium:"Stechpalme (‚Nadelblatt‘)", helix:"gewunden (Efeu-Ranke)", avellana:"aus Avella (Haselnuss)",
+  regia:"königlich, prächtig", regius:"königlich", imperialis:"kaiserlich, prächtig",
+  intermedia:"dazwischenstehend, Übergangsform", intermedium:"dazwischenstehend", hybrida:"Kreuzung, Hybride", hybridus:"Hybride",
+  aestivalis:"sommerlich", autumnalis:"herbstblühend", autumnale:"herbstblühend", verna:"Frühlings-", vernalis:"Frühlings-", vernus:"Frühlings-",
+  praecox:"frühblühend, früh reifend", montana_:"Berg-", officinarum:"der Apotheken, Heil-",
+  bulbosa:"knollig, mit Zwiebel", bulbosus:"knollig", tuberosa:"knollentragend", tuberosus:"knollig",
+  reflexa:"zurückgebogen", reflexum:"zurückgebogen", recurva:"zurückgekrümmt", divaricata:"sparrig, weit abstehend",
+  horizontalis:"waagerecht ausgebreitet", horizontale:"waagerecht", radicans:"wurzelnd", filifera:"fadentragend",
+  // Ergänzungen aus dem Abdeckungsreport (häufige echte Epitheta)
+  terminalis:"endständig (Blüten am Triebende)", terminale:"endständig",
+  palmata:"handförmig gelappt", palmatum:"handförmig gelappt", palmatus:"handförmig gelappt",
+  mollis:"weich(haarig)", molle:"weich", avium:"der Vögel, Vogel-",
+  laurocerasus:"‚Lorbeerkirsche‘ (Kirschlorbeer)", cordata:"herzförmig (Blatt)", cordatum:"herzförmig", cordatus:"herzförmig",
+  calycina:"großkelchig", calycinum:"großkelchig", sanguineum:"blutrot",
+  peltata:"schildförmig (Blatt)", peltatum:"schildförmig", pseudonarcissus:"‚falsche Narzisse‘ (Osterglocke)",
+  hippocastanum:"‚Rosskastanie‘ (griech. hippos ‚Pferd‘)", betulus:"birkenähnlich (Hainbuche)", biloba:"zweilappig (Blatt)",
+  cerasifera:"kirschtragend", robur:"‚Kraft, Stärke‘ (hartes Holz, Stiel-Eiche)", pseudoacacia:"‚Scheinakazie‘ (Robinie)",
+  canina:"Hunds- (gemein)", caninus:"Hunds-", opulus:"alter Name des Schneeballs", deliciosa:"köstlich", deliciosus:"köstlich",
+  ternata:"dreizählig (Blätter zu dritt)", ternatum:"dreizählig", pumila:"zwergig, niedrig", pumilus:"zwergig", pumilum:"zwergig",
+  rugosa:"runzelig (Blatt)", rugosum:"runzelig", caprea:"Ziegen- (Sal-Weide)", nivalis:"Schnee-, früh blühend", nivale:"Schnee-",
+  patula:"ausgebreitet, sparrig", patulus:"ausgebreitet", veris:"des Frühlings (Schlüsselblume)",
+  tremula:"zitternd (Espe)", tremulus:"zitternd", decidua:"laubabwerfend", deciduus:"laubabwerfend",
+  pungens:"stechend, stachelspitzig", stricta:"straff aufrecht", strictus:"straff aufrecht",
+  plicata:"gefaltet", plicatum:"gefaltet", viminalis:"Ruten-, biegsam", incarnata:"fleischrot", incarnatus:"fleischrot",
+  mucronata:"stachelspitzig", laciniata:"schlitzblättrig", laciniatum:"schlitzblättrig",
+  abies:"‚Tanne‘ (alter Name; hier: Fichte)", mugo:"Name der Berg-Kiefer",
+  napus:"‚Steckrübe‘ (Raps)", rapa:"‚Rübe‘", cepa:"‚Zwiebel‘", porrum:"‚Lauch‘",
+  // Personen-Epitheta (‚nach …‘)
+  fortunei:"nach dem Pflanzensammler Robert Fortune", davidii:"nach dem Sammler Armand David",
+  wilsonii:"nach dem Sammler E. H. Wilson", arendsii:"nach dem Züchter Georg Arends",
+  dammeri:"nach dem Botaniker Udo Dammer", thunbergii:"nach dem Botaniker C. P. Thunberg",
+  sargentii:"nach dem Dendrologen C. S. Sargent", henryi:"nach dem Sammler Augustine Henry",
+  delavayi:"nach dem Sammler J. M. Delavay", nordmanniana:"nach dem Zoologen A. v. Nordmann",
+  lawsoniana:"nach der Baumschule Lawson", hookeri:"nach dem Botaniker J. D. Hooker",
+  walleriana:"nach dem Sammler H. Waller", bodnantense:"nach dem Garten Bodnant",
+  lamarckii:"nach dem Naturforscher J.-B. de Lamarck", selloana:"nach dem Sammler F. Sellow (Pampasgras)",
+  // weitere häufige Standard-Epitheta
+  barbata:"bärtig (Haare)", barbatus:"bärtig", barbatum:"bärtig", acaulis:"stängellos (fast bodennah)", acaule:"stängellos",
+  stellata:"sternförmig", stellatum:"sternförmig", stellaris:"sternförmig", coccinea:"scharlachrot", coccineum:"scharlachrot", coccineus:"scharlachrot",
+  aucuparia:"‚Vogelfang‘ (Vögel fressen die Beeren)", obtusa:"stumpf (Blattspitze)", obtusum:"stumpf", obtusus:"stumpf",
+  nitida:"glänzend", nitidum:"glänzend", nitidus:"glänzend", verticillata:"quirlständig (Blätter im Kranz)", verticillatum:"quirlständig",
+  cornuta:"gehörnt (gespornt)", cornutum:"gehörnt", cornutus:"gehörnt", subulata:"pfriemlich (schmal-spitz)", subulatum:"pfriemlich",
+  majalis:"im Mai blühend", majale:"im Mai blühend", italicum:"italienisch", syriaca:"aus Syrien", syriacus:"aus Syrien",
+  koreana:"aus Korea", koreanum:"aus Korea", koreensis:"aus Korea", podagraria:"gegen Gicht (Giersch)",
+  cineraria:"aschgrau (Blätter)", florida:"reich blühend", floridum:"reich blühend", floridus:"reich blühend",
+  caryophyllus:"nelkenartig (Gewürznelken-Duft)", caryophyllea:"nelkenartig", zonale:"gezont (Blattzeichnung)", zonalis:"gezont",
+  amellus:"antiker Name der Berg-Aster", platyphyllos:"breitblättrig", macrorrhizum:"großwurzelig",
+  platanoides:"platanenähnlich (Blatt)", bignonioides:"trompetenbaumähnlich", jasminoides:"jasminähnlich", rhamnoides:"kreuzdornähnlich (Sanddorn)",
+  telephium:"antiker Name (Große Fetthenne)", filipendulina:"‚fadenhängend‘ (Knöllchen an Wurzeln)",
+  endivia:"aus dem Namen für Endivie", coum:"von der Insel Kos", erinus:"antiker Pflanzenname",
+  cerasus:"‚Kirsche‘ (nach der Stadt Kerasos)", laevigata:"glatt (kahl)",
+  excelsior:"höher, hochragend (Esche)", excelsa:"hochragend", excelsum:"hochragend",
+  monogyna:"eingriffelig (ein Griffel, Weißdorn)", pseudoplatanus:"platanenähnlich (Berg-Ahorn)",
+  vinifera:"weintragend (Weinrebe)", tuberosum:"knollentragend", foliosum:"reich beblättert", foliosus:"reich beblättert",
+  piperita:"pfefferminzartig, scharf", schoenoprasum:"‚Binsenlauch‘ (Schnittlauch)", cerefolium:"‚Freudenblatt‘ (Kerbel)",
+  crenata:"gekerbt (Blattrand)", crenatum:"gekerbt", oblonga:"länglich", oblongum:"länglich", oblongus:"länglich",
+  alata:"geflügelt (Kork-/Stängelleisten)", alatus:"geflügelt", alatum:"geflügelt", scabra:"rau(haarig)", scabrum:"rau",
+  coronaria:"Kranz-, zum Bekränzen", coronarius:"Kranz-", armeniaca:"aus Armenien (Aprikose)",
+  nudiflorum:"nacktblütig (Blüte vor dem Laub)", squamata:"schuppig", squamatum:"schuppig",
+  colurna:"antiker Name (Baum-Hasel)", vanhouttei:"nach dem Gärtner L. Van Houtte", fraseri:"nach dem Sammler J. Fraser",
+  atlantica:"aus dem Atlasgebirge", antarctica:"südlich (aus dem Süden)", tricuspidata:"dreispitzig (Blattlappen)",
+  nummularia:"‚Münzen-‘ (rundliche Blätter, Pfennigkraut)", intybus:"antiker Name (Wegwarte)", styraciflua:"‚Storaxfluss‘ (Harz, Amberbaum)",
+};
+
+/* Kompositions-Bausteine für zusammengesetzte Epitheta (Vorderteil + Nachsilbe). */
+const LAT_PRE = {
+  grandi:"groß", magni:"groß", macro:"groß", mega:"groß", parvi:"klein", micro:"klein",
+  angusti:"schmal", steno:"schmal", lati:"breit", platy:"breit", longi:"lang", brevi:"kurz", brachy:"kurz",
+  rotundi:"rund", ovali:"oval", cordi:"herzförmig", reni:"nieren-", sagitti:"pfeil-",
+  tenui:"dünn, zart", crassi:"dick", multi:"viel", poly:"viel", pauci:"wenig", mono:"ein", uni:"ein",
+  pinnati:"gefiedert", palmati:"handförmig", denti:"gezähnt", serrati:"gesägt", integri:"ganzrandig",
+  laevi:"glatt", glabri:"kahl", tomentosi:"filzig", leuco:"weiß", chloro:"grün", erythro:"rot",
+  melano:"schwarz", chryso:"gold", cyano:"blau", purpureo:"purpurn", flori:"blüten-", folii:"blatt-",
+  hetero:"verschieden", homo:"gleich", tri:"drei", bi:"zwei", quadri:"vier", quinque:"fünf",
+};
+const LAT_SUF = {
+  folia:"blättrig", folius:"blättrig", folium:"blättrig", phylla:"blättrig", phyllus:"blättrig", phyllum:"blättrig", phyllos:"blättrig",
+  flora:"blütig", florus:"blütig", florum:"blütig", flos:"-blütig", anthos:"blütig", antha:"blütig", anthum:"blütig", anthus:"blütig",
+  carpa:"früchtig", carpus:"früchtig", carpum:"früchtig", carpos:"früchtig",
+  caulis:"stängelig", caule:"stängelig", nervis:"nervig", nervia:"nervig", spina:"dornig", spinus:"dornig",
+  petala:"blütenblättrig", stachya:"ährig", stachys:"ährig", pogon:"bärtig", rhiza:"wurzelig",
+};
+
+/* Gattungsnamen – Bedeutung/Merkhilfe (die häufigsten/bekanntesten). */
+const LAT_GEN = {
+  Acer:"lat. für Ahorn (‚scharf‘ – hartes Holz)", Quercus:"lat. für Eiche", Fagus:"lat. für Buche",
+  Betula:"lat. für Birke", Alnus:"lat. für Erle", Salix:"lat. für Weide (‚springen, wachsen‘)",
+  Populus:"lat. für Pappel", Tilia:"lat. für Linde", Ulmus:"lat. für Ulme", Fraxinus:"lat. für Esche",
+  Carpinus:"lat. für Hainbuche", Corylus:"lat. für Hasel", Castanea:"nach der Stadt Kastanaia (Edelkastanie)",
+  Juglans:"‚Jupiters Eichel‘ (Walnuss)", Aesculus:"röm. Eichenart (Rosskastanie)", Robinia:"nach dem Gärtner J. Robin",
+  Prunus:"lat. für Pflaume/Kirsche", Malus:"lat. für Apfel", Pyrus:"lat. für Birne", Cydonia:"nach der Stadt Kydonia (Quitte)",
+  Rosa:"lat. für Rose", Rubus:"lat. für Brombeere/Himbeere", Fragaria:"‚duftend‘ (Erdbeere)", Crataegus:"‚Kraft, hart‘ (Weißdorn)",
+  Sorbus:"lat. für Vogelbeere/Mehlbeere", Cotoneaster:"‚quittenartig‘ (Zwergmispel)", Amelanchier:"altfranz. Name (Felsenbirne)",
+  Ribes:"vom arabischen ‚ribas‘ (Johannisbeere)", Vaccinium:"lat. für Heidelbeere",
+  Picea:"lat. für Fichte (‚Pech‘)", Abies:"lat. für Tanne", Pinus:"lat. für Kiefer/Föhre", Larix:"lat. für Lärche",
+  Taxus:"lat. für Eibe", Juniperus:"lat. für Wacholder", Thuja:"griech. ‚thyia‘ (Lebensbaum)", Cedrus:"griech. für Zeder",
+  Fabaceae:"", // Platzhalter, nicht genutzt
+  Allium:"lat. für Knoblauch/Lauch", Lilium:"lat. für Lilie", Tulipa:"von türk. ‚tülbend‘ (Turban)", Narcissus:"nach der griech. Sagengestalt",
+  Iris:"griech. Regenbogen (Farbenpracht)", Crocus:"griech. ‚krokos‘ (Safran)", Hyacinthus:"nach der griech. Sagengestalt",
+  Aster:"griech. ‚Stern‘ (Blütenform)", Bellis:"lat. ‚hübsch‘ (Gänseblümchen)", Chrysanthemum:"griech. ‚Goldblume‘",
+  Helianthus:"griech. ‚Sonnenblume‘", Solidago:"‚heilen, festigen‘ (Goldrute)", Achillea:"nach Achilles (Schafgarbe)",
+  Campanula:"lat. ‚Glöckchen‘ (Glockenblume)", Digitalis:"lat. ‚Fingerhut‘", Salvia:"‚heilen‘ (Salbei)",
+  Lavandula:"‚waschen‘ (Lavendel, für Bäder)", Thymus:"griech. ‚thymon‘ (Thymian)", Mentha:"nach der Nymphe Minthe (Minze)",
+  Sedum:"lat. ‚sitzen‘ (Mauerpfeffer, sitzt auf Steinen)", Sempervivum:"‚immer lebend‘ (Hauswurz)",
+  Hedera:"lat. für Efeu", Vinca:"‚binden, umschlingen‘ (Immergrün)", Clematis:"griech. ‚Ranke‘ (Waldrebe)",
+  Hydrangea:"griech. ‚Wassergefäß‘ (Hortensie)", Rhododendron:"griech. ‚Rosenbaum‘", Erica:"griech. für Heide",
+  Viburnum:"lat. für Schneeball", Sambucus:"lat. für Holunder", Lonicera:"nach dem Botaniker A. Lonitzer (Heckenkirsche)",
+  Cornus:"lat. ‚Horn‘ (hartes Holz, Hartriegel)", Euonymus:"griech. ‚gut benannt‘ (Pfaffenhütchen)",
+  Berberis:"vom arab. Namen (Berberitze)", Ligustrum:"lat. für Liguster", Buxus:"griech./lat. für Buchsbaum",
+  Ilex:"lat. für Stechpalme", Magnolia:"nach dem Botaniker P. Magnol", Forsythia:"nach dem Gärtner W. Forsyth",
+  Brassica:"lat. für Kohl", Beta:"lat. für Rübe/Bete", Daucus:"griech. für Möhre", Apium:"lat. für Sellerie/Eppich",
+  Lactuca:"‚Milch‘ (Milchsaft, Salat)", Cichorium:"vom griech. Namen (Zichorie)", Petroselinum:"griech. ‚Felsen-Eppich‘ (Petersilie)",
+  Solanum:"lat. Nachtschatten", Cucumis:"lat. für Gurke/Melone", Cucurbita:"lat. für Kürbis", Phaseolus:"griech. für Bohne",
+  Pisum:"lat. für Erbse", Allium_:"", Spinacia:"vom pers. Namen (Spinat)",
+  Carex:"lat. für Segge", Festuca:"lat. ‚Halm‘ (Schwingel)", Poa:"griech. ‚Gras, Futter‘ (Rispengras)",
+  Primula:"‚die Erste‘ (Frühblüher, Schlüsselblume)", Viola:"lat. für Veilchen", Bergenia:"nach dem Botaniker K. v. Bergen",
+  Hosta:"nach dem Botaniker N. Host (Funkie)", Astilbe:"griech. ‚ohne Glanz‘", Geranium:"griech. ‚Kranich‘ (Storchschnabel)",
+  Dianthus:"griech. ‚Götterblume‘ (Nelke)", Paeonia:"nach dem Arzt Paion (Pfingstrose)", Papaver:"lat. für Mohn",
+  Anemone:"griech. ‚Wind‘ (Windröschen)", Ranunculus:"lat. ‚Fröschlein‘ (Hahnenfuß, feuchte Standorte)",
+  Begonia:"nach dem Förderer M. Bégon", Pelargonium:"griech. ‚Storch‘ (Geranie)", Fuchsia:"nach dem Botaniker L. Fuchs",
+  Ginkgo:"vom japan. Namen (Fächerblattbaum)", Camellia:"nach dem Botaniker G. Kamel", Syringa:"griech. ‚Röhre‘ (Flieder)",
+  Wisteria:"nach dem Anatomen C. Wistar (Blauregen)", Weigela:"nach dem Botaniker C. E. Weigel",
+  Deutzia:"nach dem Förderer J. van der Deutz", Spiraea:"griech. ‚Spirale‘ (Spierstrauch)", Philadelphus:"griech. ‚Bruderliebe‘ (Pfeifenstrauch)",
+  Potentilla:"lat. ‚kleine Kraft‘ (Fingerkraut, Heilpflanze)", Hypericum:"griech. Name (Johanniskraut)", Mahonia:"nach dem Gärtner B. McMahon",
+  Pachysandra:"griech. ‚dicke Staubblätter‘ (Ysander)", Pulmonaria:"lat. ‚Lunge‘ (Lungenkraut, Heilpflanze)",
+  Brunnera:"nach dem Botaniker S. Brunner", Heuchera:"nach dem Mediziner J. H. Heucher (Purpurglöckchen)",
+  Epimedium:"alter griech. Pflanzenname (Elfenblume)", Helleborus:"griech. Name (Christrose, giftig)",
+  Aquilegia:"lat. ‚Adler‘ (Akelei, gespornte Blüten)", Delphinium:"griech. ‚Delfin‘ (Rittersporn, Knospenform)",
+  Aconitum:"griech. Name (Eisenhut, sehr giftig)", Phlox:"griech. ‚Flamme‘ (Flammenblume)",
+  Echinacea:"griech. ‚Igel‘ (stacheliger Blütenboden)", Rudbeckia:"nach dem Botaniker O. Rudbeck (Sonnenhut)",
+  Lupinus:"lat. ‚Wolf‘ (Lupine, ‚zehrt den Boden aus‘)", Nepeta:"nach der Stadt Nepete (Katzenminze)",
+  Stachys:"griech. ‚Ähre‘ (Ziest)", Ajuga:"Name des Günsels", Verbena:"lat. für heiliges Kraut (Eisenkraut)",
+  Anthemis:"griech. ‚Blüte‘ (Hundskamille)", Matricaria:"lat. ‚Mutter‘ (Kamille, Frauenheilkunde)",
+  Calendula:"lat. ‚kleiner Kalender‘ (Ringelblume, blüht lange)", Tagetes:"nach dem etrusk. Gott Tages (Studentenblume)",
+  Hemerocallis:"griech. ‚Tagesschönheit‘ (Taglilie)", Convallaria:"lat. ‚Tal‘ (Maiglöckchen)",
+  Galanthus:"griech. ‚Milchblume‘ (Schneeglöckchen)", Muscari:"‚Moschus‘ (Traubenhyazinthe, Duft)",
+  Fritillaria:"lat. ‚Würfelbecher‘ (Schachblume, Musterung)", Colchicum:"nach der Landschaft Kolchis (Herbstzeitlose)",
+  Cyclamen:"griech. ‚Kreis‘ (Alpenveilchen, gedrehte Stiele)", Impatiens:"lat. ‚ungeduldig‘ (schleudernde Samen)",
+  Petunia:"vom Tupí-Wort für Tabak", Viola_:"", Antirrhinum:"griech. ‚Nasenähnlich‘ (Löwenmäulchen)",
+  Cotinus:"griech. Name (Perückenstrauch)", Hibiscus:"griech./lat. Name (Eibisch)", Laburnum:"lat. Name (Goldregen, giftig)",
+  Ostrya:"griech. Name (Hopfenbuche)", Platanus:"griech. ‚breit‘ (Platane, breite Blätter)", Liquidambar:"lat. ‚flüssiger Bernstein‘ (Amberbaum, Harz)",
+};
+/* Gattungs-Wörterbuch vervollständigt: Ergänzungen, damit praktisch jede Art der Listen
+   mindestens eine Herleitung (Gattung oder Epitheton) bekommt (~100 %). »X-Hybriden«
+   und Gattungshybriden (×…) lösen über nameEtymology auf die Basisgattung auf. */
+Object.assign(LAT_GEN, {
+  Ficus:"lat. für Feige", Euphorbia:"nach dem Leibarzt Euphorbos (Wolfsmilch, Milchsaft)",
+  Plectranthus:"griech. ‚Sporn-Blume‘ (Harfenstrauch)", Asplenium:"griech. ‚ohne Milz‘ (Milzfarn, Heilpflanze)",
+  Artemisia:"nach der Göttin Artemis (Beifuß/Wermut)", Citrus:"lat. für Zitrusbaum",
+  Rumex:"lat. für Ampfer", Yucca:"aus einem karibischen Pflanzennamen (Palmlilie)",
+  Taraxacum:"vom arab./pers. Namen (Löwenzahn)", Ageratum:"griech. ‚nicht alternd‘ (Leberbalsam)",
+  Lantana:"alter Name des Schneeballs (Wandelröschen)", Blechnum:"griech. für Farn (Rippenfarn)",
+  Dryopteris:"griech. ‚Eichenfarn‘ (Wurmfarn)", Veronica:"nach der hl. Veronika (Ehrenpreis)",
+  Aubrieta:"nach C. Aubriet (Blaukissen)", Amaranthus:"griech. ‚unverwelklich‘ (Fuchsschwanz)",
+  Trifolium:"lat. ‚Dreiblatt‘ (Klee)", Cytisus:"griech. Name (Geißklee/Ginster)",
+  Daphne:"nach der Nymphe Daphne (Seidelbast)", Nerium:"griech. Name (Oleander)",
+  Buddleja:"nach dem Botaniker A. Buddle (Sommerflieder)", Caryopteris:"griech. ‚Nuss-Flügel‘ (Bartblume)",
+  Cercis:"griech. ‚Weberschiffchen‘ (Judasbaum, Schoten)", Gleditsia:"nach dem Botaniker J. G. Gleditsch (Lederhülsenbaum)",
+  Kolkwitzia:"nach dem Botaniker R. Kolkwitz (Kolkwitzie)", Liriodendron:"griech. ‚Lilienbaum‘ (Tulpenbaum)",
+  Metasequoia:"griech. ‚ähnlich der Sequoia‘ (Urwelt-Mammutbaum)", Pseudotsuga:"griech. ‚falsche Tsuga‘ (Douglasie)",
+  Rhus:"griech./lat. Name (Sumach/Essigbaum)", Sequoiadendron:"nach dem Cherokee Sequoyah + ‚Baum‘ (Mammutbaum)",
+  Symphoricarpos:"griech. ‚zusammengehäufte Früchte‘ (Schneebeere)", Cephalotaxus:"griech. ‚Kopf-Eibe‘ (Kopfeibe)",
+  Chamaecyparis:"griech. ‚Zwerg-Zypresse‘ (Scheinzypresse)", Thujopsis:"griech. ‚thujaähnlich‘ (Hiba-Lebensbaum)",
+  Callitropsis:"griech. ‚schön gedreht‘ (Zypressenart)", Xanthocyparis:"griech. ‚gelbe Zypresse‘",
+  Cryptomeria:"griech. ‚verborgene Teile‘ (Sicheltanne)", Ailanthus:"vom molukk. ‚ailanto‘ = ‚Himmelsbaum‘ (Götterbaum)",
+  Albizia:"nach dem Naturforscher F. degli Albizzi (Seidenbaum)", Aralia:"aus einem frz.-kanad. Namen (Aralie)",
+  Araucaria:"nach der chilen. Region Arauco (Andentanne)", Arbutus:"lat. für Erdbeerbaum",
+  Callicarpa:"griech. ‚schöne Frucht‘ (Schönfrucht)", Campsis:"griech. ‚Krümmung‘ (Klettertrompete)",
+  Celtis:"lat./griech. Name (Zürgelbaum)", Elaeagnus:"griech. ‚Ölweide‘",
+  Genista:"lat. für Ginster", Neillia:"nach dem Gärtner P. Neill",
+  Olea:"lat. für Ölbaum (Olive)", Osmanthus:"griech. ‚Duftblüte‘ (Duftblüte)",
+  Pittosporum:"griech. ‚Pech-Same‘ (harzige Samen, Klebsame)", Chaenomeles:"griech. ‚klaffender Apfel‘ (Zierquitte)",
+  Pyracantha:"griech. ‚Feuerdorn‘", Pterocarya:"griech. ‚Flügelnuss‘ (Flügelnuss)",
+  Hebe:"nach der Göttin Hebe", Muehlenbeckia:"nach dem Arzt H. G. Mühlenbeck (Drahtstrauch)",
+  Ceratostigma:"griech. ‚Horn-Narbe‘ (Bleiwurz, Hornnarbe)", Eucalyptus:"griech. ‚gut bedeckt‘ (Knospendeckel, Eukalyptus)",
+  Callistemon:"griech. ‚schöne Staubfäden‘ (Zylinderputzer)", Fallopia:"nach dem Anatomen G. Falloppio (Flügelknöterich)",
+  Athyrium:"griech. Name (Frauenfarn)", Polystichum:"griech. ‚vielreihig‘ (Schildfarn, Sori in Reihen)",
+  Adiantum:"griech. ‚unbenetzbar‘ (Frauenhaarfarn)", Matteuccia:"nach dem Physiker C. Matteucci (Straußenfarn)",
+  Onoclea:"griech. Name (Perlfarn)", Osmunda:"alter Name des Königsfarns (Herkunft unsicher)",
+  Nephrolepis:"griech. ‚Nieren-Schuppe‘ (Schwertfarn)", Platycerium:"griech. ‚breites Horn‘ (Geweihfarn)",
+  Acaena:"griech. ‚Dorn‘ (Stachelnüsschen)", Bidens:"lat. ‚zweizähnig‘ (Zweizahn, Früchte)",
+  Calystegia:"griech. ‚Kelch-Dach‘ (Zaunwinde)", Convolvulus:"lat. ‚sich windend‘ (Winde)",
+  Saxifraga:"lat. ‚Stein-brechend‘ (Steinbrech, wächst in Felsspalten)", Teucrium:"nach dem König Teukros (Gamander)",
+  Leucanthemum:"griech. ‚weiße Blume‘ (Margerite)", Ligularia:"lat. ‚kleine Zunge‘ (Goldkolben, Zungenblüten)",
+  Rodgersia:"nach dem Marineoffizier J. Rodgers (Schaublatt)", Bistorta:"lat. ‚zweimal gedreht‘ (Wiesenknöterich, Wurzel)",
+  Lamium:"lat./griech. Name (Taubnessel)", Physalis:"griech. ‚Blase‘ (Andenbeere/Lampionblume)",
+  Eranthis:"griech. ‚Frühlingsblume‘ (Winterling)", Alisma:"griech. Name (Froschlöffel)",
+  Butomus:"griech. ‚Rinder-Schneide‘ (Schwanenblume, scharfe Blätter)", Schoenoplectus:"griech. ‚Binsen-Geflecht‘ (Teichsimse)",
+  Ocimum:"griech. Name (Basilikum)", Phacelia:"griech. ‚Büschel‘ (Büschelblume)",
+  Dryas:"nach den griech. Baumnymphen (Silberwurz)", Helenium:"nach Helena (Sonnenbraut)",
+  Helianthemum:"griech. ‚Sonnenblümchen‘ (Sonnenröschen)", Heracleum:"nach Herakles (Bärenklau, kräftig)",
+  Lysimachia:"nach König Lysimachos (Felberich/Gilbweiderich)", Lythrum:"griech. ‚geronnenes Blut‘ (Blutweiderich)",
+  Scilla:"griech./lat. Name (Blaustern)", Verbascum:"lat. für Königskerze",
+  Centaurea:"nach dem Kentauren Chiron (Flockenblume)", Cimicifuga:"lat. ‚Wanzen vertreibend‘ (Silberkerze)",
+  Deschampsia:"nach L. Deschamps (Schmiele)", Eremurus:"griech. ‚Steppenschwanz‘ (Steppenkerze)",
+  Menyanthes:"griech. Name (Fieberklee)", Monarda:"nach dem Arzt N. Monardes (Indianernessel)",
+  Waldsteinia:"nach dem Botaniker F. v. Waldstein (Golderdbeere)", Gentiana:"nach König Gentius (Enzian)",
+  Aloe:"vom arab./hebr. Namen (Aloe)", Crassula:"lat. ‚etwas dick‘ (Dickblatt)",
+  Dahlia:"nach dem Botaniker A. Dahl (Dahlie/Georgine)", Hippeastrum:"griech. ‚Ritterstern‘ (Ritterstern)",
+  Kalanchoe:"aus einem chines. Namen (Flammendes Käthchen)", Cynara:"griech. Name (Artischocke)",
+  Aichryson:"griech. Name (verwandt mit Aeonium)", Ajania:"nach dem Ort Ajan (Ostasien)",
+  Alternanthera:"lat. ‚abwechselnde Staubblätter‘ (Papageienblatt)", Delosperma:"griech. ‚sichtbarer Same‘ (Mittagsblume)",
+  Echeveria:"nach dem Zeichner A. Echeverría (Echeverie)", Raoulia:"nach dem Arzt É. Raoul (Scheinpolster)",
+  Perovskia:"nach dem General W. Perowski (Blauraute)", Geum:"lat. Name (Nelkenwurz)",
+  Erigeron:"griech. ‚früh-greis‘ (Berufkraut, frühe weißhaarige Früchte)", Gaura:"griech. ‚prächtig‘ (Prachtkerze)",
+  Heliopsis:"griech. ‚sonnenähnlich‘ (Sonnenauge)", Nymphaea:"griech. ‚Nymphe‘ (Seerose)",
+  Pennisetum:"lat. ‚Feder-Borste‘ (Lampenputzergras)", Calamagrostis:"griech. ‚Rohrgras‘",
+  Echinochloa:"griech. ‚Igel-Gras‘ (Hühnerhirse)", Leymus:"Anagramm von Elymus (Strandroggen)",
+  Alopecurus:"griech. ‚Fuchsschwanz‘ (Fuchsschwanzgras)", Panicum:"lat. für Hirse (Rispenhirse)",
+  Secale:"lat. für Roggen", Zea:"griech. Name eines Getreides (Mais)",
+  Cyperus:"griech. Name (Zypergras)", Luzula:"alter Name (Hainsimse)",
+  Gladiolus:"lat. ‚kleines Schwert‘ (Siegwurz, schwertförmige Blätter)", Leucojum:"griech. ‚weißes Veilchen‘ (Knotenblume)",
+  Alstroemeria:"nach dem Naturforscher C. Alströmer (Inkalilie)", Camassia:"aus einem indian. Namen (Prärielilie)",
+  Anthericum:"griech. Name (Graslilie)", Ornithogalum:"griech. ‚Vogelmilch‘ (Milchstern)",
+  Freesia:"nach dem Arzt F. Freese (Freesie)", Acorus:"griech. Name (Kalmus)",
+  Agapanthus:"griech. ‚Liebesblume‘ (Schmucklilie)", Citrullus:"lat. Verkleinerung von citrus (Wassermelone)",
+  Rheum:"griech. Name (Rhabarber)", Valerianella:"lat. ‚kleiner Baldrian‘ (Feldsalat)",
+  Origanum:"griech. ‚Berg-Zierde‘ (Majoran/Oregano)", Plantago:"lat. ‚Fußsohle‘ (Wegerich, breite Blätter)",
+  Capsella:"lat. ‚Täschchen‘ (Hirtentäschel, Früchte)", Actinidia:"griech. ‚Strahl‘ (Kiwi, strahlige Griffel)",
+  Punica:"lat. ‚punisch‘ (Granatapfel, ‚aus Karthago‘)", Diospyros:"griech. ‚Götterfrucht‘ (Dattelpflaume)",
+  Oxalis:"griech. ‚sauer‘ (Sauerklee)", Capsicum:"griech. ‚beißen‘ (Paprika/Chili, scharf)",
+  Armoracia:"lat. Name (Meerrettich)", Cyphomandra:"griech. ‚gewölbte Staubbeutel‘ (Baumtomate)",
+  Glycine:"griech. ‚süß‘ (Sojabohne)", Lens:"lat. für Linse",
+  Claytonia:"nach dem Botaniker J. Clayton (Postelein)", Tetragonia:"griech. ‚viereckig‘ (Neuseeländer Spinat, Früchte)",
+  Vicia:"lat. für Wicke", Angelica:"lat. ‚engelhaft‘ (Engelwurz, Heilkraft)",
+  Carum:"griech./lat. Name (Kümmel)", Pimpinella:"mittellat. Name (Bibernelle/Anis)",
+  Senecio:"lat. ‚Greis‘ (Greiskraut, weiße Haarkrone)", Onobrychis:"griech. ‚Esels-Futter‘ (Esparsette)",
+  Asimina:"aus einem indian. Namen (Papau/Indianerbanane)", Musa:"vom arab. ‚mauz‘ (Banane)",
+  Tussilago:"lat. ‚Husten vertreiben‘", Urtica:"lat. ‚brennen‘ (Brennnessel)",
+  Mandevilla:"nach dem Diplomaten H. Mandeville (Dipladenia)", Petunie:"vom Tupí-Wort für Tabak (Petunie)",
+  Cetraria:"lat. ‚cetra‘ = Lederschild (Isländisch Moos, Flechte)", Sphagnum:"griech. Name (Torf-/Sumpfmoos)",
+  "×Fatshedera":"Gattungshybride aus Fatsia × Hedera (Efeuaralie)", "×Hesperotropsis":"Gattungshybride (Zypressen-Kreuzung)",
+  Acanthus:"griech. ‚Dorn‘ (Bärenklau/Akanthus)", Agastache:"griech. ‚viele Ähren‘ (Duftnessel)",
+  Anaphalis:"griech. Name (Perlkörbchen)", Arabis:"‚aus Arabien‘ (Gänsekresse)",
+  Aruncus:"griech. ‚Ziegenbart‘ (Wald-Geißbart)", Astilboides:"griech. ‚astilbeähnlich‘ (Schildblatt)",
+  Calamintha:"griech. ‚schöne Minze‘ (Bergminze)", Chelone:"griech. ‚Schildkröte‘ (Schildblume, Blütenform)",
+  Dicentra:"griech. ‚zweispornig‘ (Herzblume/Tränendes Herz)", Echinops:"griech. ‚igelähnlich‘ (Kugeldistel)",
+  Inula:"lat. Name (Alant)", Knautia:"nach dem Arzt C. Knaut (Witwenblume)",
+  Linum:"lat. für Lein/Flachs", Lithospermum:"griech. ‚Steinsame‘ (Steinsame, harte Nüsschen)",
+  Malva:"lat. für Malve", Phlomis:"griech. Name (Brandkraut)",
+  Saponaria:"lat. ‚Seife‘ (Seifenkraut, schäumt)", Scutellaria:"lat. ‚kleine Schale‘ (Helmkraut, Kelchform)",
+  Silene:"nach dem Waldgott Silenus (Leimkraut)", Stratiotes:"griech. ‚Soldat‘ (Krebsschere, schwertförmig)",
+  Nigella:"lat. ‚schwärzlich‘ (Jungfer im Grünen, schwarze Samen)", Cosmos:"griech. ‚Schmuck, Ordnung‘ (Schmuckkörbchen)",
+  Cleome:"alter Pflanzenname (Spinnenblume)", Cuphea:"griech. ‚gekrümmt‘ (Köcherblümchen, Frucht)",
+  Limonium:"griech. ‚Wiese‘ (Strandflieder)", Erysimum:"griech. Name (Schöterich/Goldlack)",
+  Glechoma:"griech. Name (Gundermann)", Helichrysum:"griech. ‚Gold-Sonne‘ (Strohblume)",
+  Nemesia:"altgriech. Pflanzenname (Elfenspiegel)", Diascia:"griech. ‚zwei Säckchen‘ (Doppelsporn)",
+  Calceolaria:"lat. ‚Pantöffelchen‘ (Pantoffelblume)", Scaevola:"lat. ‚linkshändig‘ (Fächerblume, einseitige Blüte)",
+  Portulaca:"lat. Name (Portulak)", Ipomoea:"griech. ‚wurmähnlich‘ (Prunkwinde, windender Stängel)",
+  Torenia:"nach dem Pfarrer O. Torén (Wishbone-Blume)", Gerbera:"nach dem Botaniker T. Gerber (Gerbera)",
+  Osteospermum:"griech. ‚Knochen-Same‘ (Kapkörbchen, harte Samen)", Argyranthemum:"griech. ‚Silberblume‘ (Strauchmargerite)",
+  Brachyscome:"griech. ‚kurzhaarig‘ (Blaues Gänseblümchen)", Gazania:"nach dem Gelehrten T. Gaza (Mittagsgold)",
+  Santolina:"lat. ‚heiliger Flachs‘ (Heiligenkraut)", Leucophyta:"griech. ‚weiße Pflanze‘ (Silberdraht)",
+  Calocephalus:"griech. ‚schöner Kopf‘ (Stacheldraht­strauch)", Cotula:"griech. ‚Becherchen‘ (Fiederpolster)",
+  Azorella:"Verkleinerung (Andenpolster)", Ambrosia:"griech. ‚Götterspeise‘ (Traubenkraut/Ragweed)",
+  Anthurium:"griech. ‚Blüten-Schwanz‘ (Flamingoblume)", Asparagus:"griech./lat. Name (Zierspargel)",
+  Philodendron:"griech. ‚Baum-liebend‘ (Kletterpflanze)", Schefflera:"nach dem Botaniker J. C. Scheffler (Strahlenaralie)",
+  Chlorophytum:"griech. ‚Grünpflanze‘ (Grünlilie)", Codiaeum:"molukk. Name (Kroton)",
+  Guzmania:"nach dem Apotheker A. Guzmán (Guzmanie)", Nicotiana:"nach J. Nicot (Tabak)",
+  Phalaenopsis:"griech. ‚falterähnlich‘ (Schmetterlingsorchidee)", Saintpaulia:"nach dem Sammler W. v. Saint Paul (Usambaraveilchen)",
+  Spathiphyllum:"griech. ‚Spatha-Blatt‘ (Einblatt)", Sansevieria:"nach dem Fürsten v. Sanseverino (Bogenhanf)",
+  Abutilon:"vom arab. Namen (Schönmalve)", Aechmea:"griech. ‚Speerspitze‘ (Lanzenrosette)",
+  Aglaonema:"griech. ‚glänzender Faden‘ (Kolbenfaden)", Aphelandra:"griech. ‚einfache Staubblätter‘",
+  Beaucarnea:"nach J. Beaucarne (Elefantenfuß)", Calathea:"griech. ‚Korb‘ (Korbmarante)",
+  Canna:"griech./lat. ‚Rohr‘ (Blumenrohr)", Cattleya:"nach dem Gärtner W. Cattley (Cattleye)",
+  Clivia:"nach Lady Charlotte Clive (Klivie)", Cycas:"griech. Name (Palmfarn)",
+  Cymbidium:"griech. ‚Kahn‘ (Kahnorchidee)", Dieffenbachia:"nach dem Gärtner J. Dieffenbach",
+  Dracaena:"griech. ‚Drachin‘ (Drachenbaum)", Echinocactus:"griech. ‚Igel-Kaktus‘ (Goldkugelkaktus)",
+  Exacum:"lat. Name (Blaues Lieschen)", Hoya:"nach dem Gärtner T. Hoy (Wachsblume)",
+  Maranta:"nach dem Arzt B. Maranti (Pfeilwurz)", Medinilla:"nach dem Gouverneur J. de Medinilla",
+  Paphiopedilum:"griech. ‚Venus-Schuh‘ (Frauenschuh-Orchidee)", Peperomia:"griech. ‚pfefferähnlich‘ (Zwergpfeffer)",
+  Phoenix:"griech. Name (Dattelpalme)", Pilea:"lat. ‚Filzkappe‘ (Kanonierblume)",
+  Plumbago:"lat. ‚Blei‘ (Bleiwurz)", Rhipsalidopsis:"griech. ‚rhipsalisähnlich‘ (Osterkaktus)",
+  Schlumbergera:"nach dem Sammler F. Schlumberger (Weihnachtskaktus)", Soleirolia:"nach dem Offizier J. Soleirol (Bubikopf)",
+  Strelitzia:"nach Königin Charlotte v. Mecklenburg-Strelitz (Paradiesvogelblume)", Streptocarpus:"griech. ‚gedrehte Frucht‘ (Drehfrucht)",
+  Syngonium:"griech. ‚zusammen-Frucht‘ (Purpurtute)", Tillandsia:"nach dem Botaniker E. Tillandz",
+  Tradescantia:"nach dem Gärtner J. Tradescant (Dreimasterblume)", Vriesea:"nach dem Botaniker W. de Vriese (Vriesie)",
+  Zamioculcas:"aus Zamia + arab. ‚culcas‘ (Glücksfeder)", Zantedeschia:"nach dem Botaniker G. Zantedeschi (Calla)",
+  Calibrachoa:"nach dem Botaniker A. de Cal y Bracho (Zauberglöckchen)", Coleus:"griech. ‚Scheide‘ (Buntnessel; heute Plectranthus)",
+  Chimonanthus:"griech. ‚Winterblüte‘ (Winterblüte)",
+});
+
+
+
+/* »Alle Namensbestandteile erklären« – Wörterbuch vervollständigt: echte Übersetzungen
+   (Epitheta), Kompositions-Bausteine und die restlichen Gattungen. Struktur-Fallbacks in
+   latGloss (Personen-Widmung/Herkunft/Ähnlichkeit) fangen den Rest ehrlich ab. */
+Object.assign(LAT_EPI, {
+  pileata:"mützenförmig", dumosus:"buschig (Kissen-Aster)",
+  fulgida:"glänzend", fulgens:"glänzend rot",
+  giganteum:"riesig (Mammutbaum)", giganteus:"riesig",
+  gigantea:"riesig", corymbosum:"doldentraubig (Kulturheidelbeere)",
+  corymbosus:"doldentraubig", micrantha:"kleinblütig",
+  micranthus:"kleinblütig", comosum:"schopftragend",
+  comosa:"schopftragend", frutescens:"strauchig werdend",
+  cucullata:"kapuzenförmig", cucullatum:"kapuzenförmig",
+  acre:"scharf (brennend)", acris:"scharf",
+  umbrosa:"schattenliebend", umbrosum:"schattenliebend",
+  umbellatus:"doldig", umbellatum:"doldig",
+  salicifolius:"weidenblättrig", salicifolia:"weidenblättrig",
+  lanceolata:"lanzettlich (Blatt)", lanceolatum:"lanzettlich",
+  lanceolatus:"lanzettlich", magnifica:"prächtig",
+  magnificum:"prächtig", deltoides:"dreieckig",
+  deltoideum:"dreieckig", hyemalis:"winterblühend (Winterling)",
+  hiemalis:"winterblühend", lactiflora:"milchweiß blühend",
+  lactiflorum:"milchweiß blühend", arguta:"scharf gesägt",
+  argutus:"scharf gesägt", filamentosa:"fädig (Yucca)",
+  splendens:"prächtig glänzend", procera:"hochgewachsen (Edel-Tanne)",
+  procerus:"hochgewachsen", glutinosa:"klebrig (Schwarz-Erle)",
+  glutinosus:"klebrig", altissima:"sehr hoch",
+  altissimum:"sehr hoch", persicifolia:"pfirsichblättrig",
+  persicifolius:"pfirsichblättrig", decapetalus:"zehnblättrig (Blüte)",
+  superbum:"prächtig", superba:"prächtig",
+  superbus:"prächtig", punctata:"punktiert",
+  punctatum:"punktiert", salicaria:"weidenartig",
+  denticulata:"kleingezähnt", denticulatum:"kleingezähnt",
+  flavescens:"gelblich", lanatus:"wollig behaart",
+  lanata:"wollig", reticulata:"netznervig",
+  reticulatum:"netznervig", dulcis:"süß (Süßmandel)",
+  dulce:"süß", triloba:"dreilappig (Mandelbäumchen)",
+  trilobum:"dreilappig", trifoliata:"dreiblättrig",
+  trifoliatum:"dreiblättrig", affinis:"verwandt, ähnlich",
+  affine:"verwandt", glomerata:"geknäuelt (Blüten)",
+  glomeratum:"geknäuelt", dealbata:"weiß bestäubt",
+  dealbatum:"weiß bestäubt", ramosa:"ästig, verzweigt",
+  ramosus:"verzweigt", cespitosa:"horstbildend",
+  cespitosum:"horstbildend", plumarius:"gefranst (Feder-Nelke)",
+  robustus:"kräftig", robusta:"kräftig",
+  sylvaticum:"Wald-", regalis:"königlich",
+  regale:"königlich (Königs-Lilie)", floriferum:"blütentragend",
+  floriferus:"blütentragend", elatum:"hochgewachsen",
+  elata:"hochgewachsen", elatus:"hochgewachsen",
+  densiflorus:"dichtblütig", densiflora:"dichtblütig",
+  variegatum:"buntlaubig", ovata:"eiförmig (Blatt)",
+  ovatum:"eiförmig", ovatus:"eiförmig",
+  elastica:"elastisch (Kautschuk-)", concolor:"einfarbig (Kolorado-Tanne)",
+  aspera:"rau(haarig)", asperum:"rau",
+  asper:"rau", incisa:"eingeschnitten (Fuji-Kirsche)",
+  incisum:"eingeschnitten", laxa:"locker (Blütenstand)",
+  laxum:"locker", laxus:"locker",
+  gramineus:"grasartig", gramineum:"grasartig",
+  acutifolia:"spitzblättrig", acutifolius:"spitzblättrig",
+  buxifolia:"buchsblättrig", buxifolium:"buchsblättrig",
+  octopetala:"achtblättrig (Silberwurz)", repanda:"geschweift (Blattrand)",
+  repandens:"geschweift", axillaris:"achselständig (Blüten)",
+  fallax:"täuschend (ähnlich einer anderen Art)", sericea:"seidig behaart",
+  sericeum:"seidig", purpurascens:"purpurn überlaufen",
+  suffruticosa:"halbstrauchig", suffruticosus:"halbstrauchig",
+  bifolia:"zweiblättrig", bifolium:"zweiblättrig",
+  fistulosum:"röhrig (Winterzwiebel)", fistulosa:"röhrig",
+  perfoliata:"durchwachsen (Blatt umfasst Stängel)", perfoliatum:"durchwachsen",
+  acuminata:"lang zugespitzt", acuminatum:"zugespitzt",
+  acuminatus:"zugespitzt", corniculata:"gehörnt",
+  corniculatum:"gehörnt", venustum:"anmutig",
+  venusta:"anmutig", triplinervis:"dreinervig (Blatt)",
+  procurrens:"vorlaufend (Ausläufer)", acutiflora:"spitzblütig",
+  obliqua:"schief (Blattgrund)", obliquum:"schief",
+  amplexicaulis:"stängelumfassend (Blatt)", eximia:"ausgezeichnet, hervorragend",
+  fulva:"braungelb, rostgelb", fulvum:"braungelb",
+  nivea:"schneeweiß", niveum:"schneeweiß",
+  niveus:"schneeweiß", alcea:"malvenartig",
+  aculeatum:"stachelig (Schildfarn)", aculeata:"stachelig",
+  sexangulare:"sechskantig", fasciata:"gebändert (Aechmea)",
+  fasciatum:"gebändert", caudatus:"geschwänzt (langes Anhängsel)",
+  caudata:"geschwänzt", multifida:"vielspaltig",
+  multifidum:"vielspaltig", cristata:"kammförmig, gekräuselt",
+  cristatum:"kammförmig", miniata:"zinnoberrot",
+  miniatum:"zinnoberrot", bipinnatus:"doppelt gefiedert",
+  bipinnata:"doppelt gefiedert", revoluta:"zurückgerollt (Blattrand)",
+  revolutum:"zurückgerollt", globulus:"kugelig (Frucht)",
+  lyrata:"leierförmig (Blatt)", lyratum:"leierförmig",
+  maculatum:"gefleckt (Taubnessel)", maculata:"gefleckt",
+  sinuatum:"buchtig (Blattrand)", sinuata:"buchtig",
+  virgatum:"rutenförmig", virgata:"rutenförmig",
+  nudicaule:"nacktstängelig", caperata:"runzelig (Blatt)",
+  erubescens:"errötend, rötlich", auriculata:"geöhrt",
+  auriculatum:"geöhrt", roseum:"rosa",
+  tricolor:"dreifarbig", bella:"schön",
+  bellum:"schön", tetraphylla:"vierblättrig",
+  tetraphyllum:"vierblättrig", thyrsoides:"thyrsusförmig (Blütenstand)",
+  cyanea:"stahlblau", cyaneus:"blau",
+  farinacea:"mehlig bestäubt", farinaceum:"mehlig",
+  saligna:"weidenartig", salignus:"weidenartig",
+  elegantissima:"sehr elegant", setaceus:"borstig",
+  setiferum:"borstentragend (Schildfarn)", flabelliformis:"fächerförmig",
+  hyssopifolia:"ysopblättrig", alternifolius:"wechselblättrig",
+  alternifolia:"wechselblättrig", citrinus:"zitronengelb",
+  citrina:"zitronengelb", isophylla:"gleichblättrig",
+  hederacea:"efeuartig", hederaceum:"efeuartig",
+  hederifolium:"efeublättrig (Alpenveilchen)", petiolaris:"langstielig",
+  petiolare:"langstielig", scoparius:"besenartig (rutig)",
+  scoparium:"besenartig", tristis:"trüb, düster (Farbe)",
+  conica:"kegelförmig", conicum:"kegelförmig",
+  flavum:"gelb", squarrosa:"sparrig (abstehend)",
+  squarrosum:"sparrig", byzantina:"byzantinisch (kleinasiatisch)",
+  urens:"brennend (Brennhaare)", rugosus:"runzelig",
+  suendermannii:"nach dem Gärtner F. Sündermann", triacanthos:"dreidornig (Lederhülsenbaum)",
+  siliquastrum:"schotentragend (Judasbaum)", mezereum:"vom pers. Namen (Seidelbast)",
+  amabilis:"lieblich, anmutig", amabile:"lieblich",
+  tulipifera:"tulpentragend (Tulpenbaum)", ligustrina:"ligusterartig",
+  anomala:"abweichend, ungewöhnlich", anomalum:"abweichend",
+  vernum:"Frühlings-", brizoides:"zittergrasähnlich",
+  botryoides:"traubig (Trauben-Hyazinthe)", echiniformis:"igelförmig",
+  chamaecyparissus:"zypressenähnlich niedrig (Heiligenkraut)", decumbens:"niederliegend, aufsteigend",
+  scutellarioides:"helmkrautähnlich", alopecuroides:"fuchsschwanzähnlich",
+  helianthoides:"sonnenblumenähnlich", plumbaginoides:"bleiwurzähnlich",
+  ericoides:"heideähnlich (Myrten-Aster)", aizoides:"hauswurzähnlich",
+  fuchsioides:"fuchsienähnlich", geoides:"nelkenwurzähnlich",
+  tetragonioides:"neuseeländerspinatähnlich", amygdaloides:"mandelähnlich",
+  epithymoides:"thymianähnlich", ocymoides:"basilikumähnlich",
+  aloides:"aloeähnlich", abrotanoides:"eberrautenähnlich",
+  tanacetifolia:"rainfarnblättrig", ferulifolia:"ferula-/fenchelblättrig",
+  oleiformis:"ölbaumähnlich", fraxinifolia:"eschenblättrig",
+  aesculifolia:"rosskastanienblättrig", artemisiifolia:"beifußblättrig",
+  iberidifolia:"schleifenblumenblättrig", cochleariifolia:"löffelkrautblättrig",
+  ficifolia:"feigenblättrig", pyrifolia:"birnenblättrig",
+  trifasciata:"dreifach gebändert (Bogenhanf)", podophylla:"schildblättrig",
+  "penna-marina":"‚Meeresfeder‘ (gefiederter Farn)", "filix-mas":"‚männlicher Farn‘ (Wurmfarn)",
+  "filix-femina":"‚weiblicher Farn‘ (Frauenfarn)", scolopendrium:"‚Hundertfüßer‘ (Hirschzunge, Sori-Reihen)",
+  spicant:"kammartig gefiedert (Rippenfarn)", trichomanes:"griech. Farnname (Streifenfarn)",
+  struthiopteris:"‚Straußenfeder-Farn‘ (Straußenfarn)", sensibilis:"empfindlich (Perlfarn)",
+  nidus:"Nest (Nestfarn, Blattrosette)", bulbiferum:"brutknospentragend",
+  atrorubens:"dunkelrot", atropunicea:"dunkelpurpurn",
+  brunnea:"braun", brunneus:"braun",
+  incarnatum:"fleischrot", semperflorens:"immerblühend",
+  pauciflora:"wenigblütig", pauciflorum:"wenigblütig",
+  uniflora:"einblütig", biflorus:"zweiblütig",
+  australis:"südlich", australe:"südlich",
+  hibernica:"irisch", hollandica:"holländisch",
+  nootkatensis:"aus Nootka (Nordwestamerika)", colchica:"aus Kolchis (Schwarzmeer)",
+  colchicum:"aus Kolchis", pacifica:"pazifisch",
+  islandica:"isländisch", danica:"dänisch",
+  neapolitanum:"aus Neapel (Blattpetersilie)", alexandrinum:"aus Alexandria",
+  carpatica:"aus den Karpaten", sabauda:"savoyisch (Wirsing)",
+  gratianopolitanus:"aus Grenoble (Pfingst-Nelke)", bannaticus:"aus dem Banat",
+  hungaricus:"ungarisch", canariensis:"von den Kanaren",
+  azoricum:"von den Azoren", macedonica:"mazedonisch",
+  hupehensis:"aus Hupeh (China)", yunnanensis:"aus Yunnan (China)",
+  pekinensis:"aus Peking", africanus:"afrikanisch",
+  africana:"afrikanisch", aethiopica:"‚aus Äthiopien/Afrika‘",
+  "novi-belgii":"aus dem Raum New York (Aster)", "novae-angliae":"aus Neuengland (Aster)",
+  liwanensis:"aus dem Libanon", hachijoensis:"von der Insel Hachijō (Japan)",
+  richmondensis:"aus Richmond", europea:"europäisch",
+  siberica:"aus Sibirien", scopulorum:"von Felsklippen",
+  lacustris:"Seen-, im See", lucustris:"See-",
+  sepium:"an Hecken/Zäunen", rusticana:"ländlich (Meerrettich)",
+  umbraticola:"an schattigen Orten", vesuv:"nach dem Vesuv (Sortenname)",
+  gemmifera:"knospentragend (Rosenkohl)", gongylodes:"knollig (Kohlrabi)",
+  botrytis:"traubig, in Röschen (Blumenkohl)", sabellica:"aus Sabina (Grünkohl)",
+  rapaceum:"rübig (Knollensellerie)", rapifera:"rüben­tragend",
+  napobrassica:"Kohlrübe", carota:"Möhre (griech. Name)",
+  melo:"Melone", pepo:"Kürbis (griech. ‚reif‘)",
+  lycopersicum:"‚Wolfspfirsich‘ (Tomate)", cerasiforme:"kirschförmig (Kirschtomate)",
+  melongena:"Aubergine (vom ital. Namen)", faba:"Bohne (Ackerbohne)",
+  culinaris:"Küchen- (Linse)", culta:"kultiviert",
+  ananassa:"ananasartig (Erdbeere, Duft)", vesca:"schmackhaft, klein (Wald-Erdbeere)",
+  nucipersica:"Nektarine (‚Nuss-Pfirsich‘)", mahaleb:"vom arab. Namen (Weichsel-Kirsche)",
+  insititia:"veredelt (Kriechen-Pflaume)", padus:"griech. Name (Traubenkirsche)",
+  amygdalus:"Mandel", idaeus:"vom Berg Ida (Himbeere)",
+  "uva-crispa":"‚krause Traube‘ (Stachelbeere)", "vitis-idaea":"‚Ida-Rebe‘ (Preiselbeere)",
+  macrocarpon:"großfrüchtig (Cranberry)", myrtillus:"kleine Myrte (Heidelbeere)",
+  carica:"aus Karien (Feige)", limon:"Zitrone",
+  aurantium:"Orange (‚goldgelb‘)", kaki:"vom japan. Namen (Kaki)",
+  betacea:"beteartig (Baumtomate)", lotus:"Lotus (griech./ägypt. Name)",
+  granatum:"‚kernreich‘ (Granatapfel)", ficus:"Feige",
+  rhabarbarum:"‚fremder Rha‘ (Rhabarber)", rhaponticum:"pontischer Rhabarber",
+  cardunculus:"kleine Distel (Artischocke/Cardy)", scolymus:"griech. Distelname (Artischocke)",
+  locusta:"Feldsalat (‚Heuschrecke‘?)", basilicum:"‚königlich‘ (Basilikum)",
+  majorana:"Majoran (vom arab. Namen)", dracunculus:"‚Drachen-‘ (Estragon)",
+  absinthium:"griech. Name (Wermut)", abrotanum:"griech. Name (Eberraute)",
+  archangelica:"‚Erzengel-‘ (Engelwurz)", carvi:"Kümmel (vom arab. Namen)",
+  anisum:"Anis (griech. Name)", recutita:"‚beschnitten‘ (Echte Kamille)",
+  rosmarinus:"‚Meertau‘ (Rosmarin)", serpyllum:"kriechend (Sand-Thymian)",
+  ursinum:"‚der Bären‘ (Bärlauch)", ampeloprasum:"‚Rebenlauch‘ (Porree-Gruppe)",
+  acetosa:"sauer (Sauerampfer)", acetosella:"kleiner Sauerampfer",
+  arachnoideum:"spinnwebig (Hauswurz)", chamaedrys:"‚Zwerg-Eiche‘ (Ehrenpreis)",
+  teucrium:"gamanderähnlich", napellus:"‚kleine Rübe‘ (Eisenhut, Knolle)",
+  cheiri:"vom arab. Namen (Goldlack)", pseudacorus:"‚falscher Kalmus‘ (Sumpf-Schwertlilie)",
+  meleagris:"perlhuhnartig gescheckt (Schachblume)", martagon:"‚Türkenbund‘ (Türkenbund-Lilie)",
+  quamash:"aus einem indian. Namen (Prärielilie)", hyacinthoides:"hyazinthenähnlich",
+  elwesii:"nach dem Sammler H. J. Elwes", eranthis:"Frühlingsblume",
+  denudata:"nackt, kahl", liliiflora:"lilienblütig",
+  soulangeana:"nach dem Züchter Soulange-Bodin", kobus:"vom japan. Namen (Kobushi-Magnolie)",
+  aria:"griech. Name (Mehlbeere)", torminalis:"‚gegen Bauchweh‘ (Elsbeere)",
+  coggygria:"griech. Name (Perückenstrauch)", tinus:"lat. Name (Lorbeer-Schneeball)",
+  lantana:"alter Name (Wolliger Schneeball)", rhytidophyllum:"runzelblättrig (Runzelblatt-Schneeball)",
+  carlesii:"nach dem Sammler W. R. Carles", chenaultii:"nach der Baumschule Chenault",
+  buddleja:"nach A. Buddle", omorika:"vom serb. Namen (Serbische Fichte)",
+  koraiensis:"aus Korea", kousa:"vom japan. Namen (Japan. Blüten-Hartriegel)",
+  pisifera:"erbsentragend (Sawara-Scheinzypresse)", leylandii:"nach dem Züchter C. Leyland",
+  pfitzeriana:"nach der Baumschule Pfitzer", sabina:"vom lat. Namen (Sadebaum)",
+  franchetii:"nach dem Botaniker A. Franchet", divaricatus:"sparrig",
+  lacteus:"milchweiß (Blüten)", microphyllus:"kleinblättrig",
+  simonsii:"nach dem Sammler Simons", integerrimus:"ganzrandig",
+  indicum:"aus Indien", simsii:"nach dem Botaniker J. Sims (Azalee)",
+  yakushimanum:"von der Insel Yakushima", catawbiense:"vom Catawba-Fluss (Rhododendron)",
+  ponticum:"aus Pontus (Schwarzmeer)", impeditum:"‚verwickelt‘ (dichtbuschig)",
+  williamsianum:"nach J. C. Williams", peduncularis:"langstielig",
+  longifolia:"langblättrig", latifolia:"breitblättrig",
+  gentianoides:"enzianähnlich", pectinata:"kammförmig",
+  faassenii:"nach der Baumschule Faassen", subsessilis:"fast sitzend",
+  cordifolia:"herzblättrig", macrophylla:"großblättrig",
+  sieboldiana:"nach P. F. von Siebold", plantaginea:"wegerichblättrig (Funkie)",
+  ventricosa:"bauchig (Blüte)", undulata:"gewellt (Blattrand)",
+  tardiana:"spätblühend", lancifolia:"lanzettblättrig",
+  galeobdolon:"‚Wiesel-Gestank‘ (Goldnessel)", orvala:"vom ital. Namen (Riesen-Taubnessel)",
+  cardinalis:"scharlachrot (Kardinals-Lobelie)", siphilitica:"‚gegen Syphilis‘ (Blaue Lobelie, Heilpflanze)",
+  cordifolius:"herzblättrig", linosyris:"‚Lein-Färberröte‘ (Goldhaar-Aster)",
+  tongolensis:"aus Tongolo (China)", sieboldii:"nach dem Arzt P. F. von Siebold",
+  menziesii:"nach dem Arzt A. Menzies", forrestii:"nach dem Sammler G. Forrest",
+  veitchii:"nach Veitch", brownii:"nach dem Botaniker R. Brown",
+  jamesonii:"nach R. Jameson", drummondii:"nach dem Sammler T. Drummond",
+  przewalskii:"nach dem Forscher N. Przewalski", gesneriana:"nach dem Gelehrten C. Gessner (Tulpe)",
+  wallichiana:"nach dem Botaniker N. Wallich", mariesii:"nach dem Sammler C. Maries",
+  christophii:"nach dem Sammler? (Zier-Lauch)", burkwoodii:"nach den Züchtern Burkwood",
+  andersonii:"nach einem Sammler Anderson", griffithii:"nach dem Botaniker W. Griffith",
+  tommasinianus:"nach M. Tommasini (Krokus)", greigii:"nach dem Förderer S. Greig",
+  kaufmanniana:"nach dem Förderer v. Kaufmann (Tulpe)", schmidtiana:"nach dem Gärtner J. Schmidt",
+  poscharskyana:"nach dem Gärtner G. Poscharsky", portenschlagiana:"nach F. v. Portenschlag (Glockenblume)",
+  wittrockiana:"nach dem Botaniker V. Wittrock (Garten-Stiefmütterchen)", mantegazzianum:"nach dem Forscher P. Mantegazza (Riesen-Bärenklau)",
+  houstonianum:"nach dem Botaniker W. Houstoun", gunnii:"nach dem Sammler R. Gunn (Eukalyptus)",
+  blossfeldiana:"nach dem Sammler R. Blossfeld (Flammendes Käthchen)", sanderiana:"nach der Gärtnerei Sander",
+  sanderi:"nach der Gärtnerei Sander", sanderae:"nach der Gärtnerei Sander",
+  makoyana:"nach Gärtnerei Makoy", cadierei:"nach dem Missionar Cadière (Kanonierblume)",
+  scherzerianum:"nach dem Diplomaten K. v. Scherzer (Flamingoblume)", wallisii:"nach dem Sammler G. Wallis (Einblatt)",
+  milii:"nach Baron Milius (Christusdorn)", martinii:"nach einem Sammler Martin",
+  grusonii:"nach dem Industriellen H. Gruson (Goldkugelkaktus)", buckleyi:"nach dem Sammler Buckley",
+  gaertneri:"nach dem Botaniker J. Gaertner (Osterkaktus)", fournieri:"nach dem Botaniker E. Fournier (Torenie)",
+  soleirolii:"nach dem Sammler J. Soleirol (Bubikopf)", reginae:"‚der Königin‘ (Paradiesvogelblume)",
+  seguine:"aus einem karib. Namen (Dieffenbachie)", andraeanum:"nach dem Botaniker É. André (Flamingoblume)",
+  degronianum:"nach einem Sammler Degron", pruhoniciana:"nach dem Park Průhonice",
+  vossii:"nach dem Gärtner A. Voss", purpusii:"nach dem Sammler C. Purpus",
+  wiltonii:"nach dem Sammler Wilton", heckrottii:"nach einem Gärtner Heckrott",
+  watereri:"nach der Baumschule Waterer", clandonensis:"aus dem Garten Clandon",
+  hillieri:"nach der Baumschule Hillier", sargentiana:"nach C. Sargent",
+  giraldii:"nach dem Missionar G. Giraldi", dielsianus:"nach dem Botaniker L. Diels",
+  aubertii:"nach dem Missionar G. Aubert", heldreichii:"nach dem Botaniker T. Heldreich",
+  tagliabueana:"nach der Baumschule Tagliabue", carmichaelii:"nach dem Sammler D. Carmichael",
+  ecklonis:"nach dem Sammler C. Ecklon (Kapkörbchen)", gautieri:"nach einem Sammler Gautier",
+  sullivantii:"nach dem Botaniker W. Sullivant (Sonnenhut)", russeliana:"nach dem Förderer Herzog v. Bedford (Russell)",
+  endressii:"nach dem Sammler P. Endress (Storchschnabel)", cantabrigiense:"aus Cambridge",
+  himalayense:"aus dem Himalaya", nodosum:"knotig",
+  forsteri:"nach dem Naturforscher G. Forster", buchananii:"nach dem Botaniker J. Buchanan",
+  morrowii:"nach dem Arzt J. Morrow (Japan-Segge)", oshimensis:"von der Insel Ōshima (Segge)",
+  muskingumensis:"vom Muskingum-Fluss (Palmwedel-Segge)", flagellifera:"peitschentragend",
+  atkinsiana:"nach einem Züchter Atkins", "rosa-sinensis":"‚chinesische Rose‘ (Roseneibisch)",
+  ionantha:"veilchenblütig (Tillandsie/Usambara-V.)", surfinia:"Handelsname (Petunie)",
+  arboricola:"an Bäumen wachsend (Kletter-Schefflera)", zamiifolia:"zamienblättrig (Glücksfeder)",
+  elephantipes:"‚Elefantenfuß‘ (Yucca)", gloriosa:"prachtvoll (Yucca)",
+  flaccida:"schlaff (Yucca)", bifurcatum:"zweigabelig (Geweihfarn)",
+  raddianum:"nach dem Botaniker G. Raddi (Frauenhaarfarn)", exaltata:"hochwachsend (Schwertfarn)",
+  lingulata:"zungenförmig (Guzmanie)", zebrina:"gestreift (Zebra-Ampelkraut)",
+  fluminensis:"‚vom Fluss‘ (aus Rio, Dreimasterblume)", leuconeura:"weißnervig (Korbmarante)",
+  andreanum:"nach É. André", warscewiczii:"nach dem Sammler Warscewicz",
+  pumilio:"zwergig (Berg-Kiefer)", balsamea:"balsamduftend (Balsam-Tanne)",
+  grandis:"groß (Küsten-Tanne)", cephalonica:"von Kefalonia (Griech. Tanne)",
+  pinsapo:"vom span. Namen (Spanische Tanne)", deodara:"‚Baum der Götter‘ (Himalaya-Zeder)",
+  libani:"aus dem Libanon (Zeder)", glyptostroboides:"glyptostrobus-ähnlich (Urwelt-Mammutbaum)",
+  distichum:"zweizeilig (Sumpfzypresse)", pensylvanica:"aus Pennsylvania",
+  dolabrata:"beilförmig (Hiba-Lebensbaum)", cuspidata:"stachelspitzig (Japan-Eibe)",
+  harringtonia:"nach dem Earl of Harrington (Kopfeibe)", buergerianum:"nach dem Sammler H. Bürger (Dreispitz-Ahorn)",
+  ginnala:"vom Amur-Namen (Feuer-Ahorn)", griseum:"grau (Zimt-Ahorn)",
+  monspessulanum:"aus Montpellier (Burgen-Ahorn)", negundo:"aus einem ind. Namen (Eschen-Ahorn)",
+  saccharinum:"zuckerhaltig (Silber-Ahorn)", tataricum:"tatarisch",
+  cappadocicum:"aus Kappadokien", julibrissin:"vom pers. Namen (Seidenbaum)",
+  araucana:"aus dem Arauco-Gebiet (Andentanne)", unedo:"lat. ‚ich esse eins‘ (Erdbeerbaum)",
+  tubulosa:"röhrig (Hülle der Nuss)", ornus:"lat. Name (Blumen-Esche)",
+  pennsylvanica:"aus Pennsylvania", babylonica:"‚babylonisch‘ (Trauer-Weide)",
+  fragilis:"brüchig (Bruch-Weide)", daphnoides:"seidelbastähnlich (Reif-Weide)",
+  canescens:"graubehaart (Grau-Pappel)", ostrya:"Hopfenbuche",
+  petraea:"Felsen- (Trauben-Eiche)", cerris:"lat. Name (Zerr-Eiche)",
+  ilex:"Stech- (Stein-Eiche)", suber:"lat. ‚Kork‘ (Kork-Eiche)",
+  frainetto:"vom ital. Namen (Ungar. Eiche)", lusitanica:"portugiesisch (Portug. Lorbeerkirsche)",
+  glandulosa:"drüsig (Mandelkirsche)", subhirtella:"etwas rauhaarig (Winter-Kirsche)",
+  yedoensis:"aus Edo/Tokio (Yoshino-Kirsche)", hispida:"borstig (Rosen-Robinie)",
+  dioca:"zweihäusig", serphyllum:"kriechend (Sand-Thymian)",
+  vinvifera:"weintragend (Tippfehler)", retoflexus:"zurückgebogen",
+  retroflexus:"zurückgebogen", supsp:"Unterart (Rangkürzel)",
+  nothof:"Nothofagus (Südbuche)", cneorum:"griech. Name (Steinröschen)",
+  dryas:"Silberwurz (Baumnymphe)", camara:"aus einem südamerik. Namen (Wandelröschen)",
+  "plantago-aquatica":"‚Wasser-Wegerich‘ (Froschlöffel)", oleander:"vom mittellat. Namen (Oleander)",
+  armeniacum:"aus Armenien (Trauben-Hyazinthe)", pulcherrima:"sehr schön, prächtig (Weihnachtsstern)",
+  benjamina:"vom Namen (Birkenfeige)", asiaticus:"asiatisch",
+  asiatica:"asiatisch", alkekengi:"vom arab. Namen (Lampionblume)",
+  xylosteum:"‚Knochenholz‘ (hartes Holz, Heckenkirsche)", typhina:"kolbig behaart wie Typha (Essigbaum)",
+  mays:"vom Taíno ‚mahiz‘ (Mais)", "crus-galli":"‚Hahnensporn‘ (dornig)",
+  cicla:"alter Name für Mangold", "bursa-pastoris":"‚Hirtentasche‘ (Frucht)",
+  rhoeas:"griech. Name (Klatsch-Mohn)", vera:"echt, wahr",
+  ebbingei:"nach dem Gärtner S. Ebbinge", lydia:"aus Lydien (Kleinasien)",
+  tobira:"vom japan. Namen (Klebsame)", calleryana:"nach dem Missionar J. Callery",
+  pendulina:"überhängend", complexa:"verschlungen, verwickelt",
+  ligtu:"aus einem chilen. Namen (Inkalilie)", "ferdinandi-coburgi":"nach Zar Ferdinand von Sachsen-Coburg",
+  trifurcata:"dreigabelig", squalida:"unscheinbar, schmutzig-grün",
+  cooperi:"nach dem Sammler T. Cooper", erythrosora:"rotsporig (Farn)",
+  rigens:"steif (Mittagsgold)", baldschuanica:"aus Baldschuan (Zentralasien, Schling-Knöterich)",
+  lindheimeri:"nach dem Sammler F. Lindheimer", urbanum:"städtisch, an Wegen (Nelkenwurz)",
+  patulum:"ausgebreitet", olympicum:"vom Olymp (Johanniskraut)",
+  secalinum:"roggenartig (Schnittsellerie)", fimbriata:"gefranst",
+  fimbriatum:"gefranst", discoidea:"scheibenförmig (strahllos)",
+  viscosus:"klebrig", viscosa:"klebrig",
+  viciifolia:"wickenblättrig (Esparsette)", cereale:"Getreide- (Roggen)",
+  resupinatum:"umgewendet (Persischer Klee)", farfara:"lat. Name (Huflattich)",
+  ptarmica:"‚Nieskraut‘ (Sumpf-Schafgarbe)", liliago:"lilienartig (Astlose Graslilie)",
+  aethusifolius:"hundspetersilienblättrig (Zwerg-Geißbart)", pansus:"ausgebreitet",
+  tabularis:"flach ausgebreitet, tafelförmig", brachytricha:"kurzhaarig (Diamant-Reitgras)",
+  nepeta:"katzenminzenartig (Bergminze)", belladonna:"‚schöne Frau‘ (Belladonna-Lilie)",
+  asclepiadea:"schwalbenwurzblättrig (Schwalbenwurz-Enzian)", "sino-ornata":"chinesisch-geschmückt (Herbst-Enzian)",
+  maximum:"sehr groß", arenarius:"Sand- (Strandhafer)",
+  purpurocaeruleum:"purpurblau (Steinsame)", chalcedonica:"aus Chalkedon (Brennende Liebe)",
+  bombyciferum:"seidig-wollig (Königskerze)", commutatum:"vertauscht, verwechselt",
+  commutata:"verwechselt", recurvata:"zurückgekrümmt",
+  sabatius:"aus Savona (Ligurien)", vigilis:"Herkunft unklar",
+  damascena:"aus Damaskus (Jungfer im Grünen)", obconica:"verkehrt-kegelförmig (Becher-Primel)",
+  podophyllum:"schildblättrig (Purpurtute)", lizei:"nach der Baumschule Lizé",
+  julianae:"nach Juliana (Großblättrige Berberitze)", myrsinites:"myrtenartig (Walzen-Wolfsmilch)",
+  nidiformis:"nestförmig (Nest-Fichte)", cauticola:"an Felsen wachsend (Fetthenne)",
+  pachyclados:"dickästig (Zwerg-Fetthenne)", blanda:"lieblich, reizend (Balkan-Anemone)",
+  perralchicum:"Kreuzungs-Epitheton (Elternarten)", ascomycota:"Schlauchpilze (Abteilung; Flechte)",
+});
+Object.assign(LAT_PRE, {
+  salici:"weiden", tanaceti:"rainfarn",
+  oleae:"ölbaum", persici:"pfirsich",
+  buxi:"buchs", ilici:"stechpalmen",
+  querci:"eichen", populi:"pappel",
+  fraxini:"eschen", aesculi:"rosskastanien",
+  lauri:"lorbeer", myrti:"myrten",
+  hederi:"efeu", plantagini:"wegerich",
+  graminei:"gras", hyssopi:"ysop",
+  rosmarini:"rosmarin", thymi:"thymian",
+});
+Object.assign(LAT_SUF, {
+  oides:"-ähnlich", odes:"-ähnlich",
+  oideus:"-ähnlich", petalum:"blütenblättrig",
+  sperma:"samig", spermum:"samig",
+  stemon:"staubfädig", glossum:"zungenförmig",
+  stigma:"narbig",
+});
+Object.assign(LAT_GEN, {
+  Abelia:"nach dem Arzt C. Abel (Abelie)", Actaea:"griech. ‚Holunder‘ (Christophskraut/Silberkerze)",
+  Adonis:"nach dem griech. Jüngling Adonis (Adonisröschen)", Aegopodium:"griech. ‚Ziegenfuß‘ (Giersch, Blattform)",
+  Aeschynanthus:"griech. ‚Scham-Blume‘ (Schamblume)", Alcea:"griech. Malvenname (Stockrose)",
+  Alchemilla:"vom arab. ‚al-kimiya‘ (Frauenmantel, Alchemie)", Alyssum:"griech. ‚gegen Tollwut‘ (Steinkraut)",
+  Anethum:"griech. Name (Dill)", Antennaria:"lat. ‚Fühler‘ (Katzenpfötchen, Haarkrone)",
+  Anthriscus:"griech. Name (Kerbel)", Antirrinum:"griech. ‚Nasenähnlich‘ (Löwenmäulchen)",
+  Aristolochia:"griech. ‚gute Geburt‘ (Pfeifenwinde, Heilpflanze)", Armeria:"altfranz./kelt. Name (Grasnelke)",
+  Aronia:"griech. Name (Apfelbeere)", Arum:"griech. Name (Aronstab)",
+  Asarum:"griech. Name (Haselwurz)", Asphodeline:"von Asphodelus (Junkerlilie)",
+  Atriplex:"lat. Name (Melde/Gartenmelde)", Astrantia:"vom lat. ‚astrum‘ = Stern (Sterndolde, sternförmige Hülle)",
+  Aucuba:"vom japan. ‚aokiba‘ (Aukube)", Aurinia:"lat. ‚golden‘ (Felsen-Steinkraut)",
+  Borago:"vom lat. Namen (Borretsch)", Bougainvillea:"nach dem Seefahrer L. de Bougainville (Drillingsblume)",
+  Briza:"griech. Name (Zittergras)", Brugmansia:"nach dem Botaniker S. Brugmans (Engelstrompete)",
+  Calla:"griech. ‚schön‘ (Sumpf-Calla)", Callistephus:"griech. ‚schöner Kranz‘ (Sommeraster)",
+  Calluna:"griech. ‚reinigen, kehren‘ (Besenheide)", Caltha:"lat./griech. Name (Sumpfdotterblume)",
+  Calycanthus:"griech. ‚Kelch-Blume‘ (Gewürzstrauch)", Carlina:"nach Karl dem Großen? (Eberwurz/Silberdistel)",
+  Catalpa:"aus einem indian. Namen (Trompetenbaum)", Celosia:"griech. ‚brennend‘ (Brandschopf/Hahnenkamm)",
+  Centranthus:"griech. ‚Sporn-Blume‘ (Spornblume)", Cerastium:"griech. ‚gehörnt‘ (Hornkraut, Kapselform)",
+  Cercidiphyllum:"griech. ‚Judasbaum-Blatt‘ (Kuchenbaum)", Chamaedorea:"griech. ‚niedrige Gabe‘ (Bergpalme)",
+  Chameacyparis:"griech. ‚Zwerg-Zypresse‘ (Scheinzypresse)", Chameacypris:"griech. ‚Zwerg-Zypresse‘ (Scheinzypresse)",
+  Choisya:"nach dem Botaniker J. D. Choisy (Orangenblume)", Cirsium:"griech. Distelname (Kratzdistel)",
+  Cissus:"griech. ‚Efeu‘ (Klimme)", Cobaea:"nach dem Missionar B. Cobo (Glockenrebe)",
+  Columnea:"nach dem Botaniker F. Colonna", Cordyline:"griech. ‚Keule‘ (Keulenlilie, Wurzeln)",
+  Coreopsis:"griech. ‚wanzenähnlich‘ (Mädchenauge, Samen)", Coriandrum:"griech. Name (Koriander)",
+  Cortaderia:"span. ‚schneiden‘ (Pampasgras, scharfe Blätter)", Corydalis:"griech. ‚Haubenlerche‘ (Lerchensporn)",
+  Corylopsis:"griech. ‚haselähnlich‘ (Scheinhasel)", Cupressus:"lat. für Zypresse",
+  Dasiphora:"griech. ‚dicht tragend‘ (Strauch-Fingerkraut)", Dendranthema:"griech. ‚Baum-Blume‘ (Garten-Chrysantheme)",
+  Dictamnus:"griech. Name (Diptam)", Diplotaxis:"griech. ‚doppelte Reihe‘ (Rauke/Rucola, Samen)",
+  Doronicum:"vom arab. Namen (Gämswurz)", Elymus:"griech. Getreidename (Quecke)",
+  Empetrum:"griech. ‚auf Steinen‘ (Krähenbeere)", Epipremnum:"griech. ‚auf Stämmen‘ (Efeutute)",
+  Equisetum:"lat. ‚Pferdehaar‘ (Schachtelhalm)", Eruca:"lat. Name (Salatrauke/Rucola)",
+  Eryngium:"griech. Name (Mannstreu/Edeldistel)", Eupatorium:"nach König Mithridates Eupator (Wasserdost)",
+  Eustoma:"griech. ‚schöner Mund‘ (Prärieenzian/Lisianthus)", Fagopyrum:"griech. ‚Buchen-Weizen‘ (Buchweizen)",
+  Fatsia:"vom japan. Namen (Zimmeraralie)", Filipendula:"lat. ‚Faden-hängend‘ (Mädesüß, Wurzelknöllchen)",
+  Foeniculum:"lat. ‚Heuchen‘ (Fenchel, Duft)", Gaillardia:"nach dem Förderer Gaillard de Marentonneau (Kokardenblume)",
+  Galinsoga:"nach dem Botaniker M. Galinsoga (Franzosenkraut)", Galium:"griech. ‚Milch‘ (Labkraut, gerinnt Milch)",
+  Gardenia:"nach dem Naturforscher A. Garden (Gardenie)", Gaultheria:"nach dem Arzt J.-F. Gaulthier (Scheinbeere)",
+  Globularia:"lat. ‚Kügelchen‘ (Kugelblume)", Gypsohila:"griech. ‚Gips liebend‘ (Schleierkraut)",
+  Gypsophila:"griech. ‚Gips liebend‘ (Schleierkraut)", Hamamelis:"griech. ‚zugleich mit Früchten‘ (Zaubernuss)",
+  Helictotrichon:"griech. ‚gedrehtes Haar‘ (Blauhafer)", Heliotropium:"griech. ‚Sonnenwende‘ (Vanilleblume)",
+  Hepatica:"lat. ‚Leber‘ (Leberblümchen, Blattform)", Hippophae:"griech. Name (Sanddorn)",
+  Hippuris:"griech. ‚Pferdeschwanz‘ (Tannenwedel)", Hyssopus:"griech./hebr. Name (Ysop)",
+  Iberis:"‚aus Iberien‘ (Schleifenblume)", Jasminum:"vom pers. ‚yasmin‘ (Jasmin)",
+  Kerria:"nach dem Gärtner W. Kerr (Ranunkelstrauch)", Koeleria:"nach dem Botaniker G. Koeler (Schillergras)",
+  Lagererstroemia:"nach dem Kaufmann M. von Lagerström (Kreppmyrte)", Lathyrus:"griech. Name (Platterbse/Wicke)",
+  Laurus:"lat. für Lorbeer", Leontopodium:"griech. ‚Löwenfüßchen‘ (Edelweiß)",
+  Lepidium:"griech. ‚Schüppchen‘ (Kresse, Früchte)", Levisticum:"aus lat. ligusticum (Liebstöckel)",
+  Liatris:"Herkunft unklar (Prachtscharte)", Lobelia:"nach dem Botaniker M. de l’Obel",
+  Lobularia:"lat. ‚kleine Schote‘ (Duftsteinrich)", Lolium:"lat. Name (Lolch/Weidelgras)",
+  Macleaya:"nach dem Zoologen A. Macleay (Federmohn)", Matthiola:"nach dem Arzt P. A. Mattioli (Levkoje)",
+  Medicago:"griech. ‚Kraut aus Medien‘ (Luzerne/Schneckenklee)", Melilotus:"griech. ‚Honig-Klee‘ (Steinklee)",
+  Melissa:"griech. ‚Biene‘ (Zitronenmelisse)", Mespilus:"griech./lat. Name (Mispel)",
+  Miscanthus:"griech. ‚Stiel-Blume‘ (Chinaschilf)", Mitchella:"nach dem Botaniker J. Mitchell (Rebhuhnbeere)",
+  Molinia:"nach dem Naturforscher J. I. Molina (Pfeifengras)", Monstera:"lat. ‚Ungeheuer‘ (Fensterblatt, große löchrige Blätter)",
+  Myosotis:"griech. ‚Mausohr‘ (Vergissmeinnicht)", Myrtus:"griech./lat. Name (Myrte)",
+  Nandina:"vom japan. ‚nanten‘ (Himmelsbambus)", Nasturtium:"lat. ‚Nasenzwinger‘ (Brunnenkresse, scharf)",
+  Nothofagus:"griech. ‚Schein-Buche‘ (Südbuche)", Nuphar:"vom arab. Namen (Teichrose)",
+  Oenothera:"griech. Name (Nachtkerze)", Omphalodes:"griech. ‚nabelähnlich‘ (Gedenkemein, Samen)",
+  Ophiopogon:"griech. ‚Schlangenbart‘ (Schlangenbart)", Pallenis:"griech. Name (Sternauge)",
+  Parrotia:"nach dem Naturforscher F. Parrot (Eisenholzbaum)", Parthenocissus:"griech. ‚Jungfern-Efeu‘ (Wilder Wein)",
+  Passiflora:"lat. ‚Passionsblume‘ (an die Passion Christi)", Pastinaca:"lat. Name (Pastinak)",
+  Paulownia:"nach der Zarentochter Anna Pawlowna (Blauglockenbaum)", Penstemon:"griech. ‚fünf Staubfäden‘ (Bartfaden)",
+  Pericallis:"griech. ‚ringsum schön‘ (Zineraria)", Photinia:"griech. ‚glänzend‘ (Glanzmispel)",
+  Phyllostachys:"griech. ‚Blatt-Ähre‘ (Flachrohrbambus)", Physostegia:"griech. ‚Blasen-Dach‘ (Gelenkblume)",
+  Pieris:"nach den Musen (Pieriden) (Lavendelheide/Schattenglöckchen)", Platycodon:"griech. ‚breite Glocke‘ (Ballonblume)",
+  Podocarpus:"griech. ‚Stiel-Frucht‘ (Steineibe)", Podophyllum:"griech. ‚Fuß-Blatt‘ (Fußblatt/Maiapfel)",
+  Polemonium:"griech. Name (Jakobsleiter/Himmelsleiter)", Polygonatum:"griech. ‚vielknotig‘ (Salomonssiegel, Rhizom)",
+  Polypodium:"griech. ‚Vielfuß‘ (Tüpfelfarn)", Pontederia:"nach dem Botaniker G. Pontedera (Hechtkraut)",
+  Prunella:"vom dt. ‚Bräune‘ (Braunelle, Heilpflanze)", Pulsatilla:"lat. ‚läuten‘ (Küchenschelle, glockig)",
+  Raphanus:"griech. ‚schnell keimend‘ (Rettich/Radieschen)", Rosmarinus:"lat. ‚Meertau‘ (Rosmarin)",
+  Sagina:"lat. ‚Mast, Futter‘ (Mastkraut)", Sagittaria:"lat. ‚Pfeil‘ (Pfeilkraut, Blattform)",
+  Sanguisorba:"lat. ‚Blut aufsaugend‘ (Wiesenknopf, blutstillend)", Sanvitalia:"nach der Familie Sanvitali (Husarenknopf)",
+  Satureja:"lat. Name (Bohnenkraut)", Scabiosa:"lat. ‚Krätze‘ (Skabiose, Heilpflanze)",
+  Scandosorbus:"Gattungshybride (× Sorbaronia-nah, Mehlbeere)", Sciadopitys:"griech. ‚Schirm-Fichte‘ (Schirmtanne)",
+  Scorzonera:"vom altfranz./ital. Namen (Schwarzwurzel)", Sinapis:"griech. Name (Senf)",
+  Sinningia:"nach dem Gärtner W. Sinning (Gloxinie)", Skimmia:"vom japan. ‚shikimi‘ (Skimmie)",
+  Sonchus:"griech. Name (Gänsedistel)", Sophora:"vom arab. Namen (Schnurbaum)",
+  Sparganium:"griech. ‚Band‘ (Igelkolben, Blätter)", Stellaria:"lat. ‚Stern‘ (Sternmiere, Blütenform)",
+  Stephanotis:"griech. ‚Kranz-Ohr‘ (Kranzschlinge)", Stipa:"griech. ‚Werg‘ (Federgras)",
+  Styphnolobium:"griech. ‚herbe Hülse‘ (Schnurbaum, früher Sophora)", Sutera:"nach dem Botaniker J. R. Suter (Schneeflockenblume)",
+  Symphytum:"griech. ‚zusammenwachsen‘ (Beinwell, heilt)", Tamarix:"lat. Name (Tamariske)",
+  Thlaspi:"griech. Name (Hellerkraut/Täschelkraut)", Thunbergia:"nach dem Botaniker C. P. Thunberg (Schwarzäugige Susanne)",
+  Tiarella:"griech. ‚kleiner Turban‘ (Schaumblüte, Fruchtform)", Trachycarpus:"griech. ‚raue Frucht‘ (Hanfpalme)",
+  Trollius:"vom dt. ‚Trollblume‘ (Trollblume)", Tropaeolum:"griech. ‚Siegeszeichen‘ (Kapuzinerkresse)",
+  Tsuga:"vom japan. Namen (Hemlocktanne)", Typha:"griech. Name (Rohrkolben)",
+  Vitis:"lat. für Weinrebe", Washingtonia:"nach G. Washington (Washingtonpalme)",
+  Zelkova:"vom kaukas. Namen (Zelkove)", Zinnia:"nach dem Botaniker J. G. Zinn (Zinnie)",
+});
+const CULTIVAR = new Set(["evergold","sunburst","herbstblüte","silberteppich","emerald","curry","stokes","bluecarpet","bluestar","maigrün","koster","bluegem","smaragd","hancock","vesuv","der","little","sec","max"]);   // klein geschriebene Sorten-/Handelsnamen im Art-Feld
+
+// ---- Glossierung ----
+function stripEnd(w){ return String(w).toLowerCase().replace(/[.,;)('"«»]+$/,"").replace(/^[.,;)('"«»-]+/,""); }
+function latGloss(word){
+  let w = stripEnd(word);
+  if(!w || w.length<3) return null;
+  w = w.replace(/-(gruppe|grp|group|gp)$/,"");            // Sorten-Gruppen-Suffix (»belladonna-gruppe«)
+  if(LAT_EPI[w]) return LAT_EPI[w];
+  // Kompositum: bekannte Nachsilbe + bekanntes Vorderteil
+  for(const suf in LAT_SUF){
+    if(w.length>suf.length+2 && w.endsWith(suf)){
+      let pre = w.slice(0, -suf.length).replace(/[io]$/,m=>m);   // Bindevokal behalten
+      if(LAT_PRE[pre]) return LAT_PRE[pre]+LAT_SUF[suf];
+      // Bindevokal wegnehmen und erneut prüfen (angustifolia: angusti|folia; latifolia: lati|folia)
+      const pre2 = w.slice(0, -suf.length).replace(/[io]$/,"");
+      if(LAT_PRE[pre2]) return LAT_PRE[pre2]+LAT_SUF[suf];
+    }
+  }
+  // Struktur-Fallback (nur wenn nichts Konkretes passt) – ehrliche Einordnung des Bestandteils:
+  if(CULTIVAR.has(w)) return "Sorten-/Handelsname";
+  if(/(ii|iana|ianus|ianum|iae|iorum)$/.test(w)) return "nach einer Person benannt (Widmung)";
+  if(/(ensis|ense)$/.test(w))                    return "nach einem Fundort/einer Region benannt";
+  if(/(oides|odes)$/.test(w))                    return "…-ähnlich, -artig";
+  return null;
+}
+const RANK = new Set(["var","ssp","subsp","cv","convar","sect","grp","group","gruppe",
+  "cultivars","cultivar","sorten","sorte","hybriden","hybride","aggr","agg","nothosubsp"]);
+function nameEtymology(g, a){
+  const parts = [], seen = new Set();
+  const gk = String(g||"").replace(/-Hybride[nr]?$/i,"").trim();   // »Fuchsia-Hybriden« → Basisgattung »Fuchsia«
+  if(g && LAT_GEN[g]) parts.push({ t:g, d:LAT_GEN[g] });
+  else if(gk && gk!==g && LAT_GEN[gk]) parts.push({ t:gk, d:LAT_GEN[gk] });
+  for(const raw of String(a||"").split(/\s+/)){
+    const w = stripEnd(raw);
+    if(!w || w.length<3 || seen.has(w) || RANK.has(w.toLowerCase()) || /[^a-zäöüß-]/.test(w)) continue;
+    if(/^[A-ZÄÖÜ]/.test(raw)) continue;              // Sortennamen (großgeschrieben) auslassen
+    const d = latGloss(w);
+    if(d){ parts.push({ t:w, d }); seen.add(w); }    // Autonyme (montanum subsp. montanum) nicht doppeln
+  }
+  return parts;
+}
+
+function deepLinks(c){
+  const full = encodeURIComponent(norm(c.g+" "+c.a));  // Wikipedia: FEIN – exakter Name inkl. Sorte/Unterart (Wikipedia löst das auf und 404t nie)
+  const q = encodeURIComponent(searchName(c));          // andere Quellen: GROB – reines Binom (zu fein → oft 0 Treffer/404; mehrere Treffer sind hier ok)
+  // Nur neutrale, nicht-kommerzielle Nachschlagequellen. Wikipedia (immer, fein),
+  // NaturaDB (immer, deckt auch Gehölze gut ab), iNaturalist (immer).
+  return [
+    { n:"Wikipedia",   u:"https://de.wikipedia.org/wiki/Spezial:Suche?search="+full },
+    { n:"NaturaDB",    u:"https://www.naturadb.de/suche/?q="+q },
+    { n:"iNaturalist", u:"https://www.inaturalist.org/taxa/search?q="+q+"&locale=de" }
+  ];
+  // Bewusst NICHT verlinkt: Gaißmayer (kommerzieller Shop – gehört nicht in ein
+  // neutrales Lern-/Prüfungswerkzeug), Baumkunde (konstant HTTP 403), InfoFlora
+  // (nur CH-Wildflora, keine GET-Suche).
+}
+
+// ---- Wikipedia-Anreicherung (opt-in, JSONP) ----
+const wikiCache = new Map();   // card.key -> {title,extract,thumb,url} | null (nicht gefunden)
+let __wpN = 0;
+/* Generischer JSONP-Aufruf (dynamisches <script>, kein fetch/XHR): hängt den
+   Callback-Namen an die übergebene URL an. Wird von der Text-Anreicherung UND
+   vom Bilder-Quiz genutzt. */
+function jsonpGet(url){
+  return new Promise((resolve,reject)=>{
+    const cb = "__wpcb"+(++__wpN);
+    const sc = document.createElement("script");
+    let done = false;
+    const cleanup = ()=>{ try{ delete window[cb]; }catch(e){ window[cb]=undefined; } if(sc.parentNode) sc.parentNode.removeChild(sc); };
+    const to = setTimeout(()=>{ if(done) return; done=true; cleanup(); reject(new Error("timeout")); }, 7000);
+    window[cb] = d=>{ if(done) return; done=true; clearTimeout(to); cleanup(); resolve(d); };
+    sc.onerror = ()=>{ if(done) return; done=true; clearTimeout(to); cleanup(); reject(new Error("network")); };
+    sc.src = url + "&callback=" + cb;
+    document.head.appendChild(sc);
+  });
+}
+function wikiJSONP(title){
+  return jsonpGet("https://de.wikipedia.org/w/api.php?action=query&format=json&prop=extracts%7Cpageimages"+
+    "&exintro=1&explaintext=1&piprop=thumbnail&pithumbsize=320&redirects=1&titles="+encodeURIComponent(title));
+}
+function wikiFirstPage(d){
+  const pg = d && d.query && d.query.pages; if(!pg) return null;
+  const k = Object.keys(pg)[0]; if(!k || k==="-1") return null;
+  const p = pg[k]; return (p && p.missing===undefined && p.extract) ? p : null;
+}
+function shortenExtract(t){
+  t = norm(t); if(t.length<=520) return t;
+  const cut = t.slice(0,520), dot = cut.lastIndexOf(". ");
+  return (dot>300 ? cut.slice(0,dot+1) : cut)+" …";
+}
+function renderWiki(host, d){
+  host.innerHTML =
+    (d.thumb ? `<img src="${esc(d.thumb)}" alt="${esc(d.title)}" loading="lazy">` : "")+
+    `<div class="wp-text">${esc(d.extract)}</div>`+
+    `<div class="wp-src">Quelle: <a href="${esc(d.url)}" target="_blank" rel="noopener">Wikipedia – ${esc(d.title)}</a> · Text unter CC BY-SA</div>`;
+}
+/* Deutsche Namen als Wikipedia-Artikeltitel. Die Listen schreiben Komposita mit
+   Bindestrich (»Steck-Rübe«, »Kohl- / Steck-Rübe«); Wikipedia löst den Bindestrich
+   NICHT auf (»Steck-Rübe« → nichts, »Steckrübe« → Treffer). Darum jeden Namen
+   zusätzlich OHNE Bindestrich/Leerzeichen anbieten und die geteilten Grundwörter
+   auflösen (»Kohl-« + »…-Rübe« → »Kohlrübe«). */
+function deArticleTitles(card){
+  const out=[], seen=new Set();
+  const push=s=>{ s=norm(String(s)).replace(/^[-\s]+|[-\s]+$/g,"");
+    const dehy=s.replace(/-\s*(.)/g,(_,c)=>c.toLowerCase());   // »Steck-Rübe« → »Steckrübe« (Wikipedia löst Bindestriche nicht auf)
+    for(const v of [s, dehy]){
+      const k=v.toLowerCase(); if(v && !seen.has(k)){ seen.add(k); out.push(v); } } };
+  for(const part of (card.de||"").split(/[,;]/)){
+    const clean0 = part.replace(/\([^)]*\)/g,"");        // »(Arznei-)Engelwurz« → ohne Klammern
+    const segs = clean0.split("/").map(norm).filter(Boolean);
+    if(segs.length<2){ push(clean0); continue; }
+    const last = segs[segs.length-1];                    // »Steck-Rübe«
+    push(last);
+    const tail = last.split(/[-\s]/).pop().toLowerCase();// »rübe«
+    for(const sg of segs.slice(0,-1)) push(sg.replace(/-$/,"")+tail);   // »Kohl«+»rübe« → »Kohlrübe«
+  }
+  return out;
+}
+/* Kandidaten in sinnvoller Reihenfolge – bewusst OHNE bloße Gattung (»Beta«,
+   »Iris« sind auf Wikipedia mehrdeutig). Wichtig bei UNTERARTEN/Varietäten: das
+   reine Binom ist die ELTERNart und damit eine ANDERE Pflanze – »Brassica napus«
+   ist Raps, die Steckrübe (ssp. rapifera) hat einen eigenen Artikel. Dort zeigt
+   das Binom das Falsche; deshalb bei infraspezifischen Namen der DEUTSCHE Name
+   zuerst und das bloße Binom weglassen. Bei reinen Arten und Sorten-Gruppen bleibt
+   das Binom (»Beta vulgaris« → »Rübe«) ein guter Treffer. */
+function wikiCandidates(card){
+  const cands=[], seen=new Set();
+  const add=s=>{ s=norm(s); if(s && !seen.has(s.toLowerCase())){ seen.add(s.toLowerCase()); cands.push(s); } };
+  const de = deArticleTitles(card);
+  const inf = infraEpithet(card.a);
+  const autonym = inf && inf===binomEpithet(card.a);   // »Cornus kousa subsp. kousa« = die Art selbst
+  add(card.g+" "+card.a);                               // voller Name (z. B. mit Sorte/Gruppe)
+  if(inf && !autonym){                                  // ANDERE Unterart: Binom = Elternart (Raps) → nur deutscher Name
+    de.forEach(add);
+  }else{                                                // Art oder Autonym: Binom ist dieselbe Pflanze (unverändert)
+    add(searchName(card));                              // reines Binom zuerst (eindeutig)
+    de.forEach(add);
+  }
+  return cands;
+}
+async function loadWiki(card, host, btn){
+  if(navigator.onLine===false){
+    host.innerHTML='<div class="wp-note">Offline – für Online-Infos ist Internet nötig. Die Links oben funktionieren, sobald du online bist.</div>'; return;
+  }
+  btn.disabled=true; btn.textContent="lädt …";
+  let pg=null, hadResponse=false;
+  for(const t of wikiCandidates(card)){
+    try{ const d=await wikiJSONP(t); hadResponse=true; pg=wikiFirstPage(d); if(pg) break; }
+    catch(e){ /* Netzfehler/Timeout – nächster Versuch (hadResponse ggf. false) */ }
+  }
+  if(!pg){
+    if(hadResponse){                                    // echte „nicht gefunden" – cachen, Knopf weg
+      wikiCache.set(card.key, null);
+      host.innerHTML='<div class="wp-note">Kein deutscher Wikipedia-Artikel gefunden. Die Links oben führen dich weiter.</div>';
+      if(btn.parentNode) btn.remove();
+    } else {                                            // offline/blockiert – nicht cachen, Wiederholung anbieten
+      host.innerHTML='<div class="wp-note">Online-Infos konnten nicht geladen werden (offline oder blockiert). Die Links oben funktionieren weiterhin.</div>';
+      btn.disabled=false; btn.textContent="🌐 Erneut versuchen";
+    }
+    return;
+  }
+  const data = { title:pg.title, extract:shortenExtract(pg.extract),
+    thumb: pg.thumbnail && pg.thumbnail.source,
+    url: "https://de.wikipedia.org/wiki/"+encodeURIComponent(pg.title.replace(/ /g,"_")) };
+  wikiCache.set(card.key, data); renderWiki(host, data); if(btn.parentNode) btn.remove();
+}
+
+// ---- infraspezifisches Epitheton (für die Wikipedia-Kandidaten) ----
+const INFRA_RE = /\b(?:var|subsp|ssp|convar|f|cv)\.\s*([a-zäöüß][a-zäöüß-]{2,})/i;
+function infraEpithet(a){ const m = INFRA_RE.exec(norm(a||"")); return m ? m[1].toLowerCase() : ""; }
+
+// ---- Modal (eigener Namensraum .infoscrim/.infobox) ----
+let infoEl=null, infoReturnFocus=null;
+function infoKey(e){
+  if(e.key==="Escape"){ closeInfo(); return; }
+  if(e.key==="Tab" && infoEl){                                   // Fokus im Dialog halten (Fokusfalle)
+    const f=[...infoEl.querySelectorAll('a[href],button:not([disabled]),input,select,[tabindex]:not([tabindex="-1"])')].filter(x=>x.offsetParent!==null);
+    if(!f.length) return;
+    const first=f[0], last=f[f.length-1];
+    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+  }
+}
+function closeInfo(){ if(infoEl){ infoEl.remove(); infoEl=null; document.removeEventListener("keydown", infoKey);
+  if(infoReturnFocus && infoReturnFocus.focus){ try{ infoReturnFocus.focus(); }catch(e){} } infoReturnFocus=null; } }
+function openInfo(card){
+  if(!card) return;
+  closeInfo();
+  const links = deepLinks(card).map(l=>
+    `<a href="${esc(l.u)}" target="_blank" rel="noopener">${esc(l.n)}<span class="ext">↗</span></a>`).join("");
+  const fam = [card.fam, card.thema].filter(Boolean).join(" · ");
+  const ety = nameEtymology(card.g, card.a);                       // Namensherleitung (Merkhilfe, offline)
+  // Standardmäßig aufgeklappt; klappt man sie zu, merkt sich das Gerät den Zustand
+  // global – alle folgenden Infokarten öffnen dann zugeklappt (und umgekehrt).
+  const etyOpen = store.get(LS_PREFIX+"etyopen")!=="0";
+  const etyHTML = ety.length ? `<details class="etym"${etyOpen?" open":""}>
+       <summary><span class="etym-ic" aria-hidden="true">📖</span> Name-Herkunft · Merkhilfe</summary>
+       <ul class="etym-list">${ety.map(p=>`<li><i>${esc(p.t)}</i> — ${esc(p.d)}</li>`).join("")}</ul>
+       <div class="etym-note">Kurzherleitung (Latein/Griechisch → Deutsch), kuratiert – ohne Gewähr.</div>
+     </details>` : "";
+  const scrim = el("div","infoscrim"); scrim.id="infoScrim";
+  scrim.innerHTML = `<div class="infobox" role="dialog" aria-modal="true" aria-label="Pflanzen-Info">
+     <button class="infobox-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <div class="modal-head">
+       <div class="mh-bot">${esc(norm(card.g+" "+card.a))}</div>
+       ${card.de?`<div class="mh-de">${esc(card.de)}</div>`:""}
+       ${fam?`<div class="mh-fam">${esc(fam)}</div>`:""}
+     </div>
+     ${etyHTML}
+     <div class="srcblock">
+       <div class="srclabel">Nachschlagen · öffnet neuen Tab</div>
+       <div class="srcgrid">${links}</div>
+     </div>
+     <div class="wpblock">
+       <button class="btn primary" id="wpLoad" title="Kurztext und Bild von der deutschen Wikipedia laden (nur online)">🌐 Online-Infos laden (Wikipedia)</button>
+       <div class="wphost" id="wpHost"></div>
+     </div>
+   </div>`;
+  document.body.appendChild(scrim); infoEl=scrim;
+  scrim.addEventListener("click", e=>{ if(e.target===scrim) closeInfo(); });
+  const etyD = scrim.querySelector("details.etym");                // Auf-/Zuklappen global merken
+  if(etyD) etyD.addEventListener("toggle", ()=>store.set(LS_PREFIX+"etyopen", etyD.open?"1":"0"));
+  $("#infoClose").onclick = closeInfo;
+  const host = scrim.querySelector("#wpHost"), btn = scrim.querySelector("#wpLoad");
+  const cached = wikiCache.get(card.key);
+  if(cached){ renderWiki(host, cached); btn.remove(); }
+  else if(cached===null){ host.innerHTML='<div class="wp-note">Kein deutscher Wikipedia-Artikel gefunden. Die Links oben führen dich weiter.</div>'; btn.remove(); }
+  else btn.onclick = ()=>loadWiki(card, host, btn);
+  document.addEventListener("keydown", infoKey);
+  infoReturnFocus = document.activeElement;                       // Fokus nach dem Schließen zurückgeben
+  try{ $("#infoClose").focus(); }catch(e){}
 }
 
 /* ============================================================
@@ -2270,9 +3373,12 @@ function wire(){
   document.querySelectorAll(".pclose").forEach(b=>b.onclick=()=>{ b.closest(".scrim").classList.remove("open"); syncPanelButtons(); });
   // Scrim-Klick schließt das jeweilige Modal
   document.querySelectorAll(".scrim").forEach(s=>s.addEventListener("mousedown",e=>{ if(e.target===s){ s.classList.remove("open"); selectNewAfterSave=false; syncPanelButtons(); } }));
-  // Escape schließt nur das oberste offene Modal
+  // Escape schließt nur das oberste offene Modal. Das Info-Modal (.infoscrim) liegt
+  // darüber und bringt sein eigenes Esc mit (infoKey → closeInfo) – solange es offen
+  // ist, fasst dieser Handler die Panels nicht an (sonst schlösse ein Esc beides).
   document.addEventListener("keydown",e=>{
     if(e.key!=="Escape") return;
+    if(document.querySelector(".infoscrim")) return;
     const open=[...document.querySelectorAll(".scrim.open")];
     if(open.length){ open[open.length-1].classList.remove("open"); selectNewAfterSave=false; syncPanelButtons(); }
   });
