@@ -396,6 +396,17 @@ async function main() {
   assert(!wc.some((t) => /^beta$/i.test(t)),
     "Wiki-Kandidaten dürfen NICHT die bloße Gattung »Beta« enthalten (griech. Buchstabe): " + JSON.stringify(wc));
 
+  // Reiner Sammel-/Sorteneintrag OHNE Art-Epitheton (»Solidago Cultivars«): es gibt keinen
+  // Artartikel → die bloße Gattung MUSS als Kandidat rein (dt. Wikipedia: Solidago → Goldruten).
+  const wcGrp = await page.evaluate(() =>
+    wikiCandidates({ g: "Solidago", a: "Cultivars", de: "Goldruten - Arten" }));
+  assert(wcGrp.some((t) => /^solidago$/i.test(t)),
+    "Bei einem reinen Sorteneintrag (»Solidago Cultivars«) muss die Gattung »Solidago« als Kandidat enthalten sein: " + JSON.stringify(wcGrp));
+  const wcHyb = await page.evaluate(() =>
+    wikiCandidates({ g: "Aubrieta", a: "- Hybriden", de: "Blaukissen" }));
+  assert(wcHyb.some((t) => /^aubrieta$/i.test(t)),
+    "Auch »Aubrieta - Hybriden« muss die Gattung als Kandidat führen: " + JSON.stringify(wcHyb));
+
   // Granularität: Wikipedia FEIN (voller Name), andere Quellen GROB (reines Binom)
   const gran = await page.evaluate(() => {
     const c = allCards.find((x) => /grp\.|convar\.|'/i.test(x.a));

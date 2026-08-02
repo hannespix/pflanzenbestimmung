@@ -1972,6 +1972,14 @@ function deArticleTitles(card){
    das Binom das Falsche; deshalb bei infraspezifischen Namen der DEUTSCHE Name
    zuerst und das bloße Binom weglassen. Bei reinen Arten und Sorten-Gruppen bleibt
    das Binom (»Beta vulgaris« → »Rübe«) ein guter Treffer. */
+// Reiner Sammel-/Sorteneintrag OHNE echtes Art-Epitheton ("Solidago Cultivars",
+// "Aubrieta - Hybriden"): kein Taxon, also gibt es keinen Artartikel. Abgrenzung zu
+// "Beta vulgaris Conditiva-Grp." (echtes Epitheton »vulgaris« → Binom findet die Art).
+const GROUP_WORD = /^(cultivars?|hybriden?|sorten|grp\.?|gruppe|group|hort\.?)$/i;
+function pureGroupName(a){
+  const ep = binomEpithet(a);
+  return !ep || GROUP_WORD.test(ep) || !/^[a-zäöü]/.test(ep);   // kein kleingeschriebenes Art-Epitheton
+}
 function wikiCandidates(card){
   const cands=[], seen=new Set();
   const add=s=>{ s=norm(s); if(s && !seen.has(s.toLowerCase())){ seen.add(s.toLowerCase()); cands.push(s); } };
@@ -1979,7 +1987,10 @@ function wikiCandidates(card){
   const inf = infraEpithet(card.a);
   const autonym = inf && inf===binomEpithet(card.a);   // »Cornus kousa subsp. kousa« = die Art selbst
   add(card.g+" "+card.a);                               // voller Name (z. B. mit Sorte/Gruppe)
-  if(inf && !autonym){                                  // ANDERE Unterart: Binom = Elternart (Raps) → nur deutscher Name
+  if(pureGroupName(card.a)){                            // Sammel-/Sorteneintrag: keine Art → Gattung ist das beste Ziel
+    de.forEach(add);                                    // deutscher (Sammel-)Name, z. B. »Goldrute«
+    add(card.g);                                        // bloße Gattung – dt. Wikipedia löst »Solidago« → »Goldruten« auf
+  }else if(inf && !autonym){                            // ANDERE Unterart: Binom = Elternart (Raps) → nur deutscher Name
     de.forEach(add);
   }else{                                                // Art oder Autonym: Binom ist dieselbe Pflanze (unverändert)
     add(searchName(card));                              // reines Binom zuerst (eindeutig)
