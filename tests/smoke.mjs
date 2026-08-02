@@ -191,18 +191,31 @@ async function main() {
   assert(modalA11y.focusInside, "Beim Öffnen muss der Fokus ins Modal wandern: " + JSON.stringify(modalA11y));
   assert(modalA11y.toastLive === "polite", "Toast muss eine aria-live-Region sein: " + JSON.stringify(modalA11y));
 
-  // Herbarium 2.0: Hell/Dunkel-Umschalter setzt data-theme und merkt die Wahl
+  // Hell/Dunkel-Umschalter setzt data-theme und merkt die Wahl. Sitzt jetzt in der
+  // »Verwaltung« (Gruppe »Ansicht«) statt im Kopf – Delegation auf .themetoggle.
   const themeT = await page.evaluate(() => {
-    const b = document.querySelector("#btnTheme");
+    const b = document.querySelector(".themetoggle");
     if (!b) return { has: false };
     b.click();
     const afterOne = document.documentElement.dataset.theme, saved = localStorage.getItem("pbw.theme");
     b.click();
     const afterTwo = document.documentElement.dataset.theme;
-    return { has: true, afterOne, saved, afterTwo };
+    // Kopf: Startseite-Link statt Prüfungs-/Lernversion, Hilfe dezent, kein Theme-Knopf im Kopf
+    const home = document.querySelector(".mast-right .homelink");
+    return {
+      has: true, afterOne, saved, afterTwo,
+      homeHref: home ? home.getAttribute("href") : null,
+      noLernlink: !document.querySelector('.mast-right a[href="pflanzen-lernen.html"]'),
+      helpDezent: !!document.querySelector(".mast-right .helplink#btnHelp"),
+      toggleInHead: !!document.querySelector(".mast-right .themetoggle, .mast-right #btnTheme")
+    };
   });
   assert(themeT.has && themeT.afterOne === "dark" && themeT.saved === "dark" && themeT.afterTwo === "light",
     "Theme-Umschalter muss dunkel/hell wechseln und die Wahl speichern: " + JSON.stringify(themeT));
+  assert(themeT.homeHref === "index.html" && themeT.noLernlink,
+    "Kopf muss einen »Startseite«-Link (index.html) statt Lernversion tragen: " + JSON.stringify(themeT));
+  assert(themeT.helpDezent && !themeT.toggleInHead,
+    "»Hilfe« muss dezent im Kopf stehen, der Design-Umschalter aus dem Kopf raus (in die Verwaltung): " + JSON.stringify(themeT));
 
   // 1c) Hilfe-Modal öffnet mit Inhalt und markiert seinen Button; Tooltips vorhanden
   const help = await page.evaluate(() => {
