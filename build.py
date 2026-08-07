@@ -5,9 +5,10 @@ Build-Skript – erzeugt aus den Quellen vollständig offline lauffähige HTML-D
 
 Aufruf:  python3 build.py
 Ergebnisse:
-  dist/index.html              Startseite (verzweigt zu Lernen / Prüfen)
+  dist/index.html              Lern-Tool (Azubis) – die Wurzel pflanze-bw.de führt direkt hierher
+  dist/pflanzen-lernen.html    dasselbe Lern-Tool unter sprechendem Namen (Altlinks/PWA)
   dist/pflanzenkenntnis.html   Prüfungswerkzeug (für Prüfende)
-  dist/pflanzen-lernen.html    Lern-Tool (für Azubis)
+  dist/pruefung/index.html     hübsche Adresse pflanze-bw.de/pruefung → Prüfungswerkzeug
   dist/rechtliches.html        Impressum & Datenschutz (statisch)
   + versionierte Verteilkopien aller Dateien im Repo-Root
 """
@@ -42,18 +43,40 @@ def render(tpl, app, seeds_json, xlsx=None):
             print(f"FEHLER: Platzhalter {ph} nicht ersetzt", file=sys.stderr); sys.exit(1)
     return out
 
-def render_landing(tpl, stats):
-    # Statische Startseite: nur die Kennzahl der gemeinsamen Datenbank einsetzen.
-    out = tpl.replace("/*__STATS__*/", stats)
-    if "__STATS__" in out:
-        print("FEHLER: Platzhalter __STATS__ nicht ersetzt", file=sys.stderr); sys.exit(1)
-    return out
+# Hübsche Adresse für die Prüfenden: pflanze-bw.de/pruefung
+# Kein Server-Rewrite nötig – ein Unterverzeichnis mit index.html, das auf die
+# echte Datei weiterleitet. Damit bleibt pflanzenkenntnis.html die eine Quelle
+# (PWA/Service-Worker/relative Links unverändert). Rein relativ und ohne externe
+# Ressourcen, damit der Offline-Check grün bleibt.
+PRUEFUNG_REDIRECT = """<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Prüfungswerkzeug · Pflanzenkenntnis</title>
+<meta http-equiv="refresh" content="0; url=../pflanzenkenntnis.html">
+<style>body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:#eceee6;color:#22352b;
+display:flex;min-height:100vh;margin:0;align-items:center;justify-content:center;text-align:center;padding:24px}
+a{color:#2b4f38}</style>
+</head>
+<body>
+<p>Das Prüfungswerkzeug wird geladen …<br>
+<a href="../pflanzenkenntnis.html">Weiter zum Prüfungswerkzeug</a></p>
+<script>location.replace("../pflanzenkenntnis.html");</script>
+</body>
+</html>
+"""
 
-def write_out(out, name):
+def write_out(out, name, root_copy=True):
     dist = ROOT / "dist"; dist.mkdir(exist_ok=True)
-    (dist / name).write_text(out, encoding="utf-8")
-    # Verteilkopie im Repo-Root: versioniert, direkt aus GitHub herunterladbar
-    (ROOT / name).write_text(out, encoding="utf-8")
+    target = dist / name
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(out, encoding="utf-8")
+    # Verteilkopie im Repo-Root: versioniert, direkt aus GitHub herunterladbar.
+    # (Nur für die eigenständigen Werkzeuge – die Weiterleitung ist reines Deploy-Beiwerk.)
+    if root_copy:
+        (ROOT / name).write_text(out, encoding="utf-8")
     kb = round(len(out.encode("utf-8")) / 1024)
     print(f"OK  dist/{name}  ({kb} KB)")
 
@@ -93,18 +116,22 @@ def main():
                   xlsx=read("lib/xlsx.full.min.js"))
     write_out(exam, "pflanzenkenntnis.html"); outputs.append(exam)
 
-    # Lern-Tool (kein Excel-Import → ohne SheetJS)
+    # Hübsche Adresse pflanze-bw.de/pruefung → leitet auf das Prüfungswerkzeug weiter
+    write_out(PRUEFUNG_REDIRECT, "pruefung/index.html", root_copy=False)
+    outputs.append(PRUEFUNG_REDIRECT)
+
+    # Lern-Tool (kein Excel-Import → ohne SheetJS). Es ist zugleich die Startseite:
+    # pflanze-bw.de führt DIREKT zum Lern-Tool (Zielgruppe Azubis). Das
+    # Prüfungswerkzeug ist bewusst nur über seine eigene Adresse erreichbar
+    # (pflanze-bw.de/pruefung bzw. /pflanzenkenntnis.html) – Azubis sollen es
+    # gar nicht erst zu sehen bekommen. Beide Namen tragen dieselbe Datei, damit
+    # bestehende Links, Lesezeichen und die PWA-Verknüpfung weiter funktionieren.
     if (ROOT / "src/learn.html").exists() and (ROOT / "src/learn.js").exists():
         learn = render(read("src/learn.html"), read("src/learn.js"), seeds_json)
         write_out(learn, "pflanzen-lernen.html"); outputs.append(learn)
+        write_out(learn, "index.html")          # Wurzel = Lern-Tool (gleiche Datei)
 
     total = sum(len(v) for v in seeds.values())
-
-    # Gemeinsame Startseite (verzweigt zu Lernen / Prüfen); nur wenn beide Ziele existieren
-    if (ROOT / "src/start.html").exists():
-        stats = f"{len(seeds)} Profile · {total} Arten"
-        landing = render_landing(read("src/start.html"), stats)
-        write_out(landing, "index.html"); outputs.append(landing)
 
     # Impressum & Datenschutz (statische Seite, keine Seeds/JS)
     if (ROOT / "src/recht.html").exists():

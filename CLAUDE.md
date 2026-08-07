@@ -50,31 +50,36 @@ Bitte alle Antworten und Commit-/PR-Texte **auf Deutsch**.
 
 ## Architektur & Datenfluss
 
-Aus **einer** gemeinsamen Pflanzendatenbank (`seeds/`) werden **vier** eigenständige
-Offline-Dateien gebaut — eine Startseite, die zwei Werkzeuge und eine statische
-Rechtliches-Seite (Impressum & Datenschutz):
+Aus **einer** gemeinsamen Pflanzendatenbank (`seeds/`) werden zwei Werkzeuge und eine
+statische Rechtliches-Seite gebaut. **Die Wurzel `pflanze-bw.de` ist das Lern-Tool** —
+eine verzweigende Startseite gibt es bewusst **nicht mehr**:
 
 ```
-src/start.html  ──────────────► dist/index.html            Startseite (verzweigt zu Lernen/Prüfen)
-                                 (start.html + Kennzahlen, statisch, ohne Seeds)
-
                           ┌────► dist/pflanzenkenntnis.html  Prüfungswerkzeug (Prüfende)
 seeds/*.json  ────────────┤      (template.html + app.js  + Seeds + SheetJS inline)
-src/{template,app}.js  ───┤
+src/{template,app}.js  ───┤      + dist/pruefung/index.html  hübsche Adresse /pruefung (Weiterleitung)
 src/{learn.html,learn.js} ┼────► dist/pflanzen-lernen.html   Lern-Tool (Azubis)
-lib/xlsx.full.min.js  ────┘      (learn.html    + learn.js + Seeds, OHNE SheetJS)
+lib/xlsx.full.min.js  ────┘      dist/index.html             DASSELBE Lern-Tool (= Wurzel)
+                                 (learn.html    + learn.js + Seeds, OHNE SheetJS)
 
 src/recht.html  ──────────────► dist/rechtliches.html      Impressum & Datenschutz
-                                 (statisch, ohne Seeds/JS; von allen Seiten verlinkt)
-                → build.py schreibt alle vier Dateien + versionierte Root-Kopien
+                                 (statisch, ohne Seeds/JS; von beiden Werkzeugen verlinkt)
+                → build.py schreibt alle Dateien + versionierte Root-Kopien
 ```
 
-**Startseite** (`index.html`) — gemeinsamer Einstieg, verzweigt zu **Lernen**
-(`pflanzen-lernen.html`) und **Prüfen** (`pflanzenkenntnis.html`); die beiden Tools
-sind zusätzlich direkt untereinander verlinkt:
-- **`src/start.html`** — statische Seite mit dem Platzhalter `/*__STATS__*/`
-  (von `build.py` durch die Kennzahl der Datenbank ersetzt, z. B. »14 Profile ·
-  2114 Arten«). Keine Seeds, kein JS. Baut nur, wenn `src/start.html` existiert.
+**Zugänge (bewusst getrennte Zielgruppen):**
+- **Azubis:** `pflanze-bw.de` → direkt das **Lern-Tool**. Es ist eine **Sackgasse**:
+  Es verlinkt **nirgends** auf das Prüfungswerkzeug (nur Impressum/Datenschutz in der
+  Fußzeile, gesetzlich nötig). Azubis sollen das Prüfungswerkzeug gar nicht erst sehen.
+- **Prüfende:** `pflanze-bw.de/pruefung` (oder direkt `/pflanzenkenntnis.html`).
+  Von dort führt ein Link **»Lernversion →«** zum Lern-Tool — der Weg geht also nur
+  in **eine** Richtung.
+- `index.html` und `pflanzen-lernen.html` tragen **dieselbe** Datei (Altlinks,
+  Lesezeichen und die PWA-Verknüpfung bleiben gültig).
+- `dist/pruefung/index.html` ist eine winzige **Weiterleitung** auf
+  `../pflanzenkenntnis.html` (kein Server-Rewrite nötig; die echte Datei bleibt die
+  eine Quelle, PWA/Service-Worker und relative Links unverändert). Sie wird **nicht**
+  als Root-Kopie ins Repo geschrieben – reines Deploy-Beiwerk.
 
 **Prüfungswerkzeug** (`pflanzenkenntnis.html`):
 - **`src/template.html`** — HTML-Gerüst, gesamtes CSS und die Platzhalter
@@ -111,7 +116,8 @@ Zur **Laufzeit** hält das Tool die Daten pro Profil getrennt:
 
 ```bash
 python3 build.py                                         # -> alle vier dist/*.html + Root-Kopien
-python3 tools/check_offline.py dist/index.html             # Offline-Check Startseite (muss grün sein)
+python3 tools/check_offline.py dist/index.html             # Offline-Check Wurzel = Lern-Tool (muss grün sein)
+python3 tools/check_offline.py dist/pruefung/index.html    # Weiterleitung /pruefung
 python3 tools/check_offline.py dist/pflanzenkenntnis.html  # dito Prüfungswerkzeug
 python3 tools/check_offline.py dist/pflanzen-lernen.html   # dito Lern-Tool
 python3 tools/check_offline.py dist/rechtliches.html       # dito Impressum & Datenschutz
@@ -122,7 +128,6 @@ Node (Konverter und Tests):
 ```bash
 node tools/xlsx_to_seed.mjs <excel> <profil-id> [--sheet "Blattname"]
 bash tools/rebuild_seeds.sh            # alle Seeds aus data/<id>.<ext> neu erzeugen
-node tests/start.mjs                    # Puppeteer-Smoke Startseite (Verzweigung)
 node tests/smoke.mjs                    # Puppeteer-Smoke Prüfungswerkzeug (npm test)
 node tests/learn.mjs                    # Puppeteer-Smoke Lern-Tool
 node tests/pwa.mjs                      # PWA: Manifest + Service Worker + Offline-Cache
@@ -1168,6 +1173,26 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       weiterhin nur im Lern-Tool). `tests/smoke.mjs` prüft: ℹ öffnet aus Liste **und**
       Aktueller Prüfung, Namensherleitung + drei Deep-Links + Wikipedia-Knopf vorhanden,
       kein `.scrim`-Panel geöffnet (Namensraum-Trennung), Schließen per ×/Esc.
+
+- [x] **Wurzel ist das Lern-Tool, Startseite entfällt, getrennte Zugänge.** Auf Wunsch führt
+      **pflanze-bw.de jetzt direkt zum Lern-Tool** (Zielgruppe Azubis); die verzweigende
+      Startseite (`src/start.html`, `tests/start.mjs`) ist **entfallen**. Prüfende
+      erreichen ihr Werkzeug über die hübsche Adresse **`pflanze-bw.de/pruefung`**
+      (`dist/pruefung/index.html` = winzige Weiterleitung auf `../pflanzenkenntnis.html`;
+      kein Server-Rewrite nötig, die echte Datei bleibt die eine Quelle) oder weiterhin
+      direkt über `/pflanzenkenntnis.html`. **Einbahnstraße:** Das Prüfungswerkzeug
+      verlinkt **»Lernversion →«**, das Lern-Tool verlinkt **nicht** zurück – Azubis
+      sollen das Prüfungswerkzeug gar nicht zu sehen bekommen (auch die veraltete
+      Hilfe-Zeile »Über Prüfungsversion → …« ist raus). Impressum/Datenschutz bleibt aus
+      beiden Werkzeugen über die Fußzeile erreichbar (Pflicht); die Rechtliches-Seite
+      führt statt »zur Startseite« neutral **»← zurück«** (History, Fallback Lern-Tool).
+      `index.html` und `pflanzen-lernen.html` tragen dieselbe Datei (Altlinks/Lesezeichen/
+      PWA-Verknüpfung bleiben gültig). **PWA** ist jetzt die Azubi-App: `start_url`
+      zeigt auf die Wurzel (= Lern-Tool), der Shortcut »Prüfen« ist entfernt, Name/
+      Beschreibung ohne Prüfungswerkzeug; `sw.js` cacht die Weiterleitung mit.
+      CI/Deploy angepasst (Startseiten-Test raus, `/pruefung` wird geprüft und
+      mit ausgeliefert). `tests/learn.mjs` sichert die Sackgasse ab (kein Link/Text zum
+      Prüfungswerkzeug, Rechtliches bleibt), `tests/smoke.mjs` den »Lernversion →«-Link.
 
 ## Offene Aufgaben (TODO)
 

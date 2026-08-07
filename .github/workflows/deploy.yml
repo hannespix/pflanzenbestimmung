@@ -78,12 +78,15 @@ jobs:
           for f in index pflanzenkenntnis pflanzen-lernen rechtliches; do
             python3 tools/check_offline.py "dist/$f.html"
           done
+          python3 tools/check_offline.py dist/pruefung/index.html
 
       - name: Zu veröffentlichende Dateien sammeln
         if: steps.cred.outputs.ok == 'yes'
         run: |
           mkdir -p _site
           cp dist/index.html dist/pflanzenkenntnis.html dist/pflanzen-lernen.html dist/rechtliches.html _site/
+          # hübsche Adresse /pruefung (Unterverzeichnis mit Weiterleitung)
+          mkdir -p _site/pruefung && cp dist/pruefung/index.html _site/pruefung/
           # PWA: Manifest, Service Worker, Icons
           cp dist/manifest.webmanifest dist/sw.js _site/
           cp dist/icon-192.png dist/icon-512.png dist/icon-maskable.png dist/apple-touch-icon.png _site/
@@ -205,11 +208,14 @@ jobs:
           for f in index pflanzenkenntnis pflanzen-lernen rechtliches; do
             python3 tools/check_offline.py "dist/$f.html"
           done
+          python3 tools/check_offline.py dist/pruefung/index.html
 
       - name: Zu veröffentlichende Dateien sammeln
         run: |
           mkdir -p _site
           cp dist/index.html dist/pflanzenkenntnis.html dist/pflanzen-lernen.html dist/rechtliches.html _site/
+          # hübsche Adresse /pruefung (Unterverzeichnis mit Weiterleitung)
+          mkdir -p _site/pruefung && cp dist/pruefung/index.html _site/pruefung/
           # PWA: Manifest, Service Worker, Icons
           cp dist/manifest.webmanifest dist/sw.js _site/
           cp dist/icon-192.png dist/icon-512.png dist/icon-maskable.png dist/apple-touch-icon.png _site/
