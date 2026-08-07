@@ -1194,6 +1194,36 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       mit ausgeliefert). `tests/learn.mjs` sichert die Sackgasse ab (kein Link/Text zum
       Prüfungswerkzeug, Rechtliches bleibt), `tests/smoke.mjs` den »Lernversion →«-Link.
 
+- [x] **Lern-Tool radikal vereinfacht: Ein-Knopf-Start mit geführter Sitzung** (auf
+      Wunsch »viel unkomplizierter, ohne Funktionen einzusparen«; Bausteine A+B+D des
+      Vereinfachungs-Plans, C/Sprache bewusst nicht gewählt). Der Startbildschirm zeigt
+      im Kern nur noch **Profil-Chip → »Weiter lernen« → Fortschritt** (vorher 18
+      Bedienelemente/~11 Entscheidungen auf vier Handy-Bildschirmhöhen).
+      **(A) Geführte Sitzung** (`startGuided`/`guidedForm` in `learn.js`): »Weiter
+      lernen« (bzw. »Loslegen« ohne Fortschritt) wählt die Übungsform **pro Karte**
+      nach ihrer Leitner-Box – 0–1 → Bilder-Quiz (ohne Internet: Auswahl-Quiz), 2 →
+      Quiz, 3 → Karteikarte, 4–5 → Tippen. Umsetzung: `nextCard()` schaltet `mode` je
+      Karte um (Renderer, Tastatur-, Uhr-, Punkte- und Leitner-Logik gelten unverändert
+      je Form; `sess.formOf` Map, `sess.auto`), beim Abschluss wird der gewählte Modus
+      wiederhergestellt; Quote läuft über die **bewerteten** Karten (`sess.scored`),
+      »Weiter lernen« am Ende startet wieder geführt. **Geführt = kein Lernduell**
+      (`CH_MODES` unangetastet; Teilen weiter in den reinen Modi). Die fünf Modi +
+      eigene Sitzung + Optionen stecken vollständig erhalten in einer zugeklappten
+      **»Selbst wählen«**-Klappe (`#chooseWrap`); »Liste zum Nachschlagen« bleibt als
+      eigener Schnellzugriff (`#btnList`, wird in der Liste zum »← Zurück«-Weg,
+      `lastLearnMode`). **(B) Profil-Chip** (`#profileChip`): Fachrichtung/Ausbildung
+      stecken in einem kleinen Modal (`#profScrim`; IDs `#frSelect`/`#nivSelect`
+      unverändert → Logik/Tests intakt), im Kopf nur noch »Gemüsebau · Gärtner/in ✎«;
+      beim Erstbesuch öffnet die Berufswahl einmalig nach dem Intro
+      (`pflanzenlernen.profilechosen`, Bestandsnutzer via vorhandenem Profil-Store
+      ausgenommen). **(D) Optionen in zwei Gruppen** »Was üben?« (Lernstoff · ZP ·
+      Prüfungsstoff) / »Wie üben?« (Antwort · Abfrage · Sitzungslänge · Design ·
+      Prüfungsfelder) – reine Umsortierung (`.og`/`.og-h`), alle Felder/IDs bleiben.
+      Idle-Text (`startHintOnly`) und Intro führen zum Ein-Knopf-Start.
+      `tests/learn.mjs` prüft: Ein-Knopf sichtbar + Klappe zu, geführte Mischung
+      (Box 2 → Quiz, Box 4 → Tippen), Quote »von N bewerteten«, kein Teilen-Block,
+      Profil-Chip + Modal + Merken, Listen-Schnellzugriff hin/zurück, Gruppen-Köpfe.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein

@@ -419,6 +419,7 @@ let profileId = "gemuesebau_gaertner";
 let allCards = [];           // alle Arten des Profils
 let progress = {};           // key -> {box(1..5), due(YYYY-MM-DD), seen, correct, wrong}
 let mode = "cards";          // cards | quiz | type | list
+let lastLearnMode = "photo"; // zuletzt aktiver Nicht-Listen-Modus (Rückweg aus dem Listen-Schnellzugriff)
 let queue = [], qi = 0, current = null, flipped = false;
 let sess = { total:0, done:0, correct:0, ms:0, pts:null, active:false };
 let qStart = 0, clockTimer = null;   // Zeitmessung: Start der offenen Frage · Anzeige-Takt
@@ -878,6 +879,11 @@ function renderProgress(){
                             : DIRS[curDir()].label;
   $("#startHint").textContent = p.length ? `${due} Karten heute dran · ${wie}` : "Keine Arten in der aktuellen Auswahl.";
   $("#btnStart").disabled = !p.length;
+  const hasProg = p.some(c=>pget(c.key).box);
+  const go=$("#btnGo");
+  if(go){ go.disabled = !p.length; go.textContent = hasProg ? "Weiter lernen" : "Loslegen"; }
+  const gh=$("#goHint");
+  if(gh) gh.textContent = p.length ? `${due} Karten heute dran · Übungsform passend zu deinem Lernstand` : "Keine Arten in der aktuellen Auswahl.";
 }
 
 /* ---------- Kleine Belohnung: Partikel bei einem Treffer ----------
@@ -1154,6 +1160,36 @@ function startSession(){
   clockRun(true); stageFull(true);
   nextCard();
 }
+/* ---------- Geführte Sitzung (Ein-Knopf-Start »Weiter lernen«) ----------
+   Wählt die Übungsform PRO KARTE nach ihrem Leitner-Stand – der Lernpfad
+   (erkennen → abrufen), eingebaut statt nur erklärt:
+     Box 0–1 (neu/unsicher) → Bilder-Quiz (ohne Internet: Auswahl-Quiz)
+     Box 2                  → Auswahl-Quiz
+     Box 3                  → Karteikarte (Selbsteinschätzung)
+     Box 4–5 (sitzt)        → Tippen (prüfungsnah)
+   Umsetzung: nextCard() schaltet den Modus je Karte um – Renderer, Tastatur-,
+   Uhr-, Punkte- und Leitner-Logik gelten damit unverändert je Übungsform; beim
+   Abschluss wird der zuvor gewählte Modus wiederhergestellt. Geführte Sitzungen
+   haben kein Lernduell (CH_MODES bleibt unangetastet – Teilen gibt es in den
+   reinen Modi Quiz/Tippen/Bilder). */
+function guidedForm(box, online){
+  if(box<=1) return online ? "photo" : "quiz";
+  if(box===2) return "quiz";
+  if(box===3) return "cards";
+  return "type";
+}
+function startGuided(){
+  const q = buildQueue();
+  if(!q.length){ toast("Keine Arten im aktuellen Filter",true); return; }
+  const online = navigator.onLine !== false;
+  const formOf = new Map();
+  q.forEach(c=>formOf.set(c, guidedForm(pget(c.key).box||0, online)));
+  queue=q; qi=0; photoMisses=0; qStart=0;
+  sess = { total:q.length, done:0, correct:0, scored:0, ms:0, pts:null, active:true,
+           cards:q.slice(), challenge:null, auto:true, formOf, modeBefore:mode };
+  clockRun(true); stageFull(true);
+  nextCard();
+}
 function sessionBar(){
   const pct = sess.total? Math.round(sess.done/sess.total*100):0;
   return `<div class="sessionbar"><span>${sess.done} / ${sess.total}</span><span class="sbar"><i style="width:${pct}%"></i></span>`+
@@ -1165,13 +1201,15 @@ function sessionBar(){
 function nextCard(){
   if(qi>=queue.length){ return finishSession(); }
   current = queue[qi]; flipped=false;
+  if(sess.auto && sess.formOf && sess.formOf.has(current))
+    mode = sess.formOf.get(current);   // geführte Sitzung: Übungsform je Karte (wird nicht gespeichert)
   if(mode==="cards") renderCard();
   else if(mode==="quiz") renderQuiz();
   else if(mode==="photo") renderPhoto();
   else renderType();
   const stop=$("#btnStop"); if(stop) stop.onclick=finishSession;
 }
-function advance(){ qi++; sess.done++; nextCard(); }
+function advance(){ if(sess.auto && mode!=="cards") sess.scored=(sess.scored||0)+1; qi++; sess.done++; nextCard(); }
 function requeueCurrent(){ // "Nochmal"/falsch: Karte in dieser Sitzung später erneut zeigen
   const pos = Math.min(queue.length, qi + 3 + Math.floor(Math.random()*3)); // 3–5 Karten später
   queue.splice(pos, 0, current); sess.total++;
@@ -1182,10 +1220,14 @@ function exitSession(){ stageFull(false); startHintOnly(); try{ window.scrollTo(
 function finishSession(){
   clockStop(); clockRun(false);        // Fokus-Overlay bleibt an: Ergebnis + Teilen im Vollbild
   sess.active=false;
+  const auto = !!sess.auto;
+  if(auto && sess.modeBefore) mode = sess.modeBefore;   // Übungsform-Umschaltung der geführten Sitzung zurücknehmen
   const aborted = qi < queue.length;   // vorzeitig über »beenden« verlassen (nicht alle Karten dran)
   const acc = sessAcc();
+  const scoredN = auto ? (sess.scored||0) : sess.done;
+  const accS = auto ? (scoredN ? Math.round(sess.correct/scoredN*100) : 0) : acc;
   const ch = sess.challenge;                     // angenommene Herausforderung (falls vorhanden)
-  let extra = "", gewonnen = scoreable() && sess.done>0 && acc>=80;   // ohne Duell: gute Quote reicht
+  let extra = "", gewonnen = auto ? (scoredN>0 && accS>=80) : (scoreable() && sess.done>0 && acc>=80);   // ohne Duell: gute Quote reicht
   if(ch){                                        // Vergleich Du ↔ Herausforderer
     const theirAcc = ch.t ? Math.round(ch.s/ch.t*100) : 0;
     const who = (ch.n||"").trim() || "Herausforderer";
@@ -1201,12 +1243,12 @@ function finishSession(){
       <div class="duel-row"><span>${esc(who)}</span><span class="duel-pct">${theirAcc} %</span><span class="duel-raw">${ch.s}/${ch.t}</span>${theirs?`<span class="duel-time">${fmtDur(theirs)}</span>`:""}</div>
       <p class="duel-verdict">${verdict}</p></div>`;
   }
-  const share = scoreable() ? shareBlockHTML(ch ? "Mein Ergebnis zurückschicken" : "Ergebnis teilen · herausfordern") : "";
+  const share = (!auto && scoreable()) ? shareBlockHTML(ch ? "Mein Ergebnis zurückschicken" : "Ergebnis teilen · herausfordern") : "";   // geführt: kein Duell (gemischte Formen)
   const stage=$("#stage");
   stage.innerHTML = `<div class="stage-empty">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6L9 17l-5-5"/></svg>
     <h2>${aborted?"Sitzung beendet":"Sitzung geschafft"}</h2>
-    <p>${sess.done} Karten gelernt${mode!=="cards"?` · ${sess.correct} richtig (${acc} %)`:""}${examScoring()&&sess.pts?` · <b>${nfmt(sess.pts.sum)} von ${nfmt(sess.pts.max)} Punkten</b>`:""}${scoreable()&&sess.ms?` · Denkzeit ${fmtDur(sess.ms)}`:""}.</p>
+    <p>${sess.done} Karten gelernt${auto ? (scoredN?` · ${sess.correct} richtig von ${scoredN} bewerteten (${accS} %)`:"") : (mode!=="cards"?` · ${sess.correct} richtig (${acc} %)`:"")}${sess.pts&&(auto||examScoring())?` · <b>${nfmt(sess.pts.sum)} von ${nfmt(sess.pts.max)} Punkten</b>`:""}${(auto?sess.ms:(scoreable()&&sess.ms))?` · Denkzeit ${fmtDur(sess.ms)}`:""}.</p>
     ${extra}
     ${share}
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px">
@@ -1214,7 +1256,7 @@ function finishSession(){
       <button class="btn ghost" id="btnOverview">Zur Übersicht</button>
     </div></div>`;
   wireShareBlock();
-  const a=$("#againBtn"); if(a) a.onclick=startSession;
+  const a=$("#againBtn"); if(a) a.onclick = auto ? startGuided : startSession;
   const ov=$("#btnOverview"); if(ov) ov.onclick=exitSession;
   if(gewonnen) celebrate(stage.querySelector("h2"), 2);
   renderProgress();
@@ -1379,16 +1421,17 @@ function submitType(ins){
 }
 
 function startHintOnly(){
+  // Ruhe-Ansicht: führt immer zum Ein-Knopf-Start; der Internet-Hinweis des
+  // Bilder-Modus erscheint nur als Randnotiz, wenn dieser Modus gewählt ist.
   const photo = mode==="photo";
   $("#stage").innerHTML = `<div class="stage-empty">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">${photo
-      ? `<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M4 18l5-5 3 3 3-3 5 5"/>`
-      : `<path d="M12 22V8M12 8C12 8 7 3 4 4c-1 3 4 8 8 8zM12 8c0 0 5-5 8-4 1 3-4 8-8 8z"/>`}</svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22V8M12 8C12 8 7 3 4 4c-1 3 4 8 8 8zM12 8c0 0 5-5 8-4 1 3-4 8-8 8z"/></svg>
     <h2>Bereit zum Lernen</h2>
-    ${photo
-      ? `<p>Bild ansehen und die richtige Pflanze wählen – wie beim Erkennen in der Prüfung.
-         <b>Dieser Modus braucht Internet</b> (die Bilder kommen von Wikipedia); alle anderen Modi laufen offline.</p>`
-      : `<p>Modus wählen und »Sitzung starten«. Gefragt wird der <b>deutsche Name → botanische Identität</b> (Gattung, Art, Familie), wie in der Prüfung. Details unter <b>Hilfe</b>.</p>`}
+    <p><b>»Weiter lernen«</b> startet eine geführte Sitzung – die Übungsform (Bilder, Quiz,
+       Karteikarte, Tippen) richtet sich je Pflanze nach deinem Lernstand. Unter <b>»Selbst
+       wählen«</b> gibt es jeden Modus einzeln; Details unter <b>Hilfe</b>.</p>
+    ${photo ? `<p class="stage-note">Der Bilder-Modus braucht Internet (die Bilder kommen von
+       Wikipedia); alles andere läuft auch ohne.</p>` : ``}
   </div>`;
 }
 
@@ -1707,6 +1750,11 @@ function applyMode(){
   sess.active=false; qStart=0; clockRun(false); stageFull(false);   // Moduswechsel bricht die Sitzung ab
   const sr=$("#startRow"), lsr=$("#listSearchRow"), lc=$("#listControls");
   if(sr) sr.hidden = isList;
+  const bg=$("#btnGo"), gh=$("#goHint");                    // Ein-Knopf-Start nur außerhalb der Liste
+  if(bg) bg.hidden = isList;
+  if(gh) gh.hidden = isList;
+  const bl=$("#btnList");                                   // Schnellzugriff wird zum Rückweg
+  if(bl) bl.textContent = isList ? "← Zurück zum Lernen" : "Liste zum Nachschlagen";
   const ln=$("#learnNote"); if(ln) ln.hidden = isList;   // Hinweis gehört zu den Lektionen, nicht zur Liste
   const cf=$("#cat") && $("#cat").closest(".field"); if(cf) cf.hidden = isList;  // »Auswahl«-Scope filtert die Liste nicht – im Listenmodus ausblenden (Suche + Ansicht-Tags reichen)
   // Im Listenmodus gibt es EIN Options-Akkordeon: die Sitzungs-Optionen sind ausgeblendet,
@@ -3178,6 +3226,7 @@ function loadProfile(id){
   syncExamOnlyUI();                                  // »nur Prüfungsstoff«-Schalter nur bei Fachwerker zeigen
   normalizeSort();                                   // ggf. Familien-Ansicht verlassen, wenn ausgeblendet
   applyMode();                                       // Ansicht passend zum aktuellen Modus (inkl. Liste)
+  syncProfileChip();
   store.set(LS_PREFIX+"profile", id);
 }
 function refreshKat(){   // Auswahl der Lernsitzung: alles · ein Thema · eine Familie
@@ -3230,6 +3279,13 @@ function syncExamFieldsUI(){
     saveExamFields(); syncExamFieldsUI();
   });
 }
+function syncProfileChip(){
+  const t=$("#profChipText"); if(!t) return;
+  const fr=$("#frSelect"), nv=$("#nivSelect");
+  const frL = fr && fr.selectedIndex>=0 ? fr.options[fr.selectedIndex].textContent : "";
+  const nvL = nv && nv.selectedIndex>=0 ? nv.options[nv.selectedIndex].textContent : "";
+  t.textContent = frL && nvL ? frL+" · "+nvL : "Beruf wählen";
+}
 function profSub(){
   const fr = FR_LIST.find(f=>slug(f)===$("#frSelect").value)||"";
   const niv = (NIVEAUS.find(n=>n.key===$("#nivSelect").value)||{}).label||"";
@@ -3281,11 +3337,31 @@ function wire(){
   if($("#btnPrintList")) $("#btnPrintList").onclick=printList;
   // Druckoptionen (Spalten, Namensherkunft) leben im Listen-Akkordeon (renderListControls)
   $("#modeTabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    if(b.dataset.mode==="list" && mode!=="list") lastLearnMode=mode;   // Rückweg aus der Liste
     mode=b.dataset.mode; store.set(LS_PREFIX+"mode",mode);
     $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
     vt(applyMode);   // Moduswechsel blendet weich über
   });
   $("#btnStart").onclick=startSession;
+  if($("#btnGo")) $("#btnGo").onclick=startGuided;
+  if($("#btnList")) $("#btnList").onclick=()=>{             // Liste rein/raus ohne die Klappe zu öffnen
+    const target = mode==="list" ? (lastLearnMode||"photo") : "list";
+    if(mode!=="list") lastLearnMode=mode;
+    mode=target; store.set(LS_PREFIX+"mode",mode);
+    $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.mode===mode));
+    vt(applyMode);
+  };
+  const chip=$("#profileChip"), ps=$("#profScrim");         // Beruf: Chip öffnet das Profil-Modal
+  if(chip && ps){
+    const openP=()=>{ ps.hidden=false; try{ $("#profClose").focus(); }catch(e){} };
+    const closeP=()=>{ ps.hidden=true; store.set(LS_PREFIX+"profilechosen","1"); try{ chip.focus(); }catch(e){} };
+    chip.onclick=openP;
+    $("#profClose").onclick=closeP;
+    $("#profDone").onclick=closeP;
+    ps.addEventListener("click",e=>{ if(e.target===ps) closeP(); });
+    document.addEventListener("keydown",e=>{ if(e.key==="Escape" && !ps.hidden) closeP(); });
+    window.openProfile=openP;                               // Erstbesuch: nach dem Intro einmalig öffnen
+  }
   $("#btnHelp").onclick=()=>{
     const h=$("#helpPanel"), b=$("#btnHelp"), willOpen=h.hidden;
     h.hidden=!willOpen; b.classList.toggle("active",willOpen); b.setAttribute("aria-pressed",String(willOpen));
@@ -3297,13 +3373,13 @@ function wire(){
 /* Erst-Einweisung: einmalig beim ersten Besuch (danach über den »So funktioniert
    der Lernpfad«-Link), zeigt den Weg von leicht bis prüfungsreif. Reines Overlay,
    offline; merkt sich »gesehen« im localStorage, damit die Hinweise nicht im Weg sind. */
-function openIntro(auto){
+function openIntro(auto, onClose){
   const prev = document.activeElement;
   const scrim = el("div","scrim"); scrim.id="introScrim";
   scrim.innerHTML = `<div class="modal intro" role="dialog" aria-modal="true" aria-labelledby="introTtl">
     <button class="modal-x" id="introClose" aria-label="Schließen" title="Schließen">×</button>
     <h2 class="intro-h" id="introTtl">So wirst du prüfungsreif</h2>
-    <p class="intro-lead">Die Modi oben sind nach Schwierigkeit sortiert – steigere dich mit deinem Fortschritt vom Erkennen bis zum freien Schreiben:</p>
+    <p class="intro-lead">Am einfachsten: <b>»Weiter lernen«</b> – die passende Stufe wird automatisch nach deinem Lernstand gewählt. Wer selbst wählt: die Stufen sind nach Schwierigkeit sortiert, vom Erkennen bis zum freien Schreiben:</p>
     <ol class="intro-steps">
       <li><span class="is-ic" aria-hidden="true">🖼️</span><div><b>Bilder</b><span class="is-tag">leicht</span><br>Pflanze am Foto erkennen und den richtigen Namen wählen.</div></li>
       <li><span class="is-ic" aria-hidden="true">✔️</span><div><b>Quiz</b><span class="is-tag">leicht</span><br>Zum deutschen Namen den richtigen botanischen aus vier Optionen wählen.</div></li>
@@ -3317,7 +3393,8 @@ function openIntro(auto){
   document.body.appendChild(scrim);
   const close=()=>{ try{ store.set(LS_PREFIX+"introSeen","1"); }catch(e){}
     document.removeEventListener("keydown", key); scrim.remove();
-    if(prev && prev.focus){ try{ prev.focus(); }catch(e){} } };
+    if(prev && prev.focus){ try{ prev.focus(); }catch(e){} }
+    if(onClose){ try{ onClose(); }catch(e){} } };
   const key=e=>{ if(e.key==="Escape") close(); };
   scrim.addEventListener("click", e=>{ if(e.target===scrim) close(); });
   scrim.querySelector("#introClose").onclick=close;
@@ -3338,6 +3415,7 @@ function openIntro(auto){
     photoAnswer = PH_ANSWER[store.get(LS_PREFIX+"phanswer")] ? store.get(LS_PREFIX+"phanswer") : "mc";
     mode = store.get(LS_PREFIX+"mode") || "photo";   // neue Nutzer starten beim leichtesten Modus (Bilder)
     let pid = store.get(LS_PREFIX+"profile");
+    const hadProfile = !!pid;                          // vor loadProfile lesen – das setzt den Store
     if(!(typeof SEEDS!=="undefined" && SEEDS[pid])) pid="gemuesebau_gaertner";
     // Eingehende Herausforderung (#c=…) übernimmt Profil und Modus
     const cm = (location.hash||"").match(/[#&]c=([^&]+)/);
@@ -3354,7 +3432,11 @@ function openIntro(auto){
     loadProfile(pid); profSub();
     if(pendingChallenge) showChallengeBanner(pendingChallenge);
     const bi=$("#btnIntro"); if(bi) bi.onclick=()=>openIntro(false);
-    if(!pendingChallenge && !store.get(LS_PREFIX+"introSeen")) openIntro(true);   // Erst-Einweisung nur beim ersten Besuch
+    if(hadProfile) store.set(LS_PREFIX+"profilechosen","1");   // Bestandsnutzer: Beruf gilt als gewählt
+    const firstRun = !pendingChallenge && !store.get(LS_PREFIX+"introSeen");
+    if(firstRun) openIntro(true, ()=>{                 // Erst-Einweisung, danach einmalig die Berufswahl
+      if(!store.get(LS_PREFIX+"profilechosen") && window.openProfile) window.openProfile();
+    });
   }catch(e){
     document.body.innerHTML='<div style="max-width:640px;margin:80px auto;font-family:sans-serif;color:#22352b">'+
       '<h2>Start fehlgeschlagen</h2><pre>'+esc(e.message)+'</pre></div>';
@@ -3362,6 +3444,8 @@ function openIntro(auto){
 })();
 /* für Tests / Konsole */
 window.startSession=startSession;
+window.startGuided=startGuided;
+window.guidedForm=guidedForm;
 window.openIntro=openIntro;
 window.openInfo=openInfo;
 window.closeInfo=closeInfo;
