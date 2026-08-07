@@ -185,20 +185,25 @@ async function main() {
   assert(theme.has && theme.afterOne === "dark" && theme.saved === "dark" && theme.afterTwo === "light",
     "Theme-Umschalter muss dunkel/hell wechseln und die Wahl speichern: " + JSON.stringify(theme));
 
-  // Kopf-Umbau: Startseite-Link statt Prüfungsversion, Hilfe dezent, Design-Umschalter in den Optionen
+  // Sackgasse für Azubis: Das Lern-Tool ist die Wurzel (pflanze-bw.de) und darf
+  // NIRGENDS auf das Prüfungswerkzeug verweisen – weder per Link noch im Text.
+  // Impressum/Datenschutz muss in der Fußzeile erreichbar bleiben (gesetzlich nötig).
   const head = await page.evaluate(() => {
-    const home = document.querySelector(".mast-right .homelink");
     const help = document.querySelector(".mast-right .helplink");
     return {
-      homeHref: home ? home.getAttribute("href") : null,
-      noExam: !document.querySelector(".mast-right .examlink") && !document.querySelector('.mast-right a[href="pflanzenkenntnis.html"]'),
+      noExamLink: !document.querySelector('a[href*="pflanzenkenntnis"], a[href*="pruefung"]'),
+      noHomeLink: !document.querySelector('.mast-right a[href="index.html"], .mast-right .homelink'),
+      noExamText: !/Prüfungsversion|Werkzeug für Prüfende/.test(document.body.textContent),
+      legalKept: !!document.querySelector('.foot a[href="rechtliches.html"]'),
       helpDezent: !!(help && help.id === "btnHelp"),
       toggleInHead: !!document.querySelector(".mast-right .themetoggle"),
       toggleInOpts: !!document.querySelector("#setOpts .themetoggle")
     };
   });
-  assert(head.homeHref === "index.html", "Kopf muss einen »Startseite«-Link (index.html) tragen: " + JSON.stringify(head));
-  assert(head.noExam, "Kopf darf keinen Prüfungsversion-Link mehr tragen: " + JSON.stringify(head));
+  assert(head.noExamLink && head.noExamText,
+    "Lern-Tool darf nicht auf das Prüfungswerkzeug verweisen (Azubis sollen es nicht sehen): " + JSON.stringify(head));
+  assert(head.noHomeLink, "Lern-Tool ist selbst die Startseite – kein Startseite-Link im Kopf: " + JSON.stringify(head));
+  assert(head.legalKept, "Impressum/Datenschutz muss über die Fußzeile erreichbar bleiben: " + JSON.stringify(head));
   assert(head.helpDezent, "»Hilfe« muss als dezenter .helplink im Kopf stehen: " + JSON.stringify(head));
   assert(!head.toggleInHead && head.toggleInOpts,
     "Design-Umschalter muss in den Optionen sitzen, nicht mehr im Kopf: " + JSON.stringify(head));

@@ -16,6 +16,7 @@ const CACHE = "pflanzenkenntnis-" + VERSION;
 const ASSETS = [
   "index.html",
   "pflanzenkenntnis.html",
+  "pruefung/index.html",
   "pflanzen-lernen.html",
   "rechtliches.html",
   "manifest.webmanifest",

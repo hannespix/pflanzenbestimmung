@@ -1,7 +1,7 @@
 {
-  "name": "Pflanze-BW – Lernen & Prüfen",
+  "name": "Pflanze-BW – Pflanzen lernen",
   "short_name": "Pflanze-BW",
-  "description": "Pflanzenkenntnis-Prüfung der Gärtnerberufe (Baden-Württemberg): Lernen mit Karteikarten, Quiz und Tippen sowie das Prüfungswerkzeug – läuft im Browser, auch ohne Internet.",
+  "description": "Pflanzenkenntnis der Gärtnerberufe (Baden-Württemberg): lernen mit Karteikarten, Quiz, Tippen und Bildern – läuft im Browser, auch ohne Internet.",
   "lang": "de",
   "dir": "ltr",
   "start_url": "index.html",
@@ -11,11 +11,28 @@
   "orientation": "any",
   "background_color": "#eceee6",
   "theme_color": "#2b4f38",
-  "categories": ["education"],
+  "categories": [
+    "education"
+  ],
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
     {
@@ -23,14 +40,13 @@
       "short_name": "Lernen",
       "description": "Karteikarten, Quiz und Tippen",
       "url": "pflanzen-lernen.html",
-      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
-    },
-    {
-      "name": "Prüfen (Prüfende)",
-      "short_name": "Prüfen",
-      "description": "Prüfungslisten ziehen, Bögen drucken, Noten rechnen",
-      "url": "pflanzenkenntnis.html",
-      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }

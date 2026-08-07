@@ -213,20 +213,20 @@ async function main() {
     const afterOne = document.documentElement.dataset.theme, saved = localStorage.getItem("pbw.theme");
     b.click();
     const afterTwo = document.documentElement.dataset.theme;
-    // Kopf: Startseite-Link statt Prüfungs-/Lernversion, Hilfe dezent, kein Theme-Knopf im Kopf
+    // Kopf: Link zur Lernversion (es gibt keine Startseite mehr), Hilfe dezent, kein Theme-Knopf im Kopf
     const home = document.querySelector(".mast-right .homelink");
     return {
       has: true, afterOne, saved, afterTwo,
       homeHref: home ? home.getAttribute("href") : null,
-      noLernlink: !document.querySelector('.mast-right a[href="pflanzen-lernen.html"]'),
+      lernHref: (document.querySelector('.mast-right a[href="pflanzen-lernen.html"]') || {}).textContent || null,
       helpDezent: !!document.querySelector(".mast-right .helplink#btnHelp"),
       toggleInHead: !!document.querySelector(".mast-right .themetoggle, .mast-right #btnTheme")
     };
   });
   assert(themeT.has && themeT.afterOne === "dark" && themeT.saved === "dark" && themeT.afterTwo === "light",
     "Theme-Umschalter muss dunkel/hell wechseln und die Wahl speichern: " + JSON.stringify(themeT));
-  assert(themeT.homeHref === "index.html" && themeT.noLernlink,
-    "Kopf muss einen »Startseite«-Link (index.html) statt Lernversion tragen: " + JSON.stringify(themeT));
+  assert(themeT.homeHref === "pflanzen-lernen.html" && /Lernversion/.test(themeT.lernHref || ""),
+    "Kopf muss zur Lernversion verlinken (pflanzen-lernen.html): " + JSON.stringify(themeT));
   assert(themeT.helpDezent && !themeT.toggleInHead,
     "»Hilfe« muss dezent im Kopf stehen, der Design-Umschalter aus dem Kopf raus (in die Verwaltung): " + JSON.stringify(themeT));
 

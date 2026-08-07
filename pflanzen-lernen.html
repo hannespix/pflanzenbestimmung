@@ -50,9 +50,8 @@ input,select{font-family:inherit; color:inherit}
 .pfield select{border:1.4px solid var(--green); background:var(--card); border-radius:4px; padding:9px 30px 9px 12px; font-size:15px; font-family:var(--serif); font-weight:600; color:var(--green-deep);
   appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%232b4f38' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 11px center}
 .profsub{font-family:var(--mono); font-size:12px; color:var(--ink-soft); padding-bottom:9px}
-.homelink{white-space:nowrap; text-decoration:none}
 .mast-right{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-/* »Hilfe« bewusst dezent oben rechts – kleiner, gedämpft, tritt hinter »Startseite« zurück */
+/* »Hilfe« bewusst dezent oben rechts (einziges Bedienelement im Kopf) */
 .helplink{display:inline-flex; align-items:center; gap:5px; border:1px solid transparent; background:none;
   color:var(--ink-soft); padding:5px 8px; border-radius:8px; font-size:12.5px; font-family:inherit; cursor:pointer}
 .helplink .ic{width:14px; height:14px; flex:none; opacity:.85}
@@ -781,7 +780,9 @@ body.stagefull #stage>.sessionbar{
         <h1>Pflanzenkenntnis · Lernen</h1>
       </div>
       <div class="mast-right">
-        <a class="btn ghost homelink" href="index.html" title="Zur Startseite (Lernen · Prüfen)">Startseite&nbsp;→</a>
+        <!-- Bewusst KEIN Link zur Prüfungsversion: pflanze-bw.de führt direkt hierher;
+             das Prüfungswerkzeug hat seine eigene Adresse (/pruefung) und geht Azubis
+             nichts an. Impressum/Datenschutz bleibt über die Fußzeile erreichbar. -->
         <button class="helplink" id="btnHelp" type="button" aria-pressed="false" title="Kurzanleitung und Erklärung aller Modi und Einstellungen ein- oder ausblenden"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5"/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/></svg>Hilfe</button>
       </div>
     </div>
@@ -987,7 +988,6 @@ body.stagefull #stage>.sessionbar{
       <li>Dein Fortschritt bleibt im Browser gespeichert (je Profil getrennt). Anderer Browser oder
         anderes Gerät = eigener Fortschritt.</li>
       <li>Fast jedes Feld hat einen <b>Tooltip</b> – kurz mit der Maus darüber verweilen.</li>
-      <li>Über <b>Prüfungsversion →</b> geht es zum Werkzeug für Prüfende (Listen, Bögen, Noten).</li>
     </ul>
   </section>
 
