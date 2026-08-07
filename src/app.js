@@ -23,36 +23,18 @@ function activeCols(){ return (schema&&schema.cols||[]).filter(c=>c.pts>0); }
 function ptsPer(){ return activeCols().reduce((s,c)=>s+(c.pts||0),0); }
 function drawTarget(){ return (schema&&schema.anzahl)||20; }
 
-/* ---- Notenstufen (Label/Farbe) + IHK-Referenzwerte ----
-   Die aktive Skala ist die lineare BW-Skala (scaleCfg); die IHK-Werte dienen
-   nur dem optionalen Vergleichsmodus. */
+/* ---- Notenstufen (Label/Farbe) für die lineare BW-Skala ----
+   Baden-Württemberg rechnet Pflanzenkenntnis linear/gleichmäßig (VGH BW, 24.1.1979);
+   ein IHK-Schlüssel wird hier bewusst nicht angeboten. */
 const GRADE = [
-  {stufe:1, min:92, hi:100, label:"sehr gut",     color:"#2b5138"},
-  {stufe:2, min:81, hi:91,  label:"gut",          color:"#3d6b4d"},
-  {stufe:3, min:67, hi:80,  label:"befriedigend", color:"#a9842b"},
-  {stufe:4, min:50, hi:66,  label:"ausreichend",  color:"#b5762a"},
-  {stufe:5, min:30, hi:49,  label:"mangelhaft",   color:"#c96a5a"},
-  {stufe:6, min:0,  hi:29,  label:"ungenügend",   color:"#9c3b2e"}
+  {stufe:1, label:"sehr gut",     color:"#2b5138"},
+  {stufe:2, label:"gut",          color:"#3d6b4d"},
+  {stufe:3, label:"befriedigend", color:"#a9842b"},
+  {stufe:4, label:"ausreichend",  color:"#b5762a"},
+  {stufe:5, label:"mangelhaft",   color:"#c96a5a"},
+  {stufe:6, label:"ungenügend",   color:"#9c3b2e"}
 ];
-const gradeFor = pct => GRADE.find(g=>pct>=g.min);
 const thresholdPts = (min,max) => Math.ceil(min*max/100);
-const clamp100 = v => Math.max(0,Math.min(100,v));
-/* Offizielle IHK-Dezimalnote je Punktwert 0–100 (nur Vergleichsmodus) */
-const DEZ = (()=>{
-  const t={100:"1,0",99:"1,1",98:"1,1",97:"1,2",96:"1,2",95:"1,3",94:"1,3",93:"1,4",92:"1,4",91:"1,5",
-    90:"1,6",89:"1,7",88:"1,8",87:"1,9",86:"2,0",85:"2,0",84:"2,1",83:"2,2",82:"2,3",81:"2,4",
-    80:"2,5",79:"2,5",78:"2,6",77:"2,7",76:"2,8",75:"2,8",74:"2,9",73:"3,0",72:"3,0",71:"3,1",
-    70:"3,2",69:"3,3",68:"3,3",67:"3,4",66:"3,5",65:"3,5",64:"3,6",63:"3,6",62:"3,7",61:"3,8",
-    60:"3,8",59:"3,9",58:"3,9",57:"4,0",56:"4,0",55:"4,1",54:"4,2",53:"4,2",52:"4,3",51:"4,3",
-    50:"4,4",49:"4,5",48:"4,5",47:"4,6",46:"4,6",45:"4,7",44:"4,7",43:"4,8",42:"4,8",41:"4,9",
-    40:"4,9",39:"5,0",38:"5,0",37:"5,1",36:"5,1",35:"5,2",34:"5,2",33:"5,3",32:"5,3",31:"5,4",30:"5,4"};
-  const a=new Array(101);
-  for(let p=30;p<=100;p++) a[p]=t[p];
-  for(let p=25;p<=29;p++) a[p]="5,5"; for(let p=20;p<=24;p++) a[p]="5,6";
-  for(let p=15;p<=19;p++) a[p]="5,7"; for(let p=10;p<=14;p++) a[p]="5,8";
-  for(let p=5;p<=9;p++) a[p]="5,9";   for(let p=0;p<=4;p++) a[p]="6,0";
-  return a;
-})();
 
 /* ---- Prüfungsschema & Profile ----
    scaleCfg zeigt immer auf schema.scale des aktiven Profils. */
@@ -133,13 +115,9 @@ function linDez(pct,G){
   return 6.0;
 }
 const dez1 = d => d.toFixed(1).replace(".",",");
-/* Note für erreichte Punkte je aktivem Modus */
+/* Note für erreichte Punkte (lineare BW-Skala) */
 function computeGrade(raw,max){
   const p=Math.max(0,Math.min(raw,max)), pct=max>0?p/max*100:0;
-  if(scaleCfg.mode==="ihk"){
-    const g=gradeFor(pct); let pr=Math.round(pct); while(pr>0 && gradeFor(pr).stufe<g.stufe) pr--;
-    return {p,pct,stufe:g.stufe,label:g.label,color:g.color,dez:DEZ[clamp100(pr)]};
-  }
   const b=linBands(scaleCfg.lin).find(x=>pct>=x.lo)||GRADE[5];
   return {p,pct,stufe:b.stufe,label:b.label,color:b.color,dez:dez1(linDez(pct,scaleCfg.lin))};
 }
@@ -748,15 +726,10 @@ function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gesp
   // Nur auf der Musterlösung: Zuordnung, Vermerk und Bewertungsschlüssel
   let solMeta="", solScale="";
   if(sol){
-    let key,keyLabel;
-    if(scale.mode==="ihk"){
-      key=GRADE.map(g=>g.stufe===6?`6 unter ${thresholdPts(GRADE[4].min,maxP)}`:`${g.stufe} ab ${thresholdPts(g.min,maxP)}`).join(" · ");
-      keyLabel="100-Punkte-Schlüssel";
-    }else{
-      const B=linBands(scale.lin);
-      key=B.map(b=>b.stufe===6?`6 unter ${thresholdPts(B[4].lo,maxP)}`:`${b.stufe} ab ${thresholdPts(b.lo,maxP)}`).join(" · ");
-      keyLabel="linear, Baden-Württemberg";
-    }
+    const lin=(scale&&Array.isArray(scale.lin)&&scale.lin.length===5)?scale.lin:[90,70,50,30,10];
+    const B=linBands(lin);
+    const key=B.map(b=>b.stufe===6?`6 unter ${thresholdPts(B[4].lo,maxP)}`:`${b.stufe} ab ${thresholdPts(b.lo,maxP)}`).join(" · ");
+    const keyLabel="linear, Baden-Württemberg";
     solMeta=`<div class="sheet-meta">Fachrichtung ${esc(def.fr)} · ${esc(def.niveau)} · Prüfung am ${esc(dateStr)} ·
       ${plants.length} Pflanzen · max. ${fmtPts(maxP)} Punkte
       ${norm(settings&&settings.pruefendeNote)?`<span class="solution-note">${esc(settings.pruefendeNote)}</span>`:""}</div>`;
@@ -2155,19 +2128,10 @@ function openGrader(){
 function renderGrader(){
   const max=Math.max(1, Math.round(parseFloat($("#gMax").value)||0));
   $("#gScaleMax").textContent="· "+max+" P.";
-  const lin=scaleCfg.mode!=="ihk";
+  // Baden-Württemberg rechnet immer linear; ein alter (gespeicherter) IHK-Modus heilt sich hier zu linear.
+  if(scaleCfg.mode!=="linear"){ scaleCfg.mode="linear"; saveCfg(); }
 
-  // Modus-Umschalter
-  $("#gMode").innerHTML=
-    `<button class="segbtn ${lin?'on':''}" data-m="linear">linear · Baden-Württemberg</button>`+
-    `<button class="segbtn ${!lin?'on':''}" data-m="ihk">IHK gestuft</button>`;
-  $("#gMode").querySelectorAll(".segbtn").forEach(b=>b.onclick=()=>{
-    scaleCfg.mode=b.dataset.m; saveCfg(); renderGrader();
-  });
-
-  // Bänder je Modus
-  const bands = lin ? linBands(scaleCfg.lin)
-                    : GRADE.map(g=>({stufe:g.stufe,label:g.label,color:g.color,lo:g.min,hi:g.hi}));
+  const bands = linBands(scaleCfg.lin);
   // Skalenleiste
   const bar=$("#gBar"); bar.innerHTML="";
   [...bands].reverse().forEach(b=>{ const s=el("div","seg"); s.style.flexGrow=Math.max(1,b.hi-b.lo); s.style.background=b.color; s.textContent=b.stufe; bar.appendChild(s); });
@@ -2183,18 +2147,18 @@ function renderGrader(){
     res.innerHTML=`<div class="badge" style="background:${r.color}"><span class="num">${r.stufe}</span><span class="z">NOTE</span></div>
       <div class="txt"><div class="word" style="color:${r.color}">${r.label}</div>
         <div class="detail">${(r.p%1?r.p.toFixed(1).replace('.',','):r.p)} / ${max} P.${over}</div>
-        <div class="detail">${r.pct.toFixed(1).replace('.',',')} % · dezimal ${lin?'':'≈ '}${r.dez}</div></div>`;
+        <div class="detail">${r.pct.toFixed(1).replace('.',',')} % · dezimal ${r.dez}</div></div>`;
     mark.innerHTML=`<div class="pin" style="left:${r.pct}%" data-pct="${r.pct.toFixed(0)} %"></div>`;
   }
 
-  // Schwellen-Tabelle (linear: Grenzen editierbar)
+  // Schwellen-Tabelle (Grenzen editierbar)
   const rows=bands.map(b=>{
     const lo=thresholdPts(b.lo,max);
     const hi=b.stufe===1?max:(thresholdPts(bands[b.stufe-2].lo,max)-1);
     const range=b.stufe===6?`0 – ${thresholdPts(bands[4].lo,max)-1}`:`${lo} – ${hi}`;
-    const pctCell = (lin && b.stufe<=5)
+    const pctCell = b.stufe<=5
       ? `ab <input class="gedge" type="number" min="1" max="99" step="1" value="${b.lo}" data-i="${b.stufe-1}"> %`
-      : (b.stufe===6?`0–${bands[4].lo-1} %`:`${b.lo}–${b.hi} %`);
+      : `0–${bands[4].lo-1} %`;
     return `<tr class="${b.stufe===hitStufe?'hit':''}">
       <td class="g"><span class="swatch" style="background:${b.color}"></span>${b.stufe}</td>
       <td>${b.label}</td><td>${pctCell}</td><td class="pts">${range}</td></tr>`;
@@ -2210,9 +2174,7 @@ function renderGrader(){
     scaleCfg.lin=G.map(x=>Math.max(1,Math.min(99,x))); saveCfg(); renderGrader();
   });
 
-  $("#gNote").textContent = lin
-    ? "Gleichmäßige (lineare) Skala – jede Note gleiche Spannweite, Grenzen anpassbar (VGH BW, Urt. 24.1.1979). Dezimalnote linear."
-    : "Bundeseinheitlicher 100-Punkte-Schlüssel (ungleichmäßige Notenstufen).";
+  $("#gNote").textContent = "Gleichmäßige (lineare) Skala – jede Note gleiche Spannweite, Grenzen anpassbar (VGH BW, Urt. 24.1.1979). Dezimalnote linear.";
 }
 
 /* ============================================================

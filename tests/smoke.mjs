@@ -142,6 +142,19 @@ async function main() {
   assert(/^aus Auswahl:/.test(active.openState.gSync || ""),
     "Notenrechner: »Höchstpunktzahl aus Auswahl«-Knopf muss verständlich beschriftet sein (»aus Auswahl: … P.«), war: " + JSON.stringify(active.openState.gSync));
 
+  // 1b2) IHK-Notenschlüssel entfernt: kein Modus-Umschalter, keine »IHK«-Option; immer linear.
+  //      Diskriminator: bei 50 % gibt linear Note 3 (Grenze 50), IHK gäbe Note 4.
+  const noIhk = await page.evaluate(() => {
+    openGrader();
+    const g = document.querySelector("#graderScrim");
+    const hasToggle = !!document.querySelector("#gMode") || /IHK/i.test(g.textContent);
+    const at50 = computeGrade(100, 200).stufe;   // 50 % → linear = Note 3
+    document.querySelector("#graderScrim .pclose").click();
+    return { hasToggle, at50 };
+  });
+  assert(!noIhk.hasToggle, "Notenrechner darf keinen IHK-Umschalter/keine IHK-Option mehr haben: " + JSON.stringify(noIhk));
+  assert(noIhk.at50 === 3, "Notenskala muss linear sein (50 % → Note 3, nicht IHK-Note 4): " + JSON.stringify(noIhk));
+
   // 1b3) Flag-Leck: »Neue Art anlegen« (setzt selectNewAfterSave) per Esc abbrechen darf
   // nicht dazu führen, dass eine SPÄTER regulär angelegte Art ungewollt in der Auswahl landet.
   const flagLeak = await page.evaluate(() => {

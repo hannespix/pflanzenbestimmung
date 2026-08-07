@@ -212,9 +212,11 @@ als fertig gilt.
   oberster/unterster Note. Standard-Grenzen (Prozent, ab dem die Note gilt):
   **1 ≥ 90, 2 ≥ 70, 3 ≥ 50, 4 ≥ 30, 5 ≥ 10, 6 < 10**; Dezimalnote linear
   (`6 − 5·%`). Grenzen sind pro Profil editierbar.
-- **IHK-Schlüssel** (100-Punkte, ungleichmäßig: 92/81/67/50/30) ist als
-  Umschaltoption vorhanden, inkl. offizieller Dezimaltabelle. Für die Gärtnerberufe
-  in BW ist **linear** der Standard.
+- **Kein IHK-Schlüssel.** Für die Gärtnerberufe in BW wird **immer linear**
+  gerechnet; die frühere IHK-Umschaltoption (100-Punkte, ungleichmäßig) wurde auf
+  Wunsch **entfernt** (Notenrechner ohne Modus-Umschalter, `computeGrade`/`buildSheet`
+  nur noch linear, ein alt gespeicherter `mode:"ihk"` heilt sich beim Öffnen des
+  Notenrechners zu `linear`).
 - **Zwei Druckvarianten:** Prüfungsbogen (leer, zum Ausfüllen) und Musterlösung
   (gefüllt, »Nur für Prüfende«, kompakte Zeilen). **Die Leerbögen entsprechen den
   offiziellen AP-Formularen** der Regierungspräsidien BW (Quellen:
