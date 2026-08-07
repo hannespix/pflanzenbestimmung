@@ -380,7 +380,6 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .gcard .right{padding:16px 20px; min-width:0}
 .gtitle{font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--sepia); margin:0 0 13px}
 .gtitle span{color:var(--ink-faint); letter-spacing:.06em}
-.modeswitch{display:flex; gap:0; margin:0 0 15px; border:1px solid var(--rule-strong); border-radius:4px; overflow:hidden; width:fit-content}
 .segbtn{border:none; background:var(--surface-2); color:var(--ink-soft); padding:7px 13px; font-size:12.5px; font-family:var(--sans); border-right:1px solid var(--rule-strong)}
 .segbtn:last-child{border-right:none}
 .segbtn:hover{background:var(--card)}
@@ -738,7 +737,7 @@ body{overflow-x:clip}
     </div>
     <div class="tools">
       <button class="btn" id="btnExams" title="Gespeicherte Prüfungen (nach Prüfungsdatum): aktuelle Auswahl sichern, laden, kopieren (z. B. für den nächsten Prüfungstag), aktualisieren, drucken, als JSON herunterladen, von einem anderen Gerät importieren oder löschen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Prüfungen</button>
-      <button class="btn" id="btnGrade" title="Notenrechner: erreichte Punkte in eine Note umrechnen. Lineare Baden-Württemberg-Skala (Standard) oder IHK-Schlüssel; Notengrenzen einstellbar; zeigt Note, Prozent und Punktschwellen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h14a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 7h8M8 11h3M14 11h2M8 15h3M14 15h2"/></svg>Notenrechner</button>
+      <button class="btn" id="btnGrade" title="Notenrechner: erreichte Punkte in eine Note umrechnen. Lineare Baden-Württemberg-Skala; Notengrenzen einstellbar; zeigt Note, Prozent und Punktschwellen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h14a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 7h8M8 11h3M14 11h2M8 15h3M14 15h2"/></svg>Notenrechner</button>
       <button class="btn ghost" id="btnAdmin" aria-expanded="false" title="Verwaltung ein-/ausblenden: Liste bearbeiten (Excel-Import, Art hinzufügen), Prüfungsschema, Einstellungen und Sicherung (JSON laden, Sichern, Standardliste)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Verwaltung <span class="caret" aria-hidden="true">▾</span></button>
     </div>
     <div class="admbar" id="adminBar" hidden>
@@ -800,7 +799,7 @@ body{overflow-x:clip}
           klappt darunter auf.</p>
         <dl class="hdl">
           <dt>Prüfungsschema</dt><dd>Legt fest, welche Spalten (Gattung, Art, Familie, deutscher Name) mit wie vielen Punkten bewertet werden, in welcher Reihenfolge (▲▼ = Spaltenfolge auf dem Bogen) und wie viele Pflanzen je Prüfung. Punkte dürfen Nachkommastellen haben (z. B. 0,5). Gilt pro Profil.</dd>
-          <dt>Notenrechner</dt><dd>Rechnet erreichte Punkte in eine Note um – lineare Baden-Württemberg-Skala (Standard) oder IHK-Schlüssel. Notengrenzen sind einstellbar; angezeigt werden Note, Prozent, Dezimalnote und die Punktschwellen.</dd>
+          <dt>Notenrechner</dt><dd>Rechnet erreichte Punkte in eine Note um – gleichmäßige (lineare) Baden-Württemberg-Skala. Notengrenzen sind einstellbar; angezeigt werden Note, Prozent, Dezimalnote und die Punktschwellen.</dd>
           <dt>Prüfungen</dt><dd>Speichert die gezogene Liste als Momentaufnahme (samt Schema) unter einem <b>Prüfungsdatum</b>.
             Am schnellsten geht das direkt beim <b>Drucken</b> (Häkchen »Als Prüfung speichern« im Druck-Dialog). Von dort: laden, <b>kopieren</b> (z. B. für den nächsten Prüfungstag), nach dem Bearbeiten <b>aktualisieren</b>, drucken oder als <b>.json</b> herunterladen. Die .json-Datei lässt sich auf einem <b>anderen Gerät</b> über »Prüfung importieren« (im Prüfungen-Panel) oder »JSON laden« einlesen; beim »Laden« dort fehlende Arten werden automatisch in die Liste übernommen.</dd>
           <dt>Einstellungen</dt><dd>Passt den Druckbogen an: Titel, <b>Fußzeile</b> (zuständige Stelle, zwei Zeilen) und den Vermerk auf der Musterlösung – so ist das Werkzeug für jede zuständige Stelle nutzbar. Gilt geräteweit.</dd>
@@ -872,7 +871,6 @@ body{overflow-x:clip}
     <div class="gcard">
       <div class="left">
         <p class="gtitle">Notenrechner</p>
-        <div class="modeswitch" id="gMode"></div>
         <div class="ginputs">
           <div class="gfld"><label>Erreichte Punkte</label><input id="gPts" type="number" min="0" step="0.5" inputmode="decimal" placeholder="z. B. 156" title="Vom Prüfling erreichte Punktzahl eingeben (Nachkommastellen erlaubt)."></div>
           <div class="gfld"><label>von Höchstpunktzahl</label><div class="maxrow"><input id="gMax" type="number" min="1" step="1" value="200" title="Höchstpunktzahl der Prüfung (Grundlage der Notenberechnung)."><button class="btn ghost small" id="gSync" title="Höchstpunktzahl aus der aktuellen Auswahl übernehmen (Pflanzenzahl × Punkte je Pflanze).">aus Auswahl: 200 P.</button></div></div>
