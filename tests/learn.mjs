@@ -80,18 +80,103 @@ async function main() {
   });
   assert(setup.cards === 148, "Gemüsebau/Gärtner: 148 Arten erwartet, war " + setup.cards);
 
-  // Entschlackte Startansicht: Feineinstellungen stecken in einer standardmäßig
-  // zugeklappten »Optionen«-Klappe (Kategorie/ZP/Sitzungslänge), Modi + Start bleiben sichtbar
+  // Ein-Knopf-Start: »Weiter lernen« (geführt) + Listen-Schnellzugriff sind sofort sichtbar;
+  // Modi + eigene Sitzung + Optionen stecken in der zugeklappten »Selbst wählen«-Klappe,
+  // die Optionen darin in den zwei Gruppen »Was üben?« / »Wie üben?«.
   const declutter = await page.evaluate(() => {
-    const d = document.querySelector("#setOpts");
-    return { isDetails: d && d.tagName === "DETAILS", closed: d && !d.open,
+    const go = document.querySelector("#btnGo"), ch = document.querySelector("#chooseWrap"),
+      d = document.querySelector("#setOpts");
+    return {
+      goVisible: !!go && !go.hidden && go.offsetParent !== null,
+      goLabel: go ? go.textContent.trim() : "",
+      listQuick: !!document.querySelector("#btnList"),
+      chooseClosed: ch && ch.tagName === "DETAILS" && !ch.open,
+      holdsModes: ch ? !!ch.querySelector("#modeTabs") && !!ch.querySelector("#startRow") : false,
+      isDetails: d && d.tagName === "DETAILS", closed: d && !d.open,
       holdsControls: d ? ["#cat", "#onlyzp", "#sessLen"].every((s) => d.querySelector(s)) : false,
-      modesVisible: !document.querySelector("#modeTabs").hidden,
-      startVisible: !document.querySelector("#startRow").hidden };
+      groups: [...document.querySelectorAll("#setOpts .og-h")].map((h) => h.textContent.trim())
+    };
   });
+  assert(declutter.goVisible && /^(Loslegen|Weiter lernen)$/.test(declutter.goLabel) && declutter.listQuick,
+    "Ein-Knopf-Start »Weiter lernen/Loslegen« + Listen-Schnellzugriff müssen sofort sichtbar sein: " + JSON.stringify(declutter));
+  assert(declutter.chooseClosed && declutter.holdsModes,
+    "Modi + »Sitzung starten« stecken in der standardmäßig zugeklappten »Selbst wählen«-Klappe");
   assert(declutter.isDetails && declutter.closed, "Optionen sollten in einer standardmäßig zugeklappten Klappe stecken");
   assert(declutter.holdsControls, "Die Optionen-Klappe muss Kategorie, ZP und Sitzungslänge enthalten");
-  assert(declutter.modesVisible && declutter.startVisible, "Modi und »Sitzung starten« müssen ohne Aufklappen sichtbar sein");
+  assert(declutter.groups.join("|") === "Was üben?|Wie üben?",
+    "Optionen müssen in den Gruppen »Was üben?« / »Wie üben?« stehen: " + JSON.stringify(declutter.groups));
+
+  // Geführte Sitzung: Übungsform je Karte nach Leitner-Stand (Box 2 → Quiz, Box 4 → Tippen),
+  // kein Teilen-/Duell-Block am Ende (gemischte Formen), »Weiter lernen« beschriftet den Knopf.
+  const guided = await page.evaluate(() => {
+    const rows = SEEDS["gemuesebau_gaertner"];
+    const cards = rows.map((r) => ({ g: r[0], a: r[1], de: r[3], kat: r[4] }))
+      .filter((c) => themeOf(c.g, c.a, c.kat, "gemuesebau_gaertner") === "Zwiebelgemüse");
+    const key = (c) => (c.g + "|" + c.a + "|" + c.de).toLowerCase();
+    const prog = {};
+    cards.forEach((c, i) => { prog[key(c)] = i === 0
+      ? { box: 2, due: "2020-01-01", seen: 1, correct: 1, wrong: 0 }
+      : { box: 4, due: "2020-01-01", seen: 1, correct: 1, wrong: 0 }; });
+    localStorage.setItem("pflanzenlernen.progress.gemuesebau_gaertner", JSON.stringify(prog));
+    applyProfile();                                     // präparierten Fortschritt laden
+    document.querySelector("#cat").value = "t:Zwiebelgemüse";
+    document.querySelector("#cat").dispatchEvent(new Event("change"));
+    const goLabel = document.querySelector("#btnGo").textContent.trim();
+    document.querySelector("#btnGo").click();           // geführte Sitzung starten
+    const firstQuiz = !!document.querySelector("#opts .opt");   // Box 2 zuerst → Auswahl-Quiz
+    const barThere = !!document.querySelector(".sessionbar");
+    document.querySelector("#opts .opt").click();       // beantworten (richtig oder falsch – egal)
+    document.querySelector("#wt").click();              // weiter
+    const thenType = !!document.querySelector("#typeForm");     // Box 4 → Tippen (prüfungsnah)
+    document.querySelector("#btnStop").click();         // Sitzung beenden → Abschluss-Screen
+    const doneTitle = (document.querySelector(".stage-empty h2") || {}).textContent || "";
+    const summary = (document.querySelector(".stage-empty p") || {}).textContent || "";
+    const noShare = !document.querySelector(".stage-empty #shareBlock");
+    document.querySelector("#btnOverview").click();
+    localStorage.removeItem("pflanzenlernen.progress.gemuesebau_gaertner");   // aufräumen
+    applyProfile();
+    document.querySelector("#cat").value = "";
+    document.querySelector("#cat").dispatchEvent(new Event("change"));
+    return { goLabel, firstQuiz, barThere, thenType, doneTitle, summary, noShare };
+  });
+  assert(guided.goLabel === "Weiter lernen",
+    "Mit vorhandenem Fortschritt muss der Knopf »Weiter lernen« heißen: " + guided.goLabel);
+  assert(guided.firstQuiz && guided.barThere && guided.thenType,
+    "Geführte Sitzung muss die Übungsform je Lernstand mischen (Box 2 → Quiz, Box 4 → Tippen): " + JSON.stringify(guided));
+  assert(/bewerteten/.test(guided.summary),
+    "Abschluss der geführten Sitzung nennt die Quote über die bewerteten Karten: " + guided.summary);
+  assert(guided.noShare, "Geführte Sitzungen haben kein Lernduell/Teilen (gemischte Formen): " + JSON.stringify(guided));
+
+  // Profil-Chip: zeigt den Beruf, öffnet das Modal mit beiden Auswahlfeldern, »Passt so« schließt
+  const chip = await page.evaluate(() => {
+    const c = document.querySelector("#profileChip");
+    const txt = c ? c.textContent.trim() : "";
+    c.click();
+    const open = !document.querySelector("#profScrim").hidden;
+    const holds = !!document.querySelector("#profScrim #frSelect") && !!document.querySelector("#profScrim #nivSelect");
+    document.querySelector("#profDone").click();
+    const closed = document.querySelector("#profScrim").hidden;
+    const flag = localStorage.getItem("pflanzenlernen.profilechosen");
+    return { txt, open, holds, closed, flag };
+  });
+  assert(/Gemüsebau/.test(chip.txt) && /Gärtner/.test(chip.txt),
+    "Profil-Chip muss den gewählten Beruf zeigen: " + chip.txt);
+  assert(chip.open && chip.holds && chip.closed && chip.flag === "1",
+    "Profil-Modal: Chip öffnet, enthält Fachrichtung/Ausbildung, »Passt so« schließt + merkt die Wahl: " + JSON.stringify(chip));
+
+  // Listen-Schnellzugriff: rein in die Liste und zurück, ohne die Klappe zu öffnen
+  const quickList = await page.evaluate(() => {
+    document.querySelector("#btnList").click();
+    const inList = document.querySelector("#listControls").hidden === false
+      && document.querySelector("#btnGo").hidden === true;
+    const label = document.querySelector("#btnList").textContent.trim();
+    document.querySelector("#btnList").click();
+    const back = document.querySelector("#listControls").hidden === true
+      && document.querySelector("#btnGo").hidden === false;
+    return { inList, label, back };
+  });
+  assert(quickList.inList && /Zurück/.test(quickList.label) && quickList.back,
+    "»Liste zum Nachschlagen« muss ohne Klappe in den Listenmodus und zurück führen: " + JSON.stringify(quickList));
 
   // Lernpfad: Modi nach Schwierigkeit sortiert (Bilder zuerst) mit Schwierigkeits-Tags;
   // Erst-Einweisung über »So funktioniert der Lernpfad« öffnen/schließen (merkt »gesehen«).
@@ -1457,10 +1542,10 @@ async function main() {
     // konsolidiert: Sitzungs-Optionen weg, keine Zahnrad-Reste, alles im Akkordeon
     const oneAccordion = document.querySelector("#setOpts").hidden === true
       && !document.querySelector("#btnPrintOpts") && !document.querySelector("#printOpts");
-    // homogene Position: die Listen-Optionen sitzen im selben Karten-Slot wie die
-    // Sitzungs-Optionen (direkt nach #setOpts in der Setup-Karte, unter den Modus-Tabs)
+    // homogene Position: die Listen-Optionen sitzen im Karten-Slot direkt nach der
+    // »Selbst wählen«-Klappe (die Sitzungs-Optionen stecken in der Klappe)
     const inCard = !!document.querySelector(".setup #listControls")
-      && document.querySelector("#setOpts").nextElementSibling === document.querySelector("#listControls");
+      && document.querySelector("#chooseWrap").nextElementSibling === document.querySelector("#listControls");
     const lc = document.querySelector("#listControls"); lc.dataset.open = "1"; renderListControls();
     const inAccordion = !!lc.querySelector("#printCols") && !!lc.querySelector("#printEty") && !!lc.querySelector("#lcZp");
     const noExamOnlyForGaertner = !lc.querySelector("#lcExamOnly");   // Spiegel nur bei Fachwerkern
@@ -1674,7 +1759,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON-Links lesbar, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz.");
+  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand, kein Duell, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON-Links lesbar, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz.");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
