@@ -946,6 +946,59 @@ async function main() {
   assert(zuordnung.illuKoehler && !zuordnung.illuFoto,
     "Bildzuordnung: alte Tafeln (Köhler) werden nicht als solche erkannt: " + JSON.stringify(zuordnung));
 
+  // Digitalisierte Bücher (PDF/DjVu, Internet-Archive-Scans) dürfen NIE als Foto
+  // durchgehen – ihr Vorschaubild ist der Buchdeckel. Realfall Garten-Dill
+  // (Anethum graveolens var. hortorum): die feinen Suchwege treffen nichts,
+  // der Volltext-Weg »Anethum graveolens hortorum« liefert nur lateinische
+  // Bücher (»hortorum« = Genitiv von hortus) – die Kette muss sie verwerfen
+  // und über die Ersatzroute (Art-Kategorie) beim echten Foto landen.
+  const buchscan = await page.evaluate(async () => {
+    const dill = allCards.find((c) => c.g === "Anethum");
+    const cmP = (i, file, mime) => ({ index: i, title: "File:" + file,
+      imageinfo: [{ thumburl: "https://x/" + file, mime: mime, descriptionurl: "https://commons/" + file }] });
+    const cmA = (specs) => ({ query: { pages: Object.fromEntries(specs.map((s, i) => ["p" + i, cmP(i + 1, s[0], s[1])])) } });
+    const buecher = cmA([
+      ["Hortus Kewensis. Sistens herbas exoticas (IA mobot31753000817749).pdf", "application/pdf"],
+      ["Icones plantarum medicinalium. Abbildungen von Arzneygewächsen (IA b30534732 0006).pdf", "application/pdf"],
+      ["Flora Rossica; sive, Enumeratio plantarum (IA florarossica12gmel).pdf", "application/pdf"]]);
+    const fotos = cmA([
+      ["Schwalbenschwanz (Papilio machaon) Raupe-20250724.jpg", "image/jpeg"],
+      ["Aneth FR 2012.jpg", "image/jpeg"],
+      ["Anethum graveolens20090812 475.jpg", "image/jpeg"]]);
+    __clearPhotoCache();
+    __setJsonp((url) => {
+      if (/commons/.test(url)) {
+        const q = decodeURIComponent((url.match(/gsrsearch=([^&]+)/) || [])[1] || "");
+        if (q === 'incategory:"Anethum graveolens"') return Promise.resolve(fotos);   // Ersatzroute (Art-Kategorie)
+        if (/incategory:|"/.test(q)) return Promise.resolve({ query: { pages: {} } }); // feine Wege: leer (wie echt)
+        return Promise.resolve(buecher);                                               // Volltext: nur Bücher (wie echt)
+      }
+      const t = decodeURIComponent((url.match(/titles=([^&]+)/) || [])[1] || "");
+      if (/Garten-Dill/.test(t)) return Promise.resolve({ query: { pages: { "1": { title: "Garten-Dill" } } } });
+      return Promise.resolve({ query: { pages: { "1": { title: "Dill (Pflanze)",
+        extract: "Dill, Dille oder Gurkenkraut (Anethum graveolens) …",
+        pageimage: "Illustration_Anethum_graveolens0.jpg",
+        thumbnail: { source: "https://x/Illustration_Anethum_graveolens0.jpg" } } } } });
+    });
+    const hit = await wikiPhoto(dill);
+    const pdfDirekt = pickCommons(buecher, dill);
+    __setJsonp(null); __clearPhotoCache();
+    return { file: hit && hit.file, src: hit && hit.src, pdfDirekt,
+      pdfRaus: !usablePhoto("Icones plantarum medicinalium (IA b30534732 0006).pdf"),
+      djvuRaus: !usablePhoto("Flora Batava afbeelding.djvu"),
+      iaRaus: !usablePhoto("Herbarium Blackwellianum (IA herbariumblackwe03blac) page 12.jpg"),
+      iainBleibt: usablePhoto("Rosa canina (Iain Smith) 2019.jpg"),
+      fotoBleibt: usablePhoto("Anethum graveolens20090812 475.jpg") };
+  });
+  assert(buchscan.pdfRaus && buchscan.djvuRaus && buchscan.iaRaus,
+    "Buchscans (PDF/DjVu, »(IA …)«) müssen aussortiert werden: " + JSON.stringify(buchscan));
+  assert(buchscan.iainBleibt && buchscan.fotoBleibt,
+    "Echte Fotos (auch mit »(Iain …)« im Namen) dürfen nicht aussortiert werden: " + JSON.stringify(buchscan));
+  assert(buchscan.pdfDirekt === null,
+    "pickCommons darf aus einer reinen Buch-Trefferliste nichts wählen (mime application/pdf): " + JSON.stringify(buchscan.pdfDirekt));
+  assert(buchscan.file === "Anethum graveolens20090812 475.jpg" && buchscan.src === "cm",
+    "Garten-Dill muss über die Ersatzroute beim echten Dill-Foto landen (nicht Buchdeckel/Illustration): " + JSON.stringify(buchscan));
+
   // Wikipedia-Vorschau: bei ANDERER Unterart darf nicht die Elternart erscheinen
   // (»Brassica napus« = Raps, gesucht ist die Steckrübe ssp. rapifera). Offline –
   // nur die Kandidatenliste/Titelbildung, kein Netzabruf.

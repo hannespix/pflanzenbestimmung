@@ -1253,6 +1253,30 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Selects ≥44, Zeilen ≥48, prüft Zeilen-Klick (an/ab, ℹ toggelt nicht) und
       `#gMax` ≥80 px.
 
+- [x] **Bilder-Quiz: digitalisierte Bücher aussortiert** (Rückmeldung mit Screenshot:
+      »Garten-Dill« zeigte einen Buchdeckel, Bildnachweis »Hill, John, 1714–1775«).
+      Ursache: Die feinen Suchwege (Taxon-Kategorie, Phrase, deutscher Name) treffen
+      für *Anethum graveolens* var. *hortorum* nichts, und der **Volltext-Notweg**
+      `Anethum graveolens hortorum` liefert auf Commons fast nur **digitalisierte
+      lateinische Bücher als PDF** (»hortorum« = Genitiv von *hortus* – »Hortus
+      Kewensis« 1768 von John Hill war Platz 1); das Vorschaubild eines PDFs ist
+      seine erste Seite = der Buchdeckel, und weder Dateiname noch Filter schlugen
+      an. Fix (minimal-invasiv, Kette unverändert): `commonsQuery` fragt
+      `iiprop=url|mime` mit ab, `pickCommons` verwirft alles außer `image/*`
+      (und DjVu); `usablePhoto` verwirft zusätzlich die Endungen `.pdf`/`.djvu`
+      und das Internet-Archive-Muster `(IA …)` (Wortgrenze – »(Iain Smith)« bleibt).
+      Dadurch läuft die Kette weiter zur **Ersatzroute** und landet beim echten Foto
+      (Art-Kategorie: »Anethum graveolens20090812 475.jpg«; das Artikelbild der
+      Wikipedia ist hier eine historische Illustration und bleibt korrekt Notnagel).
+      Bild-Cache-Key auf `pflanzenlernen.photos3` gehoben (schlechte Treffer beim
+      Nutzer verfallen). **Verfahren wie gehabt:** Python-Zwilling der Kette gegen
+      die echten APIs – Garten-Dill jetzt echtes Dill-Foto, die Referenzfälle
+      (Kirschtomate/Küchen-Zwiebel/Schalotte/Hainbuche) unverändert, *Pelargonium ×
+      hortorum* (gleiches »hortorum«-Risiko) sauber, 13/13 Stichproben mit Bild,
+      0 Buchscans. `tests/learn.mjs` stellt den Realfall offline nach (PDF-Bücher im
+      Volltext-Schritt → Kette muss beim Commons-Foto landen) und prüft die Filter
+      (PDF/DjVu/`(IA …)` raus, »(Iain …)«-Foto bleibt).
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein
