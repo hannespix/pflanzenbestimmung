@@ -1361,6 +1361,27 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Prüfwerkzeug (eigener Dialog, kein `.scrim`-Leck). Per Screenshot verifiziert;
       `animation-timeline: view()` auf den Zeilen per computedStyle bestätigt.
 
+- [x] **Quiz-Juice: Feuerwerk 2.0, Haptik, einfahrende Antwort-Knöpfe** (Nutzerwunsch:
+      »Buttons sollen stylisch rausfahren, Feuerwerk viel cooler, mehr Dopamin-
+      Feedback wie Vibration, bessere Schatten«). Nur Lern-Tool, offline-rein:
+      (1) **celebrate() neu**: Blättchen + Blüten (`c-petal`) + goldene Funken
+      (`c-spark`, Glow) bersten in **zwei Phasen** (schneller Burst → Fallen mit
+      Drall; Keyframe `conf-fly` mit `--dx/--dy/--fall/--rot/--dur/--s`), dazu ein
+      **Licht-Ring** (`conf-ring`) am Auslöser; Stärke 2 = 64 Partikel + zweite
+      Welle. Klassen `.conf-host`/`.conf` bleiben (Testkompatibilität), alles
+      transform/opacity, `try/catch`, unter `prefers-reduced-motion` aus.
+      (2) **Haptik** (`buzz(pattern)` via `navigator.vibrate`, in `celebrate`
+      eingebaut): Treffer = kurzer Tick (12 ms), Sitzung/Duell gewonnen =
+      Erfolgsmuster – Android vibriert, iOS/Desktop ignorieren still; läuft auch
+      bei reduzierter Bewegung (Haptik ist keine Motion). (3) **Quiz-Optionen
+      fahren gestaffelt ein** (`optIn` + nth-child-Delays 0,02–0,30 s, federnde
+      Kurve), der **richtige Knopf poppt** (`optPop`), der **falsche schüttelt**
+      (`optShake`); dazu tiefere, grün getönte Mehrschicht-Schatten auf Optionen
+      und Bewertungs-Knöpfen (satterer Hover-Lift). `tests/learn.mjs` prüft:
+      Vibrationsmuster bei Stärke 2 (sofort gesichert – der echte Treffer-buzz
+      der App überschreibt sonst mit 12), ≥60 Partikel + Ring + drei Formen,
+      Stagger-Delays + optPop auf dem richtigen Knopf. Screenshot verifiziert.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein
