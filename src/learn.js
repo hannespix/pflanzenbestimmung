@@ -512,6 +512,97 @@ function streakBump(){
   }catch(e){ /* Belohnung ist Kür */ }
 }
 
+/* ---------- Erfahrungspunkte + botanische Ränge ----------
+   Didaktisches Prinzip: Je schwerer das Abrufen, desto mehr Punkte – Tippen
+   (freies Erinnern) bringt doppelt so viel wie Ankreuzen, die Selbsteinschätzung
+   der Karteikarte am wenigsten. Teilweise richtig gibt anteilig. Global über
+   alle Profile (Key pflanzenlernen.xp = {x:Punkte, r:zuletzt gefeierter Rang}). */
+const LS_XP = LS_PREFIX+"xp";
+const RANKS = [                                  // Gärtner-Laufbahn statt Level-Zahlen
+  {n:"Keimling",          x:0},
+  {n:"Sämling",           x:150},
+  {n:"Steckling",         x:500},
+  {n:"Jungpflanze",       x:1200},
+  {n:"Stockmutter",       x:2500},
+  {n:"Meistergärtner/in", x:5000}
+];
+const XP_BASE = { cards:3, quiz:5, type:10 };    // Karteikarte < Auswahl < freies Tippen
+function xpLoad(){ try{ const o=JSON.parse(store.get(LS_XP)||"{}"); return (o&&typeof o==="object")?o:{}; }catch(e){ return {}; } }
+function xpSave(o){ try{ store.set(LS_XP, JSON.stringify(o)); }catch(e){} }
+function xpTotal(){ return Math.max(0, +(xpLoad().x||0)); }
+function rankOf(xp){
+  let i=0; for(let k=0;k<RANKS.length;k++) if(xp>=RANKS[k].x) i=k;
+  const cur=RANKS[i], next=RANKS[i+1]||null;
+  const spanne = next ? next.x-cur.x : 1;
+  return { i, name:cur.n, next:next?next.n:null, need:next?next.x-xp:0,
+           pct: next ? Math.min(100, Math.round((xp-cur.x)/spanne*100)) : 100 };
+}
+function xpAdd(n, anchor){                       // Punkte gutschreiben, Rangaufstieg feiern
+  n = Math.max(0, Math.round(n||0));
+  if(!n) return 0;
+  try{
+    const o=xpLoad(), vor=rankOf(xpTotal()).i;
+    o.x=(+o.x||0)+n;
+    const nach=rankOf(o.x).i;
+    if(nach>vor && o.r!==nach){                  // neuer Rang: einmalig feiern
+      o.r=nach; xpSave(o);
+      toast(`Neuer Rang: ${RANKS[nach].n} 🌱`);
+      celebrate(anchor||$("#stage")||document.body, 2);
+    } else xpSave(o);
+    if(sess.active) sess.xp=(sess.xp||0)+n;      // in der Sitzungsleiste mitzählen
+  }catch(e){}
+  return n;
+}
+/* Rangliste als echtes Popover (Top-Layer, Light-Dismiss + Esc kommen von der
+   Plattform), am Rang-Namen verankert. Nur wenn Popover UND Anchor-Positioning
+   können – sonst bleibt es beim erklärenden Tooltip, ohne toten Knopf. */
+function canPopover(){
+  try{ return ("popover" in HTMLElement.prototype) && window.CSS && CSS.supports("anchor-name: --a"); }
+  catch(e){ return false; }
+}
+function wireRankPopover(){
+  const chip=$("#rankName"); if(!chip || !canPopover()) return;
+  let pop=$("#rankPop");
+  if(!pop){
+    pop=el("div"); pop.id="rankPop"; pop.setAttribute("popover","auto");
+    document.body.appendChild(pop);
+  }
+  const jetzt=rankOf(xpTotal()).i;
+  pop.innerHTML = `<div class="rkp-h">Laufbahn</div>`+
+    RANKS.map((r,i)=>`<div class="rkp-row${i===jetzt?" on":""}"><span class="r-n">${esc(r.n)}</span><span class="r-x">ab ${r.x} P.</span></div>`).join("");
+  chip.setAttribute("role","button"); chip.tabIndex=0;
+  chip.setAttribute("aria-label","Laufbahn ansehen: alle Ränge und ihre Punktzahlen");
+  const zeig=()=>{ try{ pop.togglePopover(); }catch(e){} };
+  chip.onclick=zeig;
+  chip.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); zeig(); } };
+}
+/* ---------- Sitzungs-Combo (Treffer in Folge) ----------
+   Kein Zeitdruck – nur eine Serie richtiger Antworten innerhalb der Sitzung.
+   Ab 3 in Folge gibt es Bonuspunkte, bei 5/10/15… ein größeres Feuerwerk.
+   Nur in bewerteten Modi (Quiz, Tippen, Bilder) – bei der Karteikarte könnte
+   man sich sonst durch »Gewusst« klicken. */
+function comboBonus(n){ return n>=10 ? 8 : n>=5 ? 4 : n>=3 ? 2 : 0; }
+function comboHit(ok, anchor){
+  if(!scoreable()) return 0;                     // Karteikarten: keine Combo
+  if(!ok){ sess.combo=0; return 0; }
+  sess.combo=(sess.combo||0)+1;
+  sess.comboMax=Math.max(sess.comboMax||0, sess.combo);
+  const n=sess.combo, bonus=comboBonus(n);
+  if(n>=5 && n%5===0){                           // 5er-Stufen: größere Feier + kräftigere Haptik
+    celebrate(anchor||$("#fb")||document.body, 2);
+    buzz([14,40,14,40,30]);
+    toast(`${n} richtige in Folge! +${bonus} Punkte`);
+  }
+  return bonus;
+}
+/* Ein Treffer wird verbucht: Grundpunkte je Übungsform × Anteil + Combo-Bonus. */
+function scoreHit(kind, ok, anteil, anchor){
+  const base = XP_BASE[kind]||XP_BASE.quiz;
+  const teil = Math.max(0, Math.min(1, anteil==null ? (ok?1:0) : anteil));
+  const bonus = comboHit(ok, anchor);
+  return xpAdd(base*teil + (ok?bonus:0), anchor);
+}
+
 /* ---------- Auswahl / Filter ---------- */
 /* Lernstoff eingrenzen: alles, ein Thema (»t:…«) oder eine Pflanzenfamilie (»f:…«). */
 function scopeOk(c, sel){
@@ -914,7 +1005,14 @@ function renderProgress(){
          <span class="sr-goal"><i style="width:${Math.round(done/goal*100)}%"></i></span>
          <span class="sr-n">${done}/${goal} heute</span>
          <button class="herblink" id="btnHerb" title="Deine Themen-Sammlung: Jedes gemeisterte Thema legt eine gepresste Pflanze ins Herbarium.">🌿 Mein Herbarium</button>
+       </div>`; })()}
+     ${(()=>{ const xp=xpTotal(), r=rankOf(xp);
+       return `<div class="rankrow" id="rankRow" title="Erfahrungspunkte sammelst du mit richtigen Antworten – freies Tippen bringt am meisten, Ankreuzen weniger, die Selbsteinschätzung der Karteikarte am wenigsten.">
+         <span class="rk-name" id="rankName">${esc(r.name)}</span>
+         <span class="rk-bar"><i style="width:${r.pct}%"></i></span>
+         <span class="rk-n">${xp} P.${r.next?` · noch ${r.need} bis ${esc(r.next)}`:` · höchster Rang`}</span>
        </div>`; })()}`;
+  wireRankPopover();
   const hb=$("#btnHerb"); if(hb) hb.onclick=openHerbarium;
   const due = p.filter(c=>{ const pr=pget(c.key); return !pr.box || !pr.due || pr.due<=todayISO(); }).length;
   const wie = mode==="photo" ? (photoAnswer==="exam" ? "wie in der Prüfung" : DIRS[curDir()].label+" · "+PH_ANSWER[photoAnswer])
@@ -1266,6 +1364,7 @@ function sessionBar(){
   return `<div class="sessionbar"><span>${sess.done} / ${sess.total}</span><span class="sbar"><i style="width:${pct}%"></i></span>`+
     (mode!=="cards"?`<span>${sess.correct} richtig</span>`:``)+
     (examScoring()&&sess.pts?`<span class="spts" title="Punkte dieser Sitzung – ein Schreibfehler zählt halb, der Rest kommt bei der fehlerfreien Wiederholung dazu">${nfmt(sess.pts.sum)} / ${nfmt(sess.pts.max)} P.</span>`:``)+
+    ((sess.combo||0)>=3?`<span class="scombo" title="Treffer in Folge – ab 3 gibt es Bonuspunkte, jede 5er-Stufe wird gefeiert">${sess.combo}× in Folge</span>`:``)+
     (scoreable()?`<span class="sclock" id="sclock" title="Denkzeit dieser Sitzung – die Uhr läuft nur, solange eine Frage offen ist">${fmtDur(clockNow())}</span>`:``)+
     `<button class="btn ghost" id="btnStop" title="Sitzung beenden">beenden</button></div>`;
 }
@@ -1320,6 +1419,7 @@ function finishSession(){
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6L9 17l-5-5"/></svg>
     <h2>${aborted?"Sitzung beendet":"Sitzung geschafft"}</h2>
     <p>${sess.done} Karten gelernt${auto ? (scoredN?` · ${sess.correct} richtig von ${scoredN} bewerteten (${accS} %)`:"") : (mode!=="cards"?` · ${sess.correct} richtig (${acc} %)`:"")}${sess.pts&&(auto||examScoring())?` · <b>${nfmt(sess.pts.sum)} von ${nfmt(sess.pts.max)} Punkten</b>`:""}${(auto?sess.ms:(scoreable()&&sess.ms))?` · Denkzeit ${fmtDur(sess.ms)}`:""}.</p>
+    ${(sess.xp||sess.comboMax>=3)?`<p class="xpline"><b>+${sess.xp||0} Erfahrungspunkte</b>${sess.comboMax>=3?` · beste Serie: ${sess.comboMax}× in Folge`:""} · Rang: ${esc(rankOf(xpTotal()).name)}</p>`:""}
     ${extra}
     ${share}
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px">
@@ -1382,8 +1482,8 @@ function flipCard(){
     <button class="r-good">Gewusst<small>${when(days("good"))}</small></button>`;
   $("#stage").appendChild(rate);
   rate.querySelector(".r-again").onclick=()=>{ grade(c,"again"); requeueCurrent(); advance(); };
-  rate.querySelector(".r-hard").onclick =()=>{ grade(c,"hard"); advance(); };
-  rate.querySelector(".r-good").onclick =()=>{ grade(c,"good"); advance(); };
+  rate.querySelector(".r-hard").onclick =()=>{ grade(c,"hard"); xpAdd(1); advance(); };   // Teilwissen zählt ein wenig
+  rate.querySelector(".r-good").onclick =()=>{ grade(c,"good"); scoreHit("cards", true, 1); advance(); };
   try{ rate.querySelector(".r-again").focus(); }catch(e){}   // Tastatur: direkt bewerten (1/2/3 oder Tab)
 }
 
@@ -1421,6 +1521,7 @@ function answerQuiz(btn, chosen, opts){
   $("#fb").innerHTML = (ok ? `<span class="good">Richtig!</span>` : `<span class="bad">Leider falsch.</span>`)+
     ` <span class="sol">${solutionLine(c)}</span>`;
   if(ok) celebrate(btn, 1);
+  scoreHit("quiz", ok, ok?1:0, btn);                   // Punkte + Combo (Auswahl = mittlere Schwierigkeit)
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
 }
@@ -1490,6 +1591,7 @@ function submitType(ins){
                 : near ? ` · <b>≈</b> Schreibfehler zählen halb – so steht es auf dem Prüfungsbogen` : "")+
     (all?"":" · "+solutionLine(c))+`</span>`;
   if(all) celebrate($("#fb"), 1);
+  scoreHit("type", all, max?got/max:0, $("#fb"));      // freies Tippen zählt doppelt; Teilpunkte anteilig
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
 }
@@ -3225,6 +3327,9 @@ function finishPhotoAnswer(ok, g, p, solHTML, full){
     : (ok ? `<span class="good">Richtig!</span>`
       : g==="hard" ? `<span class="near">Teilweise richtig.</span>` : `<span class="bad">Leider falsch.</span>`)+" "+solHTML;
   if(ok) celebrate($("#fb"), 1);
+  // Punkte + Combo: Auswahl zählt wie Quiz, Tippen/»wie in der Prüfung« wie freies Tippen;
+  // teilweise richtig (»hard«) gibt die Hälfte.
+  scoreHit(photoAnswer==="mc" ? "quiz" : "type", ok, ok?1:(g==="hard"?0.5:0), $("#fb"));
   photoRevealCredit(p);
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
@@ -3675,6 +3780,11 @@ window.streakGoal=streakGoal;
 window.herbCheck=herbCheck;       // für Tests: Sammel-Herbarium
 window.herbData=herbData;
 window.openHerbarium=openHerbarium;
+window.xpTotal=xpTotal;           // für Tests: XP, Ränge, Combo
+window.xpAdd=xpAdd;
+window.rankOf=rankOf;
+window.comboBonus=comboBonus;
+window.RANKS=RANKS;
 window.isCultivarName=isCultivarName;
 window.infraEpithet=infraEpithet;
 window.artLevelOk=artLevelOk;

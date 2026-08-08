@@ -691,6 +691,37 @@ async function main() {
   assert(lb.closed && lb.focusBack, "Esc muss die Lightbox schließen und den Fokus zurückgeben: " + JSON.stringify(lb));
   assert(/\/1600px-Foo\.jpg$/.test(lb.derive), "lbBig muss das größere Commons-Derivat ableiten: " + lb.derive);
 
+  // 8y) Verwaltungs-Menü als Popover (wo die Plattform es kann): Top-Layer, am Knopf
+  //     verankert, Light-Dismiss/Esc schließen – der »hidden«-Zustand bleibt in beiden
+  //     Fällen die Wahrheit, damit alles Bestehende weiter stimmt.
+  const admin = await page.evaluate(async () => {
+    const bar = document.querySelector("#adminBar"), btn = document.querySelector("#btnAdmin");
+    const kann = ("popover" in HTMLElement.prototype) && CSS.supports("anchor-name: --a");
+    btn.click();
+    const auf = { hidden: bar.hidden, aria: btn.getAttribute("aria-expanded"), active: btn.classList.contains("active"),
+      pop: bar.matches(":popover-open") };
+    btn.click();
+    const zu = { hidden: bar.hidden, aria: btn.getAttribute("aria-expanded") };
+    let dismiss = null;
+    if (kann) {                                  // Light-Dismiss/Esc muss den Zustand mitziehen
+      btn.click(); await new Promise((r) => setTimeout(r, 20));
+      bar.hidePopover(); await new Promise((r) => setTimeout(r, 30));
+      dismiss = { hidden: bar.hidden, aria: btn.getAttribute("aria-expanded") };
+    }
+    return { kann, istPopover: bar.hasAttribute("popover"), auf, zu, dismiss };
+  });
+  assert(!admin.auf.hidden && admin.auf.aria === "true" && admin.auf.active,
+    "Verwaltung: Öffnen muss Zustand + ARIA sofort setzen: " + JSON.stringify(admin));
+  assert(admin.zu.hidden && admin.zu.aria === "false",
+    "Verwaltung: Schließen muss Zustand + ARIA zurücksetzen: " + JSON.stringify(admin));
+  assert(admin.istPopover === admin.kann,
+    "Verwaltung: Popover-Modus nur wo Popover+Anchor können (sonst unveränderte Inline-Leiste): " + JSON.stringify(admin));
+  if (admin.kann) {
+    assert(admin.auf.pop, "Verwaltung: im Popover-Modus muss die Leiste im Top-Layer offen sein: " + JSON.stringify(admin));
+    assert(admin.dismiss && admin.dismiss.hidden && admin.dismiss.aria === "false",
+      "Verwaltung: Light-Dismiss/Esc muss Zustand + ARIA mitziehen: " + JSON.stringify(admin));
+  }
+
   // 9) Mobile-Layout: Status-Pille überlagert die Überschrift nicht (schmale Breite)
   await page.setViewport({ width: 360, height: 720, deviceScaleFactor: 1 });
   const mobile = await page.evaluate(() => {
@@ -733,7 +764,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Smoke-Test OK – Boot, Modul-Modals (öffnen/×/Esc, aktive Buttons), Hilfe + Tooltips, Profilwechsel (148/248), Schema-Matrix, Ziehen, Bogen (offizielle Formulare), Druck-Dialog speichert/aktualisiert Prüfung, Prüfungen (speichern/laden/kopieren/aktualisieren), Prüfungs-JSON-Import (Gerätewechsel), Sicherung mit Profilwechsel, Einstellungen, Vorschau, Info-Karte (ℹ in Liste + Aktueller Prüfung: Namensherleitung, Deep-Links, opt-in Wikipedia, ×/Esc), Persistenz, Mobile-Kopf, Touch-Ziele (≥44px, Zeile wählt an/ab, #gMax breit genug).");
+  console.log("Smoke-Test OK – Boot, Modul-Modals (öffnen/×/Esc, aktive Buttons), Hilfe + Tooltips, Profilwechsel (148/248), Schema-Matrix, Ziehen, Bogen (offizielle Formulare), Druck-Dialog speichert/aktualisiert Prüfung, Prüfungen (speichern/laden/kopieren/aktualisieren), Prüfungs-JSON-Import (Gerätewechsel), Sicherung mit Profilwechsel, Einstellungen, Vorschau, Info-Karte (ℹ in Liste + Aktueller Prüfung: Namensherleitung, Deep-Links, opt-in Wikipedia, ×/Esc), Persistenz, Mobile-Kopf, Touch-Ziele (≥44px, Zeile wählt an/ab, #gMax breit genug), Bild-Lightbox, Verwaltung als Popover (Top-Layer, Light-Dismiss).");
 }
 
 main().catch((e) => { console.error("Smoke-Test FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });

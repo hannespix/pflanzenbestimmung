@@ -2266,11 +2266,31 @@ function wire(){
   if(fb){ const upd=()=>fb.classList.toggle("stuck", fb.getBoundingClientRect().top<=0.5);
     window.addEventListener("scroll", upd, {passive:true}); window.addEventListener("resize", upd, {passive:true}); upd(); }
   // »Verwaltung«: seltene Funktionen (Liste/Schema/Einstellungen/Sicherung) auf-/zuklappen
+  // Wo die Plattform es kann (Popover + Anchor-Positioning), wird die Leiste ein echtes
+  // Popover im Top-Layer: Klick daneben und Esc schließen von selbst, die Position hängt
+  // am Knopf. Sonst bleibt exakt das bisherige Auf-/Zuklappen – der »hidden«-Zustand
+  // (und damit alles Bestehende) stimmt in beiden Fällen.
+  const admPop = (()=>{ try{ return ("popover" in HTMLElement.prototype) && window.CSS && CSS.supports("anchor-name: --a"); }catch(e){ return false; } })();
+  const admSync=(on)=>{ $("#btnAdmin").classList.toggle("active",on); $("#btnAdmin").setAttribute("aria-expanded",String(on)); };
+  if(admPop){
+    const bar=$("#adminBar");
+    bar.setAttribute("popover","auto");
+    bar.addEventListener("toggle",e=>{                 // deckt auch Light-Dismiss/Esc ab
+      const on = e.newState==="open";
+      if(!on) bar.hidden=true;
+      admSync(on);
+    });
+  }
   $("#btnAdmin").onclick=()=>{
     const bar=$("#adminBar"), open=bar.hidden;
+    if(admPop){                                        // hidden zuerst lösen, sonst bleibt display:none
+      if(open){ bar.hidden=false; try{ bar.showPopover(); }catch(e){} }
+      else { try{ bar.hidePopover(); }catch(e){} bar.hidden=true; }
+      admSync(open);                                   // sofort spiegeln (das toggle-Event kommt erst später)
+      return;
+    }
     bar.hidden=!open;
-    $("#btnAdmin").classList.toggle("active",open);
-    $("#btnAdmin").setAttribute("aria-expanded",String(open));
+    admSync(open);
   };
   $("#btnImport").onclick=pickExcel;
   $("#btnAdd").onclick=()=>openEdit(null);

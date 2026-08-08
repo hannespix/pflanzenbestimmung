@@ -161,6 +161,33 @@ input[type=checkbox],input[type=radio]{accent-color:var(--green)}
   h1,h2,h3,summary{ text-wrap:balance }
   p,li{ text-wrap:pretty }
 }
+
+/* ===== Herbarium 2.0 · Stufe 5: OKLCH/Display-P3, Popover-Menüs, Container Queries =====
+   Progressive enhancement in Reinform: Jede Regel steckt hinter @supports bzw. einer
+   Feature-Abfrage – ältere Browser sehen unverändert die bisherige Fassung, der Druck
+   bleibt unberührt (alles @media screen). */
+@media screen{
+  @supports (color: oklch(0.5 0.1 150)){
+    @media (color-gamut: p3){
+      /* Sattere botanische Grüntöne, die im sRGB-Dreieck gar nicht darstellbar sind.
+         Gleiche Helligkeit (L) wie bisher – nur mehr Farbigkeit (C). */
+      :root{
+        --green:oklch(.50 .095 152); --green-deep:oklch(.38 .080 152); --green-tint:oklch(.93 .028 148);
+        --gold:oklch(.62 .145 85); --madder:oklch(.47 .165 30); --sepia:oklch(.50 .050 80);
+      }
+      :root[data-theme="dark"]{
+        --green:oklch(.62 .115 152); --green-deep:oklch(.83 .105 152); --green-tint:oklch(.30 .050 152);
+        --gold:oklch(.78 .130 85); --madder:oklch(.72 .130 32); --sepia:oklch(.74 .065 82);
+      }
+      @media (prefers-color-scheme:dark){
+        :root:not([data-theme="light"]){
+          --green:oklch(.62 .115 152); --green-deep:oklch(.83 .105 152); --green-tint:oklch(.30 .050 152);
+          --gold:oklch(.78 .130 85); --madder:oklch(.72 .130 32); --sepia:oklch(.74 .065 82);
+        }
+      }
+    }
+  }
+}
 </style>
 </head>
 <body>
