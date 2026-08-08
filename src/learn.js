@@ -1190,6 +1190,18 @@ function startGuided(){
   clockRun(true); stageFull(true);
   nextCard();
 }
+/* Brücke von der geführten Sitzung zum Lernduell: dieselben Karten als REINES
+   Auswahl-Quiz spielen – dessen Abschluss hat den normalen Teilen-/Herausfordern-
+   Block. So bleibt das Duell fair und reproduzierbar (der Link kodiert nur reine
+   Modi), und die Teilen-Funktion ist auch vom Ein-Knopf-Weg aus einen Tap entfernt. */
+function startQuizWith(cards){
+  mode="quiz"; store.set(LS_PREFIX+"mode",mode);
+  $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.mode===mode));
+  queue = cards.slice(); qi = 0; photoMisses = 0; qStart = 0;
+  sess = { total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, cards:cards.slice(), challenge:null };
+  clockRun(true); stageFull(true);
+  nextCard();
+}
 function sessionBar(){
   const pct = sess.total? Math.round(sess.done/sess.total*100):0;
   return `<div class="sessionbar"><span>${sess.done} / ${sess.total}</span><span class="sbar"><i style="width:${pct}%"></i></span>`+
@@ -1253,10 +1265,12 @@ function finishSession(){
     ${share}
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px">
       <button class="btn primary" id="againBtn">Weiter lernen</button>
+      ${auto && sess.cards && sess.cards.length ? `<button class="btn ghost" id="duelQuizBtn" title="Genau diese Karten noch einmal als Auswahl-Quiz spielen – an dessen Ende kannst du dein Ergebnis teilen und Kollegen herausfordern (das Duell braucht eine reine, vergleichbare Quote).">Diese Lektion als Duell-Quiz</button>` : ``}
       <button class="btn ghost" id="btnOverview">Zur Übersicht</button>
     </div></div>`;
   wireShareBlock();
   const a=$("#againBtn"); if(a) a.onclick = auto ? startGuided : startSession;
+  const dq=$("#duelQuizBtn"); if(dq){ const cs=sess.cards.slice(); dq.onclick=()=>startQuizWith(cs); }
   const ov=$("#btnOverview"); if(ov) ov.onclick=exitSession;
   if(gewonnen) celebrate(stage.querySelector("h2"), 2);
   renderProgress();
