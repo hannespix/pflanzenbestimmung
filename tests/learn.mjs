@@ -60,6 +60,9 @@ async function main() {
     // Erst-Einweisung standardmäßig als »gesehen« markieren, damit sie die übrigen
     // Tests nicht überlagert; ein eigener Test setzt sie gezielt zurück.
     try { localStorage.setItem("pflanzenlernen.introSeen", "1"); } catch (e) {}
+    // Tagesziel der Lernserie sehr hoch setzen: die vielen grade()-Aufrufe der Tests
+    // sollen nicht zufällig mitten in einer Assertion das Ziel-Feuerwerk auslösen.
+    try { localStorage.setItem("pflanzenlernen.streak", JSON.stringify({ g: 5000 })); } catch (e) {}
     // View-Transitions deaktivieren: sie rendern asynchron und würden die
     // synchronen Assertions des Tests unzuverlässig machen (vt()-Fallback).
     window.__noVT = 1;
@@ -1088,6 +1091,71 @@ async function main() {
     "Feuerwerk: Stärke 2 braucht ≥60 Partikel, Licht-Ring und drei Formen (Blatt/Blüte/Funke): " + JSON.stringify(juice));
   assert(juice.stagger && juice.pop,
     "Quiz-Optionen müssen gestaffelt einfahren (optIn + Delays), der richtige Knopf poppt (optPop): " + JSON.stringify(juice));
+
+  // Lernserie + Tagesziel: jede bearbeitete Karte zählt; bei Zielerreichen beginnt/wächst
+  // die Serie; »Ziel gestern erreicht« überlebt die Nacht, ein Loch reißt die Serie.
+  const streak = await page.evaluate(() => {
+    const K = "pflanzenlernen.streak";
+    const shift = (n) => { const d = new Date(); d.setDate(d.getDate() + n);
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+    const today = shift(0);
+    localStorage.setItem(K, JSON.stringify({ g: 5 }));          // kleines Ziel nur für diesen Test
+    for (let i = 0; i < 5; i++) streakBump();
+    const s1 = streakState();
+    const reached = s1.s === 1 && s1.gd === today && s1.n === 5 && streakGoal() === 5;
+    localStorage.setItem(K, JSON.stringify({ g: 5, d: shift(-1), n: 7, s: 3, b: 3, gd: shift(-1) }));
+    const s2 = streakState();                                   // Ziel gestern erreicht → Serie lebt, Tageszähler frisch
+    const survived = s2.s === 3 && s2.n === 0;
+    localStorage.setItem(K, JSON.stringify({ g: 5, d: shift(-3), n: 9, s: 4, b: 6, gd: shift(-3) }));
+    const broken = streakState().s === 0;                       // letzter Zieltag vor 3 Tagen → gerissen
+    localStorage.setItem(K, JSON.stringify({ g: 5, d: today, n: 3, s: 2, b: 6, gd: shift(-1) }));
+    renderProgress();
+    const row = document.querySelector("#streakRow");
+    const ui = !!row && row.querySelector(".sflame b").textContent === "2" && /3\/5 heute/.test(row.textContent) &&
+      row.querySelector(".sflame").classList.contains("on");
+    const goalField = !!document.querySelector("#dayGoal");
+    localStorage.setItem(K, JSON.stringify({ g: 5000 }));       // Harnisch-Zustand wiederherstellen
+    renderProgress();
+    return { reached, survived, broken, ui, goalField };
+  });
+  assert(streak.reached, "Lernserie: das Erreichen des Tagesziels muss die Serie starten (s=1, gd=heute): " + JSON.stringify(streak));
+  assert(streak.survived && streak.broken,
+    "Lernserie: »Ziel gestern erreicht« muss die Nacht überleben, ein Loch muss die Serie reißen: " + JSON.stringify(streak));
+  assert(streak.ui && streak.goalField,
+    "Lernserie-UI: Flammen-Zeile (Serie an, 3/5 heute) im Fortschritt + Tagesziel-Feld in den Optionen: " + JSON.stringify(streak));
+
+  // Sammel-Herbarium: sitzt JEDE Art eines Themas (Box 4–5), gilt es als gemeistert –
+  // einmalige Feier, Sammelkarte wird farbig mit »Gemeistert«-Stempel.
+  const herb = await page.evaluate(() => {
+    $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    const thema = allCards.find((c) => c.thema === "Zwiebelgemüse") ? "Zwiebelgemüse" : allCards[0].thema;
+    const prog = {};
+    allCards.filter((c) => c.thema === thema).forEach((c) => {
+      prog[c.key] = { box: 5, due: "2099-01-01", seen: 3, correct: 3, wrong: 0 }; });
+    localStorage.setItem("pflanzenlernen.progress.gemuesebau_gaertner", JSON.stringify(prog));
+    localStorage.removeItem("pflanzenlernen.herb.gemuesebau_gaertner");
+    applyProfile();                                     // Fortschritt neu laden
+    const neu1 = herbCheck();                           // → [thema], einmalig
+    const neu2 = herbCheck();                           // → leer
+    openHerbarium();
+    const modal = document.querySelector(".herbmodal");
+    const total = modal ? modal.querySelectorAll(".herbcard").length : 0;
+    const doneCards = modal ? modal.querySelectorAll(".herbcard.done").length : 0;
+    const doneName = modal && modal.querySelector(".herbcard.done .hc-name") ?
+      modal.querySelector(".herbcard.done .hc-name").textContent.trim() : "";
+    const stamp = modal && !!modal.querySelector(".herbcard.done .hc-stamp");
+    const btn = !!document.querySelector("#btnHerb");
+    document.querySelector("#infoClose").click();
+    localStorage.removeItem("pflanzenlernen.progress.gemuesebau_gaertner");
+    localStorage.removeItem("pflanzenlernen.herb.gemuesebau_gaertner");
+    applyProfile();                                     // aufräumen
+    return { thema, neu1, neu2, total, doneCards, doneName, stamp, btn };
+  });
+  assert(herb.btn, "»Mein Herbarium«-Knopf fehlt im Fortschritts-Bereich");
+  assert(Array.isArray(herb.neu1) && herb.neu1.includes(herb.thema) && herb.neu2.length === 0,
+    "Herbarium: ein voll gemeistertes Thema muss GENAU EINMAL gefeiert werden: " + JSON.stringify(herb));
+  assert(herb.total > 3 && herb.doneCards === 1 && herb.doneName === herb.thema && herb.stamp,
+    "Herbarium-Modal: genau die gemeisterte Sammelkarte muss farbig mit Stempel sein: " + JSON.stringify(herb));
 
   // Wikipedia-Vorschau: bei ANDERER Unterart darf nicht die Elternart erscheinen
   // (»Brassica napus« = Raps, gesucht ist die Steckrübe ssp. rapifera). Offline –

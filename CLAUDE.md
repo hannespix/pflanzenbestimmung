@@ -1382,6 +1382,37 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       der App überschreibt sonst mit 12), ≥60 Partikel + Ring + drei Formen,
       Stagger-Delays + optPop auf dem richtigen Knopf. Screenshot verifiziert.
 
+- [x] **Gamification: Lernserie + Tagesziel & Sammel-Herbarium** (Nutzerwunsch »mehr
+      Suchtfaktor, mehr Dopamin – aber didaktisch«; per Auswahl bestätigt: A + C,
+      bewusst OHNE XP-Ränge und Combo). Nur Lern-Tool, offline, `localStorage`.
+      **(A) Lernserie + Tagesziel** (`streakState`/`streakBump` in `learn.js`,
+      global über alle Profile – EIN Lernender, EINE Gewohnheit; Key
+      `pflanzenlernen.streak` = `{d,n,g,s,b,gd}`): Jede bewertete Karte zählt
+      (`grade()` ruft `streakBump`), bei Erreichen des **Tagesziels** (einstellbar
+      10/20/30/50 unter Optionen · »Wie üben?«, `#dayGoal`, Standard 20) wird der
+      Tag zum **Serientag** – Toast + Feuerwerk, Meilensteine 7/30/100 groß.
+      Serie überlebt die Nacht (Ziel gestern erreicht), reißt nach einem Tag
+      Pause. UI: Flammen-Zeile im Fortschritt (`#streakRow`: 🔥 N Tage-Serie ·
+      Gold-Zielbalken · »n/Ziel heute«), Rekord im Tooltip. Didaktik: Spaced
+      Repetition wirkt nur bei Regelmäßigkeit – belohnt wird genau die.
+      **(C) Sammel-Herbarium** (`herbData`/`herbCheck`/`openHerbarium`): Je Thema
+      des Profils eine Sammelkarte im Herbarium-Look (Klebestreifen, gepresste
+      Pflanze als currentColor-SVG aus 6 Silhouetten, Fortschrittsbalken
+      »sitzt/gesamt«). Sitzt **jede** Art eines Themas sicher (Box 4–5, gleiche
+      Schwelle wie »sitzt«), gilt es als **gemeistert**: Karte wird grün mit
+      »Gemeistert«-Schrägband, gefeiert wird **einmalig** (Feier-Liste
+      `pflanzenlernen.herb.<profil>`; der Stand selbst wird live aus dem
+      Leitner-Fortschritt berechnet). Prüfpunkte: `finishSession` und Öffnen des
+      Modals (`#btnHerb` »🌿 Mein Herbarium« im Fortschritt; gleiches
+      `.scrim`-Modal-System wie die Steckbriefe). Didaktik: motiviert, ALLE
+      Themen zu lernen statt nur Lieblingsthemen. **Testabsicherung** in
+      `tests/learn.mjs`: Serie startet bei Zielerreichen, überlebt »gestern
+      erreicht«, reißt nach Lücke; UI-Zeile + Tagesziel-Feld; Harnisch setzt
+      global `{g:5000}`, damit die vielen `grade()`-Aufrufe der übrigen Tests
+      kein zufälliges Ziel-Feuerwerk mitten in fremden Assertions zünden;
+      Herbarium: volles Thema → genau EINE Feier, Modal zeigt genau die
+      gemeisterte Karte farbig mit Stempel. Screenshots verifiziert.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein
