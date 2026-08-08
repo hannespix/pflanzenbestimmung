@@ -57,9 +57,9 @@ input,select{font-family:inherit; color:inherit}
 .helplink .ic{width:14px; height:14px; flex:none; opacity:.85}
 .helplink:hover{color:var(--green-deep); background:var(--surface-2)}
 .helplink.active{color:var(--green-deep); background:var(--green-tint); border-color:var(--green)}
-.disclaimer{margin:40px 2px 0; padding-top:16px; border-top:1px solid var(--rule); color:var(--ink-faint); font-size:11.5px; line-height:1.6; max-width:760px}
+.disclaimer{margin:40px 2px 0; padding-top:16px; border-top:1px solid var(--rule); color:var(--ink-soft); font-size:12px; line-height:1.65; max-width:760px}
 .disclaimer + .foot{margin-top:14px; padding-top:14px}
-.foot{margin-top:40px; padding-top:18px; border-top:1px solid var(--rule); display:flex; flex-wrap:wrap; gap:8px 16px; justify-content:space-between; align-items:center; color:var(--ink-faint); font-family:var(--mono); font-size:11.5px; letter-spacing:.03em}
+.foot{margin-top:40px; padding-top:18px; border-top:1px solid var(--rule); display:flex; flex-wrap:wrap; gap:8px 16px; justify-content:space-between; align-items:center; color:var(--ink-soft); font-family:var(--mono); font-size:11.5px; letter-spacing:.03em}
 .foot .legal{color:var(--sepia); text-decoration:none; border-bottom:1px solid var(--rule); transition:color .12s,border-color .12s}
 .foot .legal:hover{color:var(--green-deep); border-color:var(--green)}
 .btn .ic{width:16px; height:16px; flex:none}
@@ -150,7 +150,7 @@ input,select{font-family:inherit; color:inherit}
 .btn.ghost:hover{background:var(--surface-2); border-color:var(--rule)}
 .btn.big{font-size:15px; padding:11px 20px}
 .btn:disabled{opacity:.4; cursor:not-allowed}
-.btn:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--madder); outline-offset:2px}
+:where(button,a,select,input,textarea,summary,[role="button"]):focus-visible{outline:2px solid var(--madder); outline-offset:2px}
 
 /* Setup */
 .setup{background:var(--surface); border:1px solid var(--rule-strong); border-top:none; border-radius:0 0 4px 4px; padding:16px 18px; margin-top:-1px; display:flex; flex-direction:column; gap:14px}
@@ -437,7 +437,7 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .etym-list{margin:0; padding:10px 15px 6px 30px; display:flex; flex-direction:column; gap:5px}
 .etym-list li{font-family:var(--serif); font-size:14.5px; color:var(--ink); line-height:1.35}
 .etym-list li i{color:var(--green-deep)}
-.etym-note{padding:2px 15px 11px; font-size:11px; color:var(--ink-faint); font-style:italic}
+.etym-note{padding:2px 15px 11px; font-size:11px; color:var(--ink-soft); font-style:italic}
 .srclabel{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); margin-bottom:8px}
 .srcgrid{display:flex; flex-wrap:wrap; gap:8px}
 .srcgrid a{display:inline-flex; align-items:center; gap:6px; text-decoration:none; border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); border-radius:5px; padding:7px 11px; font-size:13px; font-weight:500}
@@ -447,7 +447,7 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .wphost{margin-top:12px}
 .wphost img{float:left; width:132px; max-width:42%; height:auto; border-radius:5px; border:1px solid var(--rule); margin:2px 14px 8px 0}
 .wp-text{font-size:14px; color:var(--ink); line-height:1.5}
-.wp-src{clear:both; font-family:var(--mono); font-size:11px; color:var(--ink-faint); margin-top:12px}
+.wp-src{clear:both; font-family:var(--mono); font-size:11px; color:var(--ink-soft); margin-top:12px}
 .wp-src a{color:var(--green-deep)}
 .wp-note{font-size:13px; color:var(--ink-soft); font-style:italic}
 
@@ -795,6 +795,42 @@ body.stagefull #stage>.sessionbar{
   align-self:stretch; width:auto; max-width:none; top:0;
   margin:0 calc(-1*(env(safe-area-inset-right,0px) + 16px)) 14px calc(-1*(env(safe-area-inset-left,0px) + 16px));
   padding:calc(env(safe-area-inset-top,0px) + 10px) calc(env(safe-area-inset-right,0px) + 18px) 12px calc(env(safe-area-inset-left,0px) + 18px);
+}
+
+/* ===== Barrierefreie Bedienung: Touch-Ziele & Großbildschirm =====
+   Eine kombinierte Media-Query statt nur max-width: (hover:none) und
+   (pointer:coarse) erfassen Tablets und Touch-Laptops in JEDER Breite,
+   max-width bleibt als Rückfallebene für schmale Fenster. Ziel: alle
+   Tippziele ≥ 44 px (Apple/WCAG-Empfehlung), dichte Chip-Reihen mit
+   größerem Abstand; am Desktop bleibt die kompakte Optik unverändert. */
+@media (hover:none),(pointer:coarse),(max-width:640px){
+  .btn,.modes button,.modal-x{min-height:44px}
+  .helplink{min-height:44px; padding:8px 12px}
+  .profchip{min-height:44px}
+  .introlink{min-height:44px; display:inline-flex; align-items:center; padding:8px 4px}
+  .themetoggle{min-height:44px}
+  select.mini,input.mini,.listsearch{min-height:44px}
+  .switch,.po-ety,label.exf{min-height:44px; align-items:center}
+  .setopts>summary,.choose>summary,.learnnote>summary,.etym>summary{min-height:44px; display:flex; align-items:center}
+  .lc-toggle{min-height:44px}
+  .sortbtn,.cattag{min-height:44px; padding-top:9px; padding-bottom:9px}
+  .sortbtns,.cattags{gap:10px}
+  .setrow{gap:14px 18px}
+  .srcgrid a{min-height:44px}
+  .srcgrid{gap:10px}
+  .foot a{display:inline-flex; align-items:center; min-height:44px}
+  .sp{min-height:48px}
+  .exf{padding-top:6px; padding-bottom:6px}
+}
+/* Große Monitore: mehr Luft und etwas größere Grundelemente – die ruhige
+   Lese-Spalte bleibt, wirkt aber nicht verloren auf 1440 px + */
+@media (min-width:1440px){
+  .wrap{max-width:920px; padding:48px 28px 110px}
+  .masthead{padding:26px 30px}
+  .gorow{margin:6px 0 16px}
+  .gorow .btn.go{font-size:17.5px; padding:15px 32px}
+  .setup{padding:22px 24px}
+  .stage-empty{padding:44px 24px}
 }
 </style>
 </head>

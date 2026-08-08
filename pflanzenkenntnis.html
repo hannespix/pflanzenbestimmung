@@ -88,7 +88,7 @@ input,select{font-family:inherit; color:inherit}
 .gfld.exd input,.gfld.exl input{border:1px solid var(--rule-strong); border-radius:3px; padding:8px 10px; font-size:14px; background:var(--card); width:100%}
 .exsave .btn.small,.exsave .btn.primary{height:36px}
 .exlist{display:flex; flex-direction:column; gap:8px; margin-top:12px}
-.exempty{font-size:13.5px; color:var(--ink-faint); font-style:italic; padding:8px 0}
+.exempty{font-size:13.5px; color:var(--ink-soft); font-style:italic; padding:8px 0}
 .exrow{display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center; justify-content:space-between; background:var(--surface-2); border:1px solid var(--rule); border-radius:4px; padding:9px 12px}
 .exrow.active{border-color:var(--green); background:var(--green-tint)}
 .exmeta{display:flex; flex-wrap:wrap; gap:5px 12px; align-items:baseline; min-width:0}
@@ -177,7 +177,7 @@ input,select{font-family:inherit; color:inherit}
 .filterbar>summary::-webkit-details-marker{display:none}
 .filterbar>summary .ic{width:15px; height:15px; flex:none; color:var(--sepia)}
 .fb-title{font-weight:600; color:var(--ink)}
-.fb-sub{color:var(--ink-faint); font-size:12px}
+.fb-sub{color:var(--ink-soft); font-size:12px}
 .fb-caret{margin-left:auto; color:var(--ink-faint); transition:transform .15s}
 .filterbar>summary:hover{background:var(--surface-2)}
 .filterbar[open]>summary{border-bottom:1px solid var(--rule)}
@@ -251,7 +251,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .de{color:var(--ink)}
 .tag{font-family:var(--mono); font-size:10px; letter-spacing:.05em; padding:1px 6px; border-radius:3px; text-transform:uppercase}
 .tag.zp{color:var(--gold); border:1px solid var(--gold); background:#f6efdc}
-.zpnote{display:flex; align-items:center; gap:7px; margin:4px 0 10px 2px; font-size:12px; color:var(--ink-faint); font-family:var(--sans)}
+.zpnote{display:flex; align-items:center; gap:7px; margin:4px 0 10px 2px; font-size:12px; color:var(--ink-soft); font-family:var(--sans)}
 .tag.bem{color:var(--sepia); border:1px dashed var(--rule-strong)}
 .rowacts{display:flex; gap:2px}
 /* ℹ »Mehr zur Pflanze« ist dauerhaft sichtbar (auffindbar wie im Lern-Tool);
@@ -260,10 +260,10 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .row:hover .rowacts .iconbtn:not(.info),.row:focus-within .rowacts .iconbtn:not(.info){opacity:1}
 .iconbtn.info{color:var(--green-deep)}
 /* Touch/Tablet (kein Hover): Zeilen-Aktionen dauerhaft sichtbar, größere Tap-Ziele (~44px) */
-@media (hover:none){
+@media (hover:none),(pointer:coarse),(max-width:640px){
   .rowacts .iconbtn{opacity:1}
-  .iconbtn,.pclose,.scmove{min-width:40px; min-height:40px}
-  .btn.small{min-height:40px}
+  .iconbtn,.pclose,.scmove{min-width:44px; min-height:44px}
+  .btn,.btn.small{min-height:44px}
 }
 .iconbtn{border:none; background:transparent; padding:6px; border-radius:3px; color:var(--ink-faint); display:inline-flex}
 .iconbtn:hover{background:var(--surface-2); color:var(--green-deep)}
@@ -328,7 +328,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .infobox .etym-list{margin:0; padding:10px 15px 6px 30px; display:flex; flex-direction:column; gap:5px}
 .infobox .etym-list li{font-family:var(--serif); font-size:14.5px; color:var(--ink); line-height:1.35}
 .infobox .etym-list li i{color:var(--green-deep)}
-.infobox .etym-note{padding:2px 15px 11px; font-size:11px; color:var(--ink-faint); font-style:italic}
+.infobox .etym-note{padding:2px 15px 11px; font-size:11px; color:var(--ink-soft); font-style:italic}
 .infobox .srclabel{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); margin-bottom:8px}
 .infobox .srcgrid{display:flex; flex-wrap:wrap; gap:8px}
 .infobox .srcgrid a{display:inline-flex; align-items:center; gap:6px; text-decoration:none; border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); border-radius:8px; padding:7px 11px; font-size:13px; font-weight:500; transition:background .14s, border-color .14s, transform .08s}
@@ -338,7 +338,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .infobox .wphost{margin-top:12px}
 .infobox .wphost img{float:left; width:132px; max-width:42%; height:auto; border-radius:8px; border:1px solid var(--rule); margin:2px 14px 8px 0}
 .infobox .wp-text{font-size:14px; color:var(--ink); line-height:1.5}
-.infobox .wp-src{clear:both; font-family:var(--mono); font-size:11px; color:var(--ink-faint); margin-top:12px}
+.infobox .wp-src{clear:both; font-family:var(--mono); font-size:11px; color:var(--ink-soft); margin-top:12px}
 .infobox .wp-src a{color:var(--green-deep)}
 .infobox .wp-note{font-size:13px; color:var(--ink-soft); font-style:italic}
 @media (max-width:640px){
@@ -369,7 +369,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
 .toast.err{background:var(--madder)}
 /* Seitenfuß mit Rechtlichem (im Druck über .wrap ausgeblendet) */
-.pagefoot{margin-top:40px; padding-top:18px; border-top:1px solid var(--rule); display:flex; flex-wrap:wrap; gap:8px 16px; justify-content:space-between; align-items:center; color:var(--ink-faint); font-family:var(--mono); font-size:11.5px; letter-spacing:.03em}
+.pagefoot{margin-top:40px; padding-top:18px; border-top:1px solid var(--rule); display:flex; flex-wrap:wrap; gap:8px 16px; justify-content:space-between; align-items:center; color:var(--ink-soft); font-family:var(--mono); font-size:11.5px; letter-spacing:.03em}
 .pagefoot .legal{color:var(--sepia); text-decoration:none; border-bottom:1px solid var(--rule); transition:color .12s,border-color .12s}
 .pagefoot .legal:hover{color:var(--green-deep); border-color:var(--green)}
 
@@ -709,6 +709,33 @@ body{overflow-x:clip}
 @media (max-width:640px){
   .findbar{row-gap:8px}
   .findbar .filterbar{flex:1 1 100%; width:100%}
+}
+:where(button,a,select,input,textarea,summary,[role="button"]):focus-visible{outline:2px solid var(--madder); outline-offset:2px}
+
+/* ===== Barrierefreie Bedienung: Touch-Ziele (Tablets/Touch in jeder Breite) =====
+   Alle Tippziele ≥ 44 px; Checkbox-Zeilen mit größerem Trefferbereich; dichte
+   Leisten mit mehr Abstand. Desktop-Optik und die amtlichen Druckbögen bleiben
+   unverändert (reine Screen-Regeln). */
+@media (hover:none),(pointer:coarse),(max-width:640px){
+  .helplink{min-height:44px; padding:8px 12px}
+  .segbtn{min-height:44px}
+  .pfield select,.findbar input,#filterOpts select,#drawCount,.grader input,.modal input,.modal select,.modal textarea{min-height:44px}
+  .themetoggle{min-height:44px}
+  .gedge{min-width:58px}
+  #gMax{min-width:82px}
+  .maxrow{flex-wrap:wrap}
+  .row{cursor:pointer}
+  .switch{min-height:44px; align-items:center}
+  details.filterbar>summary{min-height:44px; display:flex; align-items:center}
+  .row{min-height:48px}
+  .chk{width:22px; height:22px}
+  .tools{gap:10px}
+  .grow{gap:10px}
+  .selacts{gap:10px}
+  .homelink{display:inline-flex; align-items:center; min-height:44px}
+  .foot a,.pagefoot a{display:inline-flex; align-items:center; min-height:44px}
+  .gedge{min-height:38px}
+  .exf,.po-ety{min-height:44px; align-items:center}
 }
 </style>
 </head>
@@ -1644,6 +1671,9 @@ function rowEl(p){
   dl.addEventListener("click",()=>delPlant(p.id,p));
   acts.append(inf,ed,dl);
   row.append(cb,name,acts);
+  // Touch-Trefferfläche: die ganze Zeile wählt an/ab (nicht nur die 22-px-Checkbox);
+  // Klicks auf die Aktions-Knöpfe und die Checkbox selbst bleiben unberührt.
+  row.addEventListener("click",e=>{ if(e.target.closest("button,a,input,select,label")) return; cb.click(); });
   return row;
 }
 function emptyState(){

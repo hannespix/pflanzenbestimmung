@@ -1614,6 +1614,32 @@ async function main() {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   assert(overflow <= 1, "Listenmodus läuft mobil horizontal über (Überhang " + overflow + "px)");
 
+  // Barrierefreie Touch-Bedienung (schmale/Touch-Viewports): ≥44-px-Ziele für
+  // Hilfe-Link, Profil-Chip, Ansicht-/Filter-Knöpfe, Suchfeld und Fußzeilen-Link;
+  // die Fußzeile muss zudem genug Kontrast fürs Lesen haben (≥4,5:1).
+  const touch = await page.evaluate(() => {
+    const tb = document.querySelector('.sortbtn[data-sort="thema"]');
+    if (tb) tb.click();                                   // Gruppen-Ansicht -> Filter-Tags sichtbar
+    const h = sel => { const e = document.querySelector(sel); return e ? e.getBoundingClientRect().height : -1; };
+    const sizes = { help: h(".helplink"), chip: h("#profileChip"), sort: h(".sortbtn"),
+      tag: h(".cattag"), search: h(".listsearch"), foot: h(".foot a") };
+    const az = document.querySelector('.sortbtn[data-sort="bot"]');
+    if (az) az.click();                                   // Ansicht zurück auf Standard
+    const lum = c => { const m = (c.match(/\d+(\.\d+)?/g) || [255, 255, 255]).map(Number);
+      const f = v => { v /= 255; return v <= .04045 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+      return .2126 * f(m[0]) + .7152 * f(m[1]) + .0722 * f(m[2]); };
+    let bg = "rgb(255,255,255)";
+    const foot = document.querySelector(".foot");
+    for (let p = foot; p; p = p.parentElement) { const c = getComputedStyle(p).backgroundColor;
+      if (c && !/rgba?\(0, 0, 0, 0\)/.test(c) && c !== "transparent") { bg = c; break; } }
+    const fgL = lum(getComputedStyle(foot).color), bgL = lum(bg);
+    const ratio = (Math.max(fgL, bgL) + .05) / (Math.min(fgL, bgL) + .05);
+    return { sizes, ratio: Math.round(ratio * 100) / 100 };
+  });
+  for (const [k, v] of Object.entries(touch.sizes))
+    assert(v >= 43.5, "Touch-Ziel zu klein (" + k + ": " + Math.round(v) + "px, mindestens 44px erwartet)");
+  assert(touch.ratio >= 4.5, "Fußzeilen-Kontrast unter 4,5:1 (" + touch.ratio + ":1)");
+
   // Fokus-/Vollbild-Sitzung auf dem Smartphone: laufende Lektion füllt den Schirm;
   // das Ergebnis + der Teilen-Block bleiben im Fokus-Overlay (nicht unter dem Fold);
   // erst »Zur Übersicht« bzw. ein Moduswechsel verlässt den Fokus-Modus.
@@ -1770,7 +1796,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand, kein Duell, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON-Links lesbar, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz.");
+  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand, kein Duell, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON-Links lesbar, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast.");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
