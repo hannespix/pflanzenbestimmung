@@ -2694,6 +2694,47 @@ function renderWiki(host, d){
     (d.thumb ? `<img src="${esc(d.thumb)}" alt="${esc(d.title)}" loading="lazy">` : "")+
     `<div class="wp-text">${esc(d.extract)}</div>`+
     `<div class="wp-src">Quelle: <a href="${esc(d.url)}" target="_blank" rel="noopener">Wikipedia – ${esc(d.title)}</a> · Text unter CC BY-SA</div>`;
+  lbWire(host.querySelector("img"), "Vorschaubild vergrößern");
+}
+/* ---------- Bild-Lightbox (Bild anklicken → groß ansehen) ----------
+   Für die Quiz-Fotos und die Wikipedia-Vorschau der Info-Karte. Holt per
+   URL-Ableitung ein größeres Commons-Derivat (»…/640px-…« → »…/1600px-…«);
+   schlägt das fehl, bleibt das bekannte Bild stehen. Eigener Namensraum
+   .lbscrim (kollidiert nicht mit .scrim-Panels); Esc/Klick daneben/× schließen,
+   der Fokus kehrt zum Auslöser zurück. */
+function lbBig(src){ return String(src||"").replace(/\/(\d{2,4})px-/, "/1600px-"); }
+let lbReturnFocus=null;
+function closeLightbox(){
+  const sc=document.querySelector(".lbscrim"); if(!sc) return;
+  sc.remove();
+  if(lbReturnFocus && lbReturnFocus.focus){ try{ lbReturnFocus.focus(); }catch(e){} }
+  lbReturnFocus=null;
+}
+function openLightbox(src, alt){
+  closeLightbox();
+  lbReturnFocus=document.activeElement;
+  const sc=el("div","lbscrim");
+  sc.setAttribute("role","dialog"); sc.setAttribute("aria-modal","true"); sc.setAttribute("aria-label","Bild vergrößert");
+  const big=lbBig(src);
+  sc.innerHTML=`<button class="lb-x" aria-label="Schließen">×</button>
+    <img class="lb-img" src="${esc(big)}" alt="${esc(alt||"Bild vergrößert")}">`;
+  const img=sc.querySelector(".lb-img");
+  if(big!==src) img.onerror=()=>{ img.onerror=null; img.src=src; };   // Derivat fehlt → bekanntes Bild
+  sc.addEventListener("click",e=>{ if(e.target===sc || e.target.closest(".lb-x")) closeLightbox(); });
+  document.body.appendChild(sc);
+  sc.querySelector(".lb-x").focus();
+}
+document.addEventListener("keydown",e=>{                // Capture: Esc gilt zuerst der Lightbox, nicht dem Modal dahinter
+  if(e.key==="Escape" && document.querySelector(".lbscrim")){ e.stopPropagation(); e.preventDefault(); closeLightbox(); }
+}, true);
+function lbWire(img, label){                            // Bild anklick- UND tastaturbedienbar machen
+  if(!img) return;
+  img.classList.add("lb-zoom");
+  img.setAttribute("role","button"); img.tabIndex=0;
+  img.setAttribute("aria-label", label||"Bild vergrößern");
+  const go=()=>openLightbox(img.currentSrc||img.src, img.alt);
+  img.addEventListener("click",go);
+  img.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); } });
 }
 /* Deutsche Namen als Wikipedia-Artikeltitel. Die Listen schreiben Komposita mit
    Bindestrich (»Steck-Rübe«, »Kohl- / Steck-Rübe«); Wikipedia löst den Bindestrich
@@ -3020,6 +3061,7 @@ async function renderPhoto(){
   const img=$("#phImg");
   if(img) img.onerror=()=>{ const b=$("#stage").querySelector(".photobox");
     if(b) b.innerHTML=`<div class="ph-load">Bild konnte nicht geladen werden.</div>`; };
+  lbWire(img, "Bild vergrößern");                       // antippen/Enter → Lightbox mit größerem Bild
   if(photoAnswer==="exam")      renderPhotoExam(p);
   else if(photoAnswer==="type") renderPhotoType(p);
   else                          renderPhotoChoice(p);
@@ -3495,6 +3537,8 @@ window.fileMentionsOther=fileMentionsOther;
 window.pageFitsCard=pageFitsCard;
 window.looksIllustration=looksIllustration;
 window.looksDamage=looksDamage;
+window.openLightbox=openLightbox;
+window.lbBig=lbBig;
 window.isCultivarName=isCultivarName;
 window.infraEpithet=infraEpithet;
 window.artLevelOk=artLevelOk;

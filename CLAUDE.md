@@ -1335,6 +1335,32 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       looksDamage-Einzelprüfungen (Rost/Raupe/Mehltau raus; Blumenkohl, *Rosa
       gallica*, St.-Gallen-Foto bleiben).
 
+- [x] **Herbarium 2.0 · Stufe 4 – Cross-Doc-Übergänge, Scroll-Dynamik, Bild-Lightbox,
+      Typo** (Nutzerwunsch: »Dynamik, modernste CSS-Effekte, Lesbarkeit, Barriere-
+      freiheit, Bilder anklickbar/vergrößerbar«). Alles **native Browser-Features,
+      kein CDN** (Grundregel): (1) **Cross-Document View Transitions**
+      (`@view-transition{navigation:auto}` in Lern-/Prüf-/Rechtliches-Seite) –
+      Seitenwechsel blenden weich über statt hart zu laden. (2) **Scroll-getriebene
+      Einblendungen** (`animation-timeline: view()` unter `@supports` + `@media
+      screen and (prefers-reduced-motion: no-preference)`): Listenzeilen (`.sprow`
+      im Lern-Tool, `.row`/`.pvrow` im Prüfwerkzeug) steigen beim Scrollen sanft
+      ein – rein deklarativ, ohne JS. (3) **Bild-Lightbox** (`openLightbox`/
+      `lbWire`, 1:1 in `learn.js` UND `app.js`): Quiz-Fotos und die Wikipedia-
+      Vorschau der Info-Karte sind klick- **und** tastaturbedienbar (role=button,
+      Enter/Leertaste), öffnen eine Großansicht im eigenen Namensraum `.lbscrim`
+      (kollidiert nicht mit den `.scrim`-Panels); geladen wird per URL-Ableitung
+      das **größere Commons-Derivat** (`lbBig`: »…/640px-…« → »…/1600px-…«, bei
+      Fehlschlag Fallback aufs bekannte Bild – nur `<img>`, kein `fetch`, offline-
+      rein); Esc läuft in der **Capture-Phase** (Modal dahinter schließt nicht mit),
+      Fokus auf ×, Rückgabe an den Auslöser, `@starting-style`-Eintrittsübergang,
+      ×-Knopf ≥44 px. (4) **Typo:** `text-wrap:balance` (Überschriften/Summaries)
+      + `text-wrap:pretty` (Absätze), nur `@media screen` – **Leerbögen/Druck
+      unberührt**; `prefers-reduced-motion` schaltet jede neue Bewegung ab.
+      `tests/learn.mjs` prüft Foto-Verkabelung + Lightbox-Zyklus (öffnen/Esc/
+      Fokus-Rückgabe, `lbBig`-Ableitung); `tests/smoke.mjs` prüft die Lightbox im
+      Prüfwerkzeug (eigener Dialog, kein `.scrim`-Leck). Per Screenshot verifiziert;
+      `animation-timeline: view()` auf den Zeilen per computedStyle bestätigt.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein
