@@ -886,33 +886,50 @@ function renderProgress(){
   if(gh) gh.textContent = p.length ? `${due} Karten heute dran · Übungsform passend zu deinem Lernstand` : "Keine Arten in der aktuellen Auswahl.";
 }
 
-/* ---------- Kleine Belohnung: Partikel bei einem Treffer ----------
-   Reines CSS/JS, keine Bibliothek: ein paar Blättchen fliegen kurz auseinander.
-   Stärke 1 = Treffer in der Sitzung, 2 = Sitzung/Duell gewonnen. Wer im System
-   »weniger Bewegung« eingestellt hat, bekommt nichts (prefers-reduced-motion). */
+/* ---------- Kleine Belohnung: Feuerwerk + Haptik bei einem Treffer ----------
+   Reines CSS/JS, keine Bibliothek: Blättchen, Blüten und goldene Funken bersten
+   in zwei Phasen auseinander (schneller Burst, dann Fallen mit Drall), dazu ein
+   kurzer Licht-Ring am Auslöser und – wo das Gerät es kann (Android) – ein
+   feiner Vibrations-Tick. Stärke 1 = Treffer, 2 = Sitzung/Duell gewonnen
+   (größerer Burst + zweite Welle). Wer im System »weniger Bewegung« eingestellt
+   hat, bekommt nichts (prefers-reduced-motion); Haptik bleibt (kein Motion). */
 const CONF_COLORS = ["#3d6b4d","#7aa87f","#c8a24a","#9c3b2e","#2b4f38","#e0c56e"];
+function buzz(pattern){                                // Haptik – still ignoriert, wo es keine gibt (iOS/Desktop)
+  try{ if(navigator.vibrate) navigator.vibrate(pattern); }catch(e){}
+}
 function celebrate(anchor, strength){
   try{
+    buzz(strength>1 ? [18,60,18,60,45] : 12);          // Dopamin auch ohne Bild – dezent, treffergebunden
     if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const n = strength>1 ? 34 : 14;
     const r = anchor && anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : null;
     const x = r && r.width ? r.left + r.width/2 : innerWidth/2;
     const y = r && r.height ? r.top + r.height/2 : innerHeight/3;
     const host = el("div","conf-host");
-    for(let i=0;i<n;i++){
-      const s = el("i","conf");
-      const ang = (Math.PI*2*i)/n + Math.random()*0.5;
-      const dist = (strength>1?150:90) * (0.5+Math.random());
-      s.style.left = x+"px"; s.style.top = y+"px";
-      s.style.setProperty("--dx", Math.cos(ang)*dist+"px");
-      s.style.setProperty("--dy", (Math.sin(ang)*dist - 40)+"px");
-      s.style.setProperty("--rot", Math.round(Math.random()*720-360)+"deg");
-      s.style.setProperty("--del", (Math.random()*0.12).toFixed(2)+"s");
-      s.style.background = CONF_COLORS[i%CONF_COLORS.length];
-      host.appendChild(s);
-    }
+    const ring = el("i","conf-ring");                  // kurzer Licht-Ring am Auslöser
+    ring.style.left = x+"px"; ring.style.top = y+"px";
+    host.appendChild(ring);
+    const wave = (count, spread, delay0) => {
+      for(let i=0;i<count;i++){
+        const kind = i%5===4 ? "conf c-spark" : (i%3===2 ? "conf c-petal" : "conf");
+        const s = el("i",kind);
+        const ang = (Math.PI*2*i)/count + Math.random()*0.6;
+        const dist = spread * (0.45+Math.random());
+        s.style.left = x+"px"; s.style.top = y+"px";
+        s.style.setProperty("--dx", Math.cos(ang)*dist+"px");
+        s.style.setProperty("--dy", (Math.sin(ang)*dist*0.8 - 60)+"px");
+        s.style.setProperty("--fall", Math.round(70+Math.random()*120)+"px");
+        s.style.setProperty("--rot", Math.round(Math.random()*900-450)+"deg");
+        s.style.setProperty("--del", (delay0+Math.random()*0.14).toFixed(2)+"s");
+        s.style.setProperty("--dur", (0.95+Math.random()*0.65).toFixed(2)+"s");
+        s.style.setProperty("--s", (0.7+Math.random()*0.7).toFixed(2));
+        s.style.background = CONF_COLORS[i%CONF_COLORS.length];
+        host.appendChild(s);
+      }
+    };
+    wave(strength>1 ? 40 : 22, strength>1 ? 190 : 110, 0);
+    if(strength>1) wave(24, 140, 0.18);                // zweite Welle beim großen Erfolg
     document.body.appendChild(host);
-    setTimeout(()=>host.remove(), strength>1 ? 1600 : 1200);
+    setTimeout(()=>host.remove(), strength>1 ? 2200 : 1700);
   }catch(e){ /* Animation ist Kür – nie ein Grund für einen Fehler */ }
 }
 

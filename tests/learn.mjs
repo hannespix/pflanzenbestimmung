@@ -1059,6 +1059,36 @@ async function main() {
   assert(lightbox.closed && lightbox.focusBack,
     "Esc muss die Lightbox schließen und den Fokus zum Foto zurückgeben: " + JSON.stringify(lightbox));
 
+  // Quiz-Juice: celebrate() feuert Vibration + Feuerwerk (Ring, Blätter/Blüten/Funken,
+  // zweite Welle bei Stärke 2); Quiz-Optionen fahren gestaffelt ein, richtig poppt.
+  const juice = await page.evaluate(() => {
+    let vibed = null; navigator.vibrate = (p) => { vibed = p; return true; };
+    celebrate(document.body, 2);
+    const vibedStrong = vibed;                           // sofort sichern – der spätere echte Treffer-buzz (12) überschreibt sonst
+    const confN = document.querySelectorAll(".conf").length;
+    const ring = !!document.querySelector(".conf-ring");
+    const shapes = document.querySelectorAll(".conf.c-petal").length > 0 &&
+                   document.querySelectorAll(".conf.c-spark").length > 0;
+    document.querySelectorAll(".conf-host").forEach((h) => h.remove());
+    $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    document.querySelector('#modeTabs button[data-mode="quiz"]').click();
+    $("#sessLen").value = "4"; startSession();
+    const opts = [...document.querySelectorAll(".options .opt")];
+    const s0 = getComputedStyle(opts[0]), s1 = getComputedStyle(opts[1]);
+    const stagger = s0.animationName.includes("optIn") && s1.animationDelay !== s0.animationDelay;
+    opts[0].click();                                     // egal ob richtig – der richtige Knopf bekommt .correct
+    const cb = document.querySelector(".opt.correct");
+    const pop = !!cb && getComputedStyle(cb).animationName.includes("optPop");
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();   // Sitzung aufräumen
+    return { vibed: vibedStrong, confN, ring, shapes, stagger, pop };
+  });
+  assert(Array.isArray(juice.vibed) && juice.vibed.length >= 3,
+    "celebrate(Stärke 2) muss ein Vibrationsmuster senden (Haptik): " + JSON.stringify(juice.vibed));
+  assert(juice.confN >= 60 && juice.ring && juice.shapes,
+    "Feuerwerk: Stärke 2 braucht ≥60 Partikel, Licht-Ring und drei Formen (Blatt/Blüte/Funke): " + JSON.stringify(juice));
+  assert(juice.stagger && juice.pop,
+    "Quiz-Optionen müssen gestaffelt einfahren (optIn + Delays), der richtige Knopf poppt (optPop): " + JSON.stringify(juice));
+
   // Wikipedia-Vorschau: bei ANDERER Unterart darf nicht die Elternart erscheinen
   // (»Brassica napus« = Raps, gesucht ist die Steckrübe ssp. rapifera). Offline –
   // nur die Kandidatenliste/Titelbildung, kein Netzabruf.
