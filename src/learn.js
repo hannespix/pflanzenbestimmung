@@ -2739,6 +2739,9 @@ function wikiCandidates(card){
     add(card.g);                                        // bloße Gattung – dt. Wikipedia löst »Solidago« → »Goldruten« auf
   }else if(inf && !autonym){                            // ANDERE Unterart: Binom = Elternart (Raps) → nur deutscher Name
     de.forEach(add);
+    add(searchName(card));                              // Notnagel ganz am Ende: findet der deutsche Name nichts (»Garten-Dill«
+                                                        // hat keinen Artikel), ist die Elternart (»Dill«) besser als gar nichts;
+                                                        // die Steckrübe erreicht ihn nie, ihr deutscher Titel trifft vorher
   }else{                                                // Art oder Autonym: Binom ist dieselbe Pflanze (unverändert)
     add(searchName(card));                              // reines Binom zuerst (eindeutig)
     de.forEach(add);

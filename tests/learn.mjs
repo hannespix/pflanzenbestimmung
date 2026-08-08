@@ -1006,16 +1006,26 @@ async function main() {
     const steck = { g: "Brassica", a: "napus ssp. rapifera", de: "Kohl- / Steck-Rübe" };
     const raps  = { g: "Brassica", a: "napus", de: "Raps" };
     const auto  = { g: "Cornus", a: "kousa subsp. kousa", de: "Japanischer Blumen-Hartriegel" };
+    const dill  = { g: "Anethum", a: "graveolens var. hortorum", de: "Garten-Dill" };
     const low = (a) => a.map((x) => x.toLowerCase());
+    const sc = wikiCandidates(steck), dc = wikiCandidates(dill);
     return {
-      steck: wikiCandidates(steck), steckTitles: deArticleTitles(steck),
-      steckHasBinom: low(wikiCandidates(steck)).includes("brassica napus"),
+      steck: sc, steckTitles: deArticleTitles(steck),
+      steckDeVorBinom: low(sc).indexOf("steckrübe") >= 0 &&
+        low(sc).indexOf("steckrübe") < low(sc).indexOf("brassica napus"),
+      steckBinomLetzter: low(sc)[sc.length - 1] === "brassica napus",
+      dill: dc,
+      dillDeVorBinom: low(dc).indexOf("garten-dill") >= 0 &&
+        low(dc).indexOf("garten-dill") < low(dc).indexOf("anethum graveolens"),
+      dillBinomLetzter: low(dc)[dc.length - 1] === "anethum graveolens",
       raps0: wikiCandidates(raps)[0].toLowerCase(),
       autoHasBinom: low(wikiCandidates(auto)).includes("cornus kousa"),
     };
   });
-  assert(wikiCand.steck.includes("Steckrübe") && !wikiCand.steckHasBinom,
-    "Steckrübe-Vorschau: deutscher Name muss Kandidat sein, das Binom (Raps) NICHT: " + JSON.stringify(wikiCand.steck));
+  assert(wikiCand.steck.includes("Steckrübe") && wikiCand.steckDeVorBinom && wikiCand.steckBinomLetzter,
+    "Steckrübe-Vorschau: deutscher Name muss VOR dem Binom stehen, das Binom (Raps) nur als letzter Notnagel: " + JSON.stringify(wikiCand.steck));
+  assert(wikiCand.dillDeVorBinom && wikiCand.dillBinomLetzter,
+    "Garten-Dill: ohne deutschen Artikel muss die Elternart (Anethum graveolens) letzter Notnagel-Kandidat sein: " + JSON.stringify(wikiCand.dill));
   assert(wikiCand.steckTitles.includes("Steckrübe") && wikiCand.steckTitles.includes("Kohlrübe"),
     "deArticleTitles: Bindestrich auflösen (Steckrübe) und geteiltes Grundwort ergänzen (Kohlrübe): " + JSON.stringify(wikiCand.steckTitles));
   assert(wikiCand.raps0 === "brassica napus",
