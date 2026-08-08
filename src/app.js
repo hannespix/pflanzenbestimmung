@@ -564,6 +564,9 @@ function rowEl(p){
   dl.addEventListener("click",()=>delPlant(p.id,p));
   acts.append(inf,ed,dl);
   row.append(cb,name,acts);
+  // Touch-Trefferfläche: die ganze Zeile wählt an/ab (nicht nur die 22-px-Checkbox);
+  // Klicks auf die Aktions-Knöpfe und die Checkbox selbst bleiben unberührt.
+  row.addEventListener("click",e=>{ if(e.target.closest("button,a,input,select,label")) return; cb.click(); });
   return row;
 }
 function emptyState(){

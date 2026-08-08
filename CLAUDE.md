@@ -1227,6 +1227,32 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       (Box 2 → Quiz, Box 4 → Tippen), Quote »von N bewerteten«, kein Teilen-Block,
       Profil-Chip + Modal + Merken, Listen-Schnellzugriff hin/zurück, Gruppen-Köpfe.
 
+- [x] **Barrierefreie Touch-Bedienung + Großbildschirm-Politur (beide Werkzeuge,
+      UI-Audit Abschluss).** Messbasierter Durchgang (eigener Puppeteer-Audit über
+      neun Ansichten, iteriert bis 0 Befunde). **Touch-Ziele ≥44 px** über eine
+      kombinierte Media-Query `@media (hover:none),(pointer:coarse),(max-width:640px)`
+      (die reine `hover:none`-Abfrage griff in den 360-px-Testviewports nicht –
+      Chromium emuliert dort kein `pointer:coarse`): Lern-Tool u. a. `.helplink`,
+      `.profchip`, `.introlink`, `.sortbtn`/`.cattag` (+ luftigere Gaps), `select.mini`,
+      `.listsearch`, Schalter/`label.exf`, alle `<summary>`-Klappen, Fußzeilen-Links,
+      `.sp`-Listenzeilen ≥48; Prüfwerkzeug u. a. `.btn`/`.segbtn`, Profil-Selects,
+      Suchfeld, Modal-Felder, `.iconbtn`/`.pclose`/`.scmove` ≥44, Listenzeilen `.row`
+      ≥48 mit **Zeile-als-Trefferfläche** (Klick auf die Zeile toggelt die Checkbox;
+      Knöpfe/Inputs ausgenommen – `rowEl`-Listener), `#gMax{min-width:82px}` +
+      `.maxrow{flex-wrap:wrap}` gegen das zusammengequetschte Punktefeld. **Kontrast:**
+      Disclaimer/Fußzeilen und kleine Hinweistexte von `--ink-faint` (2,78:1) auf
+      `--ink-soft` (5,64:1) gehoben (beide Werkzeuge, gemessen ≥4,65:1); rein
+      dekorative Faints bleiben. **Fokus:** sichtbarer Ring einheitlich über
+      Null-Spezifitäts-Regel `:where(button,a,select,input,textarea,summary,
+      [role="button"]):focus-visible`. **Großbildschirm (≥1440 px):** Lern-Tool
+      `.wrap` 920 px mit großzügigerem Start (`#btnGo` größer), Prüfwerkzeug 1080 px –
+      ruhige Lese-Spalten statt gedehnter Layouts. Leerbögen/Druck unberührt,
+      offline-rein. **Dauerhafte Testguards:** `tests/learn.mjs` misst am
+      360-px-Viewport Hilfe-Link/Chip/Sortier-Knöpfe/Filter-Tags/Suchfeld/Fußzeile
+      ≥44 px + Fußzeilen-Kontrast ≥4,5:1; `tests/smoke.mjs` misst Buttons/Tabs/
+      Selects ≥44, Zeilen ≥48, prüft Zeilen-Klick (an/ab, ℹ toggelt nicht) und
+      `#gMax` ≥80 px.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein

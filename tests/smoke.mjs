@@ -681,9 +681,38 @@ async function main() {
   assert(!mobile.overlap && mobile.statusBelowTitle,
     "Mobile: Status-Pille überlagert die Überschrift (overlap=" + mobile.overlap + ")");
 
+  // 9b) Barrierefreie Touch-Bedienung (schmale/Touch-Viewports): ≥44-px-Ziele für
+  // Buttons, Modus-Tabs und Profil-Auswahl, Listenzeilen ≥48 px – und die ganze
+  // Zeile wählt an/ab (nicht nur die Checkbox); Aktions-Knöpfe bleiben unberührt.
+  const touch = await page.evaluate(() => {
+    document.querySelector("#tabExam").click();
+    const h = sel => { const e = document.querySelector(sel); return e ? e.getBoundingClientRect().height : -1; };
+    const row = document.querySelector("#list .row");
+    const n0 = selection.length;
+    row.querySelector(".namecell").click();
+    const rowToggles = selection.length !== n0;
+    document.querySelector("#list .row .namecell").click();   // Zeile neu gerendert -> frisch greifen
+    const backAgain = selection.length === n0;
+    const inf = document.querySelector("#list .row .iconbtn.info"); if (inf) inf.click();
+    const btnNoToggle = selection.length === n0;              // ℹ öffnet nur das Modal
+    const sc = document.querySelector(".infoscrim"); if (sc) sc.remove();
+    openGrader();
+    const gmax = document.querySelector("#gMax").getBoundingClientRect().width;
+    document.querySelector("#graderScrim .pclose").click();
+    return { btn: h("#btnDraw"), seg: h("#tabExam"), fr: h("#frSelect"),
+      row: h("#list .row"), rowToggles, backAgain, btnNoToggle, gmax: Math.round(gmax) };
+  });
+  for (const k of ["btn", "seg", "fr"])
+    assert(touch[k] >= 43.5, "Touch-Ziel zu klein (" + k + ": " + Math.round(touch[k]) + "px, mindestens 44px erwartet)");
+  assert(touch.row >= 47.5, "Listenzeile zu niedrig für Touch (" + Math.round(touch.row) + "px, mindestens 48px erwartet)");
+  assert(touch.rowToggles && touch.backAgain,
+    "Zeilen-Klick muss die Auswahl an-/abwählen (ganze Zeile als Trefferfläche): " + JSON.stringify(touch));
+  assert(touch.btnNoToggle, "Klick auf den ℹ-Knopf darf die Auswahl nicht ändern: " + JSON.stringify(touch));
+  assert(touch.gmax >= 80, "Höchstpunktzahl-Feld (#gMax) mobil zu schmal: " + touch.gmax + "px (mindestens 80px)");
+
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Smoke-Test OK – Boot, Modul-Modals (öffnen/×/Esc, aktive Buttons), Hilfe + Tooltips, Profilwechsel (148/248), Schema-Matrix, Ziehen, Bogen (offizielle Formulare), Druck-Dialog speichert/aktualisiert Prüfung, Prüfungen (speichern/laden/kopieren/aktualisieren), Prüfungs-JSON-Import (Gerätewechsel), Sicherung mit Profilwechsel, Einstellungen, Vorschau, Info-Karte (ℹ in Liste + Aktueller Prüfung: Namensherleitung, Deep-Links, opt-in Wikipedia, ×/Esc), Persistenz, Mobile-Kopf.");
+  console.log("Smoke-Test OK – Boot, Modul-Modals (öffnen/×/Esc, aktive Buttons), Hilfe + Tooltips, Profilwechsel (148/248), Schema-Matrix, Ziehen, Bogen (offizielle Formulare), Druck-Dialog speichert/aktualisiert Prüfung, Prüfungen (speichern/laden/kopieren/aktualisieren), Prüfungs-JSON-Import (Gerätewechsel), Sicherung mit Profilwechsel, Einstellungen, Vorschau, Info-Karte (ℹ in Liste + Aktueller Prüfung: Namensherleitung, Deep-Links, opt-in Wikipedia, ×/Esc), Persistenz, Mobile-Kopf, Touch-Ziele (≥44px, Zeile wählt an/ab, #gMax breit genug).");
 }
 
 main().catch((e) => { console.error("Smoke-Test FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
