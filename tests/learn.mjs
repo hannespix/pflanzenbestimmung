@@ -132,12 +132,21 @@ async function main() {
     const doneTitle = (document.querySelector(".stage-empty h2") || {}).textContent || "";
     const summary = (document.querySelector(".stage-empty p") || {}).textContent || "";
     const noShare = !document.querySelector(".stage-empty #shareBlock");
+    // Brücke zum Lernduell: gleiche Karten als reines Quiz – DESSEN Abschluss hat den Teilen-Block
+    const nCards = cards.length;
+    const bridge = !!document.querySelector("#duelQuizBtn");
+    document.querySelector("#duelQuizBtn").click();
+    const bridgeQuiz = !!document.querySelector("#opts .opt");
+    const bridgeTotal = (document.querySelector(".sessionbar span") || {}).textContent || "";
+    document.querySelector("#btnStop").click();
+    const bridgeShare = !!document.querySelector(".stage-empty #shareBlock");
     document.querySelector("#btnOverview").click();
     localStorage.removeItem("pflanzenlernen.progress.gemuesebau_gaertner");   // aufräumen
     applyProfile();
     document.querySelector("#cat").value = "";
     document.querySelector("#cat").dispatchEvent(new Event("change"));
-    return { goLabel, firstQuiz, barThere, thenType, doneTitle, summary, noShare };
+    return { goLabel, firstQuiz, barThere, thenType, doneTitle, summary, noShare,
+      nCards, bridge, bridgeQuiz, bridgeTotal, bridgeShare };
   });
   assert(guided.goLabel === "Weiter lernen",
     "Mit vorhandenem Fortschritt muss der Knopf »Weiter lernen« heißen: " + guided.goLabel);
@@ -146,6 +155,8 @@ async function main() {
   assert(/bewerteten/.test(guided.summary),
     "Abschluss der geführten Sitzung nennt die Quote über die bewerteten Karten: " + guided.summary);
   assert(guided.noShare, "Geführte Sitzungen haben kein Lernduell/Teilen (gemischte Formen): " + JSON.stringify(guided));
+  assert(guided.bridge && guided.bridgeQuiz && guided.bridgeTotal.includes("/ " + guided.nCards) && guided.bridgeShare,
+    "»Diese Lektion als Duell-Quiz« muss dieselben Karten als reines Quiz spielen und am Ende den Teilen-Block bieten: " + JSON.stringify(guided));
 
   // Profil-Chip: zeigt den Beruf, öffnet das Modal mit beiden Auswahlfeldern, »Passt so« schließt
   const chip = await page.evaluate(() => {

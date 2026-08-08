@@ -1207,7 +1207,10 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       je Form; `sess.formOf` Map, `sess.auto`), beim Abschluss wird der gewählte Modus
       wiederhergestellt; Quote läuft über die **bewerteten** Karten (`sess.scored`),
       »Weiter lernen« am Ende startet wieder geführt. **Geführt = kein Lernduell**
-      (`CH_MODES` unangetastet; Teilen weiter in den reinen Modi). Die fünf Modi +
+      (`CH_MODES` unangetastet; Teilen weiter in den reinen Modi) – als Brücke bietet
+      der Abschluss-Screen **»Diese Lektion als Duell-Quiz«** (`startQuizWith`):
+      dieselben Karten als reines Quiz, dessen Abschluss den normalen Teilen-/
+      Herausfordern-Block hat (faire, vergleichbare Quote). Die fünf Modi +
       eigene Sitzung + Optionen stecken vollständig erhalten in einer zugeklappten
       **»Selbst wählen«**-Klappe (`#chooseWrap`); »Liste zum Nachschlagen« bleibt als
       eigener Schnellzugriff (`#btnList`, wird in der Liste zum »← Zurück«-Weg,
