@@ -1277,6 +1277,26 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Volltext-Schritt → Kette muss beim Commons-Foto landen) und prüft die Filter
       (PDF/DjVu/`(IA …)` raus, »(Iain …)«-Foto bleibt).
 
+- [x] **Info-Karte: Elternart als letzter Wikipedia-Notnagel** (zweiter Garten-Dill-
+      Fund, Screenshot: »Kein deutscher Wikipedia-Artikel gefunden«, obwohl »Dill
+      (Pflanze)« existiert). Ursache: Seit dem Steckrüben-Fix lässt `wikiCandidates`
+      bei **fremden Varietäten** (infraspezifisch, kein Autonym) das bloße Binom ganz
+      weg – zu Recht als *früher* Kandidat (sonst erschien Raps für die Steckrübe),
+      aber dadurch fand Garten-Dill (alle Kandidaten missing: voller Name,
+      »Garten-Dill«, »Gartendill«) gar nichts. Fix in `learn.js` **und** `app.js`
+      (Info-Karte ist in beiden Werkzeugen): Das Binom wird in diesem Zweig als
+      **letzter Notnagel** angehängt – die Steckrübe erreicht ihn nie (ihr deutscher
+      Titel trifft vorher), Garten-Dill fällt auf »Anethum graveolens« → »Dill
+      (Pflanze)« (Weiterleitung, mit Bild + Kurztext). Live-Zwilling über alle
+      **61 eindeutigen infraspezifischen Nicht-Autonym-Arten** der 14 Profile:
+      44 unverändert (alle Alt-Treffer identisch, z. B. Steckrübe → Steckrübe,
+      Knollensellerie → Echter Sellerie); 12 vorher leere Fälle finden jetzt die
+      fachlich korrekte Elternart (Buschbohne → Gartenbohne, Kulturtomate → Tomate,
+      Frisée → Endivie, Weiße Kletterhortensie → *Hydrangea anomala* …), 3 bleiben
+      mangels deutscher Artikel leer wie bisher – null Regressionen. `tests/learn.mjs`:
+      Steckrüben-Assertion auf die neue Semantik gehoben (deutscher Titel VOR dem
+      Binom, Binom nur als letzter), Dill-Fall ergänzt.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein
