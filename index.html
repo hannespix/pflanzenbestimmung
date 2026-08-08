@@ -265,6 +265,18 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .herblink{border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--green-deep);
   border-radius:99px; padding:5px 12px; font-family:var(--mono); font-size:11px; cursor:pointer; min-height:32px}
 .herblink:hover{background:var(--green-tint); border-color:var(--green)}
+/* Erfahrungspunkte + botanischer Rang (Keimling … Meistergärtner/in) */
+.rankrow{display:flex; align-items:center; gap:8px; margin-top:8px; font-family:var(--mono); font-size:11px; color:var(--ink-soft); flex-wrap:wrap}
+.rk-name{font-family:var(--serif); font-size:14px; font-style:italic; color:var(--green-deep); letter-spacing:.01em}
+.rk-bar{flex:1; height:6px; background:var(--surface-2); border:1px solid var(--rule); border-radius:99px; overflow:hidden; min-width:70px}
+.rk-bar i{display:block; height:100%; background:linear-gradient(90deg,var(--green),var(--green-deep)); border-radius:99px;
+  transition:width .5s cubic-bezier(.2,.8,.3,1)}
+/* Sitzungs-Combo: Treffer in Folge (ab 3 sichtbar), poppt bei jeder Erhöhung */
+.scombo{font-family:var(--mono); font-size:12px; color:#b5651d; font-weight:700; letter-spacing:.02em;
+  animation:comboPop .42s cubic-bezier(.2,.85,.3,1.4)}
+@keyframes comboPop{ 0%{transform:scale(.7); opacity:.2} 55%{transform:scale(1.18)} 100%{transform:scale(1); opacity:1} }
+@media (prefers-reduced-motion: reduce){ .scombo{animation:none} }
+.xpline{font-family:var(--mono); font-size:12.5px; color:var(--green-deep); margin:2px 0 0}
 /* Sammel-Herbarium: eine Sammelkarte je Thema – Klebestreifen oben, gepresste
    Pflanze (SVG, currentColor), »Gemeistert«-Schrägband; Unfertiges bleibt blass */
 .herbmodal{max-width:740px}
@@ -934,6 +946,65 @@ body.stagefull #stage>.sessionbar{
   box-shadow:0 3px 10px -4px rgba(31,58,40,.3), 0 20px 42px -20px rgba(31,58,40,.55) }
 .opt.correct{ box-shadow:0 0 0 1.5px var(--green), 0 10px 30px -14px rgba(61,107,77,.65) }
 .rate button:hover{ box-shadow:0 4px 12px -6px rgba(31,58,40,.35), 0 16px 34px -18px rgba(31,58,40,.5) }
+
+/* ===== Herbarium 2.0 · Stufe 5: OKLCH/Display-P3, Popover-Menüs, Container Queries =====
+   Progressive enhancement in Reinform: Jede Regel steckt hinter @supports bzw. einer
+   Feature-Abfrage – ältere Browser sehen unverändert die bisherige Fassung, der Druck
+   bleibt unberührt (alles @media screen). */
+@media screen{
+  @supports (color: oklch(0.5 0.1 150)){
+    @media (color-gamut: p3){
+      /* Sattere botanische Grüntöne, die im sRGB-Dreieck gar nicht darstellbar sind.
+         Gleiche Helligkeit (L) wie bisher – nur mehr Farbigkeit (C). */
+      :root{
+        --green:oklch(.50 .095 152); --green-deep:oklch(.38 .080 152); --green-tint:oklch(.93 .028 148);
+        --gold:oklch(.62 .145 85); --madder:oklch(.47 .165 30); --sepia:oklch(.50 .050 80);
+      }
+      :root[data-theme="dark"]{
+        --green:oklch(.62 .115 152); --green-deep:oklch(.83 .105 152); --green-tint:oklch(.30 .050 152);
+        --gold:oklch(.78 .130 85); --madder:oklch(.72 .130 32); --sepia:oklch(.74 .065 82);
+      }
+      @media (prefers-color-scheme:dark){
+        :root:not([data-theme="light"]){
+          --green:oklch(.62 .115 152); --green-deep:oklch(.83 .105 152); --green-tint:oklch(.30 .050 152);
+          --gold:oklch(.78 .130 85); --madder:oklch(.72 .130 32); --sepia:oklch(.74 .065 82);
+        }
+      }
+    }
+  }
+}
+
+/* Container Queries: Die Herbarium-Sammelkarten richten sich nach der Breite IHRES
+   Rasters (nicht des Fensters) – im schmalen Modal kompakter, im breiten großzügiger. */
+@supports (container-type: inline-size){
+  .herbgrid{container-type:inline-size; container-name:herb}
+  @container herb (max-width: 380px){
+    .herbcard{padding:12px 8px 8px}
+    .hc-art svg{width:44px; height:44px}
+    .hc-name{font-size:12px; min-height:2.2em}
+  }
+  @container herb (min-width: 640px){
+    .hc-art svg{width:72px; height:72px}
+    .hc-name{font-size:15px}
+  }
+}
+/* Rang-Popover: alle Stufen auf einen Blick, im Top-Layer am Rang-Namen verankert
+   (Light-Dismiss und Esc bringt die Popover-API mit). Nur aktiv, wenn Popover UND
+   Anchor-Positioning können – sonst erklärt weiterhin der Tooltip. */
+#rankPop{margin:0; border:1px solid var(--rule-strong); background:var(--glass-m,var(--surface));
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  border-radius:14px; padding:12px 14px; box-shadow:var(--shadow-2); color:var(--ink); max-width:min(320px,90vw)}
+#rankPop::backdrop{background:transparent}
+@supports (anchor-name: --a){
+  .rk-name{anchor-name:--rankchip}
+  #rankPop{position-anchor:--rankchip; position-area:block-end span-inline-end; position-try-fallbacks:flip-block; margin-top:6px}
+}
+.rkp-h{font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--sepia); margin-bottom:8px}
+.rkp-row{display:flex; align-items:baseline; gap:8px; font-size:13px; padding:3px 0; color:var(--ink-soft)}
+.rkp-row.on{color:var(--green-deep); font-weight:700}
+.rkp-row .r-n{font-family:var(--serif); font-style:italic; flex:1}
+.rkp-row .r-x{font-family:var(--mono); font-size:11px}
+.rk-name{cursor:pointer; text-decoration:underline dotted var(--rule-strong); text-underline-offset:3px}
 </style>
 </head>
 <body>
@@ -1754,6 +1825,97 @@ function streakBump(){
   }catch(e){ /* Belohnung ist Kür */ }
 }
 
+/* ---------- Erfahrungspunkte + botanische Ränge ----------
+   Didaktisches Prinzip: Je schwerer das Abrufen, desto mehr Punkte – Tippen
+   (freies Erinnern) bringt doppelt so viel wie Ankreuzen, die Selbsteinschätzung
+   der Karteikarte am wenigsten. Teilweise richtig gibt anteilig. Global über
+   alle Profile (Key pflanzenlernen.xp = {x:Punkte, r:zuletzt gefeierter Rang}). */
+const LS_XP = LS_PREFIX+"xp";
+const RANKS = [                                  // Gärtner-Laufbahn statt Level-Zahlen
+  {n:"Keimling",          x:0},
+  {n:"Sämling",           x:150},
+  {n:"Steckling",         x:500},
+  {n:"Jungpflanze",       x:1200},
+  {n:"Stockmutter",       x:2500},
+  {n:"Meistergärtner/in", x:5000}
+];
+const XP_BASE = { cards:3, quiz:5, type:10 };    // Karteikarte < Auswahl < freies Tippen
+function xpLoad(){ try{ const o=JSON.parse(store.get(LS_XP)||"{}"); return (o&&typeof o==="object")?o:{}; }catch(e){ return {}; } }
+function xpSave(o){ try{ store.set(LS_XP, JSON.stringify(o)); }catch(e){} }
+function xpTotal(){ return Math.max(0, +(xpLoad().x||0)); }
+function rankOf(xp){
+  let i=0; for(let k=0;k<RANKS.length;k++) if(xp>=RANKS[k].x) i=k;
+  const cur=RANKS[i], next=RANKS[i+1]||null;
+  const spanne = next ? next.x-cur.x : 1;
+  return { i, name:cur.n, next:next?next.n:null, need:next?next.x-xp:0,
+           pct: next ? Math.min(100, Math.round((xp-cur.x)/spanne*100)) : 100 };
+}
+function xpAdd(n, anchor){                       // Punkte gutschreiben, Rangaufstieg feiern
+  n = Math.max(0, Math.round(n||0));
+  if(!n) return 0;
+  try{
+    const o=xpLoad(), vor=rankOf(xpTotal()).i;
+    o.x=(+o.x||0)+n;
+    const nach=rankOf(o.x).i;
+    if(nach>vor && o.r!==nach){                  // neuer Rang: einmalig feiern
+      o.r=nach; xpSave(o);
+      toast(`Neuer Rang: ${RANKS[nach].n} 🌱`);
+      celebrate(anchor||$("#stage")||document.body, 2);
+    } else xpSave(o);
+    if(sess.active) sess.xp=(sess.xp||0)+n;      // in der Sitzungsleiste mitzählen
+  }catch(e){}
+  return n;
+}
+/* Rangliste als echtes Popover (Top-Layer, Light-Dismiss + Esc kommen von der
+   Plattform), am Rang-Namen verankert. Nur wenn Popover UND Anchor-Positioning
+   können – sonst bleibt es beim erklärenden Tooltip, ohne toten Knopf. */
+function canPopover(){
+  try{ return ("popover" in HTMLElement.prototype) && window.CSS && CSS.supports("anchor-name: --a"); }
+  catch(e){ return false; }
+}
+function wireRankPopover(){
+  const chip=$("#rankName"); if(!chip || !canPopover()) return;
+  let pop=$("#rankPop");
+  if(!pop){
+    pop=el("div"); pop.id="rankPop"; pop.setAttribute("popover","auto");
+    document.body.appendChild(pop);
+  }
+  const jetzt=rankOf(xpTotal()).i;
+  pop.innerHTML = `<div class="rkp-h">Laufbahn</div>`+
+    RANKS.map((r,i)=>`<div class="rkp-row${i===jetzt?" on":""}"><span class="r-n">${esc(r.n)}</span><span class="r-x">ab ${r.x} P.</span></div>`).join("");
+  chip.setAttribute("role","button"); chip.tabIndex=0;
+  chip.setAttribute("aria-label","Laufbahn ansehen: alle Ränge und ihre Punktzahlen");
+  const zeig=()=>{ try{ pop.togglePopover(); }catch(e){} };
+  chip.onclick=zeig;
+  chip.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); zeig(); } };
+}
+/* ---------- Sitzungs-Combo (Treffer in Folge) ----------
+   Kein Zeitdruck – nur eine Serie richtiger Antworten innerhalb der Sitzung.
+   Ab 3 in Folge gibt es Bonuspunkte, bei 5/10/15… ein größeres Feuerwerk.
+   Nur in bewerteten Modi (Quiz, Tippen, Bilder) – bei der Karteikarte könnte
+   man sich sonst durch »Gewusst« klicken. */
+function comboBonus(n){ return n>=10 ? 8 : n>=5 ? 4 : n>=3 ? 2 : 0; }
+function comboHit(ok, anchor){
+  if(!scoreable()) return 0;                     // Karteikarten: keine Combo
+  if(!ok){ sess.combo=0; return 0; }
+  sess.combo=(sess.combo||0)+1;
+  sess.comboMax=Math.max(sess.comboMax||0, sess.combo);
+  const n=sess.combo, bonus=comboBonus(n);
+  if(n>=5 && n%5===0){                           // 5er-Stufen: größere Feier + kräftigere Haptik
+    celebrate(anchor||$("#fb")||document.body, 2);
+    buzz([14,40,14,40,30]);
+    toast(`${n} richtige in Folge! +${bonus} Punkte`);
+  }
+  return bonus;
+}
+/* Ein Treffer wird verbucht: Grundpunkte je Übungsform × Anteil + Combo-Bonus. */
+function scoreHit(kind, ok, anteil, anchor){
+  const base = XP_BASE[kind]||XP_BASE.quiz;
+  const teil = Math.max(0, Math.min(1, anteil==null ? (ok?1:0) : anteil));
+  const bonus = comboHit(ok, anchor);
+  return xpAdd(base*teil + (ok?bonus:0), anchor);
+}
+
 /* ---------- Auswahl / Filter ---------- */
 /* Lernstoff eingrenzen: alles, ein Thema (»t:…«) oder eine Pflanzenfamilie (»f:…«). */
 function scopeOk(c, sel){
@@ -2156,7 +2318,14 @@ function renderProgress(){
          <span class="sr-goal"><i style="width:${Math.round(done/goal*100)}%"></i></span>
          <span class="sr-n">${done}/${goal} heute</span>
          <button class="herblink" id="btnHerb" title="Deine Themen-Sammlung: Jedes gemeisterte Thema legt eine gepresste Pflanze ins Herbarium.">🌿 Mein Herbarium</button>
+       </div>`; })()}
+     ${(()=>{ const xp=xpTotal(), r=rankOf(xp);
+       return `<div class="rankrow" id="rankRow" title="Erfahrungspunkte sammelst du mit richtigen Antworten – freies Tippen bringt am meisten, Ankreuzen weniger, die Selbsteinschätzung der Karteikarte am wenigsten.">
+         <span class="rk-name" id="rankName">${esc(r.name)}</span>
+         <span class="rk-bar"><i style="width:${r.pct}%"></i></span>
+         <span class="rk-n">${xp} P.${r.next?` · noch ${r.need} bis ${esc(r.next)}`:` · höchster Rang`}</span>
        </div>`; })()}`;
+  wireRankPopover();
   const hb=$("#btnHerb"); if(hb) hb.onclick=openHerbarium;
   const due = p.filter(c=>{ const pr=pget(c.key); return !pr.box || !pr.due || pr.due<=todayISO(); }).length;
   const wie = mode==="photo" ? (photoAnswer==="exam" ? "wie in der Prüfung" : DIRS[curDir()].label+" · "+PH_ANSWER[photoAnswer])
@@ -2508,6 +2677,7 @@ function sessionBar(){
   return `<div class="sessionbar"><span>${sess.done} / ${sess.total}</span><span class="sbar"><i style="width:${pct}%"></i></span>`+
     (mode!=="cards"?`<span>${sess.correct} richtig</span>`:``)+
     (examScoring()&&sess.pts?`<span class="spts" title="Punkte dieser Sitzung – ein Schreibfehler zählt halb, der Rest kommt bei der fehlerfreien Wiederholung dazu">${nfmt(sess.pts.sum)} / ${nfmt(sess.pts.max)} P.</span>`:``)+
+    ((sess.combo||0)>=3?`<span class="scombo" title="Treffer in Folge – ab 3 gibt es Bonuspunkte, jede 5er-Stufe wird gefeiert">${sess.combo}× in Folge</span>`:``)+
     (scoreable()?`<span class="sclock" id="sclock" title="Denkzeit dieser Sitzung – die Uhr läuft nur, solange eine Frage offen ist">${fmtDur(clockNow())}</span>`:``)+
     `<button class="btn ghost" id="btnStop" title="Sitzung beenden">beenden</button></div>`;
 }
@@ -2562,6 +2732,7 @@ function finishSession(){
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6L9 17l-5-5"/></svg>
     <h2>${aborted?"Sitzung beendet":"Sitzung geschafft"}</h2>
     <p>${sess.done} Karten gelernt${auto ? (scoredN?` · ${sess.correct} richtig von ${scoredN} bewerteten (${accS} %)`:"") : (mode!=="cards"?` · ${sess.correct} richtig (${acc} %)`:"")}${sess.pts&&(auto||examScoring())?` · <b>${nfmt(sess.pts.sum)} von ${nfmt(sess.pts.max)} Punkten</b>`:""}${(auto?sess.ms:(scoreable()&&sess.ms))?` · Denkzeit ${fmtDur(sess.ms)}`:""}.</p>
+    ${(sess.xp||sess.comboMax>=3)?`<p class="xpline"><b>+${sess.xp||0} Erfahrungspunkte</b>${sess.comboMax>=3?` · beste Serie: ${sess.comboMax}× in Folge`:""} · Rang: ${esc(rankOf(xpTotal()).name)}</p>`:""}
     ${extra}
     ${share}
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px">
@@ -2624,8 +2795,8 @@ function flipCard(){
     <button class="r-good">Gewusst<small>${when(days("good"))}</small></button>`;
   $("#stage").appendChild(rate);
   rate.querySelector(".r-again").onclick=()=>{ grade(c,"again"); requeueCurrent(); advance(); };
-  rate.querySelector(".r-hard").onclick =()=>{ grade(c,"hard"); advance(); };
-  rate.querySelector(".r-good").onclick =()=>{ grade(c,"good"); advance(); };
+  rate.querySelector(".r-hard").onclick =()=>{ grade(c,"hard"); xpAdd(1); advance(); };   // Teilwissen zählt ein wenig
+  rate.querySelector(".r-good").onclick =()=>{ grade(c,"good"); scoreHit("cards", true, 1); advance(); };
   try{ rate.querySelector(".r-again").focus(); }catch(e){}   // Tastatur: direkt bewerten (1/2/3 oder Tab)
 }
 
@@ -2663,6 +2834,7 @@ function answerQuiz(btn, chosen, opts){
   $("#fb").innerHTML = (ok ? `<span class="good">Richtig!</span>` : `<span class="bad">Leider falsch.</span>`)+
     ` <span class="sol">${solutionLine(c)}</span>`;
   if(ok) celebrate(btn, 1);
+  scoreHit("quiz", ok, ok?1:0, btn);                   // Punkte + Combo (Auswahl = mittlere Schwierigkeit)
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
 }
@@ -2732,6 +2904,7 @@ function submitType(ins){
                 : near ? ` · <b>≈</b> Schreibfehler zählen halb – so steht es auf dem Prüfungsbogen` : "")+
     (all?"":" · "+solutionLine(c))+`</span>`;
   if(all) celebrate($("#fb"), 1);
+  scoreHit("type", all, max?got/max:0, $("#fb"));      // freies Tippen zählt doppelt; Teilpunkte anteilig
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
 }
@@ -4467,6 +4640,9 @@ function finishPhotoAnswer(ok, g, p, solHTML, full){
     : (ok ? `<span class="good">Richtig!</span>`
       : g==="hard" ? `<span class="near">Teilweise richtig.</span>` : `<span class="bad">Leider falsch.</span>`)+" "+solHTML;
   if(ok) celebrate($("#fb"), 1);
+  // Punkte + Combo: Auswahl zählt wie Quiz, Tippen/»wie in der Prüfung« wie freies Tippen;
+  // teilweise richtig (»hard«) gibt die Hälfte.
+  scoreHit(photoAnswer==="mc" ? "quiz" : "type", ok, ok?1:(g==="hard"?0.5:0), $("#fb"));
   photoRevealCredit(p);
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
@@ -4917,6 +5093,11 @@ window.streakGoal=streakGoal;
 window.herbCheck=herbCheck;       // für Tests: Sammel-Herbarium
 window.herbData=herbData;
 window.openHerbarium=openHerbarium;
+window.xpTotal=xpTotal;           // für Tests: XP, Ränge, Combo
+window.xpAdd=xpAdd;
+window.rankOf=rankOf;
+window.comboBonus=comboBonus;
+window.RANKS=RANKS;
 window.isCultivarName=isCultivarName;
 window.infraEpithet=infraEpithet;
 window.artLevelOk=artLevelOk;

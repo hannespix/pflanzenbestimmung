@@ -1413,6 +1413,54 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Herbarium: volles Thema → genau EINE Feier, Modal zeigt genau die
       gemeisterte Karte farbig mit Stempel. Screenshots verifiziert.
 
+- [x] **Gamification, zweite Hälfte: XP + botanische Ränge & Sitzungs-Combo**
+      (Bausteine B und D des Konzepts, vom Nutzer freigegeben). Nur Lern-Tool,
+      offline, global über alle Profile (Key `pflanzenlernen.xp = {x,r}`).
+      **XP didaktisch gestaffelt** (`XP_BASE`, `scoreHit(kind, ok, anteil, anchor)`):
+      freies **Tippen 10** > **Auswahl 5** > **Karteikarte 3** (Selbsteinschätzung
+      am wenigsten, weil am schwächsten belegt), »Unsicher« 1; Teilpunkte anteilig
+      (Prüfungsmodus: `got/max`, Bilder-»hard« = halb). **Sechs Ränge**
+      (`RANKS`): Keimling · Sämling · Steckling · Jungpflanze · Stockmutter ·
+      Meistergärtner/in (0/150/500/1200/2500/5000 P.); Aufstieg wird **einmalig**
+      gefeiert (Toast + Feuerwerk, `o.r` merkt den zuletzt gefeierten Rang).
+      Anzeige: Rang-Zeile unter der Lernserie (`#rankRow`: Rang kursiv · grüner
+      Balken · »x P. · noch n bis …«). **Combo** (`comboHit`): Treffer in Folge
+      **nur in bewerteten Modi** (bei der Karteikarte könnte man sich sonst durch
+      »Gewusst« klicken), ab 3 Bonus 2/4/8 P., jede 5er-Stufe mit größerem
+      Feuerwerk + kräftigerer Haptik + Toast; Chip in der Sitzungsleiste
+      (`.scombo`, poppt), Abschluss-Screen nennt XP + beste Serie + Rang.
+      **Kein Zeitdruck** (verleitet sonst zum Raten). `tests/learn.mjs` prüft
+      Rangkette + Aufstieg, Combo (Fehler setzt zurück, ab 3 sichtbar), Bonus-
+      Staffel und dass drei Quiz-Treffer ≥15 P. bringen. *Nebenbei gefunden:*
+      `rankOf` griff auf `cur.name` zu, während `RANKS` das Feld `n` führt – der
+      neue Test deckte es sofort auf.
+
+- [x] **Herbarium 2.0 · Stufe 5 – OKLCH/Display-P3, Popover-Menüs, Container
+      Queries** (alle Seiten, Marker »Stufe 5« am Ende jedes `<style>`; alles
+      progressive enhancement hinter `@supports`/Feature-Abfragen, Druck unberührt).
+      **(1) Farbe:** Nur wenn der Browser `oklch()` versteht **und** das Display
+      einen weiten Farbraum meldet (`@media (color-gamut: p3)`), werden Grün/Gold/
+      Krapp/Sepia in **OKLCH** neu gesetzt – gleiche Helligkeit, mehr Farbigkeit
+      (Töne, die im sRGB-Dreieck gar nicht darstellbar sind), Hell **und** Dunkel
+      je doppelt hinterlegt (`[data-theme]` + Media-Query). sRGB-Geräte sehen
+      exakt das bisherige Bild. **(2) Popover + Anchor:** Das **Verwaltungs-Menü**
+      des Prüfungswerkzeugs wird zum echten `popover="auto"` im **Top-Layer**, am
+      Knopf verankert (`anchor-name`/`position-area` + `position-try-fallbacks`) –
+      Klick daneben und Esc schließen von selbst. Aktiviert **nur**, wenn Popover
+      UND Anchor-Positioning können; sonst bleibt die bisherige Inline-Leiste
+      unverändert. Der `hidden`-Zustand bleibt in **beiden** Wegen die Wahrheit
+      (Klick-Handler spiegelt **synchron**, weil das `toggle`-Event erst später
+      feuert; ein `toggle`-Listener fängt zusätzlich Light-Dismiss/Esc ab).
+      Neu im Lern-Tool: **Rang-Popover** (`#rankPop`, am Rang-Namen verankert)
+      zeigt die ganze Laufbahn mit Punktzahlen, aktueller Rang hervorgehoben –
+      tastaturbedienbar, ohne toten Knopf bei fehlender Unterstützung.
+      **(3) Container Queries:** Herbarium-Raster und »Aktuelle Prüfung« reagieren
+      auf **ihre eigene** Breite statt auf das Fenster (Sammelkarten im schmalen
+      Modal kompakter, im breiten großzügiger). `tests/smoke.mjs` prüft den
+      Popover-Modus inkl. Light-Dismiss und dass er nur bei Unterstützung greift;
+      `tests/learn.mjs` prüft Rang-Popover (sechs Ränge, aktueller markiert) und
+      den Container-Typ. Screenshots verifiziert.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein

@@ -1157,6 +1157,81 @@ async function main() {
   assert(herb.total > 3 && herb.doneCards === 1 && herb.doneName === herb.thema && herb.stamp,
     "Herbarium-Modal: genau die gemeisterte Sammelkarte muss farbig mit Stempel sein: " + JSON.stringify(herb));
 
+  // XP + botanische Ränge: freies Tippen bringt mehr als Ankreuzen, Rangaufstieg wird
+  // einmalig gefeiert; Combo zählt Treffer in Folge (ab 3 sichtbar, Bonus gestaffelt).
+  const xp = await page.evaluate(async () => {
+    localStorage.removeItem("pflanzenlernen.xp");
+    const r0 = rankOf(0), r1 = rankOf(RANKS[1].x), rTop = rankOf(RANKS[RANKS.length - 1].x + 999);
+    xpAdd(RANKS[1].x);                                   // Aufstieg Keimling → Sämling
+    const nachAufstieg = rankOf(xpTotal()).name;
+    const gefeiert = xpTotal() === RANKS[1].x;
+    // Quiz-Sitzung: erst falsch (Combo bleibt 0), dann drei richtige in Folge
+    $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    document.querySelector('#modeTabs button[data-mode="quiz"]').click();
+    $("#sessLen").value = "8"; startSession();
+    const vorXP = xpTotal();
+    const antworte = (richtig) => {
+      const soll = answerText(current);
+      const opts = [...document.querySelectorAll("#opts .opt")];
+      const b = opts.find((o) => (o.querySelector("span:last-child").textContent === soll) === richtig);
+      b.click(); const nx = document.querySelector("#wt"); if (nx) nx.click();
+    };
+    antworte(false);
+    const comboNachFehler = sess.combo || 0;
+    antworte(true); antworte(true);
+    const bar2 = document.querySelector(".scombo");      // bei 2 noch nicht sichtbar
+    antworte(true);
+    const bar3 = document.querySelector(".scombo");      // ab 3 sichtbar
+    const combo3 = sess.combo, comboText = bar3 ? bar3.textContent : "";
+    const xpDelta = xpTotal() - vorXP;
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();   // Sitzung beenden
+    localStorage.removeItem("pflanzenlernen.xp");
+    return { r0: r0.name, r1: r1.name, rTopNext: rTop.next, nachAufstieg, gefeiert,
+      comboNachFehler, sichtbarBei2: !!bar2, sichtbarBei3: !!bar3, combo3, comboText, xpDelta,
+      bonus: [comboBonus(2), comboBonus(3), comboBonus(5), comboBonus(10)] };
+  });
+  assert(xp.r0 === "Keimling" && xp.r1 === "Sämling" && xp.rTopNext === null,
+    "Ränge: Keimling → Sämling → … → höchster Rang ohne »nächsten«: " + JSON.stringify(xp));
+  assert(xp.nachAufstieg === "Sämling" && xp.gefeiert,
+    "Rangaufstieg muss beim Erreichen der Punktzahl greifen: " + JSON.stringify(xp));
+  assert(xp.comboNachFehler === 0 && !xp.sichtbarBei2 && xp.sichtbarBei3 && xp.combo3 === 3 && /3× in Folge/.test(xp.comboText),
+    "Combo: Fehler setzt zurück, ab 3 Treffern in Folge sichtbar: " + JSON.stringify(xp));
+  assert(JSON.stringify(xp.bonus) === JSON.stringify([0, 2, 4, 8]),
+    "Combo-Bonus muss gestaffelt sein (0/2/4/8 bei 2/3/5/10): " + JSON.stringify(xp.bonus));
+  assert(xp.xpDelta >= 15, "Drei richtige Quiz-Antworten müssen mindestens 15 Punkte bringen: " + xp.xpDelta);
+
+  // Stufe 5: Rang-Popover (Top-Layer, am Rang-Namen verankert) – nur wo Popover UND
+  // Anchor-Positioning können; Container Queries auf dem Herbarium-Raster.
+  const stufe5 = await page.evaluate(() => {
+    const kann = ("popover" in HTMLElement.prototype) && CSS.supports("anchor-name: --a");
+    renderProgress();
+    const chip = document.querySelector("#rankName");
+    const pop = document.querySelector("#rankPop");
+    let offen = null, zeilen = 0, aktiv = "";
+    if (kann && chip) {
+      chip.click();
+      offen = pop.matches(":popover-open");
+      zeilen = pop.querySelectorAll(".rkp-row").length;
+      const on = pop.querySelector(".rkp-row.on .r-n");
+      aktiv = on ? on.textContent : "";
+      chip.click();
+    }
+    openHerbarium();
+    const grid = document.querySelector(".herbgrid");
+    const ct = grid ? getComputedStyle(grid).containerType : "";
+    document.querySelector("#infoClose").click();
+    return { kann, hatPop: !!pop, rolle: chip ? chip.getAttribute("role") : "", offen, zeilen, aktiv, ct,
+      oklch: CSS.supports("color: oklch(0.5 0.1 150)") };
+  });
+  if (stufe5.kann) {
+    assert(stufe5.hatPop && stufe5.rolle === "button" && stufe5.offen,
+      "Rang-Popover: Chip muss Knopf sein und das Popover im Top-Layer öffnen: " + JSON.stringify(stufe5));
+    assert(stufe5.zeilen === 6 && stufe5.aktiv === "Keimling",
+      "Rang-Popover muss alle sechs Ränge zeigen und den aktuellen hervorheben: " + JSON.stringify(stufe5));
+  }
+  assert(stufe5.ct === "inline-size",
+    "Container Queries: das Herbarium-Raster muss ein Inline-Size-Container sein: " + JSON.stringify(stufe5));
+
   // Wikipedia-Vorschau: bei ANDERER Unterart darf nicht die Elternart erscheinen
   // (»Brassica napus« = Raps, gesucht ist die Steckrübe ssp. rapifera). Offline –
   // nur die Kandidatenliste/Titelbildung, kein Netzabruf.
@@ -2043,7 +2118,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand, kein Duell, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON-Links lesbar, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast.");
+  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand, kein Duell, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON-Links lesbar, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast, Lernserie/Tagesziel, Herbarium, XP-Ränge + Combo, Stufe 5 (Rang-Popover, Container Queries).");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
