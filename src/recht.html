@@ -152,6 +152,15 @@ input[type=checkbox],input[type=radio]{accent-color:var(--green)}
 @media (prefers-reduced-motion:reduce){
   details::details-content{transition:none}
   ::view-transition-old(root),::view-transition-new(root){animation:none}}
+/* ── Herbarium 2.0 · Stufe 4: weicher Seitenwechsel + Typo ── */
+@view-transition{ navigation: auto }
+@media (prefers-reduced-motion: reduce){
+  ::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){ animation:none !important }
+}
+@media screen{
+  h1,h2,h3,summary{ text-wrap:balance }
+  p,li{ text-wrap:pretty }
+}
 </style>
 </head>
 <body>

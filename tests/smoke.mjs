@@ -670,6 +670,27 @@ async function main() {
   assert(info.fromCurrent, "ℹ in der »Aktuellen Prüfung« öffnet die Info-Karte nicht: " + JSON.stringify(info));
   assert(info.closedByEsc, "Info-Modal schließt nicht über Esc: " + JSON.stringify(info));
 
+  // 8x) Bild-Lightbox (Info-Karte): eigener Namensraum (.lbscrim, kein .scrim-Panel),
+  //     Fokus auf ×, Esc schließt und gibt den Fokus zurück; lbBig leitet das größere Derivat ab.
+  const lb = await page.evaluate(() => {
+    const before = document.querySelectorAll(".scrim.open").length;
+    const anchor = document.querySelector("#btnDraw"); anchor.focus();
+    openLightbox("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>", "Test");
+    const sc = document.querySelector(".lbscrim");
+    const open = !!sc && sc.getAttribute("role") === "dialog" && !!sc.querySelector(".lb-img");
+    const xFocused = document.activeElement === (sc && sc.querySelector(".lb-x"));
+    const noPanel = document.querySelectorAll(".scrim.open").length === before;
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    const closed = !document.querySelector(".lbscrim");
+    const focusBack = document.activeElement === anchor;
+    return { open, xFocused, noPanel, closed, focusBack,
+      derive: lbBig("https://u/commons/thumb/x/Foo.jpg/640px-Foo.jpg") };
+  });
+  assert(lb.open && lb.xFocused && lb.noPanel,
+    "Lightbox muss als eigener Dialog öffnen (Fokus auf ×, kein .scrim-Panel): " + JSON.stringify(lb));
+  assert(lb.closed && lb.focusBack, "Esc muss die Lightbox schließen und den Fokus zurückgeben: " + JSON.stringify(lb));
+  assert(/\/1600px-Foo\.jpg$/.test(lb.derive), "lbBig muss das größere Commons-Derivat ableiten: " + lb.derive);
+
   // 9) Mobile-Layout: Status-Pille überlagert die Überschrift nicht (schmale Breite)
   await page.setViewport({ width: 360, height: 720, deviceScaleFactor: 1 });
   const mobile = await page.evaluate(() => {

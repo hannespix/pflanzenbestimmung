@@ -1028,6 +1028,37 @@ async function main() {
   assert(damage.file === "Phaseolus coccineus in Jardin des Plantes de Toulouse 01.jpg",
     "Feuerbohne: das Rostpilz-Foto muss verworfen werden, das echte Pflanzenfoto gewinnt: " + JSON.stringify(damage));
 
+  // Bild-Lightbox: das Quiz-Foto ist klick- UND tastaturbedienbar (role=button) und
+  // öffnet die Großansicht (größeres Commons-Derivat); Esc schließt, Fokus kehrt zurück.
+  const lightbox = await page.evaluate(async () => {
+    const derive = lbBig("https://upload.wikimedia.org/wikipedia/commons/thumb/a/b/Foo.jpg/640px-Foo.jpg");
+    __clearPhotoCache();
+    __setPhotoSource(() => Promise.resolve({ thumb: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>",
+      title: "Testbild", file: "Testbild.jpg", url: "https://example.invalid", src: "cm" }));
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();
+    $("#sessLen").value = "4"; startSession();
+    await new Promise((r) => setTimeout(r, 90));
+    const img = document.querySelector("#phImg");
+    const wired = !!img && img.getAttribute("role") === "button" && img.tabIndex === 0 && img.classList.contains("lb-zoom");
+    img.focus(); img.click();
+    const sc = document.querySelector(".lbscrim");
+    const open = !!sc && sc.getAttribute("role") === "dialog" && !!sc.querySelector(".lb-img");
+    const xFocused = document.activeElement === (sc && sc.querySelector(".lb-x"));
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    const closed = !document.querySelector(".lbscrim");
+    const focusBack = document.activeElement === img;
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();   // Sitzung aufräumen
+    __setPhotoSource(null); __clearPhotoCache();
+    return { derive, wired, open, xFocused, closed, focusBack };
+  });
+  assert(/\/1600px-Foo\.jpg$/.test(lightbox.derive),
+    "lbBig muss das größere Commons-Derivat ableiten (…/1600px-…): " + lightbox.derive);
+  assert(lightbox.wired, "Quiz-Foto muss als Button verkabelt sein (role/tabindex/lb-zoom): " + JSON.stringify(lightbox));
+  assert(lightbox.open && lightbox.xFocused,
+    "Klick aufs Foto muss die Lightbox öffnen (role=dialog, Fokus auf ×): " + JSON.stringify(lightbox));
+  assert(lightbox.closed && lightbox.focusBack,
+    "Esc muss die Lightbox schließen und den Fokus zum Foto zurückgeben: " + JSON.stringify(lightbox));
+
   // Wikipedia-Vorschau: bei ANDERER Unterart darf nicht die Elternart erscheinen
   // (»Brassica napus« = Raps, gesucht ist die Steckrübe ssp. rapifera). Offline –
   // nur die Kandidatenliste/Titelbildung, kein Netzabruf.
