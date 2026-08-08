@@ -999,6 +999,35 @@ async function main() {
   assert(buchscan.file === "Anethum graveolens20090812 475.jpg" && buchscan.src === "cm",
     "Garten-Dill muss über die Ersatzroute beim echten Dill-Foto landen (nicht Buchdeckel/Illustration): " + JSON.stringify(buchscan));
 
+  // Krankheits-/Schädlingsfotos: Ein Rostpilz-Foto nennt die Wirtspflanze im Dateinamen
+  // und würde über commonsScore gewinnen (Realfall Feuerbohne) – looksDamage muss es
+  // verwerfen, das echte Pflanzenfoto dahinter gewinnt. Wortliste ohne Fehlalarme
+  // (Blumenkohl = var. botrytis, Rosa gallica, St.-Gallen-Fotos bleiben erlaubt).
+  const damage = await page.evaluate(() => {
+    const bohne = { g: "Phaseolus", a: "coccineus", de: "Feuerbohne", key: "t|px" };
+    const cmP = (i, file) => ({ index: i, title: "File:" + file,
+      imageinfo: [{ thumburl: "https://x/" + file, mime: "image/jpeg", descriptionurl: "https://commons/" + file }] });
+    const antwort = { query: { pages: {
+      p0: cmP(1, "-2019-05-21 Runner Bean plants, Trimingham.JPG"),
+      p1: cmP(2, "Uromyces appendiculatus var. appendiculatus telia at Phaseolus coccineus (4) cropped.jpg"),
+      p2: cmP(3, "Phaseolus coccineus in Jardin des Plantes de Toulouse 01.jpg") } } };
+    const hit = pickCommons(antwort, bohne);
+    return { file: hit && hit.file,
+      rostRaus: looksDamage("Uromyces appendiculatus telia at Phaseolus coccineus.jpg"),
+      raupeRaus: looksDamage("Schwalbenschwanz (Papilio machaon) Raupe-20250724.jpg"),
+      mehltauRaus: looksDamage("Erysiphe alphitoides Eichenmehltau 2019.jpg"),
+      blumenkohlBleibt: !looksDamage("Brassica oleracea var. botrytis 0125.jpg"),
+      gallicaBleibt: !looksDamage("Rosa gallica Habitus 2021.jpg"),
+      stGallenBleibt: !looksDamage("Botanischer Garten St. Gallen, Beet 3.jpg"),
+      fotoBleibt: !looksDamage("Phaseolus coccineus in Jardin des Plantes de Toulouse 01.jpg") };
+  });
+  assert(damage.rostRaus && damage.raupeRaus && damage.mehltauRaus,
+    "looksDamage muss Rost-/Raupen-/Mehltau-Fotos erkennen: " + JSON.stringify(damage));
+  assert(damage.blumenkohlBleibt && damage.gallicaBleibt && damage.stGallenBleibt && damage.fotoBleibt,
+    "looksDamage darf Blumenkohl (var. botrytis), Rosa gallica, St.-Gallen- und normale Fotos NICHT sperren: " + JSON.stringify(damage));
+  assert(damage.file === "Phaseolus coccineus in Jardin des Plantes de Toulouse 01.jpg",
+    "Feuerbohne: das Rostpilz-Foto muss verworfen werden, das echte Pflanzenfoto gewinnt: " + JSON.stringify(damage));
+
   // Wikipedia-Vorschau: bei ANDERER Unterart darf nicht die Elternart erscheinen
   // (»Brassica napus« = Raps, gesucht ist die Steckrübe ssp. rapifera). Offline –
   // nur die Kandidatenliste/Titelbildung, kein Netzabruf.

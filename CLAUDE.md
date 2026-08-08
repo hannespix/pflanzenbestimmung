@@ -1313,6 +1313,28 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       aus (keine `pbrk`-Klassen), aktiv = alle Bänder außer dem ersten mit `pbrk`,
       Speicherung, Rücknahme.
 
+- [x] **Bilder-Quiz: Krankheits-/Schädlingsfotos aussortiert** (Screenshot: Feuerbohne
+      zeigte die Makroaufnahme eines rostbefallenen Blatts). Ursache: Das Artikelbild
+      der »Feuerbohne« ist eine Illustration (→ korrekt Notnagel), in der Commons-
+      Kategorie gewann dann **»Uromyces appendiculatus … telia at Phaseolus
+      coccineus«** – ein Foto des **Bohnenrost-Pilzes** auf dem Blatt: Es nennt die
+      Wirtspflanze im Dateinamen und bekam so die volle commonsScore-Punktzahl,
+      einen Platz vor dem perfekten Pflanzenfoto (»… in Jardin des Plantes de
+      Toulouse«). Gleiche Fehlerklasse wie die Schmetterlingsraupe in der Dill-
+      Kategorie. Fix: **`looksDamage(file)`** (neben `looksIllustration`) verwirft
+      Krankheits-/Schädlings-/Schadbilder hart – Rost/telia/uredini, Mehltau,
+      blight/Blattfleck, Larven/Raupen, Blattläuse, Gallen (nur engl. `\bgalls?\b`
+      + Komposita; »St. Gallen«-Fotos bleiben), Befall/infect, Pilzgattungen
+      (Uromyces, Puccinia, Erysiphe, Peronospora …). **`botrytis` fehlt bewusst** –
+      *Brassica oleracea* var. *botrytis* ist der Blumenkohl (Wortliste gegen alle
+      2114 Arten geprüft, einziger Treffer). Greift in `pickCommons` **und** der
+      wp-Route; Bild-Cache auf `pflanzenlernen.photos4`. Live-Zwilling: Feuerbohne →
+      Jardin-des-Plantes-Foto, Blumenkohl → korrektes var.-botrytis-Foto, alle
+      Referenzfälle (Dill/Kirschtomate/Zwiebel/Schalotte/Hainbuche/Pelargonium)
+      unverändert. `tests/learn.mjs`: Rost-Fixture verliert gegen das Pflanzenfoto;
+      looksDamage-Einzelprüfungen (Rost/Raupe/Mehltau raus; Blumenkohl, *Rosa
+      gallica*, St.-Gallen-Foto bleiben).
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein
