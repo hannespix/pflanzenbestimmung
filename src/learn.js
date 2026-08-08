@@ -2788,7 +2788,7 @@ async function loadWiki(card, host, btn){
    Bewusst ein EIGENER Modus: Er lädt nichts beim Seitenaufbau, und ohne Netz
    sagt er das klar – Karteikarten, Quiz, Tippen und Liste bleiben offline voll
    nutzbar. */
-const LS_PHOTOS = LS_PREFIX+"photos3";                // gemerkte Bild-URLs (spart API-Abrufe; »3« = neue Auswahl, alte Treffer verfallen)
+const LS_PHOTOS = LS_PREFIX+"photos4";                // gemerkte Bild-URLs (spart API-Abrufe; »4« = neue Auswahl, alte Treffer verfallen)
 let photoStore = null, photoMisses = 0;
 function photoStoreLoad(){
   if(photoStore) return photoStore;
@@ -2839,6 +2839,16 @@ function isCultivarName(a){ a = norm(a||""); return INFRA_RE.test(a) || GRP_RE.t
 function looksIllustration(file){                     // alte Tafeln/Sammelbilder statt Foto
   const f = deacc(String(file||"").toLowerCase());    // »Köhler–s Medizinal-Pflanzen« → koehler…
   return /(illustration|kohler|koehler|koeh_|medizinal|sturm|thome|liebig|plate|drawing|zeichnung|botanical|tafel|gravure|lithograph|herbarium|herbarbeleg|specimen|exsiccat|woodcut|holzschnitt|engraving|abbildung)/.test(f);
+}
+/* Krankheits-/Schädlings-/Schadbilder: Fotos von Rost, Mehltau, Fraßschäden, Larven …
+   nennen die WIRTSPFLANZE im Dateinamen und gewinnen sonst über commonsScore
+   (Realfall Feuerbohne: »Uromyces appendiculatus telia at Phaseolus coccineus«).
+   Als Bestimmungsfoto unbrauchbar → hart verwerfen. Wortliste gegen alle 2114
+   Arten geprüft; »botrytis« fehlt BEWUSST (Brassica oleracea var. botrytis =
+   Blumenkohl), Gallen nur englisch/als Kompositum (»St. Gallen«-Fotos bleiben). */
+function looksDamage(file){
+  const f = deacc(String(file||"").toLowerCase()).replace(/[_\-.]+/g," ");
+  return /(telia|teliospor|uredini|aecidi|\brusts?\b|\brost\b|mildew|mehltau|blight|leaf ?spot|blattfleck|disease|krankheit|infect|infest|\bdamaged?\b|\bschaden\b|befall|\bgalls?\b|gallmilbe|gallwespe|pflanzengalle|leaf ?miner|blattminier|\blarvae?\b|\blarven?\b|\braupen?\b|caterpillar|aphid|blattlaus|\bpests?\b|pathogen|\bfungus\b|\bfungi\b|pilzbefall|\bvirus\b|chlorosis|chlorose|necrosis|nekrose|deficiency|uromyces|puccinia|erysiphe|peronospora|phytophthora|fusarium|septoria|colletotrichum|alternaria|sclerotinia|monilinia|venturia)/.test(f);
 }
 function fileMentionsOther(file, card){               // Dateiname nennt eine andere Art derselben Gattung
   const gen = norm(card.g||"").toLowerCase(); if(!gen) return false;
@@ -2913,7 +2923,7 @@ function pickCommons(d, card){                        // bester Treffer der Comm
     const file = String(p.title||"").replace(/^File:/i,"").replace(/^Datei:/i,"");
     const ii = p.imageinfo && p.imageinfo[0]; if(!ii || !(ii.thumburl||ii.url)) continue;
     if(ii.mime && (!/^image\//i.test(ii.mime) || /djvu/i.test(ii.mime))) continue;   // PDF/DjVu-Buchscans: Vorschau = Buchdeckel
-    if(!usablePhoto(file) || looksIllustration(file) || fileMentionsOther(file, card)) continue;
+    if(!usablePhoto(file) || looksIllustration(file) || looksDamage(file) || fileMentionsOther(file, card)) continue;
     const sc = commonsScore(file, card);
     if(sc > bestScore){                               // Gleichstand → der zuerst gelistete (Relevanz der Suche)
       bestScore = sc;
@@ -2939,7 +2949,7 @@ async function wikiPhoto(card){                        // → {thumb,title,file,
         if(!pageFitsCard(p, card)) continue;                       // anderer Artikel (Homonym)
         // Sorte gesucht, aber auf dem Art-Artikel gelandet? Nur zulässig, wenn die Art nicht ebenfalls in der Liste steht.
         if(strict && ((p.title||"")+" "+(p.extract||"")).toLowerCase().indexOf(inf) < 0) continue;
-        if(!usablePhoto(p.pageimage) || fileMentionsOther(p.pageimage, card)) continue;
+        if(!usablePhoto(p.pageimage) || looksDamage(p.pageimage) || fileMentionsOther(p.pageimage, card)) continue;
         const hit = { thumb:p.thumbnail.source, title:p.title, file:p.pageimage||"", src:"wp",
                       url:"https://de.wikipedia.org/wiki/"+encodeURIComponent(String(p.title).replace(/ /g,"_")) };
         if(!looksIllustration(p.pageimage)) return hit;
@@ -3484,6 +3494,7 @@ window.photoSteps=photoSteps;
 window.fileMentionsOther=fileMentionsOther;
 window.pageFitsCard=pageFitsCard;
 window.looksIllustration=looksIllustration;
+window.looksDamage=looksDamage;
 window.isCultivarName=isCultivarName;
 window.infraEpithet=infraEpithet;
 window.artLevelOk=artLevelOk;
