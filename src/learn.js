@@ -1516,6 +1516,7 @@ function renderListControls(){
       <div class="lc-h">Drucken</div>
       <div class="po-cols" id="printCols" role="group" aria-label="Spalten für den Druck"></div>
       <label class="po-ety" title="Zu jeder Pflanze eine kurze Merkzeile mit der Herkunft/Bedeutung des botanischen Namens mitdrucken (Latein/Griechisch → Deutsch, kuratiert – ohne Gewähr)."><input type="checkbox" id="printEty"${printEtyOn()?" checked":""}> Namensherkunft mitdrucken</label>
+      <label class="po-ety" title="Jede Gruppe der gewählten Ansicht (Thema, Familie oder Anfangsbuchstabe) beginnt beim Drucken auf einer eigenen Seite – braucht mehr Papier, ist aber übersichtlicher zum Lernen."><input type="checkbox" id="printBreak"${printBreakOn()?" checked":""}> jede Gruppe auf neuer Seite</label>
     </div>`;
   // Design-Umschalter auch im Listenmodus erreichbar (die Sitzungs-Optionen mit dem
   // Umschalter sind hier ausgeblendet). Klick wird per Delegation (.themetoggle) behandelt.
@@ -1551,6 +1552,7 @@ function renderListControls(){
   const zp=$("#lcZp"); if(zp) zp.onchange=()=>{ const src=$("#onlyzp"); if(src){ src.checked=zp.checked; src.dispatchEvent(new Event("change")); } };
   const ex=$("#lcExamOnly"); if(ex) ex.onchange=()=>{ const src=$("#examOnly"); if(src){ src.checked=ex.checked; src.dispatchEvent(new Event("change")); } };
   const pe=$("#printEty"); if(pe) pe.onchange=()=>store.set(LS_PREFIX+"printety", pe.checked?"1":"0");
+  const pb=$("#printBreak"); if(pb) pb.onchange=()=>store.set(LS_PREFIX+"printbreak", pb.checked?"1":"0");
 }
 function renderList(){
   const stage=$("#stage");
@@ -1637,6 +1639,7 @@ function loadPrintColsOff(){
 }
 function savePrintColsOff(){ try{ store.set(LS_PREFIX+"printcols", JSON.stringify([...printColsOff])); }catch(e){} }
 function printEtyOn(){ return store.get(LS_PREFIX+"printety")==="1"; }   // Quelle: Speicher (Checkbox lebt nur im offenen Akkordeon)
+function printBreakOn(){ return store.get(LS_PREFIX+"printbreak")==="1"; }   // opt-in: jede Gruppe auf neuer Seite
 function printColOn(k){ if(!printColsOff) loadPrintColsOff(); return !printColsOff.has(k); }
 function renderPrintCols(){
   const host=$("#printCols"); if(!host) return;
@@ -1677,8 +1680,10 @@ function buildPrintList(){
     (showZP?`<th class="pzp" title="prüfungsrelevant für die Zwischenprüfung">ZP</th>`:"")+
     (showChk?`<th class="pchk" title="zum Abhaken, was schon sitzt">gelernt</th>`:"");
   const wantEty = printEtyOn();                                   // opt-in: Namensherkunft-Merkzeile je Pflanze
-  let n=0, rows="";
-  const band = label => `<tr class="pcat"><td colspan="${tCols}">${esc(label)}</td></tr>`;
+  const wantBreak = printBreakOn();                               // opt-in: jede Gruppe auf neuer Seite (mehr Papier, übersichtlicher)
+  let n=0, rows="", bandN=0;
+  const band = label => { bandN++;                                // erstes Band ohne Umbruch (sonst leere erste Seite)
+    return `<tr class="pcat${wantBreak&&bandN>1?" pbrk":""}"><td colspan="${tCols}">${esc(label)}</td></tr>`; };
   const rowFor = c => { n++;
     const cls = wantEty ? ` class="pmain${n%2===0?" pz":""}"` : "";
     let tr = `<tr${cls}><td class="pnum">${n}</td>`+

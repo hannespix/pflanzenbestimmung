@@ -1297,6 +1297,22 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Steckrüben-Assertion auf die neue Semantik gehoben (deutscher Titel VOR dem
       Binom, Binom nur als letzter), Dill-Fall ergänzt.
 
+- [x] **Druckliste: Option »jede Gruppe auf neuer Seite«** (Nutzerwunsch: beim
+      Druck nach Thema/Familie soll jede Gruppe auf einer eigenen Seite beginnen –
+      mehr Papier, aber übersichtlicher zum Lernen). Opt-in-Checkbox im
+      **Drucken-Block** des Listen-Akkordeons (»Ansicht & Filter«), neben
+      »Namensherkunft mitdrucken«; Zustand in `pflanzenlernen.printbreak`
+      (`printBreakOn()`), Standard **aus**. `buildPrintList` zählt die Gruppen-Bänder
+      und gibt ab dem **zweiten** Band die Klasse `pbrk` (das erste bleibt frei,
+      sonst entstünde eine leere erste Seite); Print-CSS `table.ptab tr.pcat.pbrk{
+      break-before:page}` in `learn.html`. Wirkt in **allen** Ansichten (Thema,
+      Familie, A–Z-Buchstaben) und respektiert die gefilterte Menge; der
+      Tabellenkopf wiederholt sich ohnehin je Seite. Per Puppeteer-PDF verifiziert
+      (Gemüsebau/Thema: 9 Bänder, 6 Seiten ohne → 10 Seiten mit Option, jede Gruppe
+      beginnt frisch). `tests/learn.mjs` prüft: Checkbox im Drucken-Block, Standard
+      aus (keine `pbrk`-Klassen), aktiv = alle Bänder außer dem ersten mit `pbrk`,
+      Speicherung, Rücknahme.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein

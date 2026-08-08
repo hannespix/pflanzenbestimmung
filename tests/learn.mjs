@@ -1658,6 +1658,32 @@ async function main() {
   assert(pcol.deStays && pcol.hasOneCol, "Druckoptionen: die letzte Bogen-Spalte darf nicht abwählbar sein");
   assert(pcol.restored, "Druckoptionen: Wiedereinschalten stellt die Spalten nicht her");
 
+  // Opt-in »jede Gruppe auf neuer Seite«: Checkbox im Drucken-Block; aktiv trägt in der
+  // Druckliste jedes Gruppen-Band außer dem ersten einen Seitenumbruch (.pbrk); Standard aus.
+  const pbrk = await page.evaluate(() => {
+    const setBreak = (v) => { const cb = document.querySelector("#printBreak"); cb.checked = v; cb.dispatchEvent(new Event("change")); };
+    const inPanel = !!document.querySelector("#listControls #printBreak");
+    const themaBtn = document.querySelector('.sortbtn[data-sort="thema"]'); if (themaBtn) themaBtn.click();
+    buildPrintList();                                       // Standard: keine Umbruch-Klassen
+    const bandsDefault = document.querySelectorAll("#printList .ptab tr.pcat").length;
+    const brkDefault = document.querySelectorAll("#printList .ptab tr.pcat.pbrk").length;
+    setBreak(true); buildPrintList();
+    const bands = [...document.querySelectorAll("#printList .ptab tr.pcat")];
+    const brkOn = bands.filter((b) => b.classList.contains("pbrk")).length;
+    const firstFree = bands.length > 0 && !bands[0].classList.contains("pbrk");
+    const stored = localStorage.getItem("pflanzenlernen.printbreak") === "1";
+    setBreak(false); buildPrintList();
+    const brkOff = document.querySelectorAll("#printList .ptab tr.pcat.pbrk").length;
+    return { inPanel, bandsDefault, brkDefault, nBands: bands.length, brkOn, firstFree, stored, brkOff };
+  });
+  assert(pbrk.inPanel, "Druckoptionen: Checkbox »jede Gruppe auf neuer Seite« fehlt im Drucken-Block");
+  assert(pbrk.bandsDefault > 1 && pbrk.brkDefault === 0,
+    "Seitenumbruch je Gruppe muss standardmäßig AUS sein: " + JSON.stringify(pbrk));
+  assert(pbrk.brkOn === pbrk.nBands - 1 && pbrk.firstFree,
+    "Mit Option: jedes Band außer dem ersten braucht .pbrk (Umbruch davor): " + JSON.stringify(pbrk));
+  assert(pbrk.stored, "Die Wahl »jede Gruppe auf neuer Seite« muss gespeichert werden");
+  assert(pbrk.brkOff === 0, "Nach Abwahl darf kein Band mehr .pbrk tragen: " + JSON.stringify(pbrk));
+
   // Disclaimer: dezenter Hinweis (RP-Bezug, Stand, KI-Kategorien, keine Gewähr)
   const disc = await page.evaluate(() => {
     const el = document.querySelector(".disclaimer");

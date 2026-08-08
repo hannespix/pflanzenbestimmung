@@ -588,6 +588,9 @@ main{margin-top:22px}
     letter-spacing:.05em; text-transform:uppercase; color:#264a34; background:#e6eede !important;
     border-bottom:.5pt solid #c2cdb1; border-left:3pt solid #2f5339; padding:5pt 8pt 5pt 9pt}
   table.ptab tr.pcat{break-inside:avoid; break-after:avoid}   /* Band nie allein am Seitenende */
+  /* Opt-in »jede Gruppe auf neuer Seite«: ab dem zweiten Band Seitenumbruch davor
+     (buildPrintList setzt .pbrk); der Tabellenkopf wiederholt sich ohnehin je Seite */
+  table.ptab tr.pcat.pbrk{break-before:page; page-break-before:always}
   table.ptab tr{break-inside:avoid}
   /* Optionale Namensherkunft-Merkzeile je Pflanze: Zebra pro Pflanze (Name + Merkzeile
      gleich schattiert), Merkzeile bleibt beim Namen (kein Seitenumbruch dazwischen). */
