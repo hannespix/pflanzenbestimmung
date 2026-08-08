@@ -946,6 +946,50 @@ async function main() {
   assert(zuordnung.illuKoehler && !zuordnung.illuFoto,
     "Bildzuordnung: alte Tafeln (Köhler) werden nicht als solche erkannt: " + JSON.stringify(zuordnung));
 
+  // Grenzgänger Garten-Dill (Anethum graveolens var. hortorum): Die Volltext-Suche
+  // »Anethum graveolens hortorum« findet auf Commons NUR digitalisierte Kräuterbücher
+  // (»… (IA b30512888).pdf«) – deren PDF-Vorschau ist ein Buchdeckel. Solche Treffer
+  // müssen verworfen werden (Dokumentformat + kein Pflanzenname im Dateinamen), damit
+  // die Kette bis zur Kategorie der Art durchläuft und dort das echte Foto gewinnt.
+  const dillFix = await page.evaluate(async () => {
+    const dill = allCards.find((c) => c.g === "Anethum");
+    const cmPage = (i, file) => ({ index: i, title: "File:" + file, imageinfo: [{ thumburl: "https://x/" + file, descriptionurl: "https://commons/" + file }] });
+    const cmAnswer = (files) => ({ query: { pages: Object.fromEntries(files.map((f, i) => ["p" + i, cmPage(i + 1, f)])) } });
+    const wpAnswer = (title, extract, file) => ({ query: { pages: { "1": { title, extract, pageimage: file, thumbnail: { source: "https://x/" + file } } } } });
+    __clearPhotoCache();
+    __setJsonp((url) => {
+      const q = decodeURIComponent(url);
+      if (/commons/.test(url)) {
+        if (/incategory:/.test(q)) {
+          // Kategorien der Varietät sind leer; die Art-Kategorie enthält auch
+          // namenlose Fremdmotive (Raupe auf Dill) – der benannte Treffer muss gewinnen
+          return Promise.resolve(/hortorum/.test(q) ? { query: { pages: {} } }
+            : cmAnswer(["Schwalbenschwanz Raupe-20250724.jpg", "Anethum graveolens20090812 475.jpg"]));
+        }
+        return Promise.resolve(cmAnswer([                    // Volltext: nur Buchscans (echte API-Antwort nachgestellt)
+          "Hortus Kewensis. Sistens herbas exoticas (IA b30512888).pdf",
+          "Flora Rossica; sive, Enumeratio plantarum (IA florarossicasive02lede).pdf"]));
+      }
+      return Promise.resolve(/Anethum/.test(q)               // »Garten-Dill«/»Gartendill« gibt es als Artikel nicht
+        ? wpAnswer("Dill (Pflanze)", "Dill … ist eine Pflanzenart der Gattung Anethum …", "Illustration_Anethum_graveolens0.jpg")
+        : { query: { pages: { "-1": { title: "x", missing: "" } } } });
+    });
+    const hit = await wikiPhoto(dill);
+    __setJsonp(null); __clearPhotoCache();
+    return { file: hit && hit.file, src: hit && hit.src,
+      sorte: isCultivarName(dill.a),
+      iaPdf: usablePhoto("Hortus Kewensis. Sistens herbas exoticas (IA b30512888).pdf"),
+      pdf: usablePhoto("Anethum graveolens Herbal.pdf"),
+      wege: photoSteps(dill).map((s) => s.k + ":" + s.q) };
+  });
+  assert(dillFix.sorte, "Garten-Dill: var. hortorum wird nicht als Varietät erkannt");
+  assert(!dillFix.iaPdf && !dillFix.pdf,
+    "Garten-Dill: PDFs/Internet-Archive-Digitalisate müssen als unbrauchbar verworfen werden: " + JSON.stringify(dillFix));
+  assert(dillFix.file === "Anethum graveolens20090812 475.jpg" && dillFix.src === "cm",
+    "Garten-Dill: statt des Fotos aus der Art-Kategorie kam etwas anderes (Buchdeckel-Bug?): " + JSON.stringify(dillFix));
+  assert(dillFix.wege.some((w) => w === "wp:Gartendill"),
+    "Garten-Dill: die Bindestrich-Variante des deutschen Namens fehlt in den Suchwegen: " + JSON.stringify(dillFix.wege));
+
   // Wikipedia-Vorschau: bei ANDERER Unterart darf nicht die Elternart erscheinen
   // (»Brassica napus« = Raps, gesucht ist die Steckrübe ssp. rapifera). Offline –
   // nur die Kandidatenliste/Titelbildung, kein Netzabruf.
