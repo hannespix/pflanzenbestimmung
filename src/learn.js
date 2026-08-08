@@ -476,7 +476,40 @@ function grade(card, g){ // g: 'again' | 'hard' | 'good'
   if(g==="again"){ p.wrong=(p.wrong||0)+1; p.due=todayISO(); }        // heute nochmal fällig
   else { p.correct=(p.correct||0)+1; p.due=addDays(todayISO(), BOX_DAYS[nb-1]); }
   progress[card.key]=p; saveProgress();
+  streakBump();                                // jede bearbeitete Karte zählt fürs Tagesziel
   if(sess.active) renderProgress();            // Fortschritt sofort sichtbar aktualisieren
+}
+
+/* ---------- Lernserie + Tagesziel (Gewohnheits-Motor) ----------
+   Ein Serientag zählt, sobald das Tagesziel erreicht ist (einstellbar, Standard
+   20 Karten) – denn der Karteikasten wirkt nur bei regelmäßigem Üben; genau das
+   wird belohnt. Global über alle Profile (EIN Lernender, EINE Gewohnheit).
+   Speicher: pflanzenlernen.streak = {d:Datum, n:Karten heute, g:Ziel,
+   s:Serie, b:Rekord, gd:letzter Zieltag}. */
+const LS_STREAK = LS_PREFIX+"streak";
+function streakLoad(){ try{ const s=JSON.parse(store.get(LS_STREAK)||"{}"); return (s&&typeof s==="object")?s:{}; }catch(e){ return {}; } }
+function streakSave(s){ try{ store.set(LS_STREAK, JSON.stringify(s)); }catch(e){} }
+function streakGoal(){ const g=+(streakLoad().g||0); return g>=5?g:20; }
+function streakState(){                        // aufgeräumter Blick auf heute (Tageswechsel + gerissene Serie)
+  const s=streakLoad(), t=todayISO();
+  if(s.d!==t){ s.d=t; s.n=0; }
+  if(s.gd && s.gd!==t && s.gd!==addDays(t,-1)) s.s=0;   // letzter Zieltag weder heute noch gestern → Serie gerissen
+  return s;
+}
+function streakBump(){
+  try{
+    const s=streakState(), t=todayISO(), goal=streakGoal();
+    s.n=(s.n||0)+1;
+    if(s.n===goal && s.gd!==t){                // Tagesziel JETZT erreicht → Serientag
+      s.s=(s.s||0)+1; s.b=Math.max(s.b||0, s.s); s.gd=t;
+      streakSave(s);
+      const stark = (s.s===7 || s.s===30 || s.s===100);   // Meilensteine groß feiern
+      toast(`Tagesziel geschafft – Lernserie: ${s.s} ${s.s===1?"Tag":"Tage"} 🔥`);
+      celebrate($("#stage")||document.body, stark?2:1);
+      return;
+    }
+    streakSave(s);
+  }catch(e){ /* Belohnung ist Kür */ }
 }
 
 /* ---------- Auswahl / Filter ---------- */
@@ -873,7 +906,16 @@ function renderProgress(){
          <i class="b-lern" style="background:var(--gold)"></i>${lern} am Lernen</span>
        <span title="Noch nie bewertet.">
          <i class="b-neu" style="background:var(--rule-strong)"></i>${neu} neu</span>
-     </div>`;
+     </div>
+     ${(()=>{ const st=streakState(), goal=streakGoal(), done=Math.min(st.n||0, goal);
+       return `<div class="streakrow" id="streakRow" title="Lernserie: an so vielen Tagen in Folge hast du dein Tagesziel erreicht (einstellbar unter Optionen · Tagesziel). Rekord: ${st.b||0} ${(st.b||0)===1?"Tag":"Tage"}.">
+         <span class="sflame${(st.s||0)>0?" on":""}"><svg class="fl" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c-4 0-7-2.9-7-6.7 0-2.6 1.4-4.6 2.7-6.2.9-1.2 1.9-2.3 2.3-3.6.9 1 1.4 2 1.5 3.2 0 .6 0 1.2-.2 1.9 1-.7 1.7-1.7 1.9-3.1C15.6 9 19 11.5 19 15.3 19 19.1 16 22 12 22z"/></svg><b>${st.s||0}</b></span>
+         <span class="sr-l">${(st.s||0)===1?"Tag":"Tage"}-Serie</span>
+         <span class="sr-goal"><i style="width:${Math.round(done/goal*100)}%"></i></span>
+         <span class="sr-n">${done}/${goal} heute</span>
+         <button class="herblink" id="btnHerb" title="Deine Themen-Sammlung: Jedes gemeisterte Thema legt eine gepresste Pflanze ins Herbarium.">🌿 Mein Herbarium</button>
+       </div>`; })()}`;
+  const hb=$("#btnHerb"); if(hb) hb.onclick=openHerbarium;
   const due = p.filter(c=>{ const pr=pget(c.key); return !pr.box || !pr.due || pr.due<=todayISO(); }).length;
   const wie = mode==="photo" ? (photoAnswer==="exam" ? "wie in der Prüfung" : DIRS[curDir()].label+" · "+PH_ANSWER[photoAnswer])
                             : DIRS[curDir()].label;
@@ -1290,6 +1332,7 @@ function finishSession(){
   const dq=$("#duelQuizBtn"); if(dq){ const cs=sess.cards.slice(); dq.onclick=()=>startQuizWith(cs); }
   const ov=$("#btnOverview"); if(ov) ov.onclick=exitSession;
   if(gewonnen) celebrate(stage.querySelector("h2"), 2);
+  herbCheck();                                 // frisch gemeisterte Themen einmalig feiern
   renderProgress();
   // Desktop (kein Vollbild-Overlay): Ergebnis in den Blick holen statt unter dem Fold
   try{ if(!matchMedia("(max-width:640px)").matches) stage.scrollIntoView({behavior:"smooth", block:"center"}); }catch(e){}
@@ -3304,6 +3347,73 @@ function openFamilyInfo(famStr){
   try{ scrim.querySelector("#infoClose").focus(); }catch(e){}
 }
 
+/* ---------- Sammel-Herbarium (Gamification, didaktisch) ----------
+   Je Thema des Profils eine Sammelseite: Sitzt JEDE Art des Themas sicher
+   (Box 4–5, gleiche Schwelle wie »sitzt« im Fortschritt), gilt das Thema als
+   gemeistert – die gepresste Pflanze wird farbig, mit »Gemeistert«-Stempel,
+   und das wird EINMAL gefeiert (Feier-Liste je Profil im localStorage; der
+   Stand selbst wird immer live aus dem Leitner-Fortschritt berechnet).
+   Motiviert, ALLE Themen zu lernen statt nur die Lieblingsthemen. */
+const HERB_ART = [
+  `<svg viewBox="0 0 64 64" fill="currentColor"><path d="M32 58V20M32 34c-6-2-11-7-12-14 7 1 11 5 12 10zm0-8c1-6 5-11 12-13-1 8-6 12-12 13zM32 46c-5-1-9-5-10-11 6 1 9 4 10 8zm0-2c1-5 4-9 10-10-1 6-5 9-10 10z" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg>`,
+  `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M32 58V26M32 26 18 12M32 26 32 8M32 26 46 12"/><circle cx="18" cy="12" r="3.4" fill="currentColor" stroke="none"/><circle cx="32" cy="8" r="3.4" fill="currentColor" stroke="none"/><circle cx="46" cy="12" r="3.4" fill="currentColor" stroke="none"/></svg>`,
+  `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M32 58C32 40 30 24 24 10M32 58c0-16 3-30 10-44M32 58C32 44 32 28 32 14"/></svg>`,
+  `<svg viewBox="0 0 64 64" fill="currentColor"><circle cx="32" cy="22" r="5"/><path d="M32 10a6 6 0 0 1 6 6 6 6 0 0 1 6 6 6 6 0 0 1-6 6 6 6 0 0 1-6 6 6 6 0 0 1-6-6 6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6-6z" opacity=".45"/><path d="M32 34v24M32 46c-4-1-7-4-8-9 5 1 7 4 8 9z" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg>`,
+  `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M32 58C30 38 30 22 34 8M34 12c-5 2-8 6-9 11M33 20c-6 2-9 6-10 12M33 30c-6 2-9 6-9 11M34 16c4 1 7 4 8 8M33 26c5 1 8 4 9 9M32 36c5 1 8 4 9 9"/></svg>`,
+  `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M30 58C28 40 30 24 38 10M35 22c-5-1-9-4-10-9M33 32c-6 0-10-3-12-8"/><circle cx="44" cy="20" r="3.2" fill="currentColor" stroke="none"/><circle cx="47" cy="28" r="3.2" fill="currentColor" stroke="none"/><circle cx="41" cy="27" r="3.2" fill="currentColor" stroke="none"/></svg>`
+];
+function herbData(){                                    // je Thema: [name, {n: gesamt, fest: sitzt}]
+  const m=new Map();
+  allCards.forEach(c=>{ const t=c.thema||"Sonstiges";
+    if(!m.has(t)) m.set(t,{n:0,fest:0});
+    const e=m.get(t); e.n++; if((pget(c.key).box||0)>=4) e.fest++; });
+  return [...m.entries()].sort((a,b)=> themeRank(a[0])-themeRank(b[0]) || a[0].localeCompare(b[0],"de"));
+}
+function herbKey(){ return LS_PREFIX+"herb."+profileId; }
+function herbSeen(){ try{ const a=JSON.parse(store.get(herbKey())||"[]"); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function herbCheck(){                                   // neu gemeisterte Themen einmalig feiern
+  try{
+    const seen=new Set(herbSeen()), neu=[];
+    herbData().forEach(([t,e])=>{ if(e.n>0 && e.fest===e.n && !seen.has(t)){ seen.add(t); neu.push(t); } });
+    if(neu.length){
+      store.set(herbKey(), JSON.stringify([...seen]));
+      toast(`Neues Blatt im Herbarium: ${neu.join(", ")} 🌿`);
+      celebrate($("#stage")||document.body, 2);
+    }
+    return neu;
+  }catch(e){ return []; }
+}
+function openHerbarium(){
+  closeInfo();
+  herbCheck();                                          // beim Öffnen ggf. Neues feiern
+  const rows=herbData(), done=rows.filter(([,e])=>e.n>0&&e.fest===e.n).length;
+  const cards=rows.map(([t,e],i)=>{
+    const fertig=e.n>0&&e.fest===e.n;
+    return `<div class="herbcard${fertig?" done":""}">
+       <div class="hc-art">${HERB_ART[i%HERB_ART.length]}</div>
+       ${fertig?`<div class="hc-stamp">Gemeistert</div>`:""}
+       <div class="hc-name">${esc(t)}</div>
+       <div class="hc-bar"><i style="width:${e.n?Math.round(e.fest/e.n*100):0}%"></i></div>
+       <div class="hc-n">${e.fest}/${e.n} sitzt</div>
+     </div>`; }).join("");
+  const scrim = el("div","scrim"); scrim.id="infoScrim";
+  scrim.innerHTML = `<div class="modal herbmodal" role="dialog" aria-modal="true" aria-label="Mein Herbarium">
+     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <div class="modal-head">
+       <div class="mh-bot fam">Mein Herbarium</div>
+       <div class="mh-fam">${done}/${rows.length} Themen gemeistert · gemeistert = jede Art des Themas sitzt sicher (Box 4–5)</div>
+     </div>
+     <div class="herbgrid">${cards}</div>
+     <div class="famfoot">Jedes gemeisterte Thema legt eine gepresste Pflanze in deine Sammlung – so siehst du auf einen Blick, welche Themen noch Pflege brauchen.</div>
+   </div>`;
+  document.body.appendChild(scrim); infoEl=scrim;
+  scrim.addEventListener("click", e=>{ if(e.target===scrim) closeInfo(); });
+  scrim.querySelector("#infoClose").onclick = closeInfo;
+  document.addEventListener("keydown", infoKey);
+  infoReturnFocus = document.activeElement;
+  try{ scrim.querySelector("#infoClose").focus(); }catch(e){}
+}
+
 /* ---------- Profil-Wechsel ---------- */
 function loadProfile(id){
   if(!(typeof SEEDS!=="undefined" && SEEDS[id])) id = SEEDS && SEEDS["gemuesebau_gaertner"] ? "gemuesebau_gaertner" : Object.keys(SEEDS||{})[0];
@@ -3404,6 +3514,9 @@ function applyProfile(){
 /* ---------- Verdrahtung ---------- */
 function wire(){
   const refreshView = ()=>{ syncOptsSummary(); vt(()=>{ if(mode==="list"){ renderListControls(); renderList(); } else renderProgress(); }); };
+  const dgl=$("#dayGoal");                       // Tagesziel der Lernserie (global, Standard 20)
+  if(dgl){ dgl.value=String(streakGoal());
+    dgl.onchange=()=>{ const s=streakLoad(); s.g=+dgl.value||20; streakSave(s); renderProgress(); }; }
   const lsr=$("#listSearchRow");   // Listen-Suche klebt beim Scrollen oben; »stuck« nur, wenn wirklich angepinnt (dezenter Schatten)
   if(lsr){ const upd=()=>lsr.classList.toggle("stuck", !lsr.hidden && lsr.getBoundingClientRect().top<=0.5);
     window.addEventListener("scroll", upd, {passive:true}); window.addEventListener("resize", upd, {passive:true}); }
@@ -3556,6 +3669,12 @@ window.looksIllustration=looksIllustration;
 window.looksDamage=looksDamage;
 window.openLightbox=openLightbox;
 window.lbBig=lbBig;
+window.streakState=streakState;   // für Tests: Lernserie/Tagesziel
+window.streakBump=streakBump;
+window.streakGoal=streakGoal;
+window.herbCheck=herbCheck;       // für Tests: Sammel-Herbarium
+window.herbData=herbData;
+window.openHerbarium=openHerbarium;
 window.isCultivarName=isCultivarName;
 window.infraEpithet=infraEpithet;
 window.artLevelOk=artLevelOk;
