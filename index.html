@@ -3919,7 +3919,7 @@ async function loadWiki(card, host, btn){
    Bewusst ein EIGENER Modus: Er lädt nichts beim Seitenaufbau, und ohne Netz
    sagt er das klar – Karteikarten, Quiz, Tippen und Liste bleiben offline voll
    nutzbar. */
-const LS_PHOTOS = LS_PREFIX+"photos2";                // gemerkte Bild-URLs (spart API-Abrufe; »2« = neue Auswahl, alte Treffer verfallen)
+const LS_PHOTOS = LS_PREFIX+"photos3";                // gemerkte Bild-URLs (spart API-Abrufe; »3« = neue Auswahl, alte Treffer verfallen)
 let photoStore = null, photoMisses = 0;
 function photoStoreLoad(){
   if(photoStore) return photoStore;
@@ -3943,7 +3943,8 @@ function wikiPage(d){                                  // erste Seite der Antwor
    eindeutige Wörter (einband, buchdeckel, \bbook\b, \bcover\b …). */
 function usablePhoto(file){
   if(!file) return true;
-  if(/\.svg$/i.test(file)) return false;
+  if(/\.(svg|pdf|djvu)$/i.test(file)) return false;  // PDF/DjVu = digitalisierte Bücher; ihr Vorschaubild ist der Buchdeckel
+  if(/\(ia\b/i.test(file)) return false;             // »(IA xyz)« = Internet-Archive-Buchscan (»Garten-Dill« traf so ein Werk von 1768)
   if(/(map|karte|distribution|range|verbreitung|locator|diagram|chart|wappen|logo|signature)/i.test(file)) return false;
   const f = String(file).replace(/[_\-.]+/g, " ");   // _-. sind Wortzeichen – erst normalisieren, sonst greift \b nicht (Book_cover)
   return !/(\bcover\b|einband|buchdeckel|deckblatt|titelblatt|titelseite|\btitle ?page\b|frontispi[sz]|manuscript|manuskript|handschrift|codex|\bbook\b|\bscans?\b|\bscanned\b)/i.test(f);
@@ -4022,7 +4023,7 @@ function wikiArticleQuery(title){                     // Artikelbild + erster Sa
 function commonsQuery(q){                             // Dateien auf Commons suchen (Kategorie oder Phrase)
   return jsonp("https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search"+
     "&gsrnamespace=6&gsrlimit=12&gsrsearch="+encodeURIComponent(q)+
-    "&prop=imageinfo&iiprop=url&iiurlwidth=640");
+    "&prop=imageinfo&iiprop=url%7Cmime&iiurlwidth=640");
 }
 /* Dateien, die die Pflanze im Namen führen, sind meist gezielte Aufnahmen –
    besser als ein beliebiges Bild aus derselben Kategorie (»Hortus Haren … 24.jpg«). */
@@ -4042,6 +4043,7 @@ function pickCommons(d, card){                        // bester Treffer der Comm
   for(const p of list){
     const file = String(p.title||"").replace(/^File:/i,"").replace(/^Datei:/i,"");
     const ii = p.imageinfo && p.imageinfo[0]; if(!ii || !(ii.thumburl||ii.url)) continue;
+    if(ii.mime && (!/^image\//i.test(ii.mime) || /djvu/i.test(ii.mime))) continue;   // PDF/DjVu-Buchscans: Vorschau = Buchdeckel
     if(!usablePhoto(file) || looksIllustration(file) || fileMentionsOther(file, card)) continue;
     const sc = commonsScore(file, card);
     if(sc > bestScore){                               // Gleichstand → der zuerst gelistete (Relevanz der Suche)
