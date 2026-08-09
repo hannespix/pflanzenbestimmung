@@ -2449,6 +2449,52 @@ async function main() {
   });
   assert(!kaputtIn.shown, "Lernduell: manipulierter Link wird trotzdem als Herausforderung angenommen");
 
+  // Die Aufgabenstellung muss mitwandern: »Bild → voller Name« (img2both) und die
+  // Antwortart des Bilder-Quiz. In v2 fielen beide heraus – der Herausgeforderte
+  // bekam plötzlich nur den botanischen Namen. Alte v2-Links bleiben lesbar.
+  const kodier = await page.evaluate(() => {
+    const idx = [1, 2, 3];
+    const rund = (o) => chDecode(chEncode(Object.assign({ p: "gemuesebau_gaertner", i: idx, s: 2, t: 3, z: 9, n: "K" }, o)));
+    const voll = rund({ m: "photo", r: "img2both", a: "mc" });
+    const pruef = rund({ m: "photo", r: "img2bot", a: "exam" });
+    const text = rund({ m: "type", r: "bot2de" });
+    // v2-Link nachbauen (alter Aufbau: Richtung global über CH_DIRS, keine Antwortart)
+    const alt2 = (() => {
+      const out = [2, (CH_PROFILES.indexOf("gemuesebau_gaertner") << 4) | (CH_MODES.indexOf("photo") << 2) | CH_DIRS.indexOf("img2de")];
+      const put = (n) => { n = Math.round(n); while (n > 127) { out.push((n & 127) | 128); n = Math.floor(n / 128); } out.push(n); };
+      put(idx.length); idx.forEach(put); put(2); put(3); put(9); put(0);
+      const body = Uint8Array.from(out), sum = chSum(body, body.length);
+      const all = new Uint8Array(body.length + 2);
+      all.set(body); all[body.length] = sum & 255; all[body.length + 1] = sum >>> 8;
+      return chDecode(bytesToB64url(chMask(all)));
+    })();
+    return { voll, pruef, text, alt2 };
+  });
+  assert(kodier.voll && kodier.voll.r === "img2both" && kodier.voll.a === "mc",
+    "Lernduell: »Bild → voller Name« muss im Link erhalten bleiben: " + JSON.stringify(kodier.voll));
+  assert(kodier.pruef && kodier.pruef.a === "exam" && kodier.pruef.r === "img2bot",
+    "Lernduell: die Antwortart des Bilder-Quiz muss mitwandern: " + JSON.stringify(kodier.pruef));
+  assert(kodier.text && kodier.text.r === "bot2de" && kodier.text.m === "type",
+    "Lernduell: Textmodi müssen ihre Richtung behalten: " + JSON.stringify(kodier.text));
+  assert(kodier.alt2 && kodier.alt2.r === "img2de" && kodier.alt2.a === "mc" && kodier.alt2.s === 2,
+    "Lernduell: alte v2-Links müssen weiterhin richtig gelesen werden: " + JSON.stringify(kodier.alt2));
+
+  // … und beim Öffnen eines solchen Links stellt sich das Tool auch wirklich darauf ein
+  const vollFrag = await page.evaluate(() =>
+    chEncode({ p: "gemuesebau_gaertner", m: "photo", r: "img2both", a: "mc", i: [1, 2, 3], s: 3, t: 3, z: 30, n: "Kollegin" }));
+  await page.goto("about:blank");
+  await page.goto(FILE + "#c=" + vollFrag, { waitUntil: "load" });
+  await page.waitForFunction("window.startChallenge!=null", { timeout: 10000 });
+  const vollIn = await page.evaluate(() => ({
+    dir: curDir(), antwort: photoAnswer, modus: mode,
+    txt: (document.querySelector("#duelBanner") || {}).textContent || "",
+    imSelect: (document.querySelector("#dir") || {}).value,
+  }));
+  assert(vollIn.modus === "photo" && vollIn.antwort === "mc" && vollIn.dir === "img2both" && vollIn.imSelect === "img2both",
+    "Lernduell: »voller Name« muss beim Öffnen übernommen werden (sonst kommt nur botanisch): " + JSON.stringify(vollIn));
+  assert(/voller Name/.test(vollIn.txt),
+    "Lernduell-Banner soll die Aufgabenstellung nennen: " + vollIn.txt);
+
   // Zurück auf sauberen Zustand für die Aufräum-Schritte
   await page.goto("about:blank");
   await page.goto(FILE, { waitUntil: "load" });
@@ -2459,7 +2505,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand, kein Duell, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON-Links lesbar, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter, Galerie mit mehreren Ansichten – Commons-Kandidaten sofort, Artikelbilder nachgeladen, Wischen, Vorladen der Galerie, stille Wiederholung bei Aussetzern, neuer Versuch je Sitzung), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast, Lernserie/Tagesziel, Herbarium, XP-Ränge + Combo, Stufe 5 (Rang-Popover, Container Queries).");
+  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand, kein Duell, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON- und v2-Links lesbar, Richtung inkl. »voller Name« + Antwortart wandern mit, Banner übernimmt Profil/Modus/Aufgabenstellung, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter, Galerie mit mehreren Ansichten – Commons-Kandidaten sofort, Artikelbilder nachgeladen, Wischen, Vorladen der Galerie, stille Wiederholung bei Aussetzern, neuer Versuch je Sitzung), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast, Lernserie/Tagesziel, Herbarium, XP-Ränge + Combo, Stufe 5 (Rang-Popover, Container Queries).");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
