@@ -1621,6 +1621,37 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       (gleiche Logik im Prüfungswerkzeug – Schutz gegen Auseinanderdriften der
       beiden Kopien).
 
+- [x] **Galerie vorladen + hartnäckigere Bildsuche** (zwei Rückmeldungen).
+      **(1) Vorladen** (`lbPreload`, beide Werkzeuge): Sobald die Vollbild-Ansicht
+      offen ist, werden die übrigen Bilder der Galerie im Hintergrund geholt –
+      Blättern und Wischen warten dann nicht mehr. Reihenfolge **von innen nach
+      außen** (1 vor, 1 zurück, 2 vor …), geladen wird **dieselbe URL wie in der
+      Anzeige** (`lbBig`), sonst nützt der Browser-Cache nichts; das gerade
+      gezeigte Bild wird in `lbPre` eingetragen und nicht erneut angefragt. `lbPre`
+      (URL → `Image`) verhindert Doppel-Abrufe, Deckel 80 Einträge. Bei
+      **Datensparmodus oder 2G** (`navigator.connection.saveData`/`effectiveType`)
+      nur die direkten Nachbarn – 12 Bilder à 1600 px sind unterwegs schnell
+      einige Megabyte. Läuft auch nach dem **Nachladen** der Artikel-Galerie
+      (`lbLoad`).
+      **(2) Bilder-Quiz gibt nicht mehr so schnell auf** (Rückmeldung »oft werden
+      keine Bilder geladen«). Ursache war vor allem der **dauerhaft gemerkte
+      Fehlversuch**: `photoFor` speicherte `null` in `pflanzenlernen.photos4`, und
+      ein einziger Aussetzer (schwache Verbindung, ein Suchweg lief ins Leere)
+      machte die Art damit **für immer** bildlos – sie kam ab dann nur noch als
+      Quizfrage. Jetzt gilt »kein Bild« nur für die **laufende Sitzung**
+      (`photoTried`): gefundene Bilder bleiben dauerhaft gemerkt, erfolglose Arten
+      bekommen bei **jedem Start einen frischen Versuch** (auch im Vorabholen,
+      `prefetchPhoto`). Dazu **zwei stille Wiederholungen** mit wachsender Pause
+      (0,9 s / 1,8 s, Anzeige »neuer Versuch 2 von 3«), bevor überhaupt »Keine
+      Verbindung« erscheint – kurze Funklöcher heilen sich so von selbst. Lädt die
+      **Bilddatei selbst** nicht, wird der Reihe nach auf die übrigen Ansichten
+      derselben Art ausgewichen, statt sofort »Bild konnte nicht geladen werden«
+      zu zeigen. Der Quiz-Ausweichtext sagt jetzt zu, dass **beim nächsten Start
+      erneut gesucht** wird. `tests/learn.mjs` prüft: Vorladen (alle weiteren
+      Bilder, Nachbar zuerst, nichts doppelt, Einzelbild = nichts), stille
+      Wiederholung statt sofortiger Fehlermeldung, gemerktes »kein Bild« sperrt
+      die Art nicht dauerhaft, und pro Sitzung wird trotzdem nur einmal gesucht.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein

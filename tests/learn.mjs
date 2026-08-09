@@ -727,6 +727,44 @@ async function main() {
   assert(phGal.keinBadge && phGal.sofort === 0 && phGal.nachgeladen === "1 / 3",
     "Bilder-Quiz: Artikel-Galerie muss beim Öffnen nachgeladen werden (Pfeile erscheinen nach): " + JSON.stringify(phGal));
 
+  // Hartnäckig statt schnell aufgeben: ein Netz-Aussetzer wird still wiederholt, und
+  // eine Art, die früher einmal ohne Treffer blieb, wird je Sitzung neu gesucht.
+  const zaeh = await page.evaluate(async (PX) => {
+    __clearPhotoCache(); photoTried.clear();
+    let n = 0;
+    __setPhotoSource(() => { n++; return n < 2 ? Promise.reject(new Error("network"))
+      : Promise.resolve({ thumb: PX, src: "cm", title: "T", file: "T.jpg", url: "https://x/y" }); });
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();
+    startSession();
+    await new Promise((r) => setTimeout(r, 1500));        // erste Wiederholung nach ~0,9 s
+    const nachAussetzer = { versuche: n, bild: !!document.querySelector("#phImg"),
+      keineMeldung: !document.querySelector(".ph-note") };
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+
+    // gemerkte »kein Bild« aus einer früheren Sitzung darf die Art nicht dauerhaft sperren
+    __clearPhotoCache(); photoTried.clear();
+    __rememberPhoto(allCards[0].key, null);
+    let gefragt = 0;
+    __setPhotoSource(() => { gefragt++; return Promise.resolve({ thumb: PX, src: "cm", title: "T", file: "T.jpg", url: "https://x/y" }); });
+    const wieder = await photoFor(allCards[0]);           // neuer Versuch trotz gemerkter null
+    await photoFor(allCards[0]);                          // jetzt aus dem Speicher
+    const zweiteChance = { gefunden: !!wieder, gefragt };
+
+    // bleibt es erfolglos, wird in DERSELBEN Sitzung nicht endlos gesucht
+    __clearPhotoCache(); photoTried.clear();
+    let leer = 0;
+    __setPhotoSource(() => { leer++; return Promise.resolve(null); });
+    await photoFor(allCards[1]); await photoFor(allCards[1]);
+    __setPhotoSource(null); __clearPhotoCache(); photoTried.clear();
+    return { nachAussetzer, zweiteChance, leer };
+  }, PX);
+  assert(zaeh.nachAussetzer.bild && zaeh.nachAussetzer.versuche >= 2 && zaeh.nachAussetzer.keineMeldung,
+    "Bilder-Quiz: ein Aussetzer muss still wiederholt werden statt sofort »keine Verbindung«: " + JSON.stringify(zaeh));
+  assert(zaeh.zweiteChance.gefunden && zaeh.zweiteChance.gefragt === 1,
+    "Bilder-Quiz: gemerktes »kein Bild« darf die Art nicht dauerhaft sperren (ein neuer Versuch je Sitzung): " + JSON.stringify(zaeh));
+  assert(zaeh.leer === 1,
+    "Bilder-Quiz: bleibt die Suche erfolglos, darf sie in derselben Sitzung nicht wiederholt werden: " + JSON.stringify(zaeh));
+
   // Bilder-Quiz, Antwort »Namen tippen«: Eingabefeld direkt unter dem Bild
   const phType = await page.evaluate(async (PX) => {
     __clearPhotoCache();
@@ -912,17 +950,23 @@ async function main() {
   assert(phBoth.italics === 4 && phBoth.hasCorrect && phBoth.good && phBoth.scored,
     "Bilder-Quiz »voller Name«: botanischer Teil kursiv, richtige volle Option wertbar: " + JSON.stringify(phBoth));
 
-  // Bilder-Quiz ohne Netz: klare Ansage statt kaputter Ansicht
+  // Bilder-Quiz ohne Netz: erst still wiederholen (»neuer Versuch 2 von 3«),
+  // und erst wenn auch das nichts bringt, eine klare Ansage statt kaputter Ansicht
   const photoOff = await page.evaluate(async () => {
-    __clearPhotoCache();
+    __clearPhotoCache(); photoTried.clear();
     __setPhotoSource(() => Promise.reject(new Error("network")));
     startSession();
     await new Promise((r) => setTimeout(r, 60));
+    const frueh = document.querySelector("#stage").textContent;
+    await new Promise((r) => setTimeout(r, 3200));        // 0,9 s + 1,8 s Wiederholungen
     const txt = document.querySelector("#stage").textContent;
-    return { note: /Keine Verbindung/i.test(txt), retry: !!document.querySelector("#phRetry") };
+    return { wiederholt: /neuer Versuch/i.test(frueh), fruehKeineMeldung: !/Keine Verbindung/i.test(frueh),
+      note: /Keine Verbindung/i.test(txt), retry: !!document.querySelector("#phRetry") };
   });
+  assert(photoOff.wiederholt && photoOff.fruehKeineMeldung,
+    "Bilder-Quiz offline: erst still wiederholen, nicht sofort aufgeben: " + JSON.stringify(photoOff));
   assert(photoOff.note && photoOff.retry,
-    "Bilder-Quiz offline: Hinweis + »Erneut versuchen« erwartet: " + JSON.stringify(photoOff));
+    "Bilder-Quiz offline: nach den Wiederholungen Hinweis + »Erneut versuchen« erwartet: " + JSON.stringify(photoOff));
 
   // Unbrauchbare Dateien (Karte/Diagramm/Wappen) müssen aussortiert werden. Findet sich für
   // eine Art gar kein Foto, wird sie NICHT mehr übersprungen (sonst käme sie im Bilder-Modus
@@ -930,7 +974,7 @@ async function main() {
   const photoSkip = await page.evaluate(async () => {
     const bad = ["Quercus_robur_range_map.svg", "Verbreitung_Fagus.png", "Wappen_Baden.svg"];
     const good = ["Quercus_robur_Blatt.jpg", "Rosa-canina-Bluete.JPG"];
-    __clearPhotoCache(); __setPhotoSource(() => Promise.resolve(null));
+    __clearPhotoCache(); photoTried.clear(); __setPhotoSource(() => Promise.resolve(null));
     const vorher = queue.length;
     startSession();
     const nachStart = queue.length;
@@ -940,12 +984,14 @@ async function main() {
     __setPhotoSource(null);   // wieder die echte Quelle (wird hier nicht mehr aufgerufen)
     document.querySelector('#modeTabs button[data-mode="cards"]').click();
     return { filterBad: bad.every((f) => !usablePhoto(f)), filterGood: good.every((f) => usablePhoto(f)),
-      fallbackHinweis: /kein brauchbares Foto/i.test(txt), optionen: opts, vorher, nachStart };
+      fallbackHinweis: /kein Foto zu finden/i.test(txt), spaeterWieder: /erneut/i.test(txt),
+      optionen: opts, vorher, nachStart };
   });
   assert(photoSkip.filterBad && photoSkip.filterGood,
     "Bilder-Quiz: Karten/Diagramme müssen aussortiert, Fotos behalten werden: " + JSON.stringify(photoSkip));
-  assert(photoSkip.fallbackHinweis && photoSkip.optionen === 4,
-    "Ohne Foto muss die Art als Quizfrage (4 Optionen) mit Hinweis kommen statt übersprungen zu werden: " + JSON.stringify(photoSkip));
+  assert(photoSkip.fallbackHinweis && photoSkip.optionen === 4 && photoSkip.spaeterWieder,
+    "Ohne Foto muss die Art als Quizfrage (4 Optionen) kommen – mit dem Hinweis, dass später erneut gesucht wird: " +
+    JSON.stringify(photoSkip));
 
   // Bildzuordnung: das Bild muss zur ART passen – nicht zur Art statt zur Sorte,
   // nicht zu einem Homonym, keine Tafel mit zwei Arten. Die API-Antworten sind
@@ -1181,6 +1227,41 @@ async function main() {
     "Galerie: der Klick direkt nach einer Wisch-Geste darf die Großansicht nicht schließen: " + JSON.stringify(galerie));
   assert(galerie.zu && galerie.einzeln.navs === 0 && !galerie.einzeln.zaehler,
     "Galerie: Esc schließt; bei nur einem Bild keine Pfeile/Zähler: " + JSON.stringify(galerie));
+
+  // Vorladen: Beim Öffnen der Großansicht werden die übrigen Bilder schon geholt,
+  // damit das Blättern nicht wartet. Der Image-Konstruktor wird dafür belauscht.
+  const vorlad = await page.evaluate(() => {
+    const px = (f) => "data:image/svg+xml," + encodeURIComponent(
+      "<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><title>" + f + "</title></svg>");
+    const D = px("D"), E = px("E"), F = px("F"), G = px("G");
+    const geholt = [];
+    const Orig = window.Image;
+    window.Image = function () {                          // kein echter Abruf, nur mitschreiben
+      const im = new Orig();
+      Object.defineProperty(im, "src", { set(v) { geholt.push(v); }, get() { return ""; }, configurable: true });
+      return im;
+    };
+    openLightbox(D, "D", [{ src: D }, { src: E }, { src: F }, { src: G }], 0);
+    const beimOeffnen = geholt.slice();                   // E, F, G – alles außer dem gezeigten
+    geholt.length = 0;
+    document.querySelector(".lbscrim .lb-nav.next").click();
+    const beimBlaettern = geholt.slice();                 // schon alle geholt → nichts Neues
+    closeLightbox();
+    geholt.length = 0;
+    openLightbox(px("H"), "H");                           // Einzelbild: nichts vorzuladen
+    const einzeln = geholt.slice();
+    closeLightbox();
+    window.Image = Orig;
+    return { beimOeffnen, beimBlaettern: beimBlaettern.length, einzeln: einzeln.length,
+      reihenfolge: beimOeffnen[0] === E, alle: [E, F, G].every((u) => beimOeffnen.indexOf(u) >= 0),
+      ohneAktuelles: beimOeffnen.indexOf(D) < 0 };
+  });
+  assert(vorlad.alle && vorlad.beimOeffnen.length === 3,
+    "Vorladen: beim Öffnen müssen alle weiteren Galerie-Bilder geholt werden: " + JSON.stringify(vorlad));
+  assert(vorlad.reihenfolge && vorlad.ohneAktuelles,
+    "Vorladen: der Nachbar zuerst, das gezeigte Bild nicht noch einmal: " + JSON.stringify(vorlad));
+  assert(vorlad.beimBlaettern === 0 && vorlad.einzeln === 0,
+    "Vorladen: nichts doppelt anfragen, bei einem Einzelbild gar nichts: " + JSON.stringify(vorlad));
 
   // Lernstand in der Info-Karte: Stufe, Fälligkeit und Bilanz beim Nachschlagen
   const lstate = await page.evaluate(() => {
@@ -2378,7 +2459,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand, kein Duell, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON-Links lesbar, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter, Galerie mit mehreren Ansichten – Commons-Kandidaten sofort, Artikelbilder nachgeladen, Wischen), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast, Lernserie/Tagesziel, Herbarium, XP-Ränge + Combo, Stufe 5 (Rang-Popover, Container Queries).");
+  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand, kein Duell, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON-Links lesbar, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter, Galerie mit mehreren Ansichten – Commons-Kandidaten sofort, Artikelbilder nachgeladen, Wischen, Vorladen der Galerie, stille Wiederholung bei Aussetzern, neuer Versuch je Sitzung), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast, Lernserie/Tagesziel, Herbarium, XP-Ränge + Combo, Stufe 5 (Rang-Popover, Container Queries).");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
