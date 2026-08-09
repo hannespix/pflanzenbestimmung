@@ -871,21 +871,28 @@ async function main() {
   assert(photoOff.note && photoOff.retry,
     "Bilder-Quiz offline: Hinweis + »Erneut versuchen« erwartet: " + JSON.stringify(photoOff));
 
-  // Arten ohne brauchbares Foto (z. B. Verbreitungskarte) werden übersprungen
+  // Unbrauchbare Dateien (Karte/Diagramm/Wappen) müssen aussortiert werden. Findet sich für
+  // eine Art gar kein Foto, wird sie NICHT mehr übersprungen (sonst käme sie im Bilder-Modus
+  // nie dran und bliebe im Herbarium ewig offen), sondern als Quizfrage gestellt.
   const photoSkip = await page.evaluate(async () => {
     const bad = ["Quercus_robur_range_map.svg", "Verbreitung_Fagus.png", "Wappen_Baden.svg"];
     const good = ["Quercus_robur_Blatt.jpg", "Rosa-canina-Bluete.JPG"];
     __clearPhotoCache(); __setPhotoSource(() => Promise.resolve(null));
+    const vorher = queue.length;
     startSession();
+    const nachStart = queue.length;
     await new Promise((r) => setTimeout(r, 60));
-    const skipped = document.querySelector("#stage").textContent;
+    const txt = document.querySelector("#stage").textContent;
+    const opts = document.querySelectorAll("#opts .opt").length;
     __setPhotoSource(null);   // wieder die echte Quelle (wird hier nicht mehr aufgerufen)
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
     return { filterBad: bad.every((f) => !usablePhoto(f)), filterGood: good.every((f) => usablePhoto(f)),
-      note: /kaum Bilder/i.test(skipped) };
+      fallbackHinweis: /kein brauchbares Foto/i.test(txt), optionen: opts, vorher, nachStart };
   });
   assert(photoSkip.filterBad && photoSkip.filterGood,
     "Bilder-Quiz: Karten/Diagramme müssen aussortiert, Fotos behalten werden: " + JSON.stringify(photoSkip));
-  assert(photoSkip.note, "Bilder-Quiz: ohne verfügbare Bilder fehlt der erklärende Hinweis");
+  assert(photoSkip.fallbackHinweis && photoSkip.optionen === 4,
+    "Ohne Foto muss die Art als Quizfrage (4 Optionen) mit Hinweis kommen statt übersprungen zu werden: " + JSON.stringify(photoSkip));
 
   // Bildzuordnung: das Bild muss zur ART passen – nicht zur Art statt zur Sorte,
   // nicht zu einem Homonym, keine Tafel mit zwei Arten. Die API-Antworten sind
@@ -1156,6 +1163,43 @@ async function main() {
     "Herbarium: ein voll gemeistertes Thema muss GENAU EINMAL gefeiert werden: " + JSON.stringify(herb));
   assert(herb.total > 3 && herb.doneCards === 1 && herb.doneName === herb.thema && herb.stamp,
     "Herbarium-Modal: genau die gemeisterte Sammelkarte muss farbig mit Stempel sein: " + JSON.stringify(herb));
+
+  // Angefangenes Thema: die Karte muss zeigen, WAS noch fehlt – Arten ohne Foto extra
+  // markiert (sie kommen im Bilder-Modus als Quizfrage, hängen also nicht unsichtbar fest).
+  const offen = await page.evaluate(() => {
+    $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    const thema = "Zwiebelgemüse";
+    const imThema = allCards.filter((c) => c.thema === thema);
+    const prog = {};
+    imThema.slice(0, imThema.length - 2).forEach((c) => {          // alle bis auf zwei sitzen
+      prog[c.key] = { box: 5, due: "2099-01-01", seen: 3, correct: 3, wrong: 0 }; });
+    localStorage.setItem("pflanzenlernen.progress.gemuesebau_gaertner", JSON.stringify(prog));
+    const fehlt = imThema.slice(imThema.length - 2);
+    __clearPhotoCache();
+    __rememberPhoto(fehlt[0].key, null);                           // für diese Art gibt es sicher kein Foto
+    applyProfile(); openHerbarium();
+    const karte = [...document.querySelectorAll(".herbcard")].find((k) => k.querySelector(".hc-name").textContent.trim() === thema);
+    const liste = karte ? [...karte.querySelectorAll(".hc-open li")] : [];
+    const res = { hatBlock: !!(karte && karte.querySelector(".hc-open")),
+      anzahl: liste.length, ohneFoto: liste.filter((li) => li.classList.contains("no-photo")).length,
+      tag: !!(karte && karte.querySelector(".np-tag")),
+      // ein noch gar nicht begonnenes Thema bekommt keine Liste (das wäre die ganze Liste)
+      leerOhneFortschritt: (() => {
+        const k2 = [...document.querySelectorAll(".herbcard")].find((k) => /0\/\d+ sitzt/.test(k.querySelector(".hc-n").textContent));
+        return k2 ? !k2.querySelector(".hc-open") : true;
+      })() };
+    document.querySelector("#infoClose").click();
+    localStorage.removeItem("pflanzenlernen.progress.gemuesebau_gaertner");
+    localStorage.removeItem("pflanzenlernen.herb.gemuesebau_gaertner");
+    __clearPhotoCache(); applyProfile();
+    return res;
+  });
+  assert(offen.hatBlock && offen.anzahl === 2,
+    "Herbarium: angefangenes Thema muss die noch fehlenden Arten auflisten: " + JSON.stringify(offen));
+  assert(offen.ohneFoto === 1 && offen.tag,
+    "Herbarium: Arten ohne Foto müssen markiert sein (»ohne Foto«): " + JSON.stringify(offen));
+  assert(offen.leerOhneFortschritt,
+    "Herbarium: ein noch gar nicht begonnenes Thema bekommt keine Fehl-Liste: " + JSON.stringify(offen));
 
   // XP + botanische Ränge: freies Tippen bringt mehr als Ankreuzen, Rangaufstieg wird
   // einmalig gefeiert; Combo zählt Treffer in Folge (ab 3 sichtbar, Bonus gestaffelt).

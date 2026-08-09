@@ -1300,7 +1300,7 @@ function startChallenge(){                // genau die Karten der Herausforderun
   if(!cards.length){ toast("Karten dieser Herausforderung nicht gefunden",true); return; }
   const b=$("#duelBanner"); if(b) b.hidden=true;
   queue = cards.slice(); qi = 0; photoMisses = 0; qStart = 0;
-  sess = { total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, cards:cards.slice(), challenge:ch };
+  sess = { total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, baseMode:mode, cards:cards.slice(), challenge:ch };
   clockRun(true); stageFull(true);
   nextCard();
 }
@@ -1312,7 +1312,7 @@ function startChallenge(){                // genau die Karten der Herausforderun
 function stageFull(on){ try{ document.body.classList.toggle("stagefull", !!on); }catch(e){} }
 function startSession(){
   queue = buildQueue(); qi = 0; photoMisses = 0; qStart = 0;
-  sess = { total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, cards:queue.slice(), challenge:null };
+  sess = { total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, baseMode:mode, cards:queue.slice(), challenge:null };
   if(!queue.length){ toast("Keine Arten im aktuellen Filter",true); return; }
   clockRun(true); stageFull(true);
   nextCard();
@@ -1342,7 +1342,7 @@ function startGuided(){
   const formOf = new Map();
   q.forEach(c=>formOf.set(c, guidedForm(pget(c.key).box||0, online)));
   queue=q; qi=0; photoMisses=0; qStart=0;
-  sess = { total:q.length, done:0, correct:0, scored:0, ms:0, pts:null, active:true,
+  sess = { total:q.length, done:0, correct:0, scored:0, ms:0, pts:null, active:true, baseMode:mode,
            cards:q.slice(), challenge:null, auto:true, formOf, modeBefore:mode };
   clockRun(true); stageFull(true);
   nextCard();
@@ -1355,7 +1355,7 @@ function startQuizWith(cards){
   mode="quiz"; store.set(LS_PREFIX+"mode",mode);
   $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.mode===mode));
   queue = cards.slice(); qi = 0; photoMisses = 0; qStart = 0;
-  sess = { total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, cards:cards.slice(), challenge:null };
+  sess = { total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, baseMode:mode, cards:cards.slice(), challenge:null };
   clockRun(true); stageFull(true);
   nextCard();
 }
@@ -1373,6 +1373,7 @@ function nextCard(){
   current = queue[qi]; flipped=false;
   if(sess.auto && sess.formOf && sess.formOf.has(current))
     mode = sess.formOf.get(current);   // geführte Sitzung: Übungsform je Karte (wird nicht gespeichert)
+  else if(sess.baseMode) mode = sess.baseMode;   // Bilder-Modus: Quiz-Ausweichen der Vorkarte zurücknehmen
   if(mode==="cards") renderCard();
   else if(mode==="quiz") renderQuiz();
   else if(mode==="photo") renderPhoto();
@@ -3210,12 +3211,18 @@ async function renderPhoto(){
     $("#phSkip").onclick=()=>advance();
     return;
   }
-  if(!p){                                              // kein brauchbares Bild → Art überspringen
+  if(!p){                                              // kein brauchbares Bild → als Quizfrage stellen
     photoMisses++;
-    if(photoMisses>=6){ photoNotice(`<b>Für diese Auswahl gibt es kaum Bilder.</b> Probier ein anderes Thema
-      oder einen anderen Modus – Karteikarten, Quiz und Tippen funktionieren immer.`); return; }
-    queue.splice(qi,1); sess.total=Math.max(sess.done, sess.total-1);
-    return nextCard();
+    // Früher wurde die Art übersprungen – dann kam sie im Bilder-Modus nie dran, blieb in
+    // Box 0 und das Thema ließ sich im Herbarium nie abschließen. Jetzt weicht genau diese
+    // eine Karte auf das Quiz aus (nextCard stellt danach über sess.baseMode wieder um);
+    // die Sitzung läuft weiter, nur bei auffällig vielen Ausweichern gibt es einen Hinweis.
+    if(photoMisses===6) toast("In dieser Auswahl gibt es kaum Bilder – die Fragen kommen als Quiz.");
+    mode = "quiz"; renderQuiz();
+    const q=$("#stage").querySelector(".qprompt");
+    if(q) q.insertAdjacentHTML("beforebegin",
+      `<div class="ph-fallback">Für diese Art gibt es kein brauchbares Foto – deshalb als Quizfrage.</div>`);
+    return;
   }
   photoMisses = 0;
   $("#stage").querySelector(".photobox").innerHTML =
@@ -3467,13 +3474,19 @@ const HERB_ART = [
   `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M32 58C30 38 30 22 34 8M34 12c-5 2-8 6-9 11M33 20c-6 2-9 6-10 12M33 30c-6 2-9 6-9 11M34 16c4 1 7 4 8 8M33 26c5 1 8 4 9 9M32 36c5 1 8 4 9 9"/></svg>`,
   `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M30 58C28 40 30 24 38 10M35 22c-5-1-9-4-10-9M33 32c-6 0-10-3-12-8"/><circle cx="44" cy="20" r="3.2" fill="currentColor" stroke="none"/><circle cx="47" cy="28" r="3.2" fill="currentColor" stroke="none"/><circle cx="41" cy="27" r="3.2" fill="currentColor" stroke="none"/></svg>`
 ];
-function herbData(){                                    // je Thema: [name, {n: gesamt, fest: sitzt}]
+function herbData(){                                    // je Thema: [name, {n, fest, offen:[Karten]}]
   const m=new Map();
   allCards.forEach(c=>{ const t=c.thema||"Sonstiges";
-    if(!m.has(t)) m.set(t,{n:0,fest:0});
-    const e=m.get(t); e.n++; if((pget(c.key).box||0)>=4) e.fest++; });
+    if(!m.has(t)) m.set(t,{n:0,fest:0,offen:[]});
+    const e=m.get(t); e.n++;
+    if((pget(c.key).box||0)>=4) e.fest++; else e.offen.push(c);   // was dem Thema noch fehlt
+  });
   return [...m.entries()].sort((a,b)=> themeRank(a[0])-themeRank(b[0]) || a[0].localeCompare(b[0],"de"));
 }
+/* Sicher ohne Foto: Der Bild-Cache merkt sich »null«, wenn die Suche erfolglos war.
+   Solche Arten kamen früher im Bilder-Modus nie dran – heute weichen sie aufs Quiz aus,
+   und im Herbarium steht der Hinweis dabei. */
+function photoless(key){ try{ return photoStoreLoad()[key]===null; }catch(e){ return false; } }
 function herbKey(){ return LS_PREFIX+"herb."+profileId; }
 function herbSeen(){ try{ const a=JSON.parse(store.get(herbKey())||"[]"); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
 function herbCheck(){                                   // neu gemeisterte Themen einmalig feiern
@@ -3494,12 +3507,23 @@ function openHerbarium(){
   const rows=herbData(), done=rows.filter(([,e])=>e.n>0&&e.fest===e.n).length;
   const cards=rows.map(([t,e],i)=>{
     const fertig=e.n>0&&e.fest===e.n;
+    // Was fehlt noch? Nur bei angefangenen Themen (sonst wäre es die ganze Liste) und
+    // gedeckelt auf sechs Namen. Arten ohne Foto werden markiert – sie kommen im
+    // Bilder-Modus als Quizfrage, damit hier niemand unsichtbar hängen bleibt.
+    const zeigOffen = !fertig && e.fest>0 && e.offen.length<=12;
+    const liste = zeigOffen ? e.offen.slice(0,6).map(c=>{
+      const kein=photoless(c.key);
+      return `<li${kein?` class="no-photo" title="Für diese Art gibt es kein brauchbares Foto – im Bilder-Modus kommt sie als Quizfrage"`:""}>`+
+        `${esc(deMain(c)||norm(c.g+" "+c.a))}${kein?` <span class="np-tag">ohne Foto</span>`:""}</li>`;
+    }).join("") : "";
     return `<div class="herbcard${fertig?" done":""}">
        <div class="hc-art">${HERB_ART[i%HERB_ART.length]}</div>
        ${fertig?`<div class="hc-stamp">Gemeistert</div>`:""}
        <div class="hc-name">${esc(t)}</div>
        <div class="hc-bar"><i style="width:${e.n?Math.round(e.fest/e.n*100):0}%"></i></div>
        <div class="hc-n">${e.fest}/${e.n} sitzt</div>
+       ${zeigOffen?`<div class="hc-open"><div class="hc-open-h">Es fehlen noch</div>
+         <ul>${liste}</ul>${e.offen.length>6?`<div class="hc-more">+ ${e.offen.length-6} weitere</div>`:""}</div>`:""}
      </div>`; }).join("");
   const scrim = el("div","scrim"); scrim.id="infoScrim";
   scrim.innerHTML = `<div class="modal herbmodal" role="dialog" aria-modal="true" aria-label="Mein Herbarium">
@@ -3805,6 +3829,8 @@ window.wikiPhoto=wikiPhoto;
 window.__setPhotoSource=fn=>{ photoSource = fn || wikiPhoto; };
 window.__setJsonp=fn=>{ jsonp = fn || ((...a)=>jsonpGet(...a)); };   // API-Antworten für Tests vorgeben
 window.__clearPhotoCache=()=>{ photoStore={}; try{ store.set(LS_PHOTOS,"{}"); }catch(e){} };
+window.__rememberPhoto=photoRemember;   // für Tests: »für diese Art gibt es kein Bild« (null) vormerken
+window.photoless=photoless;
 window.renderListControls=renderListControls;
 window.openFamilyInfo=openFamilyInfo;
 window.shareChallenge=shareChallenge;
