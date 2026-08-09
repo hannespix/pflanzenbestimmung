@@ -1208,7 +1208,10 @@ async function main() {
     const rest = [0, 1, 2, 3, 4, 5].map((b) => stepsLeft(b));      // neu/1 → 3 Treffer (Sprung 0→2!)
     $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
     renderProgress();
-    const legende = (document.querySelector(".plegend-note") || {}).textContent || "";
+    openHowModal();
+    const legende = (document.querySelector(".howmodal") || {}).textContent || "";
+    const howBtn = !!document.querySelector("#btnHow");
+    document.querySelector("#infoClose").click();
     // Quiz: nach der Antwort steht die Stufe unter der Lösung
     document.querySelector('#modeTabs button[data-mode="quiz"]').click();
     $("#sessLen").value = "6"; startSession();
@@ -1227,17 +1230,40 @@ async function main() {
     openHerbarium();
     const herbHow = (document.querySelector(".herb-how") || {}).textContent || "";
     document.querySelector("#infoClose").click();
-    return { rest, legende, nachTreffer, pips, an, aufKarte, herbHow };
+    return { rest, legende, howBtn, nachTreffer, pips, an, aufKarte, herbHow };
   });
   assert(JSON.stringify(erklaert.rest) === JSON.stringify([3, 3, 2, 1, 0, 0]),
     "Restrechnung muss den Sprung neu→Stufe 2 berücksichtigen (3/3/2/1/0/0): " + JSON.stringify(erklaert.rest));
-  assert(/Stufe 4/.test(erklaert.legende) && /sitzt/.test(erklaert.legende),
-    "An der Fortschritts-Legende muss stehen, wie »sitzt« erreicht wird: " + erklaert.legende);
+  assert(erklaert.howBtn && /Stufe 4/.test(erklaert.legende) && /drei/.test(erklaert.legende),
+    "ℹ an der Legende muss die grafische Stufen-Erklärung öffnen: " + erklaert.legende.slice(0, 160));
   assert(erklaert.pips === 5 && erklaert.an === 2 && /Stufe 2 von 5/.test(erklaert.nachTreffer) && /noch 2× richtig/.test(erklaert.nachTreffer),
     "Nach einem Treffer muss die Stufe (2 von 5, noch 2×) mit 5 Punkten erscheinen: " + JSON.stringify(erklaert));
   assert(erklaert.aufKarte, "Karteikarte: die Stufe muss schon vor der Bewertung sichtbar sein");
-  assert(/gemeistert/.test(erklaert.herbHow) && /drei richtigen Antworten/.test(erklaert.herbHow),
-    "Im Herbarium muss erklärt sein, wie ein Thema gemeistert wird: " + erklaert.herbHow);
+
+  // Keine bunten Emojis in der Oberfläche – Symbole sind einheitliche Strich-SVGs.
+  // (Geprüft wird der sichtbare Text der Startansicht samt Modalen, nicht der Quelltext.)
+  const keineEmojis = await page.evaluate(() => {
+    const EMO = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+    const treffer = [];
+    const sammle = (wo) => {
+      const w = document.createTreeWalker(wo, NodeFilter.SHOW_TEXT, {
+        acceptNode: (n) => /^(SCRIPT|STYLE|TEMPLATE)$/.test(n.parentNode && n.parentNode.nodeName)
+          ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+      for (let n = w.nextNode(); n; n = w.nextNode())
+        if (EMO.test(n.nodeValue)) treffer.push(n.nodeValue.trim().slice(0, 40));
+    };
+    renderProgress(); sammle(document.body);
+    openHowModal(); sammle(document.querySelector(".howmodal")); document.querySelector("#infoClose").click();
+    openHerbarium(); sammle(document.querySelector(".herbmodal")); document.querySelector("#infoClose").click();
+    const icons = document.querySelectorAll("#progress svg.ic").length;
+    return { treffer, icons };
+  });
+  assert(keineEmojis.treffer.length === 0,
+    "Keine bunten Emojis in der Oberfläche – gefunden: " + JSON.stringify(keineEmojis.treffer));
+  assert(keineEmojis.icons >= 3,
+    "Die Status-Chips müssen Strich-Icons (svg.ic) tragen: " + keineEmojis.icons);
+  assert(/gemeistert/.test(erklaert.herbHow) && /sitzt/.test(erklaert.herbHow),
+    "Im Herbarium muss der Verweis auf die Stufen-Erklärung stehen: " + erklaert.herbHow);
 
   // XP + botanische Ränge: freies Tippen bringt mehr als Ankreuzen, Rangaufstieg wird
   // einmalig gefeiert; Combo zählt Treffer in Folge (ab 3 sichtbar, Bonus gestaffelt).
@@ -1302,7 +1328,7 @@ async function main() {
     const grid = document.querySelector(".herbgrid");
     const ct = grid ? getComputedStyle(grid).containerType : "";
     document.querySelector("#infoClose").click();
-    return { kann, hatPop: !!pop, rolle: chip ? chip.getAttribute("role") : "", offen, zeilen, aktiv, ct,
+    return { kann, hatPop: !!pop, rolle: chip ? (chip.tagName === "BUTTON" ? "button" : chip.getAttribute("role")) : "", offen, zeilen, aktiv, ct,
       oklch: CSS.supports("color: oklch(0.5 0.1 150)") };
   });
   if (stufe5.kann) {

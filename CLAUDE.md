@@ -1514,6 +1514,38 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Stufe auf der Karteikarte vor der Bewertung, Erklärtexte an Legende und
       im Herbarium. Screenshots verifiziert.
 
+- [x] **UI entschlackt: Grafik statt Fließtext, Strich-Icons statt Emojis**
+      (Nutzerkritik: »UI wird immer textlastiger auf dem ersten Screen, mehr
+      Akkordeons, grafische Lösungen, klare Symbole – **keine bunten Emojis, sieht
+      unprofessionell aus**«). Die Erklärrunde davor hatte den Startbildschirm mit
+      Absätzen zugestellt – hier die Gegenbewegung.
+      **(1) Icon-Set statt Emojis:** `ICONS`/`ico(name)` in `learn.js` (13 Symbole:
+      leaf · flame · sprout · info · globe · book · image · check · cards · keys ·
+      list · sliders · trophy) und ein schlankes Paar in `app.js` (globe · book) –
+      alle im bestehenden Stil (currentColor, 1.8er Strich, 24er Viewbox). Ersetzt
+      🌿🌱🔥🎉⚙️🌐📖🖼✔🗂 in Knöpfen, Intro, Duell und Info-Karte **beider**
+      Werkzeuge; in Toasts entfallen die Emojis ersatzlos.
+      **(2) Erklärungen als Grafik:** Der neue **Stufen-Dialog** `openHowModal()`
+      zeigt die fünf Stufen als **Leiter** (Punkte · Kurzlabel *neu/wackelig/kommt/
+      sitzt/sicher* · Intervall) plus eine Icon-Legende (richtig → weiter, fast →
+      hält, falsch → Stufe 1). Er ersetzt **drei** Textblöcke: den Erklärabsatz an
+      der Fortschritts-Legende (jetzt nur noch ein ℹ-Knopf `#btnHow`), den
+      Herbarium-Kasten (jetzt ein Satz + Verweis) und den Intro-Absatz (jetzt ein
+      Satz + Verweis).
+      **(3) Startansicht verdichtet:** »148 Karten heute dran · Übungsform passend
+      zu deinem Lernstand« → Icon + **»148 heute dran«**; die drei Statuszeilen
+      (Serie / Tagesziel / Rang / Herbarium) wurden zu **einer Chip-Reihe**
+      (`.statusrow`) – Flamme mit Zähler, Tagesziel als **Fortschritts-Ring**
+      (conic-gradient), Rang-Chip mit Mini-Balken, Herbarium-Knopf. Ergebnis:
+      **1932 → 1776 px** Seitenhöhe auf dem Handy, spürbar weniger Fließtext.
+      **(4) Layout-Bug behoben:** Die A11y-Regel (44-px-Ziele) setzte
+      `display:flex` auf **alle** `<summary>` – beim KI-Hinweis wurden dadurch die
+      Inline-Teile zu Flex-Items und der Satz zerfiel in Spalten. Fließtext-Summarys
+      bekommen jetzt Padding statt Flex.
+      `tests/learn.mjs` prüft: keine Emojis im sichtbaren Text (Startansicht +
+      beide Modale, Script/Style ausgenommen), Status-Chips tragen `svg.ic`,
+      ℹ öffnet die Stufen-Leiter, Herbarium verweist darauf. Screenshots verifiziert.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein
