@@ -1559,6 +1559,29 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       *Lehre:* Nach einem Symbol-Austausch jede betroffene Ansicht erneut öffnen – der
       Fehler lag in einem Dialog, den ich nach dem Umbau nicht noch einmal geprüft hatte.
 
+- [x] **Info-Karte: Lernstand der Art + Bildergalerie in der Vollbild-Ansicht**
+      (zwei Nutzerwünsche). **(1) Lernstand** (`learnStateHTML`, direkt unter dem
+      Kopf): fünf Stufenpunkte + »Stufe 3 von 5 · noch 1× richtig bis »sitzt««
+      bzw. »Noch nicht gelernt«, dazu die **Fälligkeit** (`faellig()`: heute /
+      morgen / in N Tagen) und die Bilanz (»7 richtig · 1 daneben«). Bei Stufe 4–5
+      grün hervorgehoben. Quelle ist derselbe Leitner-Stand (`pget`) wie Fortschritt
+      und Herbarium – **nichts wird zusätzlich gespeichert**. Nur im Lern-Tool
+      sinnvoll (das Prüfungswerkzeug führt keinen Lernstand) und deshalb auch nur
+      dort eingebaut. **(2) Galerie** (`wikiGallery` + erweiterte Lightbox in
+      **beiden** Werkzeugen): Nach dem opt-in »Online-Infos laden« holt ein zweiter
+      **JSONP**-Aufruf (`generator=images`, kein `fetch` → `check_offline` bleibt
+      grün) bis zu zwölf Bilder des Artikels, gefiltert über die vorhandenen Regeln
+      (`usablePhoto`/`looksDamage` bzw. eine schlanke Variante im Prüfwerkzeug;
+      botanische **Tafeln bleiben** – beim Nachschlagen sind sie hilfreich, anders
+      als im Bilder-Quiz). Das Vorschaubild öffnet dann die **Vollbild-Galerie**:
+      Pfeile ‹ ›, Zähler »2 / 5«, Tastatur ← →, Umlauf am Ende, Esc schließt; bei
+      nur einem Bild bleibt alles wie bisher (keine Pfeile, kein Zähler). Schlägt
+      der Galerie-Abruf fehl, bleibt es beim einen Vorschaubild.
+      `tests/learn.mjs` prüft beides (Stufenanzeige für »neu« und »Stufe 2«,
+      Galerie-Blättern per Klick/Taste inkl. Umlauf, Einzelbild ohne Pfeile) –
+      mit **Data-URI-Fixtures**, weil erfundene Bild-URLs echte Netzfehler und
+      damit Konsolenfehler im Test erzeugen würden.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein

@@ -1080,9 +1080,32 @@ body.stagefull #stage>.sessionbar{
 .rkp-row .r-n{font-family:var(--serif); font-style:italic; flex:1}
 .rkp-row .r-x{font-family:var(--mono); font-size:11px}
 .rk-name{cursor:pointer; text-decoration:underline dotted var(--rule-strong); text-underline-offset:3px}
+/* Lernstand in der Info-Karte: Stufe, Fälligkeit, Bilanz auf einen Blick */
+.lstate{display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin:10px 0 2px; padding:8px 11px;
+  border:1px solid var(--rule); border-radius:10px; background:var(--surface-2);
+  font-family:var(--mono); font-size:11.5px; color:var(--ink-soft)}
+.lstate.fest{border-color:var(--green); background:var(--green-tint)}
+.lstate .pips{display:inline-flex; gap:4px; flex:none}
+.lstate .pips i{width:9px; height:9px; border-radius:50%; background:var(--rule); border:1px solid var(--rule-strong)}
+.lstate .pips i.on{background:var(--gold); border-color:var(--gold)}
+.lstate .pips i.on.fest{background:var(--green); border-color:var(--green)}
+.lstate b{color:var(--green-deep)}
+.ls-t{flex:1; min-width:150px}
+.ls-due{color:var(--sepia)}
+.ls-b{color:var(--ink-faint)}
 /* Icon-Schutzregel: :where() hat Spezifität 0 – jede vorhandene Regel gewinnt,
    aber ein SVG ohne eigene Maße wuchert nicht mehr auf volle Breite. */
 :where(svg.ic){width:16px; height:16px; flex:none}
+/* Galerie in der Vollbild-Ansicht: Pfeile + Zähler (Tastatur: ← →) */
+.lbscrim .lb-nav{position:absolute; top:50%; transform:translateY(-50%); min-width:48px; min-height:64px;
+  border:1px solid rgba(255,255,255,.24); background:rgba(255,255,255,.10); color:#fff; font-size:30px;
+  line-height:1; border-radius:12px; cursor:pointer; backdrop-filter:blur(6px)}
+.lbscrim .lb-nav:hover{background:rgba(255,255,255,.2)}
+.lbscrim .lb-nav.prev{left:14px} .lbscrim .lb-nav.next{right:14px}
+.lbscrim .lb-count{position:absolute; bottom:16px; left:50%; transform:translateX(-50%); color:#fff;
+  font-family:var(--mono); font-size:12px; background:rgba(0,0,0,.45); border-radius:99px; padding:4px 12px}
+@media (max-width:640px){ .lbscrim .lb-nav{min-width:44px; min-height:56px; font-size:26px}
+  .lbscrim .lb-nav.prev{left:6px} .lbscrim .lb-nav.next{right:6px} }
 </style>
 </head>
 <body>

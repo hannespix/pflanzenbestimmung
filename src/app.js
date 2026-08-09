@@ -1931,6 +1931,29 @@ function renderWiki(host, d){
     `<div class="wp-src">Quelle: <a href="${esc(d.url)}" target="_blank" rel="noopener">Wikipedia – ${esc(d.title)}</a> · Text unter CC BY-SA</div>`;
   lbWire(host.querySelector("img"), "Vorschaubild vergrößern");
 }
+/* Bilder eines Artikels für die Galerie in der Vollbild-Ansicht (JSONP, kein fetch).
+   Karten/Wappen/Logos fliegen raus; botanische Tafeln bleiben – beim Nachschlagen
+   sind sie hilfreich. */
+function wikiGallery(title){
+  return jsonpGet("https://de.wikipedia.org/w/api.php?action=query&format=json&generator=images"+
+      "&gimlimit=20&redirects=1&prop=imageinfo&iiprop=url%7Cmime&iiurlwidth=1200&titles="+
+      encodeURIComponent(title))
+    .then(d=>{
+      const pg = (d && d.query && d.query.pages) || {};
+      return Object.keys(pg).map(k=>pg[k])
+        .filter(p=>{
+          const f = String(p.title||"").replace(/^(File|Datei):/i,"");
+          const ii = p.imageinfo && p.imageinfo[0];
+          if(!ii || !(ii.thumburl||ii.url)) return false;
+          if(ii.mime && !/^image\/(jpeg|png|webp)$/i.test(ii.mime)) return false;
+          return !/(\.svg$|map|karte|wappen|logo|icon|commons-logo|disambig)/i.test(f);
+        })
+        .map(p=>{ const ii=p.imageinfo[0];
+          return { src: ii.thumburl||ii.url, file: String(p.title||"").replace(/^(File|Datei):/i,"") }; })
+        .slice(0,12);
+    })
+    .catch(()=>[]);
+}
 /* ---------- Bild-Lightbox (Vorschaubild anklicken → groß ansehen) ----------
    1:1 aus learn.js übernommen (die Info-Karte ist in beiden Werkzeugen gleich).
    Eigener Namensraum .lbscrim; Esc läuft in der Capture-Phase, damit die
@@ -1943,29 +1966,51 @@ function closeLightbox(){
   if(lbReturnFocus && lbReturnFocus.focus){ try{ lbReturnFocus.focus(); }catch(e){} }
   lbReturnFocus=null;
 }
-function openLightbox(src, alt){
+let lbList=[], lbIdx=0;
+function lbShow(i){
+  const sc=document.querySelector(".lbscrim"); if(!sc || !lbList.length) return;
+  lbIdx = (i%lbList.length + lbList.length) % lbList.length;
+  const it = lbList[lbIdx], img = sc.querySelector(".lb-img");
+  const big = lbBig(it.src);
+  img.onerror = big!==it.src ? (()=>{ img.onerror=null; img.src=it.src; }) : null;
+  img.src = big; img.alt = it.file || "Bild";
+  const z = sc.querySelector(".lb-count"); if(z) z.textContent = `${lbIdx+1} / ${lbList.length}`;
+}
+function openLightbox(src, alt, list, start){
   closeLightbox();
   lbReturnFocus=document.activeElement;
+  lbList = Array.isArray(list) && list.length ? list.slice() : [{src, file:alt||""}];
+  lbIdx = Math.max(0, Math.min(lbList.length-1, start||0));
   const sc=el("div","lbscrim");
   sc.setAttribute("role","dialog"); sc.setAttribute("aria-modal","true"); sc.setAttribute("aria-label","Bild vergrößert");
-  const big=lbBig(src);
+  const many = lbList.length>1;
   sc.innerHTML=`<button class="lb-x" aria-label="Schließen">×</button>
-    <img class="lb-img" src="${esc(big)}" alt="${esc(alt||"Bild vergrößert")}">`;
-  const img=sc.querySelector(".lb-img");
-  if(big!==src) img.onerror=()=>{ img.onerror=null; img.src=src; };   // Derivat fehlt → bekanntes Bild
-  sc.addEventListener("click",e=>{ if(e.target===sc || e.target.closest(".lb-x")) closeLightbox(); });
+    ${many?`<button class="lb-nav prev" aria-label="Vorheriges Bild">‹</button>`:""}
+    <img class="lb-img" src="" alt="">
+    ${many?`<button class="lb-nav next" aria-label="Nächstes Bild">›</button>
+    <div class="lb-count" aria-live="polite"></div>`:""}`;
+  sc.addEventListener("click",e=>{
+    if(e.target.closest(".lb-nav.prev")) return lbShow(lbIdx-1);
+    if(e.target.closest(".lb-nav.next")) return lbShow(lbIdx+1);
+    if(e.target===sc || e.target.closest(".lb-x")) closeLightbox();
+  });
   document.body.appendChild(sc);
+  lbShow(lbIdx);
   sc.querySelector(".lb-x").focus();
 }
 document.addEventListener("keydown",e=>{                // Capture: Esc gilt zuerst der Lightbox
-  if(e.key==="Escape" && document.querySelector(".lbscrim")){ e.stopPropagation(); e.preventDefault(); closeLightbox(); }
+  if(!document.querySelector(".lbscrim")) return;
+  if(e.key==="Escape"){ e.stopPropagation(); e.preventDefault(); return closeLightbox(); }
+  if(lbList.length>1 && (e.key==="ArrowLeft"||e.key==="ArrowRight")){    // Galerie blättern
+    e.stopPropagation(); e.preventDefault(); lbShow(lbIdx + (e.key==="ArrowRight"?1:-1));
+  }
 }, true);
-function lbWire(img, label){                            // Bild anklick- UND tastaturbedienbar machen
+function lbWire(img, label, list){                       // Bild anklick- UND tastaturbedienbar machen
   if(!img) return;
   img.classList.add("lb-zoom");
   img.setAttribute("role","button"); img.tabIndex=0;
   img.setAttribute("aria-label", label||"Bild vergrößern");
-  const go=()=>openLightbox(img.currentSrc||img.src, img.alt);
+  const go=()=>openLightbox(img.currentSrc||img.src, img.alt, list, 0);
   img.addEventListener("click",go);
   img.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); } });
 }
@@ -2052,6 +2097,11 @@ async function loadWiki(card, host, btn){
     thumb: pg.thumbnail && pg.thumbnail.source,
     url: "https://de.wikipedia.org/wiki/"+encodeURIComponent(pg.title.replace(/ /g,"_")) };
   wikiCache.set(card.key, data); renderWiki(host, data); if(btn.parentNode) btn.remove();
+  wikiGallery(pg.title).then(list=>{                    // weitere Artikelbilder für die Vollbild-Galerie
+    if(!list.length) return;
+    data.gallery = list; wikiCache.set(card.key, data);
+    const img = host.querySelector("img"); if(img) lbWire(img, "Bilder ansehen", list);
+  }).catch(()=>{});
 }
 
 // ---- infraspezifisches Epitheton (für die Wikipedia-Kandidaten) ----

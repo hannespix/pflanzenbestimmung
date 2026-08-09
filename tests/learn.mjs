@@ -1069,6 +1069,58 @@ async function main() {
   assert(lightbox.closed && lightbox.focusBack,
     "Esc muss die Lightbox schließen und den Fokus zum Foto zurückgeben: " + JSON.stringify(lightbox));
 
+  // Vollbild-Galerie: Hat der Wikipedia-Artikel mehrere Bilder, blättert man in der
+  // Großansicht mit Pfeilen bzw. ← → durch; bei einem Bild bleibt alles wie bisher.
+  const galerie = await page.evaluate(() => {
+    // Data-URIs statt erfundener Hosts: ein <img src> lädt immer, echte Netzfehler
+    // würden sonst als Konsolenfehler gewertet.
+    const px = (f) => "data:image/svg+xml," + encodeURIComponent(
+      "<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><title>" + f + "</title></svg>");
+    const g = [{ src: px("A"), file: "A.jpg" }, { src: px("B"), file: "B.jpg" }, { src: px("C"), file: "C.jpg" }];
+    openLightbox(g[0].src, "A", g, 0);
+    const sc = document.querySelector(".lbscrim");
+    const z = () => sc.querySelector(".lb-count").textContent;
+    const start = z();
+    const gross = lbBig("https://upload.wikimedia.org/x/thumb/a/A.jpg/640px-A.jpg");   // Ableitung separat prüfen
+    sc.querySelector(".lb-nav.next").click();
+    const nachKlick = z();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+    const nachTaste = z();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+    const umlauf = z();                                   // hinter dem letzten wieder das erste
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    const zu = !document.querySelector(".lbscrim");
+    openLightbox(px("Z"), "Z");
+    const einzeln = { navs: document.querySelectorAll(".lbscrim .lb-nav").length,
+      zaehler: !!document.querySelector(".lb-count") };
+    closeLightbox();
+    return { start, gross, nachKlick, nachTaste, umlauf, zu, einzeln };
+  });
+  assert(galerie.start === "1 / 3" && /1600px/.test(galerie.gross),
+    "Galerie: Start bei 1/3 und in großer Auflösung: " + JSON.stringify(galerie));
+  assert(galerie.nachKlick === "2 / 3" && galerie.nachTaste === "3 / 3" && galerie.umlauf === "1 / 3",
+    "Galerie: Pfeil-Klick und ← → müssen blättern (mit Umlauf): " + JSON.stringify(galerie));
+  assert(galerie.zu && galerie.einzeln.navs === 0 && !galerie.einzeln.zaehler,
+    "Galerie: Esc schließt; bei nur einem Bild keine Pfeile/Zähler: " + JSON.stringify(galerie));
+
+  // Lernstand in der Info-Karte: Stufe, Fälligkeit und Bilanz beim Nachschlagen
+  const lstate = await page.evaluate(() => {
+    const c1 = allCards[0], c2 = allCards[1];
+    const prog = {}; prog[c2.key] = { box: 2, due: "2099-01-01", seen: 3, correct: 2, wrong: 1 };
+    localStorage.setItem("pflanzenlernen.progress.gemuesebau_gaertner", JSON.stringify(prog));
+    applyProfile();
+    const lies = (c) => { openInfo(c); const e = document.querySelector(".lstate");
+      const o = { txt: e ? e.textContent.replace(/\s+/g, " ").trim() : "FEHLT",
+        an: e ? e.querySelectorAll(".pips i.on").length : -1 }; closeInfo(); return o; };
+    const neu = lies(allCards[0]), lernt = lies(allCards[1]);
+    localStorage.removeItem("pflanzenlernen.progress.gemuesebau_gaertner"); applyProfile();
+    return { neu, lernt };
+  });
+  assert(/Noch nicht gelernt/.test(lstate.neu.txt) && lstate.neu.an === 0,
+    "Info-Karte: unbekannte Art muss »Noch nicht gelernt« zeigen: " + JSON.stringify(lstate.neu));
+  assert(/Stufe 2 von 5/.test(lstate.lernt.txt) && /2 richtig/.test(lstate.lernt.txt) && lstate.lernt.an === 2,
+    "Info-Karte: Lernstand (Stufe, Bilanz, 2 Punkte aktiv) fehlt: " + JSON.stringify(lstate.lernt));
+
   // Quiz-Juice: celebrate() feuert Vibration + Feuerwerk (Ring, Blätter/Blüten/Funken,
   // zweite Welle bei Stärke 2); Quiz-Optionen fahren gestaffelt ein, richtig poppt.
   const juice = await page.evaluate(() => {
