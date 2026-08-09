@@ -674,6 +674,59 @@ async function main() {
   assert(photo.good && photo.scored, "Bilder-Quiz: richtige Antwort nicht gewertet");
   assert(photo.credit && photo.weiter, "Bilder-Quiz: Bildnachweis/Weiter-Knopf fehlen nach der Antwort");
 
+  // Galerie im Bilder-Quiz: mehrere Ansichten derselben Art (Habitus, Blatt, Blüte …).
+  // Bei Commons-Treffern liegen die geprüften Kandidaten schon vor (p.gal); kam das
+  // Bild aus einem Wikipedia-Artikel, wird die Galerie erst beim Öffnen nachgeladen.
+  const phGal = await page.evaluate(async () => {
+    const px = (f) => "data:image/svg+xml," + encodeURIComponent(
+      "<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><title>" + f + "</title></svg>");
+    const A = px("A"), B = px("B"), C = px("C");
+    const setz = (id, v) => { const e = document.querySelector(id); e.value = v; e.dispatchEvent(new Event("change")); };
+    __clearPhotoCache();
+    __setPhotoSource(() => Promise.resolve({ thumb: A, gal: [A, B, C], src: "cm", file: "A.jpg", title: "T", url: "https://x/y" }));
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();
+    setz("#phAnswer", "mc");
+    startSession();
+    await new Promise((r) => setTimeout(r, 60));
+    const badge = (document.querySelector(".ph-more") || {}).textContent || "";
+    const label = document.querySelector("#phImg").getAttribute("aria-label");
+    document.querySelector("#phImg").click();
+    const sc = document.querySelector(".lbscrim");
+    const z = () => (sc.querySelector(".lb-count") || {}).textContent || "";
+    const start = z();
+    sc.querySelector(".lb-nav.next").click();
+    const nach = z();
+    const ohneDateiname = !/A\.jpg/.test(sc.querySelector(".lb-img").alt);   // der Dateiname verrät sonst die Lösung
+    closeLightbox();
+
+    // Artikelbild (src:"wp"): keine Kandidatenliste – die Bilder des Artikels kommen
+    // erst beim Öffnen der Großansicht (hier ohne Netz über __setJsonp vorgegeben).
+    __clearPhotoCache();
+    __setPhotoSource(() => Promise.resolve({ thumb: A, src: "wp", title: "Testartikel", file: "A.jpg", url: "https://x/y" }));
+    __setJsonp(() => Promise.resolve({ query: { pages: {
+      1: { title: "File:B.jpg", imageinfo: [{ thumburl: B, mime: "image/jpeg" }] },
+      2: { title: "File:C.jpg", imageinfo: [{ thumburl: C, mime: "image/jpeg" }] } } } }));
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();
+    startSession();
+    await new Promise((r) => setTimeout(r, 60));
+    const keinBadge = !document.querySelector(".ph-more");         // Zahl noch unbekannt → kein Hinweis
+    document.querySelector("#phImg").click();
+    const sofort = document.querySelectorAll(".lbscrim .lb-nav").length;   // erst einzeln …
+    await new Promise((r) => setTimeout(r, 80));
+    const nachgeladen = (document.querySelector(".lb-count") || {}).textContent || "";   // … dann Galerie
+    closeLightbox();
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    __setPhotoSource(null); __setJsonp(null); __clearPhotoCache();
+    return { badge, label, start, nach, ohneDateiname, keinBadge, sofort, nachgeladen };
+  });
+  assert(/3 Bilder/.test(phGal.badge) && phGal.label === "Bilder ansehen",
+    "Bilder-Quiz: Hinweis auf die Galerie (Anzahl am Bild, Beschriftung) fehlt: " + JSON.stringify(phGal));
+  assert(phGal.start === "1 / 3" && phGal.nach === "2 / 3" && phGal.ohneDateiname,
+    "Bilder-Quiz: Großansicht muss blättern – und der alt-Text darf den Dateinamen nicht verraten: " + JSON.stringify(phGal));
+  assert(phGal.keinBadge && phGal.sofort === 0 && phGal.nachgeladen === "1 / 3",
+    "Bilder-Quiz: Artikel-Galerie muss beim Öffnen nachgeladen werden (Pfeile erscheinen nach): " + JSON.stringify(phGal));
+
   // Bilder-Quiz, Antwort »Namen tippen«: Eingabefeld direkt unter dem Bild
   const phType = await page.evaluate(async (PX) => {
     __clearPhotoCache();
@@ -932,6 +985,7 @@ async function main() {
 
     __setJsonp(null); __clearPhotoCache();
     return { wege, kirscheFile: a && a.file, kirscheSrc: a && a.src, zwiebelFile: b && b.file, salbei: c,
+      zwiebelGal: (b && b.gal) || [],
       illuKoehler: looksIllustration("Salvia_officinalis_-_Köhler–s_Medizinal-Pflanzen-126.jpg"),
       illuFoto: looksIllustration("Carpinus betulus 001.JPG"),
       zweiArten: fileMentionsOther("Illustration_Allium_schoenoprasum_and_Allium_cepa0.jpg", zwiebel),
@@ -952,6 +1006,9 @@ async function main() {
     "Bildzuordnung: Tafel mit zwei Arten wird nicht erkannt: " + JSON.stringify(zuordnung));
   assert(zuordnung.zwiebelFile === "Allium cepa Zwiebeln 01.jpg",
     "Bildzuordnung: benannte Datei muss das beliebige Kategoriebild schlagen: " + JSON.stringify(zuordnung));
+  assert(zuordnung.zwiebelGal.length === 2 && /Allium cepa Zwiebeln 01/.test(zuordnung.zwiebelGal[0]),
+    "Galerie: die geprüften Commons-Kandidaten müssen als weitere Ansichten mitkommen (bester zuerst): " +
+    JSON.stringify(zuordnung.zwiebelGal));
   assert(zuordnung.salbei === null, "Bildzuordnung: Artikel ohne Gattungsbezug (Homonym) wird trotzdem genommen");
   assert(zuordnung.illuKoehler && !zuordnung.illuFoto,
     "Bildzuordnung: alte Tafeln (Köhler) werden nicht als solche erkannt: " + JSON.stringify(zuordnung));
@@ -1088,18 +1145,40 @@ async function main() {
     const nachTaste = z();
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
     const umlauf = z();                                   // hinter dem letzten wieder das erste
+
+    // Wischen (Handy): nach links = weiter, nach rechts = zurück, kurzer Wisch tut nichts
+    const wisch = (x1, y1, x2, y2) => {
+      const t = sc.querySelector(".lb-img");
+      const f = (x, y) => new Touch({ identifier: 1, target: t, clientX: x, clientY: y });
+      const ev = (typ, pts, chg) => t.dispatchEvent(new TouchEvent(typ,
+        { bubbles: true, touches: pts, targetTouches: pts, changedTouches: chg }));
+      ev("touchstart", [f(x1, y1)], [f(x1, y1)]);
+      ev("touchmove",  [f(x2, y2)], [f(x2, y2)]);
+      ev("touchend",   [],          [f(x2, y2)]);
+    };
+    wisch(300, 300, 120, 312); const wischLinks = z();     // −180 px → nächstes Bild
+    wisch(120, 300, 300, 288); const wischRechts = z();    // +180 px → vorheriges
+    wisch(300, 300, 280, 300); const wischKurz = z();      // −20 px → zu kurz, nichts passiert
+    sc.click();                                            // Klick direkt nach dem Wisch darf nicht schließen
+    const offenNachWisch = !!document.querySelector(".lbscrim");
+
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     const zu = !document.querySelector(".lbscrim");
     openLightbox(px("Z"), "Z");
     const einzeln = { navs: document.querySelectorAll(".lbscrim .lb-nav").length,
       zaehler: !!document.querySelector(".lb-count") };
     closeLightbox();
-    return { start, gross, nachKlick, nachTaste, umlauf, zu, einzeln };
+    return { start, gross, nachKlick, nachTaste, umlauf, zu, einzeln,
+      wischLinks, wischRechts, wischKurz, offenNachWisch };
   });
   assert(galerie.start === "1 / 3" && /1600px/.test(galerie.gross),
     "Galerie: Start bei 1/3 und in großer Auflösung: " + JSON.stringify(galerie));
   assert(galerie.nachKlick === "2 / 3" && galerie.nachTaste === "3 / 3" && galerie.umlauf === "1 / 3",
     "Galerie: Pfeil-Klick und ← → müssen blättern (mit Umlauf): " + JSON.stringify(galerie));
+  assert(galerie.wischLinks === "2 / 3" && galerie.wischRechts === "1 / 3" && galerie.wischKurz === "1 / 3",
+    "Galerie: Wischen muss blättern (links = weiter, rechts = zurück, kurzer Wisch nicht): " + JSON.stringify(galerie));
+  assert(galerie.offenNachWisch,
+    "Galerie: der Klick direkt nach einer Wisch-Geste darf die Großansicht nicht schließen: " + JSON.stringify(galerie));
   assert(galerie.zu && galerie.einzeln.navs === 0 && !galerie.einzeln.zaehler,
     "Galerie: Esc schließt; bei nur einem Bild keine Pfeile/Zähler: " + JSON.stringify(galerie));
 
@@ -1111,7 +1190,11 @@ async function main() {
     applyProfile();
     const lies = (c) => { openInfo(c); const e = document.querySelector(".lstate");
       const o = { txt: e ? e.textContent.replace(/\s+/g, " ").trim() : "FEHLT",
-        an: e ? e.querySelectorAll(".pips i.on").length : -1 }; closeInfo(); return o; };
+        an: e ? e.querySelectorAll(".pips i.on").length : -1,
+        // Der Lernstand gehört ans Ende der Karte – nach dem Wikipedia-Block
+        letzte: !!(e && e.parentElement.lastElementChild === e),
+        nachWp: !!(e && e.previousElementSibling && e.previousElementSibling.classList.contains("wpblock")) };
+      closeInfo(); return o; };
     const neu = lies(allCards[0]), lernt = lies(allCards[1]);
     localStorage.removeItem("pflanzenlernen.progress.gemuesebau_gaertner"); applyProfile();
     return { neu, lernt };
@@ -1120,6 +1203,8 @@ async function main() {
     "Info-Karte: unbekannte Art muss »Noch nicht gelernt« zeigen: " + JSON.stringify(lstate.neu));
   assert(/Stufe 2 von 5/.test(lstate.lernt.txt) && /2 richtig/.test(lstate.lernt.txt) && lstate.lernt.an === 2,
     "Info-Karte: Lernstand (Stufe, Bilanz, 2 Punkte aktiv) fehlt: " + JSON.stringify(lstate.lernt));
+  assert(lstate.neu.letzte && lstate.neu.nachWp && lstate.lernt.letzte,
+    "Info-Karte: Lernstand muss unten stehen (letztes Element, direkt nach dem Wikipedia-Block): " + JSON.stringify(lstate));
 
   // Quiz-Juice: celebrate() feuert Vibration + Feuerwerk (Ring, Blätter/Blüten/Funken,
   // zweite Welle bei Stärke 2); Quiz-Optionen fahren gestaffelt ein, richtig poppt.
@@ -2293,7 +2378,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand, kein Duell, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON-Links lesbar, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast, Lernserie/Tagesziel, Herbarium, XP-Ränge + Combo, Stufe 5 (Rang-Popover, Container Queries).");
+  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand, kein Duell, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON-Links lesbar, Banner übernimmt Profil/Modus, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter, Galerie mit mehreren Ansichten – Commons-Kandidaten sofort, Artikelbilder nachgeladen, Wischen), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast, Lernserie/Tagesziel, Herbarium, XP-Ränge + Combo, Stufe 5 (Rang-Popover, Container Queries).");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });

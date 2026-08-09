@@ -79,6 +79,11 @@ input,select{font-family:inherit; color:inherit}
 .photobox{margin:16px auto 4px; max-width:520px; text-align:center}
 .ph-img{max-width:100%; max-height:46vh; border-radius:6px; border:1px solid var(--rule-strong);
   box-shadow:0 1px 3px var(--shadow); background:var(--surface-2); display:block; margin:0 auto}
+/* Hinweis auf die Galerie: mehrere Ansichten derselben Art (Habitus, Blatt, Blüte …) */
+.ph-wrap{position:relative; display:inline-block; max-width:100%}
+.ph-more{position:absolute; right:8px; bottom:8px; pointer-events:none;
+  padding:3px 8px; border-radius:999px; font-family:var(--mono); font-size:10.5px; letter-spacing:.04em;
+  color:#fff; background:rgba(20,28,22,.62); backdrop-filter:blur(3px)}
 .ph-load{padding:44px 16px; border:1px dashed var(--rule-strong); border-radius:6px; color:var(--ink-faint);
   font-size:13.5px; background:var(--surface-2)}
 .ph-src{margin-top:7px; font-size:11.5px; color:var(--ink-faint); line-height:1.5}
@@ -1080,8 +1085,9 @@ body.stagefull #stage>.sessionbar{
 .rkp-row .r-n{font-family:var(--serif); font-style:italic; flex:1}
 .rkp-row .r-x{font-family:var(--mono); font-size:11px}
 .rk-name{cursor:pointer; text-decoration:underline dotted var(--rule-strong); text-underline-offset:3px}
-/* Lernstand in der Info-Karte: Stufe, Fälligkeit, Bilanz auf einen Blick */
-.lstate{display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin:10px 0 2px; padding:8px 11px;
+/* Lernstand in der Info-Karte: Stufe, Fälligkeit, Bilanz auf einen Blick.
+   Sitzt am Fuß der Karte – oben steht die Pflanze, unten der eigene Stand. */
+.lstate{display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin:14px 0 0; padding:8px 11px;
   border:1px solid var(--rule); border-radius:10px; background:var(--surface-2);
   font-family:var(--mono); font-size:11.5px; color:var(--ink-soft)}
 .lstate.fest{border-color:var(--green); background:var(--green-tint)}
@@ -4341,7 +4347,7 @@ function renderWiki(host, d){
    Wappen, Logos und Schadbilder fliegen raus; botanische Tafeln bleiben – beim
    Nachschlagen sind sie hilfreich (anders als im Bilder-Quiz). */
 function wikiGallery(title){
-  return jsonpGet("https://de.wikipedia.org/w/api.php?action=query&format=json&generator=images"+
+  return jsonp("https://de.wikipedia.org/w/api.php?action=query&format=json&generator=images"+
       "&gimlimit=20&redirects=1&prop=imageinfo&iiprop=url%7Cmime&iiurlwidth=1200&titles="+
       encodeURIComponent(title))
     .then(d=>{
@@ -4374,37 +4380,85 @@ function closeLightbox(){
   if(lbReturnFocus && lbReturnFocus.focus){ try{ lbReturnFocus.focus(); }catch(e){} }
   lbReturnFocus=null;
 }
-let lbList=[], lbIdx=0;
+let lbList=[], lbIdx=0, lbToken=0;
+/* Pfeile und Zähler entstehen erst, wenn es wirklich mehrere Bilder gibt – auch
+   nachträglich: Der Bilder-Quiz holt die Bilder eines Wikipedia-Artikels erst,
+   wenn jemand die Großansicht öffnet (siehe photoGalLoader). */
+function lbSync(){
+  const sc=document.querySelector(".lbscrim"); if(!sc) return;
+  const img=sc.querySelector(".lb-img");
+  if(lbList.length>1 && !sc.querySelector(".lb-nav")){
+    img.insertAdjacentHTML("beforebegin", `<button class="lb-nav prev" aria-label="Vorheriges Bild">‹</button>`);
+    img.insertAdjacentHTML("afterend", `<button class="lb-nav next" aria-label="Nächstes Bild">›</button>`+
+      `<div class="lb-count" aria-live="polite"></div>`);
+  }
+  const z=sc.querySelector(".lb-count"); if(z) z.textContent = `${lbIdx+1} / ${lbList.length}`;
+}
 function lbShow(i){
   const sc=document.querySelector(".lbscrim"); if(!sc || !lbList.length) return;
   lbIdx = (i%lbList.length + lbList.length) % lbList.length;
   const it = lbList[lbIdx], img = sc.querySelector(".lb-img");
   const big = lbBig(it.src);
   img.onerror = big!==it.src ? (()=>{ img.onerror=null; img.src=it.src; }) : null;
-  img.src = big; img.alt = it.file || "Bild";
-  const z = sc.querySelector(".lb-count"); if(z) z.textContent = `${lbIdx+1} / ${lbList.length}`;
+  img.src = big; img.alt = it.label || it.file || "Bild";
+  lbSync();
 }
-function openLightbox(src, alt, list, start){
+function lbLoad(loader){                                 // Galerie nachladen, während die Großansicht schon offen ist
+  if(typeof loader!=="function") return;
+  const token = lbToken;
+  Promise.resolve().then(loader).then(list=>{
+    if(token!==lbToken || !document.querySelector(".lbscrim")) return;   // inzwischen geschlossen/neu geöffnet
+    if(!Array.isArray(list) || !list.length) return;
+    const seen = new Set(lbList.map(i=>i.src));
+    const add = list.filter(i=>i && i.src && !seen.has(i.src));
+    if(!add.length) return;
+    lbList = lbList.concat(add);
+    lbSync();
+  }).catch(()=>{});                                      // ohne Netz bleibt es beim einen Bild
+}
+/* Wischen (Handy/Tablet): einen Finger nach links = nächstes Bild, nach rechts =
+   vorheriges. Bewusst OHNE touch-action:none – so bleibt Zwei-Finger-Zoom im Bild
+   erhalten (Blattadern ansehen!); Mehrfinger-Gesten lassen wir daher in Ruhe.
+   Wer gewischt hat, schließt nicht versehentlich: der folgende Klick wird verworfen. */
+let lbSwiped=false;
+function lbSwipe(sc){
+  let x0=0, y0=0, multi=false;
+  sc.addEventListener("touchstart", e=>{
+    multi = e.touches.length>1;                        // Pinch-Zoom → nicht blättern
+    if(multi) return;
+    const t=e.touches[0]; x0=t.clientX; y0=t.clientY; lbSwiped=false;
+  }, {passive:true});
+  sc.addEventListener("touchmove", e=>{
+    if(multi || e.touches.length>1) return;
+    if(Math.abs(e.touches[0].clientX-x0) > 12) lbSwiped=true;
+  }, {passive:true});
+  sc.addEventListener("touchend", e=>{
+    const t = e.changedTouches && e.changedTouches[0];
+    if(multi || !t || lbList.length<2) return;
+    const dx=t.clientX-x0, dy=t.clientY-y0;
+    if(Math.abs(dx)<40 || Math.abs(dx) < Math.abs(dy)*1.2) return;   // zu kurz oder eher senkrecht
+    lbShow(lbIdx + (dx<0 ? 1 : -1));                                 // nach links wischen = weiter
+  }, {passive:true});
+}
+function openLightbox(src, alt, list, start, loader){
   closeLightbox();
-  lbReturnFocus=document.activeElement;
-  lbList = Array.isArray(list) && list.length ? list.slice() : [{src, file:alt||""}];
+  lbReturnFocus=document.activeElement; lbToken++; lbSwiped=false;
+  lbList = Array.isArray(list) && list.length ? list.slice() : [{src, label:alt||""}];
   lbIdx = Math.max(0, Math.min(lbList.length-1, start||0));
   const sc=el("div","lbscrim");
   sc.setAttribute("role","dialog"); sc.setAttribute("aria-modal","true"); sc.setAttribute("aria-label","Bild vergrößert");
-  const many = lbList.length>1;
-  sc.innerHTML=`<button class="lb-x" aria-label="Schließen">×</button>
-    ${many?`<button class="lb-nav prev" aria-label="Vorheriges Bild">‹</button>`:""}
-    <img class="lb-img" src="" alt="">
-    ${many?`<button class="lb-nav next" aria-label="Nächstes Bild">›</button>
-    <div class="lb-count" aria-live="polite"></div>`:""}`;
+  sc.innerHTML=`<button class="lb-x" aria-label="Schließen">×</button><img class="lb-img" src="" alt="">`;
   sc.addEventListener("click",e=>{
+    if(lbSwiped){ lbSwiped=false; return; }             // Wisch-Geste, kein Klick
     if(e.target.closest(".lb-nav.prev")) return lbShow(lbIdx-1);
     if(e.target.closest(".lb-nav.next")) return lbShow(lbIdx+1);
     if(e.target===sc || e.target.closest(".lb-x")) closeLightbox();
   });
   document.body.appendChild(sc);
+  lbSwipe(sc);
   lbShow(lbIdx);
   sc.querySelector(".lb-x").focus();
+  lbLoad(loader);
 }
 document.addEventListener("keydown",e=>{                // Capture: Esc gilt zuerst der Lightbox, nicht dem Modal dahinter
   if(!document.querySelector(".lbscrim")) return;
@@ -4413,12 +4467,12 @@ document.addEventListener("keydown",e=>{                // Capture: Esc gilt zue
     e.stopPropagation(); e.preventDefault(); lbShow(lbIdx + (e.key==="ArrowRight"?1:-1));
   }
 }, true);
-function lbWire(img, label, list){                       // Bild anklick- UND tastaturbedienbar machen
+function lbWire(img, label, list, loader){               // Bild anklick- UND tastaturbedienbar machen
   if(!img) return;
   img.classList.add("lb-zoom");
   img.setAttribute("role","button"); img.tabIndex=0;
   img.setAttribute("aria-label", label||"Bild vergrößern");
-  const go=()=>openLightbox(img.currentSrc||img.src, img.alt, list, 0);
+  const go=()=>openLightbox(img.currentSrc||img.src, img.alt, list, 0, loader);
   img.addEventListener("click",go);
   img.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); } });
 }
@@ -4652,20 +4706,22 @@ function commonsScore(file, card){
 function pickCommons(d, card){                        // bester Treffer der Commons-Suche
   const pg = (d && d.query && d.query.pages) || null; if(!pg) return null;
   const list = Object.keys(pg).map(k=>pg[k]).sort((a,b)=>(a.index||0)-(b.index||0));
-  let best = null, bestScore = -1;
-  for(const p of list){
+  const ok = [];
+  list.forEach((p, i)=>{
     const file = String(p.title||"").replace(/^File:/i,"").replace(/^Datei:/i,"");
-    const ii = p.imageinfo && p.imageinfo[0]; if(!ii || !(ii.thumburl||ii.url)) continue;
-    if(ii.mime && (!/^image\//i.test(ii.mime) || /djvu/i.test(ii.mime))) continue;   // PDF/DjVu-Buchscans: Vorschau = Buchdeckel
-    if(!usablePhoto(file) || looksIllustration(file) || looksDamage(file) || fileMentionsOther(file, card)) continue;
-    const sc = commonsScore(file, card);
-    if(sc > bestScore){                               // Gleichstand → der zuerst gelistete (Relevanz der Suche)
-      bestScore = sc;
-      best = { thumb: ii.thumburl || ii.url, file, title: norm(card.g+" "+card.a),
-               url: ii.descriptionurl || ("https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(file)), src:"cm" };
-    }
-  }
-  return best;
+    const ii = p.imageinfo && p.imageinfo[0]; if(!ii || !(ii.thumburl||ii.url)) return;
+    if(ii.mime && (!/^image\//i.test(ii.mime) || /djvu/i.test(ii.mime))) return;   // PDF/DjVu-Buchscans: Vorschau = Buchdeckel
+    if(!usablePhoto(file) || looksIllustration(file) || looksDamage(file) || fileMentionsOther(file, card)) return;
+    ok.push({ thumb: ii.thumburl || ii.url, file, i, sc: commonsScore(file, card),
+              url: ii.descriptionurl || ("https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(file)) });
+  });
+  if(!ok.length) return null;
+  ok.sort((a,b)=> b.sc-a.sc || a.i-b.i);              // Gleichstand → der zuerst gelistete (Relevanz der Suche)
+  const best = ok[0];
+  // Die übrigen geprüften Treffer sind weitere Ansichten DERSELBEN Art – sie kosten
+  // keinen zusätzlichen Abruf und werden zur Galerie in der Großansicht (max. 6).
+  return { thumb: best.thumb, file: best.file, title: norm(card.g+" "+card.a),
+           url: best.url, src:"cm", gal: ok.slice(0,6).map(o=>o.thumb) };
 }
 async function wikiPhoto(card){                        // → {thumb,title,file,url,src} | null
   let answered = false, weak = null;                   // weak: Zeichnung/Tafel nur als Notnagel
@@ -4721,6 +4777,21 @@ function photoSrcLine(p){                              // Quellenzeile unter dem
            ` · <a href="${esc(p.url)}" target="_blank" rel="noopener">Wikipedia – ${esc(p.title)}</a>`)+
          `</div>`;
 }
+/* ---------- Galerie im Bilder-Quiz ----------
+   Eine Pflanze zeigt sich selten auf einem Bild vollständig (Habitus, Blatt,
+   Blüte, Frucht) – deshalb lässt sich die Großansicht durchblättern. Die
+   Kandidaten der Commons-Suche liegen ohnehin schon vor (p.gal, kein weiterer
+   Abruf); kam das Bild aus einem Wikipedia-Artikel, holen wir dessen Bilder
+   erst, wenn jemand die Großansicht wirklich öffnet.
+   Bewusst OHNE Dateinamen: die stehen sonst im alt-Text und verraten die Lösung. */
+function photoGalList(p){
+  const urls = (p && p.gal && p.gal.length) ? p.gal : (p && p.thumb ? [p.thumb] : []);
+  return urls.map((u,i)=>({ src:u, label:`Bild ${i+1} der gesuchten Pflanze` }));
+}
+function photoGalLoader(p){
+  if(!p || p.src!=="wp" || !p.title) return null;
+  return ()=>wikiGallery(p.title).then(l=>l.map(it=>({ src:it.src, label:"Weiteres Bild der gesuchten Pflanze" })));
+}
 function photoNotice(html){
   $("#stage").innerHTML = sessionBar() + `<div class="ph-note">${html}</div>`;
   const stop=$("#btnStop"); if(stop) stop.onclick=finishSession;
@@ -4755,12 +4826,15 @@ async function renderPhoto(){
     return;
   }
   photoMisses = 0;
+  const gal = photoGalList(p), viele = gal.length>1;
   $("#stage").querySelector(".photobox").innerHTML =
-    `<img class="ph-img" id="phImg" src="${esc(p.thumb)}" alt="Bild der gesuchten Pflanze">`;
+    `<div class="ph-wrap"><img class="ph-img" id="phImg" src="${esc(p.thumb)}" alt="Bild der gesuchten Pflanze">`+
+    (viele ? `<span class="ph-more">${gal.length} Bilder</span>` : "")+`</div>`;
   const img=$("#phImg");
   if(img) img.onerror=()=>{ const b=$("#stage").querySelector(".photobox");
     if(b) b.innerHTML=`<div class="ph-load">Bild konnte nicht geladen werden.</div>`; };
-  lbWire(img, "Bild vergrößern");                       // antippen/Enter → Lightbox mit größerem Bild
+  // antippen/Enter → Großansicht; mehrere Ansichten derselben Art als Galerie
+  lbWire(img, viele ? "Bilder ansehen" : "Bild vergrößern", gal, photoGalLoader(p));
   if(photoAnswer==="exam")      renderPhotoExam(p);
   else if(photoAnswer==="type") renderPhotoType(p);
   else                          renderPhotoChoice(p);
@@ -4958,7 +5032,6 @@ function openInfo(card){
        ${card.de?`<div class="mh-de">${esc(card.de)}</div>`:""}
        ${fam?`<div class="mh-fam">${esc(fam)}</div>`:""}
      </div>
-     ${learnStateHTML(card)}
      ${etyHTML}
      <div class="srcblock">
        <div class="srclabel">Nachschlagen · öffnet neuen Tab</div>
@@ -4968,6 +5041,7 @@ function openInfo(card){
        <button class="btn primary" id="wpLoad" title="Kurztext und Bild von der deutschen Wikipedia laden (nur online)">${ico("globe")}Online-Infos laden (Wikipedia)</button>
        <div class="wphost" id="wpHost"></div>
      </div>
+     ${learnStateHTML(card)}
    </div>`;
   document.body.appendChild(scrim); infoEl=scrim;
   scrim.addEventListener("click", e=>{ if(e.target===scrim) closeInfo(); });
