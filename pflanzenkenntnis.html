@@ -324,7 +324,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .infobox .etym>summary::-webkit-details-marker{display:none}
 .infobox .etym>summary:hover{color:var(--green-deep)}
 .infobox .etym[open]>summary{border-bottom:1px solid var(--rule); color:var(--green-deep)}
-.infobox .etym .etym-ic{font-size:12px; margin-right:5px}
+.infobox .etym .etym-ic{width:14px; height:14px; margin-right:5px; vertical-align:-2px}
 .infobox .etym-list{margin:0; padding:10px 15px 6px 30px; display:flex; flex-direction:column; gap:5px}
 .infobox .etym-list li{font-family:var(--serif); font-size:14.5px; color:var(--ink); line-height:1.35}
 .infobox .etym-list li i{color:var(--green-deep)}
@@ -818,6 +818,9 @@ body{overflow-x:clip}
     #currentSelList .pvrow{flex-wrap:wrap}
   }
 }
+/* Icon-Schutzregel: :where() hat Spezifität 0 – jede vorhandene Regel gewinnt,
+   aber ein SVG ohne eigene Maße wuchert nicht mehr auf volle Breite. */
+:where(svg.ic){width:16px; height:16px; flex:none}
 </style>
 </head>
 <body>

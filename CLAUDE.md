@@ -1546,6 +1546,19 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       beide Modale, Script/Style ausgenommen), Status-Chips tragen `svg.ic`,
       ℹ öffnet die Stufen-Leiter, Herbarium verweist darauf. Screenshots verifiziert.
 
+- [x] **Icon-Größen repariert (Folgefehler des Emoji-Austauschs).** Nutzer-Screenshot:
+      In der Info-Karte füllte das Buch-Symbol den halben Dialog. Ursache: Die Klassen
+      `.etym-ic`, `.duel-ic`, `.is-ic` stammten aus Emoji-Zeiten und steuerten die Größe
+      über `font-size` – ein SVG ohne `width`/`height` dehnt sich dort auf die volle
+      Breite. Behoben in `learn.html` **und** `template.html` (Info-Karte steckt in
+      beiden Werkzeugen): feste Maße bzw. Innenabstand statt Schriftgröße. Zusätzlich
+      eine **Schutzregel mit Null-Spezifität** `:where(svg.ic){width:16px;height:16px;
+      flex:none}` – jede vorhandene Regel gewinnt weiterhin, aber ein Icon ohne eigene
+      Maße kann nicht mehr wuchern. `tests/learn.mjs` misst jetzt **alle** `svg.ic` in
+      Startansicht, Info-Karte und Intro und schlägt an, sobald eines über 40 px wächst.
+      *Lehre:* Nach einem Symbol-Austausch jede betroffene Ansicht erneut öffnen – der
+      Fehler lag in einem Dialog, den ich nach dem Umbau nicht noch einmal geprüft hatte.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein
