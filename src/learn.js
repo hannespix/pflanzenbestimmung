@@ -10,6 +10,30 @@
 /* ---------- Helfer ---------- */
 const $ = s => document.querySelector(s);
 const el = (t,c) => { const e=document.createElement(t); if(c) e.className=c; return e; };
+/* ---------- Icon-Set (statt bunter Emojis) ----------
+   Schlichte Strichzeichnungen im Stil der übrigen Icons: currentColor, 1.8er
+   Strich, quadratisch. So bleibt die Oberfläche ruhig und professionell –
+   Emojis werden je nach Gerät bunt und uneinheitlich gerendert. */
+const ICONS = {
+  leaf:   `<path d="M4 20c0-9 6-14 15-15 1 10-4 16-13 16"/><path d="M6 18c3-4 6-7 10-9"/>`,
+  flame:  `<path d="M12 21c-3.3 0-6-2.4-6-5.6 0-2.2 1.2-3.9 2.3-5.3.8-1 1.6-1.9 1.9-3 .8.9 1.2 1.7 1.3 2.7 0 .5 0 1-.2 1.6.9-.6 1.5-1.4 1.6-2.6C15.3 9.1 18 11.2 18 14.4c0 3.2-2.7 5.6-6 5.6z"/>`,
+  sprout: `<path d="M12 21v-7"/><path d="M12 14c-4 0-6-2.5-6-6 3.6 0 6 2 6 6z"/><path d="M12 14c0-4 2.4-6.5 6-6.5 0 3.8-2.2 6.5-6 6.5z"/>`,
+  info:   `<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r=".9" fill="currentColor" stroke="none"/>`,
+  globe:  `<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 2.5 14.4 0 17M12 3.5c-2.5 2.6-2.5 14.4 0 17"/>`,
+  book:   `<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H19v3H6.5"/>`,
+  image:  `<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 4 3.5 3-2.5 4 3.5"/>`,
+  check:  `<circle cx="12" cy="12" r="8.5"/><path d="M8.2 12.4l2.6 2.6 5-5.4"/>`,
+  cards:  `<rect x="3.5" y="6.5" width="12" height="14" rx="2"/><path d="M8 3.5h10.5a2 2 0 0 1 2 2V16"/>`,
+  keys:   `<rect x="2.5" y="6.5" width="19" height="11" rx="2.5"/><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6 14h12"/>`,
+  list:   `<path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1" fill="currentColor" stroke="none"/>`,
+  sliders:`<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/>`,
+  trophy: `<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.5 4M17 6h2.5a2.5 2.5 0 0 1-2.5 4"/><path d="M12 14v3M9 20h6M10 17h4"/>`
+};
+function ico(name, cls){                       // → <svg> im einheitlichen Strichstil
+  const d = ICONS[name]; if(!d) return "";
+  return `<svg class="ic${cls?" "+cls:""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" `+
+    `stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+}
 const esc = s => (s==null?"":String(s)).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
 const norm = s => (s==null?"":String(s)).replace(/\s+/g," ").trim();
 const deacc = s => (s==null?"":String(s)).normalize("NFD").replace(/[\u0300-\u036f]/g,"");   // akzentfrei (Suche, Adjektiv-Erkennung)
@@ -479,7 +503,7 @@ function grade(card, g){ // g: 'again' | 'hard' | 'good'
   progress[card.key]=p; saveProgress();
   lastStep = { vor, nach:nb, neuFest: vor<4 && nb>=4 };               // für die Stufen-Anzeige der Rückmeldung
   if(lastStep.neuFest){                                              // DER Moment: die Art sitzt jetzt
-    toast(`»${deMain(card)||norm(card.g+" "+card.a)}« sitzt jetzt! 🌿`);
+    toast(`»${deMain(card)||norm(card.g+" "+card.a)}« sitzt jetzt – Stufe 4 von 5.`);
     celebrate($("#fb")||$("#stage")||document.body, 2);
   }
   streakBump();                                // jede bearbeitete Karte zählt fürs Tagesziel
@@ -530,7 +554,7 @@ function streakBump(){
       s.s=(s.s||0)+1; s.b=Math.max(s.b||0, s.s); s.gd=t;
       streakSave(s);
       const stark = (s.s===7 || s.s===30 || s.s===100);   // Meilensteine groß feiern
-      toast(`Tagesziel geschafft – Lernserie: ${s.s} ${s.s===1?"Tag":"Tage"} 🔥`);
+      toast(`Tagesziel geschafft – Lernserie: ${s.s} ${s.s===1?"Tag":"Tage"}`);
       celebrate($("#stage")||document.body, stark?2:1);
       return;
     }
@@ -572,7 +596,7 @@ function xpAdd(n, anchor){                       // Punkte gutschreiben, Rangauf
     const nach=rankOf(o.x).i;
     if(nach>vor && o.r!==nach){                  // neuer Rang: einmalig feiern
       o.r=nach; xpSave(o);
-      toast(`Neuer Rang: ${RANKS[nach].n} 🌱`);
+      toast(`Neuer Rang: ${RANKS[nach].n}`);
       celebrate(anchor||$("#stage")||document.body, 2);
     } else xpSave(o);
     if(sess.active) sess.xp=(sess.xp||0)+n;      // in der Sitzungsleiste mitzählen
@@ -596,7 +620,7 @@ function wireRankPopover(){
   const jetzt=rankOf(xpTotal()).i;
   pop.innerHTML = `<div class="rkp-h">Laufbahn</div>`+
     RANKS.map((r,i)=>`<div class="rkp-row${i===jetzt?" on":""}"><span class="r-n">${esc(r.n)}</span><span class="r-x">ab ${r.x} P.</span></div>`).join("");
-  chip.setAttribute("role","button"); chip.tabIndex=0;
+  if(chip.tagName!=="BUTTON"){ chip.setAttribute("role","button"); chip.tabIndex=0; }
   chip.setAttribute("aria-label","Laufbahn ansehen: alle Ränge und ihre Punktzahlen");
   const zeig=()=>{ try{ pop.togglePopover(); }catch(e){} };
   chip.onclick=zeig;
@@ -1023,26 +1047,23 @@ function renderProgress(){
          <i class="b-lern" style="background:var(--gold)"></i>${lern} am Lernen</span>
        <span title="Noch nie bewertet.">
          <i class="b-neu" style="background:var(--rule-strong)"></i>${neu} neu</span>
+       <button class="legend-i" id="btnHow" aria-label="So wächst dein Fortschritt" title="So wächst dein Fortschritt – die fünf Stufen erklärt">${ico("info")}</button>
      </div>
-     <div class="plegend-note">Jede richtige Antwort bringt eine Art eine Stufe weiter.
-       <b>Ab Stufe 4 »sitzt« sie</b> – bis dahin sind es ab »neu« drei Treffer, verteilt über mehrere Tage.
-       Schon der erste Treffer zählt: die Art wandert von <i>neu</i> zu <i>am Lernen</i>.</div>
      ${(()=>{ const st=streakState(), goal=streakGoal(), done=Math.min(st.n||0, goal);
-       return `<div class="streakrow" id="streakRow" title="Lernserie: an so vielen Tagen in Folge hast du dein Tagesziel erreicht (einstellbar unter Optionen · Tagesziel). Rekord: ${st.b||0} ${(st.b||0)===1?"Tag":"Tage"}.">
-         <span class="sflame${(st.s||0)>0?" on":""}"><svg class="fl" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c-4 0-7-2.9-7-6.7 0-2.6 1.4-4.6 2.7-6.2.9-1.2 1.9-2.3 2.3-3.6.9 1 1.4 2 1.5 3.2 0 .6 0 1.2-.2 1.9 1-.7 1.7-1.7 1.9-3.1C15.6 9 19 11.5 19 15.3 19 19.1 16 22 12 22z"/></svg><b>${st.s||0}</b></span>
-         <span class="sr-l">${(st.s||0)===1?"Tag":"Tage"}-Serie</span>
-         <span class="sr-goal"><i style="width:${Math.round(done/goal*100)}%"></i></span>
-         <span class="sr-n">${done}/${goal} heute</span>
-         <button class="herblink" id="btnHerb" title="Deine Themen-Sammlung: Jedes gemeisterte Thema legt eine gepresste Pflanze ins Herbarium.">🌿 Mein Herbarium</button>
-       </div>`; })()}
-     ${(()=>{ const xp=xpTotal(), r=rankOf(xp);
-       return `<div class="rankrow" id="rankRow" title="Erfahrungspunkte sammelst du mit richtigen Antworten – freies Tippen bringt am meisten, Ankreuzen weniger, die Selbsteinschätzung der Karteikarte am wenigsten.">
-         <span class="rk-name" id="rankName">${esc(r.name)}</span>
-         <span class="rk-bar"><i style="width:${r.pct}%"></i></span>
-         <span class="rk-n">${xp} P.${r.next?` · noch ${r.need} bis ${esc(r.next)}`:` · höchster Rang`}</span>
+       const xp=xpTotal(), r=rankOf(xp);
+       // EINE kompakte Chip-Zeile statt drei Textzeilen: Serie · Tagesziel · Rang · Herbarium
+       return `<div class="statusrow" id="streakRow">
+         <span class="chip flamechip${(st.s||0)>0?" on":""}" title="Lernserie: an so vielen Tagen in Folge hast du dein Tagesziel erreicht. Rekord: ${st.b||0} ${(st.b||0)===1?"Tag":"Tage"}.">
+           <span class="sflame${(st.s||0)>0?" on":""}">${ico("flame")}<b>${st.s||0}</b></span></span>
+         <span class="chip goalchip" title="Heute bearbeitete Karten – ab dem Tagesziel (${goal}) zählt der Tag für die Serie. Einstellbar unter Optionen.">
+           <span class="ring" style="--p:${Math.round(done/goal*100)}"></span><span class="sr-n">${done}/${goal} heute</span></span>
+         <button class="chip rankchip" id="rankName" title="Erfahrungspunkte: freies Tippen bringt am meisten, Ankreuzen weniger, die Karteikarte am wenigsten. ${xp} P.${r.next?` · noch ${r.need} bis ${esc(r.next)}`:""}">
+           ${ico("sprout")}<span class="rk-name">${esc(r.name)}</span><i class="rk-mini"><b style="width:${r.pct}%"></b></i></button>
+         <button class="chip" id="btnHerb" title="Deine Themen-Sammlung: Jedes gemeisterte Thema legt eine gepresste Pflanze ins Herbarium.">${ico("leaf")}Herbarium</button>
        </div>`; })()}`;
   wireRankPopover();
   const hb=$("#btnHerb"); if(hb) hb.onclick=openHerbarium;
+  const bh=$("#btnHow"); if(bh) bh.onclick=openHowModal;
   const due = p.filter(c=>{ const pr=pget(c.key); return !pr.box || !pr.due || pr.due<=todayISO(); }).length;
   const wie = mode==="photo" ? (photoAnswer==="exam" ? "wie in der Prüfung" : DIRS[curDir()].label+" · "+PH_ANSWER[photoAnswer])
                             : DIRS[curDir()].label;
@@ -1052,7 +1073,7 @@ function renderProgress(){
   const go=$("#btnGo");
   if(go){ go.disabled = !p.length; go.textContent = hasProg ? "Weiter lernen" : "Loslegen"; }
   const gh=$("#goHint");
-  if(gh) gh.textContent = p.length ? `${due} Karten heute dran · Übungsform passend zu deinem Lernstand` : "Keine Arten in der aktuellen Auswahl.";
+  if(gh) gh.innerHTML = p.length ? `${ico("cards")}<b>${due}</b> heute dran` : "Keine Arten in der aktuellen Auswahl.";
 }
 
 /* ---------- Kleine Belohnung: Feuerwerk + Haptik bei einem Treffer ----------
@@ -1260,7 +1281,7 @@ function duelMessage(url){
   const modeLabel = mode==="quiz" ? "Quiz" : mode==="photo" ? "Bilder-Quiz" : "Tippen";
   const fr = frNameOf(profileId);
   const zeit = sess.ms ? ` in ${fmtDur(sess.ms)} min` : "";
-  return `🌱 Pflanzen-Lernduell (${modeLabel}${fr?" · "+fr:""})\n`+
+  return `Pflanzen-Lernduell (${modeLabel}${fr?" · "+fr:""})\n`+
     `${who?who+" hat":"Ich habe"} ${sess.correct} von ${sess.done} richtig (${sessAcc()} %)${zeit}. Schaffst du mehr?\n`+
     `Gleiche Karten, gleiche Fragen – tippe den Link:\n${url}`;
 }
@@ -1309,7 +1330,7 @@ function showChallengeBanner(ch){
   const theirAcc = ch.t ? Math.round(ch.s/ch.t*100) : 0;
   const modeLabel = ch.m==="quiz" ? "Quiz" : ch.m==="photo" ? "Bilder-Quiz" : "Tippen";
   const n=(ch.i||[]).length;
-  b.innerHTML = `<div class="duel-ic" aria-hidden="true">🌱</div>
+  b.innerHTML = `<div class="duel-ic">${ico("trophy")}</div>
     <div class="duel-txt">
       <p class="duel-title">${who?esc(who)+" fordert dich heraus!":"Lernduell – Herausforderung"}</p>
       <p class="duel-meta">${modeLabel} · ${esc(frNameOf(ch.p))} · ${esc(nivNameOf(ch.p))} · ${n} Karten · Zielwert <b>${theirAcc} %</b> (${ch.s}/${ch.t} richtig)${ch.z?` · Zeit <b>${fmtDur(ch.z*1000)}</b>`:""}</p>
@@ -1433,9 +1454,9 @@ function finishSession(){
     const who = (ch.n||"").trim() || "Herausforderer";
     const mine = sess.ms||0, theirs = (ch.z||0)*1000;   // Zeit entscheidet nur bei gleicher Quote
     gewonnen = acc>theirAcc || (acc===theirAcc && !!mine && !!theirs && mine<theirs);
-    const verdict = acc>theirAcc ? `<b class="duel-win">Du hast gewonnen! 🎉</b>`
+    const verdict = acc>theirAcc ? `<b class="duel-win">Du hast gewonnen!</b>`
       : acc<theirAcc ? `<b class="duel-lose">Knapp – ${esc(who)} liegt vorn. Nochmal versuchen?</b>`
-      : (mine && theirs && mine<theirs) ? `<b class="duel-win">Gleiche Quote – aber du warst schneller! 🎉</b>`
+      : (mine && theirs && mine<theirs) ? `<b class="duel-win">Gleiche Quote – aber du warst schneller!</b>`
       : (mine && theirs && mine>theirs) ? `<b class="duel-lose">Gleiche Quote – ${esc(who)} war schneller. Revanche?</b>`
       : `<b>Gleichstand!</b>`;
     extra = `<div class="duel-result">
@@ -3006,7 +3027,7 @@ async function loadWiki(card, host, btn){
       if(btn.parentNode) btn.remove();
     } else {                                            // offline/blockiert – nicht cachen, Wiederholung anbieten
       host.innerHTML='<div class="wp-note">Online-Infos konnten nicht geladen werden (offline oder blockiert). Die Links oben funktionieren weiterhin.</div>';
-      btn.disabled=false; btn.textContent="🌐 Erneut versuchen";
+      btn.disabled=false; btn.innerHTML=ico("globe")+" Erneut versuchen";
     }
     return;
   }
@@ -3422,7 +3443,7 @@ function openInfo(card){
   // global – alle folgenden Infokarten öffnen dann zugeklappt (und umgekehrt).
   const etyOpen = store.get(LS_PREFIX+"etyopen")!=="0";
   const etyHTML = ety.length ? `<details class="etym"${etyOpen?" open":""}>
-       <summary><span class="etym-ic" aria-hidden="true">📖</span> Name-Herkunft · Merkhilfe</summary>
+       <summary>${ico("book","etym-ic")} Name-Herkunft · Merkhilfe</summary>
        <ul class="etym-list">${ety.map(p=>`<li><i>${esc(p.t)}</i> — ${esc(p.d)}</li>`).join("")}</ul>
        <div class="etym-note">Kurzherleitung (Latein/Griechisch → Deutsch), kuratiert – ohne Gewähr.</div>
      </details>` : "";
@@ -3440,7 +3461,7 @@ function openInfo(card){
        <div class="srcgrid">${links}</div>
      </div>
      <div class="wpblock">
-       <button class="btn primary" id="wpLoad" title="Kurztext und Bild von der deutschen Wikipedia laden (nur online)">🌐 Online-Infos laden (Wikipedia)</button>
+       <button class="btn primary" id="wpLoad" title="Kurztext und Bild von der deutschen Wikipedia laden (nur online)">${ico("globe")}Online-Infos laden (Wikipedia)</button>
        <div class="wphost" id="wpHost"></div>
      </div>
    </div>`;
@@ -3527,7 +3548,7 @@ function herbCheck(){                                   // neu gemeisterte Theme
     herbData().forEach(([t,e])=>{ if(e.n>0 && e.fest===e.n && !seen.has(t)){ seen.add(t); neu.push(t); } });
     if(neu.length){
       store.set(herbKey(), JSON.stringify([...seen]));
-      toast(`Neues Blatt im Herbarium: ${neu.join(", ")} 🌿`);
+      toast(`Neues Blatt im Herbarium: ${neu.join(", ")}`);
       celebrate($("#stage")||document.body, 2);
     }
     return neu;
@@ -3564,12 +3585,51 @@ function openHerbarium(){
        <div class="mh-bot fam">Mein Herbarium</div>
        <div class="mh-fam">${done}/${rows.length} Themen gemeistert</div>
      </div>
-     <div class="herb-how"><b>So füllt sich dein Herbarium:</b> Ein Thema ist gemeistert, wenn <b>jede</b> Art darin
-       »sitzt« – also Stufe 4 von 5 erreicht hat. Dorthin kommt eine Pflanze mit <b>drei richtigen Antworten</b>
-       (neu → Stufe 2 → 3 → 4), in jedem Modus gleich viel wert. Zwischen den Treffern liegen Pausen, darum
-       wächst der Balken über mehrere Tage. Der grüne Balken auf jeder Karte zeigt, wie weit das Thema ist.</div>
+     <div class="herb-how">${ico("info")}<span>Ein Thema ist gemeistert, wenn <b>jede</b> Art darin »sitzt«.
+       <button class="linklike" id="herbHow">Wie eine Art auf »sitzt« kommt</button></span></div>
      <div class="herbgrid">${cards}</div>
      <div class="famfoot">Jedes gemeisterte Thema legt eine gepresste Pflanze in deine Sammlung – so siehst du auf einen Blick, welche Themen noch Pflege brauchen.</div>
+   </div>`;
+  document.body.appendChild(scrim); infoEl=scrim;
+  scrim.addEventListener("click", e=>{ if(e.target===scrim) closeInfo(); });
+  scrim.querySelector("#infoClose").onclick = closeInfo;
+  const hh=scrim.querySelector("#herbHow"); if(hh) hh.onclick=openHowModal;
+  document.addEventListener("keydown", infoKey);
+  infoReturnFocus = document.activeElement;
+  try{ scrim.querySelector("#infoClose").focus(); }catch(e){}
+}
+
+/* ---------- »So wächst dein Fortschritt« als Grafik statt Textwand ----------
+   Die fünf Stufen als Leiter: Punkte, Kurzlabel, Intervall. Erreichbar über das
+   ℹ an der Fortschritts-Legende, aus dem Herbarium und aus der Erst-Einweisung –
+   so bleibt die Startansicht frei von Erklärabsätzen. */
+const STEP_LABEL = ["neu", "wackelig", "kommt", "sitzt", "sicher"];
+function openHowModal(){
+  closeInfo();
+  const rows = [0,1,2,3,4,5].filter(i=>i>0).map(b=>{
+    const pips=[1,2,3,4,5].map(i=>`<i class="${i<=b?(b>=4?"on fest":"on"):""}"></i>`).join("");
+    return `<div class="how-row${b>=4?" fest":""}">
+      <span class="pips">${pips}</span>
+      <span class="how-lab">${esc(STEP_LABEL[b-1]||"")}</span>
+      <span class="how-int">nach ${BOX_DAYS[b-1]} ${BOX_DAYS[b-1]===1?"Tag":"Tagen"} wieder dran</span>
+    </div>`;
+  }).join("");
+  const scrim = el("div","scrim"); scrim.id="infoScrim";
+  scrim.innerHTML = `<div class="modal howmodal" role="dialog" aria-modal="true" aria-label="So wächst dein Fortschritt">
+     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <div class="modal-head">
+       <div class="mh-bot fam">So wächst dein Fortschritt</div>
+       <div class="mh-fam">Fünf Stufen je Pflanze · ab Stufe 4 gilt sie als gemerkt</div>
+     </div>
+     <div class="howgrid">${rows}</div>
+     <div class="how-legend">
+       <div><span class="hl-ic ok">${ico("check")}</span><span><b>Richtig</b> – eine Stufe weiter</span></div>
+       <div><span class="hl-ic hold">${ico("sliders")}</span><span><b>Fast / unsicher</b> – Stufe bleibt</span></div>
+       <div><span class="hl-ic back">${ico("info")}</span><span><b>Falsch</b> – zurück auf Stufe 1</span></div>
+     </div>
+     <div class="famfoot">Von »neu« sind es <b>drei</b> richtige Antworten bis »sitzt« – in jedem Modus gleich viel wert.
+       Die Pausen dazwischen sind Absicht: So bleiben die Namen dauerhaft hängen. Am ersten Tag ist »sitzt« deshalb
+       normal noch nicht dabei – dass Pflanzen von <i>neu</i> zu <i>am Lernen</i> wandern, ist bereits der Fortschritt.</div>
    </div>`;
   document.body.appendChild(scrim); infoEl=scrim;
   scrim.addEventListener("click", e=>{ if(e.target===scrim) closeInfo(); });
@@ -3578,7 +3638,6 @@ function openHerbarium(){
   infoReturnFocus = document.activeElement;
   try{ scrim.querySelector("#infoClose").focus(); }catch(e){}
 }
-
 /* ---------- Profil-Wechsel ---------- */
 function loadProfile(id){
   if(!(typeof SEEDS!=="undefined" && SEEDS[id])) id = SEEDS && SEEDS["gemuesebau_gaertner"] ? "gemuesebau_gaertner" : Object.keys(SEEDS||{})[0];
@@ -3752,16 +3811,14 @@ function openIntro(auto, onClose){
     <h2 class="intro-h" id="introTtl">So wirst du prüfungsreif</h2>
     <p class="intro-lead">Am einfachsten: <b>»Weiter lernen«</b> – die passende Stufe wird automatisch nach deinem Lernstand gewählt. Wer selbst wählt: die Stufen sind nach Schwierigkeit sortiert, vom Erkennen bis zum freien Schreiben:</p>
     <ol class="intro-steps">
-      <li><span class="is-ic" aria-hidden="true">🖼️</span><div><b>Bilder</b><span class="is-tag">leicht</span><br>Pflanze am Foto erkennen und den richtigen Namen wählen.</div></li>
-      <li><span class="is-ic" aria-hidden="true">✔️</span><div><b>Quiz</b><span class="is-tag">leicht</span><br>Zum deutschen Namen den richtigen botanischen aus vier Optionen wählen.</div></li>
-      <li><span class="is-ic" aria-hidden="true">🗂️</span><div><b>Karteikarten</b><span class="is-tag">mittel</span><br>Selbst abrufen und ehrlich bewerten – Wiederholung nach Plan (Spaced Repetition).</div></li>
+      <li>${ico("image","is-ic")}<div><b>Bilder</b><span class="is-tag">leicht</span><br>Pflanze am Foto erkennen und den richtigen Namen wählen.</div></li>
+      <li>${ico("check","is-ic")}<div><b>Quiz</b><span class="is-tag">leicht</span><br>Zum deutschen Namen den richtigen botanischen aus vier Optionen wählen.</div></li>
+      <li>${ico("cards","is-ic")}<div><b>Karteikarten</b><span class="is-tag">mittel</span><br>Selbst abrufen und ehrlich bewerten – Wiederholung nach Plan (Spaced Repetition).</div></li>
       <li><span class="is-ic" aria-hidden="true">⌨️</span><div><b>Tippen</b><span class="is-tag">prüfungsnah</span><br>Jedes bewertete Feld frei schreiben (Gattung, Art, Familie) – mit Punkten, wie in der Prüfungstabelle.</div></li>
     </ol>
-    <p class="intro-tip"><span aria-hidden="true">⚙️</span> Jede Stufe kannst du unter <b>»Optionen«</b> feiner einstellen: was gefragt wird – vom <b>deutschen Namen</b> allein bis zur prüfungsechten Abfrage von <b>Gattung, Art und Familie</b> (Felder einzeln wählbar) – dazu Lernstoff, ZP-Filter und Sitzungslänge.</p>
-    <p class="intro-tip"><span aria-hidden="true">🌱</span> <b>So wächst dein Fortschritt:</b> Jede richtige Antwort bringt eine Pflanze
-      eine Stufe weiter – nach jeder Antwort siehst du, auf welcher Stufe sie steht. <b>Ab Stufe 4 »sitzt« sie</b> (ab »neu« drei
-      Treffer, mit Pausen dazwischen – so merkt man sich Namen dauerhaft). Erwarte am ersten Tag also kein »sitzt«: Dass Pflanzen
-      von <i>neu</i> zu <i>am Lernen</i> wandern, deine Punkte steigen und die Lernserie 🔥 läuft, ist schon der Erfolg.</p>
+    <p class="intro-tip">${ico("sliders")} Jede Stufe kannst du unter <b>»Optionen«</b> feiner einstellen: was gefragt wird – vom <b>deutschen Namen</b> allein bis zur prüfungsechten Abfrage von <b>Gattung, Art und Familie</b> (Felder einzeln wählbar) – dazu Lernstoff, ZP-Filter und Sitzungslänge.</p>
+    <p class="intro-tip">${ico("sprout")} <b>Fortschritt:</b> Jede richtige Antwort bringt eine Pflanze eine Stufe weiter –
+      ab Stufe 4 »sitzt« sie. <button class="linklike" id="introHow">Die fünf Stufen ansehen</button></p>
     <p class="intro-foot"><b>Ziel:</b> Du benennst Gattung, Art und Familie sicher. Diese Einführung findest du jederzeit über <b>»So funktioniert der Lernpfad«</b> wieder.</p>
     <div class="intro-cta"><button class="btn primary" id="introGo">Los geht's</button></div>
   </div>`;
@@ -3774,6 +3831,7 @@ function openIntro(auto, onClose){
   scrim.addEventListener("click", e=>{ if(e.target===scrim) close(); });
   scrim.querySelector("#introClose").onclick=close;
   scrim.querySelector("#introGo").onclick=close;
+  const ih=scrim.querySelector("#introHow"); if(ih) ih.onclick=()=>{ close(); openHowModal(); };
   document.addEventListener("keydown", key);
   try{ scrim.querySelector("#introGo").focus(); }catch(e){}
 }

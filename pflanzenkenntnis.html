@@ -1198,6 +1198,17 @@ const SEEDS={"baumschule_fachwerker":[["Abies","koreana","Pinaceae","Korea-Tanne
 const $ = s => document.querySelector(s);
 const el = (t,c) => { const e=document.createElement(t); if(c) e.className=c; return e; };
 const esc = s => (s==null?"":String(s)).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+/* Strich-Icons statt bunter Emojis (die werden je nach Gerät unterschiedlich
+   gerendert und wirken unprofessionell). Gleicher Stil wie die übrigen Icons. */
+const APPICONS = {
+  globe:`<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 2.5 14.4 0 17M12 3.5c-2.5 2.6-2.5 14.4 0 17"/>`,
+  book:`<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H19v3H6.5"/>`
+};
+function ico(name, cls){
+  const d = APPICONS[name]; if(!d) return "";
+  return `<svg class="ic${cls?" "+cls:""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" `+
+    `stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+}
 const norm = s => (s==null?"":String(s)).replace(/\s+/g," ").trim();
 const KAT_ORDER = ["Nadelgehölze","Laubgehölze","Gehölze","Kletterpflanzen","Stauden","Gräser","Farne","Zwiebel- und Knollenpflanzen","Ein- und zweijährige","Zimmerpflanzen","Gemüsepflanzen","Gewürzkräuter","Wild- & Beikräuter","Gründüngungspflanzen","Zierpflanzen","Obstgehölze"];
 
@@ -3221,7 +3232,7 @@ async function loadWiki(card, host, btn){
       if(btn.parentNode) btn.remove();
     } else {                                            // offline/blockiert – nicht cachen, Wiederholung anbieten
       host.innerHTML='<div class="wp-note">Online-Infos konnten nicht geladen werden (offline oder blockiert). Die Links oben funktionieren weiterhin.</div>';
-      btn.disabled=false; btn.textContent="🌐 Erneut versuchen";
+      btn.disabled=false; btn.innerHTML=ico("globe")+" Erneut versuchen";
     }
     return;
   }
@@ -3260,7 +3271,7 @@ function openInfo(card){
   // global – alle folgenden Infokarten öffnen dann zugeklappt (und umgekehrt).
   const etyOpen = store.get(LS_PREFIX+"etyopen")!=="0";
   const etyHTML = ety.length ? `<details class="etym"${etyOpen?" open":""}>
-       <summary><span class="etym-ic" aria-hidden="true">📖</span> Name-Herkunft · Merkhilfe</summary>
+       <summary>${ico("book","etym-ic")} Name-Herkunft · Merkhilfe</summary>
        <ul class="etym-list">${ety.map(p=>`<li><i>${esc(p.t)}</i> — ${esc(p.d)}</li>`).join("")}</ul>
        <div class="etym-note">Kurzherleitung (Latein/Griechisch → Deutsch), kuratiert – ohne Gewähr.</div>
      </details>` : "";
@@ -3278,7 +3289,7 @@ function openInfo(card){
        <div class="srcgrid">${links}</div>
      </div>
      <div class="wpblock">
-       <button class="btn primary" id="wpLoad" title="Kurztext und Bild von der deutschen Wikipedia laden (nur online)">🌐 Online-Infos laden (Wikipedia)</button>
+       <button class="btn primary" id="wpLoad" title="Kurztext und Bild von der deutschen Wikipedia laden (nur online)">${ico("globe")}Online-Infos laden (Wikipedia)</button>
        <div class="wphost" id="wpHost"></div>
      </div>
    </div>`;

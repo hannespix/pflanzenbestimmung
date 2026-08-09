@@ -254,21 +254,62 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .pbar .b-neu{background:var(--rule-strong)} .pbar .b-lern{background:var(--gold)} .pbar .b-fest{background:var(--green)}
 .plegend{display:flex; gap:12px; font-family:var(--mono); font-size:10.5px; color:var(--ink-soft); flex-wrap:wrap}
 .plegend i{display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:5px; vertical-align:middle}
-/* Lernserie + Tagesziel: Flamme (an, sobald die Serie läuft) + Ziel-Balken für heute */
-.streakrow{display:flex; align-items:center; gap:8px; margin-top:10px; font-family:var(--mono); font-size:11.5px; color:var(--ink-soft); flex-wrap:wrap}
-.sflame{display:inline-flex; align-items:center; gap:3px; color:var(--rule-strong)}
-.sflame.on{color:#d0862f; filter:drop-shadow(0 0 6px rgba(208,134,47,.45))}
-.sflame .fl{width:16px; height:16px}
-.sflame b{font-size:14.5px; color:var(--ink)}
-.sr-goal{flex:1; height:6px; background:var(--surface-2); border:1px solid var(--rule); border-radius:99px; overflow:hidden; min-width:70px}
-.sr-goal i{display:block; height:100%; background:linear-gradient(90deg,var(--gold),#d0862f); border-radius:99px; transition:width .45s cubic-bezier(.2,.8,.3,1)}
+/* Kompakte Status-Chips (Serie · Tagesziel · Rang · Herbarium) – eine Zeile statt drei */
+.statusrow{display:flex; align-items:center; gap:8px; margin-top:10px; flex-wrap:wrap}
+.chip{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--rule-strong);
+  background:var(--surface-2); color:var(--ink-soft); border-radius:99px; padding:5px 11px;
+  font-family:var(--mono); font-size:11px; cursor:default; min-height:32px}
+button.chip{cursor:pointer}
+button.chip:hover{background:var(--green-tint); border-color:var(--green); color:var(--green-deep)}
+.chip .ic{width:15px; height:15px; flex:none}
+.sflame{display:inline-flex; align-items:center; gap:4px; color:var(--rule-strong)}
+.sflame.on{color:#d0862f}
+.sflame .ic{fill:currentColor; stroke:none}
+.sflame b{font-size:13px; color:var(--ink)}
+.flamechip.on{border-color:#d0862f55}
+/* Tagesziel als kleiner Ring (Konisch-Verlauf) statt Balken + Text */
+.ring{width:15px; height:15px; border-radius:50%; flex:none;
+  background:conic-gradient(var(--gold) calc(var(--p,0)*1%), var(--rule) 0);
+  -webkit-mask:radial-gradient(circle, transparent 45%, #000 47%); mask:radial-gradient(circle, transparent 45%, #000 47%)}
+.rankchip .rk-name{font-family:var(--serif); font-style:italic; font-size:13px; color:var(--green-deep)}
+.rk-mini{display:inline-block; width:26px; height:4px; border-radius:99px; background:var(--rule); overflow:hidden}
+.rk-mini b{display:block; height:100%; background:var(--green); border-radius:99px}
 .herblink{border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--green-deep);
   border-radius:99px; padding:5px 12px; font-family:var(--mono); font-size:11px; cursor:pointer; min-height:32px}
 .herblink:hover{background:var(--green-tint); border-color:var(--green)}
-/* Erklärt die Fortschritts-Legende direkt (Tooltips sieht man am Handy nicht) */
-.plegend-note{font-size:11.5px; line-height:1.5; color:var(--ink-soft); margin-top:8px;
-  border-left:2px solid var(--rule-strong); padding-left:9px}
-.plegend-note b{color:var(--green-deep)}
+/* ℹ neben der Legende öffnet die grafische Stufen-Erklärung (kein Erklärabsatz mehr) */
+.legend-i{border:0; background:none; color:var(--sepia); cursor:pointer; padding:2px; line-height:0;
+  border-radius:50%; opacity:.8}
+.legend-i:hover{opacity:1; color:var(--green-deep)}
+.legend-i .ic{width:15px; height:15px}
+/* Text-Knopf, der wie ein Link aussieht (öffnet Modale statt Text auszuklappen) */
+.linklike{border:0; background:none; padding:0; cursor:pointer; color:var(--green-deep);
+  font:inherit; text-decoration:underline; text-underline-offset:2px}
+.linklike:hover{color:var(--green)}
+/* Icons in Knöpfen/Zeilen sauber ausrichten */
+.btn .ic,.herblink .ic,.goHint .ic,#goHint .ic{width:16px; height:16px; flex:none}
+#goHint{display:inline-flex; align-items:center; gap:7px}
+#goHint b{color:var(--ink); font-size:15px}
+.herblink{display:inline-flex; align-items:center; gap:6px}
+.intro-tip .ic,.herb-how .ic{width:16px; height:16px; flex:none; color:var(--sepia)}
+/* Stufen-Erklärung als Leiter (ersetzt drei Textabsätze) */
+.howmodal{max-width:560px}
+.howgrid{display:grid; gap:8px; margin:14px 0 4px}
+.how-row{display:flex; align-items:center; gap:10px; padding:8px 10px; border:1px solid var(--rule);
+  border-radius:10px; background:var(--surface-2)}
+.how-row.fest{border-color:var(--green); background:var(--green-tint)}
+.how-row .pips{display:inline-flex; gap:4px; flex:none}
+.how-row .pips i{width:9px; height:9px; border-radius:50%; background:var(--rule); border:1px solid var(--rule-strong)}
+.how-row .pips i.on{background:var(--gold); border-color:var(--gold)}
+.how-row .pips i.on.fest{background:var(--green); border-color:var(--green)}
+.how-lab{font-family:var(--serif); font-size:14px; flex:1}
+.how-row.fest .how-lab{color:var(--green-deep); font-weight:700}
+.how-int{font-family:var(--mono); font-size:10.5px; color:var(--ink-soft)}
+.how-legend{display:grid; gap:6px; margin:12px 0 2px; font-size:12.5px; color:var(--ink-soft)}
+.how-legend>div{display:flex; align-items:center; gap:8px}
+.hl-ic{line-height:0; flex:none}
+.hl-ic .ic{width:16px; height:16px}
+.hl-ic.ok{color:var(--green)} .hl-ic.hold{color:var(--gold)} .hl-ic.back{color:var(--madder)}
 /* Stufen-Anzeige nach jeder Antwort: fünf Punkte + »noch N× richtig bis sitzt« */
 .stepline{display:flex; align-items:center; justify-content:center; gap:8px; margin-top:10px;
   font-family:var(--mono); font-size:11.5px; color:var(--ink-soft); flex-wrap:wrap}
@@ -296,8 +337,8 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
    Pflanze (SVG, currentColor), »Gemeistert«-Schrägband; Unfertiges bleibt blass */
 .herbmodal{max-width:740px}
 /* Erklärt im Herbarium direkt, wie ein Thema gemeistert wird (nicht erst in der Hilfe) */
-.herb-how{font-size:12.5px; line-height:1.55; color:var(--ink-soft); background:var(--green-tint);
-  border-left:3px solid var(--green); border-radius:0 10px 10px 0; padding:10px 12px; margin:12px 0 2px}
+.herb-how{display:flex; align-items:flex-start; gap:8px; font-size:12.5px; line-height:1.5;
+  color:var(--ink-soft); margin:12px 0 2px}
 .herb-how b{color:var(--green-deep)}
 .herbgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin:14px 0 6px}
 .herbcard{position:relative; background:var(--card); border:1px solid var(--rule-strong); border-radius:12px;
@@ -902,7 +943,9 @@ body.stagefull #stage>.sessionbar{
   .themetoggle{min-height:44px}
   select.mini,input.mini,.listsearch{min-height:44px}
   .switch,.po-ety,label.exf{min-height:44px; align-items:center}
-  .setopts>summary,.choose>summary,.learnnote>summary,.etym>summary{min-height:44px; display:flex; align-items:center}
+  .setopts>summary,.choose>summary,.etym>summary{min-height:44px; display:flex; align-items:center}
+  /* Fließtext-Summary NICHT flexen – sonst stehen die inline-Teile nebeneinander */
+  .learnnote>summary{padding-top:11px; padding-bottom:11px}
   .lc-toggle{min-height:44px}
   .sortbtn,.cattag{min-height:44px; padding-top:9px; padding-bottom:9px}
   .sortbtns,.cattags{gap:10px}
