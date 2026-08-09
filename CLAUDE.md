@@ -1652,6 +1652,31 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Wiederholung statt sofortiger Fehlermeldung, gemerktes »kein Bild« sperrt
       die Art nicht dauerhaft, und pro Sitzung wird trotzdem nur einmal gesucht.
 
+- [x] **Lernduell: die Herausforderung ist wieder genau dieselbe Aufgabe** (v3 des
+      `#c=`-Links). Rückmeldung: Beim Öffnen des eigenen WhatsApp-Links kam im
+      Bilder-Quiz statt »Bild → **voller Name** (botanisch + deutsch)« plötzlich nur
+      der botanische Name. Ursache war die Kodierung: In **v2** steckte die Richtung
+      als **globaler Index in `CH_DIRS`** in nur **zwei Bit** – die später ergänzte
+      fünfte Richtung `img2both` passte dort nicht hinein und wurde beim Teilen
+      **absichtlich auf `img2bot` heruntergestuft** (Kommentar stand so im Code).
+      Ebenso fehlte die **Antwortart** des Bilder-Quiz (Auswahl/Tippen/wie in der
+      Prüfung) – der Empfänger bekam die seines eigenen Geräts.
+      **v3:** Die Richtung wird **je Modus** gezählt (`CH_DIR3`: Text 2, Bild 3
+      Möglichkeiten) – damit reichen die zwei freien Bit im Kopfbyte auch für
+      `img2both`; bei Bild-Lektionen folgt **ein Byte** mit der Antwortart
+      (`CH_PHA`). `chDecode` liest **v3 und v2** (alte geteilte Links bleiben gültig,
+      dort weiterhin global über `CH_DIRS`) sowie die alten v1-JSON-Links. Beim
+      Öffnen wird die **Antwortart vor der Richtung** übernommen – sonst filtert
+      `dirsFor()` `img2both` weg (nur bei »Auswahl« verfügbar) und man landete wieder
+      bei »nur botanisch«. Das Banner nennt jetzt zusätzlich die
+      **Aufgabenstellung** (»Bilder-Quiz (Bild → voller Name) · …«).
+      **Reihenfolge von `CH_PROFILES`, `CH_MODES`, `CH_DIRS` und jetzt auch
+      `DIRS_TEXT`, `DIRS_PHOTO`, `CH_PHA` nicht mehr ändern.**
+      `tests/learn.mjs` prüft Hin-/Rückweg für `img2both`, für `exam` und für die
+      Textmodi, einen **von Hand gebauten v2-Link** (muss weiterhin richtig gelesen
+      werden) und das Öffnen eines »voller Name«-Links (Richtung + Antwortart +
+      Dropdown + Banner-Text).
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein

@@ -2613,8 +2613,17 @@ const CH_PROFILES = [
   "staudengaertnerei_gaertner","staudengaertnerei_fachwerker",
   "zierpflanzenbau_gaertner","zierpflanzenbau_fachwerker"];
 const CH_MODES = ["quiz","type","photo"];
-const CH_DIRS  = ["de2bot","bot2de","img2bot","img2de"];
-const CH_VER   = 2;
+const CH_DIRS  = ["de2bot","bot2de","img2bot","img2de"];   // nur noch zum LESEN alter v2-Links
+/* v3: Die Richtung wird je Modus gezählt (Text: 2, Bild: 3 Möglichkeiten) – so passt
+   auch »Bild → voller Name« (img2both) in die zwei Bit, die im Kopfbyte frei sind.
+   In v2 war der Index global über CH_DIRS, deshalb fiel img2both dort heraus und die
+   Herausforderung kam beim Empfänger als »nur botanisch« an. Zusätzlich wandert bei
+   Bild-Lektionen die Antwortart mit (Auswahl/Tippen/wie in der Prüfung) – sonst ist
+   es nicht dieselbe Aufgabe. Reihenfolge von DIRS_TEXT, DIRS_PHOTO und CH_PHA
+   ebenfalls NICHT mehr ändern. */
+const CH_DIR3  = { quiz:DIRS_TEXT, type:DIRS_TEXT, photo:DIRS_PHOTO };
+const CH_PHA   = ["mc","type","exam"];
+const CH_VER   = 3;
 
 function vPut(out, n){                     // Varint: kleine Zahlen = ein Byte
   n = Math.max(0, Math.round(n));
@@ -2647,9 +2656,11 @@ function b64urlToBytes(s){
   return a;
 }
 function chEncode(o){
-  const pi = CH_PROFILES.indexOf(o.p), mi = Math.max(0, CH_MODES.indexOf(o.m)), di = Math.max(0, CH_DIRS.indexOf(o.r));
+  const pi = CH_PROFILES.indexOf(o.p), mi = Math.max(0, CH_MODES.indexOf(o.m));
+  const dirs = CH_DIR3[o.m] || DIRS_TEXT, di = Math.max(0, dirs.indexOf(o.r));
   const out = [CH_VER, ((pi<0?15:pi)<<4) | (mi<<2) | di];
   if(pi<0){ const s=unescape(encodeURIComponent(o.p||"")); vPut(out,s.length); for(let i=0;i<s.length;i++) out.push(s.charCodeAt(i) & 255); }
+  if(o.m==="photo") out.push(Math.max(0, CH_PHA.indexOf(o.a||"mc")));   // Antwortart gehört zur Aufgabe
   const idx = o.i||[];
   vPut(out, idx.length); idx.forEach(n=>vPut(out,n));
   vPut(out, o.s||0); vPut(out, o.t||0); vPut(out, o.z||0);
@@ -2663,20 +2674,25 @@ function chEncode(o){
 function chDecode(s){
   try{
     const raw = chMask(b64urlToBytes(s));
-    if(raw.length>=4 && raw[0]===CH_VER){
+    const ver = raw[0];
+    if(raw.length>=4 && (ver===3 || ver===2)){           // v2 weiterhin lesen – geteilte Links bleiben gültig
       const n = raw.length-2, sum = chSum(raw, n);
       if(((sum & 255)===raw[n]) && ((sum>>>8)===raw[n+1])){
         const st={i:2}, head=raw[1], pi=head>>>4;
         let p;
         if(pi===15){ const len=vGet(raw,st); let t=""; for(let k=0;k<len;k++) t+=String.fromCharCode(raw[st.i++]); p=decodeURIComponent(escape(t)); }
         else p = CH_PROFILES[pi] || "";
+        const m = CH_MODES[(head>>>2)&3] || "quiz";
+        let a = "mc";
+        if(ver===3 && m==="photo") a = CH_PHA[raw[st.i++]] || "mc";
         const cnt=vGet(raw,st), i=[];
         for(let k=0;k<cnt;k++) i.push(vGet(raw,st));
         const sc=vGet(raw,st), t=vGet(raw,st), z=vGet(raw,st);
         const nl=vGet(raw,st); let nm="";
         for(let k=0;k<nl;k++) nm += String.fromCharCode(raw[st.i++]);
-        const o = { v:CH_VER, p, m:CH_MODES[(head>>>2)&3]||"quiz", r:CH_DIRS[head&3]||"de2bot",
-                    i, s:sc, t, z, n:decodeURIComponent(escape(nm)) };
+        const dirs = CH_DIR3[m] || DIRS_TEXT;
+        const r = ver===3 ? (dirs[head&3] || dirs[0]) : (CH_DIRS[head&3] || "de2bot");
+        const o = { v:ver, p, m, r, a, i, s:sc, t, z, n:decodeURIComponent(escape(nm)) };
         return chPlausible(o) ? o : null;
       }
     }
@@ -2701,10 +2717,10 @@ function nivNameOf(pid){ return /_fachwerker$/.test(pid)?"Fachwerker/in":"Gärtn
 function challengeURL(){                  // aktuelle Sitzung als Herausforderungs-Link kodieren
   const idx = (sess.cards||[]).map(c=>allCards.indexOf(c)).filter(i=>i>=0);
   // z = Denkzeit in Sekunden; ältere Links ohne z werden weiterhin verstanden.
-  // »voller Name« (img2both) passt nicht in die 2-Bit-Richtungskodierung – als
-  // Herausforderung botanisch (img2bot) teilen; die Karten bleiben exakt dieselben.
-  const r = curDir()==="img2both" ? "img2bot" : curDir();
-  const payload = { v:CH_VER, p:profileId, m:mode, r, i:idx, s:sess.correct, t:sess.done,
+  // Seit v3 wandern Richtung (auch »voller Name«) und die Antwortart des Bilder-Quiz
+  // mit – sonst bekäme der Herausgeforderte eine andere Aufgabe als man selbst.
+  const payload = { v:CH_VER, p:profileId, m:mode, r:curDir(), a:photoAnswer, i:idx,
+                    s:sess.correct, t:sess.done,
                     z:Math.round((sess.ms||0)/1000), n:duelName() };
   return location.href.split("#")[0] + "#c=" + chEncode(payload);
 }
@@ -2761,11 +2777,14 @@ function showChallengeBanner(ch){
   const who=(ch.n||"").trim();
   const theirAcc = ch.t ? Math.round(ch.s/ch.t*100) : 0;
   const modeLabel = ch.m==="quiz" ? "Quiz" : ch.m==="photo" ? "Bilder-Quiz" : "Tippen";
+  // Aufgabenstellung mit ansagen – gefragt ist genau dasselbe wie beim Herausforderer
+  const wie = ch.m==="photo" && ch.a==="exam" ? "wie in der Prüfung"
+            : (DIRS[ch.r] ? DIRS[ch.r].label : "");
   const n=(ch.i||[]).length;
   b.innerHTML = `<div class="duel-ic">${ico("trophy")}</div>
     <div class="duel-txt">
       <p class="duel-title">${who?esc(who)+" fordert dich heraus!":"Lernduell – Herausforderung"}</p>
-      <p class="duel-meta">${modeLabel} · ${esc(frNameOf(ch.p))} · ${esc(nivNameOf(ch.p))} · ${n} Karten · Zielwert <b>${theirAcc} %</b> (${ch.s}/${ch.t} richtig)${ch.z?` · Zeit <b>${fmtDur(ch.z*1000)}</b>`:""}</p>
+      <p class="duel-meta">${modeLabel}${wie?" ("+esc(wie)+")":""} · ${esc(frNameOf(ch.p))} · ${esc(nivNameOf(ch.p))} · ${n} Karten · Zielwert <b>${theirAcc} %</b> (${ch.s}/${ch.t} richtig)${ch.z?` · Zeit <b>${fmtDur(ch.z*1000)}</b>`:""}</p>
     </div>
     <div class="duel-cta">
       <button class="btn primary" id="btnAcceptDuel">Herausforderung annehmen</button>
@@ -5496,6 +5515,9 @@ function openIntro(auto, onClose){
     if(ch && ch.p && Array.isArray(ch.i) && ch.i.length && (typeof SEEDS!=="undefined" && SEEDS[ch.p])){
       pendingChallenge = ch; pid = ch.p;
       if(ch.m==="quiz"||ch.m==="type"||ch.m==="photo") mode = ch.m;
+      // Antwortart VOR der Richtung übernehmen: »voller Name« gibt es nur zur Auswahl,
+      // dirsFor() würde ihn sonst wegfiltern (und man bekäme wieder nur botanisch)
+      if(ch.a && PH_ANSWER[ch.a]) photoAnswer = ch.a;
       if(ch.r && DIRS[ch.r]){ if(DIRS_PHOTO.includes(ch.r)) dirPhoto=ch.r; else dirText=ch.r; }
     }
     $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.mode===mode));
