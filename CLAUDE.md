@@ -1608,6 +1608,18 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Wikipedia-Block, `gal` sammelt die geprüften Kandidaten (bester zuerst),
       Zähler/Blättern im Quiz, kein Dateiname im `alt`, und die nachgeladene
       Artikel-Galerie (erst keine Pfeile, danach »1 / 3«).
+      **Nachgereicht: Wischen** (`lbSwipe`, beide Werkzeuge) – ein Finger nach
+      links = nächstes Bild, nach rechts = vorheriges. Bewusst **ohne**
+      `touch-action:none`, damit der **Zwei-Finger-Zoom im Bild** erhalten bleibt
+      (Blattadern!); Mehrfinger-Gesten werden erkannt und in Ruhe gelassen.
+      Schwelle 40 px und »eher waagerecht als senkrecht« (Faktor 1,2), damit ein
+      Antipper oder eine senkrechte Bewegung nicht blättert; `lbSwiped` verwirft
+      den unmittelbar folgenden Klick, sonst schlösse die Großansicht nach jedem
+      Wisch. Listener sind `passive` (kein `preventDefault`), also ohne Scroll-
+      Bremse. Tests simulieren echte `TouchEvent`s: `tests/learn.mjs` (links/
+      rechts/zu kurz, kein Schließen nach dem Wisch) und `tests/smoke.mjs`
+      (gleiche Logik im Prüfungswerkzeug – Schutz gegen Auseinanderdriften der
+      beiden Kopien).
 
 ## Offene Aufgaben (TODO)
 

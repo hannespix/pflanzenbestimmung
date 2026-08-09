@@ -683,13 +683,34 @@ async function main() {
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     const closed = !document.querySelector(".lbscrim");
     const focusBack = document.activeElement === anchor;
-    return { open, xFocused, noPanel, closed, focusBack,
+
+    // Galerie mit mehreren Bildern: Pfeile, Zähler und Wischen (dieselbe Logik wie im Lern-Tool)
+    const px = (f) => "data:image/svg+xml," + encodeURIComponent(
+      "<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><title>" + f + "</title></svg>");
+    openLightbox(px("A"), "A", [{ src: px("A"), file: "A.jpg" }, { src: px("B"), file: "B.jpg" }], 0);
+    const g = document.querySelector(".lbscrim");
+    const zahl = () => (g.querySelector(".lb-count") || {}).textContent || "";
+    const galStart = zahl();
+    const t = g.querySelector(".lb-img");
+    const f = (x, y) => new Touch({ identifier: 1, target: t, clientX: x, clientY: y });
+    const ev = (typ, pts, chg) => t.dispatchEvent(new TouchEvent(typ,
+      { bubbles: true, touches: pts, targetTouches: pts, changedTouches: chg }));
+    ev("touchstart", [f(300, 300)], [f(300, 300)]);
+    ev("touchmove",  [f(120, 306)], [f(120, 306)]);
+    ev("touchend",   [],            [f(120, 306)]);
+    const nachWisch = zahl();
+    g.click();                                       // Klick direkt nach dem Wisch schließt nicht
+    const offenNachWisch = !!document.querySelector(".lbscrim");
+    closeLightbox();
+    return { open, xFocused, noPanel, closed, focusBack, galStart, nachWisch, offenNachWisch,
       derive: lbBig("https://u/commons/thumb/x/Foo.jpg/640px-Foo.jpg") };
   });
   assert(lb.open && lb.xFocused && lb.noPanel,
     "Lightbox muss als eigener Dialog öffnen (Fokus auf ×, kein .scrim-Panel): " + JSON.stringify(lb));
   assert(lb.closed && lb.focusBack, "Esc muss die Lightbox schließen und den Fokus zurückgeben: " + JSON.stringify(lb));
   assert(/\/1600px-Foo\.jpg$/.test(lb.derive), "lbBig muss das größere Commons-Derivat ableiten: " + lb.derive);
+  assert(lb.galStart === "1 / 2" && lb.nachWisch === "2 / 2" && lb.offenNachWisch,
+    "Galerie: Zähler und Wischen müssen auch hier greifen, ohne beim Wisch zu schließen: " + JSON.stringify(lb));
 
   // 8y) Verwaltungs-Menü als Popover (wo die Plattform es kann): Top-Layer, am Knopf
   //     verankert, Light-Dismiss/Esc schließen – der »hidden«-Zustand bleibt in beiden
@@ -764,7 +785,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Smoke-Test OK – Boot, Modul-Modals (öffnen/×/Esc, aktive Buttons), Hilfe + Tooltips, Profilwechsel (148/248), Schema-Matrix, Ziehen, Bogen (offizielle Formulare), Druck-Dialog speichert/aktualisiert Prüfung, Prüfungen (speichern/laden/kopieren/aktualisieren), Prüfungs-JSON-Import (Gerätewechsel), Sicherung mit Profilwechsel, Einstellungen, Vorschau, Info-Karte (ℹ in Liste + Aktueller Prüfung: Namensherleitung, Deep-Links, opt-in Wikipedia, ×/Esc), Persistenz, Mobile-Kopf, Touch-Ziele (≥44px, Zeile wählt an/ab, #gMax breit genug), Bild-Lightbox, Verwaltung als Popover (Top-Layer, Light-Dismiss).");
+  console.log("Smoke-Test OK – Boot, Modul-Modals (öffnen/×/Esc, aktive Buttons), Hilfe + Tooltips, Profilwechsel (148/248), Schema-Matrix, Ziehen, Bogen (offizielle Formulare), Druck-Dialog speichert/aktualisiert Prüfung, Prüfungen (speichern/laden/kopieren/aktualisieren), Prüfungs-JSON-Import (Gerätewechsel), Sicherung mit Profilwechsel, Einstellungen, Vorschau, Info-Karte (ℹ in Liste + Aktueller Prüfung: Namensherleitung, Deep-Links, opt-in Wikipedia, ×/Esc), Persistenz, Mobile-Kopf, Touch-Ziele (≥44px, Zeile wählt an/ab, #gMax breit genug), Bild-Lightbox (Galerie: Pfeile, Zähler, Wischen), Verwaltung als Popover (Top-Layer, Light-Dismiss).");
 }
 
 main().catch((e) => { console.error("Smoke-Test FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });

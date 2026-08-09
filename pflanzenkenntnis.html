@@ -3202,20 +3202,46 @@ function lbLoad(loader){                                 // Galerie nachladen, w
     lbSync();
   }).catch(()=>{});
 }
+/* Wischen (Handy/Tablet): einen Finger nach links = nächstes Bild, nach rechts =
+   vorheriges. Bewusst OHNE touch-action:none – so bleibt Zwei-Finger-Zoom im Bild
+   erhalten; Mehrfinger-Gesten lassen wir daher in Ruhe. Wer gewischt hat, schließt
+   nicht versehentlich: der folgende Klick wird verworfen. */
+let lbSwiped=false;
+function lbSwipe(sc){
+  let x0=0, y0=0, multi=false;
+  sc.addEventListener("touchstart", e=>{
+    multi = e.touches.length>1;
+    if(multi) return;
+    const t=e.touches[0]; x0=t.clientX; y0=t.clientY; lbSwiped=false;
+  }, {passive:true});
+  sc.addEventListener("touchmove", e=>{
+    if(multi || e.touches.length>1) return;
+    if(Math.abs(e.touches[0].clientX-x0) > 12) lbSwiped=true;
+  }, {passive:true});
+  sc.addEventListener("touchend", e=>{
+    const t = e.changedTouches && e.changedTouches[0];
+    if(multi || !t || lbList.length<2) return;
+    const dx=t.clientX-x0, dy=t.clientY-y0;
+    if(Math.abs(dx)<40 || Math.abs(dx) < Math.abs(dy)*1.2) return;
+    lbShow(lbIdx + (dx<0 ? 1 : -1));
+  }, {passive:true});
+}
 function openLightbox(src, alt, list, start, loader){
   closeLightbox();
-  lbReturnFocus=document.activeElement; lbToken++;
+  lbReturnFocus=document.activeElement; lbToken++; lbSwiped=false;
   lbList = Array.isArray(list) && list.length ? list.slice() : [{src, label:alt||""}];
   lbIdx = Math.max(0, Math.min(lbList.length-1, start||0));
   const sc=el("div","lbscrim");
   sc.setAttribute("role","dialog"); sc.setAttribute("aria-modal","true"); sc.setAttribute("aria-label","Bild vergrößert");
   sc.innerHTML=`<button class="lb-x" aria-label="Schließen">×</button><img class="lb-img" src="" alt="">`;
   sc.addEventListener("click",e=>{
+    if(lbSwiped){ lbSwiped=false; return; }             // Wisch-Geste, kein Klick
     if(e.target.closest(".lb-nav.prev")) return lbShow(lbIdx-1);
     if(e.target.closest(".lb-nav.next")) return lbShow(lbIdx+1);
     if(e.target===sc || e.target.closest(".lb-x")) closeLightbox();
   });
   document.body.appendChild(sc);
+  lbSwipe(sc);
   lbShow(lbIdx);
   sc.querySelector(".lb-x").focus();
   lbLoad(loader);
