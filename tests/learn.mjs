@@ -1259,12 +1259,24 @@ async function main() {
       if (EMO.test(e.getAttribute("title"))) treffer.push("title: " + e.getAttribute("title").slice(0, 40));
     });
     const icons = document.querySelectorAll("#progress svg.ic").length;
-    return { treffer, icons };
+    // Kein Icon darf wuchern: Die Klassen stammen teils aus Emoji-Zeiten (font-size
+    // statt width/height) – ohne Maße dehnt sich ein SVG auf die volle Breite.
+    const zuGross = [];
+    const messe = () => document.querySelectorAll("svg.ic").forEach((s) => {
+      const r = s.getBoundingClientRect();
+      if (r.width > 40 || r.height > 40) zuGross.push((s.getAttribute("class") || "ic") + " " + Math.round(r.width) + "x" + Math.round(r.height));
+    });
+    messe();
+    openInfo(allCards[0]); messe(); closeInfo();          // Info-Karte (Buch-Icon im Klapp-Kopf)
+    openIntro(false); messe(); document.querySelector("#introGo").click();
+    return { treffer, icons, zuGross };
   });
   assert(keineEmojis.treffer.length === 0,
     "Keine bunten Emojis in der Oberfläche – gefunden: " + JSON.stringify(keineEmojis.treffer));
   assert(keineEmojis.icons >= 3,
     "Die Status-Chips müssen Strich-Icons (svg.ic) tragen: " + keineEmojis.icons);
+  assert(keineEmojis.zuGross.length === 0,
+    "Kein Icon darf über 40px wachsen (fehlende Maße an einer Emoji-Altklasse): " + JSON.stringify(keineEmojis.zuGross));
   assert(/gemeistert/.test(erklaert.herbHow) && /sitzt/.test(erklaert.herbHow),
     "Im Herbarium muss der Verweis auf die Stufen-Erklärung stehen: " + erklaert.herbHow);
 
