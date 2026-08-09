@@ -821,6 +821,16 @@ body{overflow-x:clip}
 /* Icon-Schutzregel: :where() hat Spezifität 0 – jede vorhandene Regel gewinnt,
    aber ein SVG ohne eigene Maße wuchert nicht mehr auf volle Breite. */
 :where(svg.ic){width:16px; height:16px; flex:none}
+/* Galerie in der Vollbild-Ansicht: Pfeile + Zähler (Tastatur: ← →) */
+.lbscrim .lb-nav{position:absolute; top:50%; transform:translateY(-50%); min-width:48px; min-height:64px;
+  border:1px solid rgba(255,255,255,.24); background:rgba(255,255,255,.10); color:#fff; font-size:30px;
+  line-height:1; border-radius:12px; cursor:pointer; backdrop-filter:blur(6px)}
+.lbscrim .lb-nav:hover{background:rgba(255,255,255,.2)}
+.lbscrim .lb-nav.prev{left:14px} .lbscrim .lb-nav.next{right:14px}
+.lbscrim .lb-count{position:absolute; bottom:16px; left:50%; transform:translateX(-50%); color:#fff;
+  font-family:var(--mono); font-size:12px; background:rgba(0,0,0,.45); border-radius:99px; padding:4px 12px}
+@media (max-width:640px){ .lbscrim .lb-nav{min-width:44px; min-height:56px; font-size:26px}
+  .lbscrim .lb-nav.prev{left:6px} .lbscrim .lb-nav.next{right:6px} }
 </style>
 </head>
 <body>

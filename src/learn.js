@@ -2912,6 +2912,29 @@ function renderWiki(host, d){
     `<div class="wp-src">Quelle: <a href="${esc(d.url)}" target="_blank" rel="noopener">Wikipedia – ${esc(d.title)}</a> · Text unter CC BY-SA</div>`;
   lbWire(host.querySelector("img"), "Vorschaubild vergrößern");
 }
+/* Bilder eines Artikels (für die Galerie in der Vollbild-Ansicht). Karten,
+   Wappen, Logos und Schadbilder fliegen raus; botanische Tafeln bleiben – beim
+   Nachschlagen sind sie hilfreich (anders als im Bilder-Quiz). */
+function wikiGallery(title){
+  return jsonpGet("https://de.wikipedia.org/w/api.php?action=query&format=json&generator=images"+
+      "&gimlimit=20&redirects=1&prop=imageinfo&iiprop=url%7Cmime&iiurlwidth=1200&titles="+
+      encodeURIComponent(title))
+    .then(d=>{
+      const pg = (d && d.query && d.query.pages) || {};
+      return Object.keys(pg).map(k=>pg[k])
+        .filter(p=>{
+          const f = String(p.title||"").replace(/^(File|Datei):/i,"");
+          const ii = p.imageinfo && p.imageinfo[0];
+          if(!ii || !(ii.thumburl||ii.url)) return false;
+          if(ii.mime && !/^image\/(jpeg|png|webp)$/i.test(ii.mime)) return false;   // keine SVG-Icons/PDF
+          return usablePhoto(f) && !looksDamage(f);
+        })
+        .map(p=>{ const ii=p.imageinfo[0];
+          return { src: ii.thumburl||ii.url, file: String(p.title||"").replace(/^(File|Datei):/i,"") }; })
+        .slice(0,12);
+    })
+    .catch(()=>[]);
+}
 /* ---------- Bild-Lightbox (Bild anklicken → groß ansehen) ----------
    Für die Quiz-Fotos und die Wikipedia-Vorschau der Info-Karte. Holt per
    URL-Ableitung ein größeres Commons-Derivat (»…/640px-…« → »…/1600px-…«);
@@ -2926,29 +2949,51 @@ function closeLightbox(){
   if(lbReturnFocus && lbReturnFocus.focus){ try{ lbReturnFocus.focus(); }catch(e){} }
   lbReturnFocus=null;
 }
-function openLightbox(src, alt){
+let lbList=[], lbIdx=0;
+function lbShow(i){
+  const sc=document.querySelector(".lbscrim"); if(!sc || !lbList.length) return;
+  lbIdx = (i%lbList.length + lbList.length) % lbList.length;
+  const it = lbList[lbIdx], img = sc.querySelector(".lb-img");
+  const big = lbBig(it.src);
+  img.onerror = big!==it.src ? (()=>{ img.onerror=null; img.src=it.src; }) : null;
+  img.src = big; img.alt = it.file || "Bild";
+  const z = sc.querySelector(".lb-count"); if(z) z.textContent = `${lbIdx+1} / ${lbList.length}`;
+}
+function openLightbox(src, alt, list, start){
   closeLightbox();
   lbReturnFocus=document.activeElement;
+  lbList = Array.isArray(list) && list.length ? list.slice() : [{src, file:alt||""}];
+  lbIdx = Math.max(0, Math.min(lbList.length-1, start||0));
   const sc=el("div","lbscrim");
   sc.setAttribute("role","dialog"); sc.setAttribute("aria-modal","true"); sc.setAttribute("aria-label","Bild vergrößert");
-  const big=lbBig(src);
+  const many = lbList.length>1;
   sc.innerHTML=`<button class="lb-x" aria-label="Schließen">×</button>
-    <img class="lb-img" src="${esc(big)}" alt="${esc(alt||"Bild vergrößert")}">`;
-  const img=sc.querySelector(".lb-img");
-  if(big!==src) img.onerror=()=>{ img.onerror=null; img.src=src; };   // Derivat fehlt → bekanntes Bild
-  sc.addEventListener("click",e=>{ if(e.target===sc || e.target.closest(".lb-x")) closeLightbox(); });
+    ${many?`<button class="lb-nav prev" aria-label="Vorheriges Bild">‹</button>`:""}
+    <img class="lb-img" src="" alt="">
+    ${many?`<button class="lb-nav next" aria-label="Nächstes Bild">›</button>
+    <div class="lb-count" aria-live="polite"></div>`:""}`;
+  sc.addEventListener("click",e=>{
+    if(e.target.closest(".lb-nav.prev")) return lbShow(lbIdx-1);
+    if(e.target.closest(".lb-nav.next")) return lbShow(lbIdx+1);
+    if(e.target===sc || e.target.closest(".lb-x")) closeLightbox();
+  });
   document.body.appendChild(sc);
+  lbShow(lbIdx);
   sc.querySelector(".lb-x").focus();
 }
 document.addEventListener("keydown",e=>{                // Capture: Esc gilt zuerst der Lightbox, nicht dem Modal dahinter
-  if(e.key==="Escape" && document.querySelector(".lbscrim")){ e.stopPropagation(); e.preventDefault(); closeLightbox(); }
+  if(!document.querySelector(".lbscrim")) return;
+  if(e.key==="Escape"){ e.stopPropagation(); e.preventDefault(); return closeLightbox(); }
+  if(lbList.length>1 && (e.key==="ArrowLeft"||e.key==="ArrowRight")){    // Galerie blättern
+    e.stopPropagation(); e.preventDefault(); lbShow(lbIdx + (e.key==="ArrowRight"?1:-1));
+  }
 }, true);
-function lbWire(img, label){                            // Bild anklick- UND tastaturbedienbar machen
+function lbWire(img, label, list){                       // Bild anklick- UND tastaturbedienbar machen
   if(!img) return;
   img.classList.add("lb-zoom");
   img.setAttribute("role","button"); img.tabIndex=0;
   img.setAttribute("aria-label", label||"Bild vergrößern");
-  const go=()=>openLightbox(img.currentSrc||img.src, img.alt);
+  const go=()=>openLightbox(img.currentSrc||img.src, img.alt, list, 0);
   img.addEventListener("click",go);
   img.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); } });
 }
@@ -3035,6 +3080,13 @@ async function loadWiki(card, host, btn){
     thumb: pg.thumbnail && pg.thumbnail.source,
     url: "https://de.wikipedia.org/wiki/"+encodeURIComponent(pg.title.replace(/ /g,"_")) };
   wikiCache.set(card.key, data); renderWiki(host, data); if(btn.parentNode) btn.remove();
+  // Weitere Bilder des Artikels nachladen – sie machen die Vollbild-Ansicht zur
+  // kleinen Galerie. Schlägt es fehl, bleibt es beim einen Vorschaubild.
+  wikiGallery(pg.title).then(list=>{
+    if(!list.length) return;
+    data.gallery = list; wikiCache.set(card.key, data);
+    const img = host.querySelector("img"); if(img) lbWire(img, "Bilder ansehen", list);
+  }).catch(()=>{});
 }
 /* ---------- Bilder-Quiz: Foto erkennen (opt-in, braucht Internet) ----------
    Prüfungsnah: Man sieht die Pflanze und muss sie benennen – hier als Bild
@@ -3432,6 +3484,32 @@ function infoKey(e){
 }
 function closeInfo(){ if(infoEl){ infoEl.remove(); infoEl=null; document.removeEventListener("keydown", infoKey);
   if(infoReturnFocus && infoReturnFocus.focus){ try{ infoReturnFocus.focus(); }catch(e){} } infoReturnFocus=null; } }
+/* ---------- Lernstand einer Art (für die Info-Karte) ----------
+   Beim Nachschlagen sieht man direkt, wie gut die Pflanze schon sitzt: Stufe,
+   nächste Fälligkeit und die bisherige Bilanz. Quelle ist derselbe Leitner-Stand
+   wie überall (pget) – es wird nichts zusätzlich gespeichert. */
+function faellig(due){
+  if(!due) return "";
+  const heute = todayISO();
+  if(due<=heute) return "heute dran";
+  const t = Math.round((new Date(due+"T00:00:00") - new Date(heute+"T00:00:00"))/86400000);
+  return t===1 ? "morgen wieder dran" : `in ${t} Tagen wieder dran`;
+}
+function learnStateHTML(card){
+  const p = pget(card.key||"");
+  const box = p.box||0;
+  const pips = [1,2,3,4,5].map(i=>`<i class="${i<=box?(box>=4?"on fest":"on"):""}"></i>`).join("");
+  const kopf = box>=4 ? `<b>Sitzt sicher</b> – Stufe ${box} von 5`
+    : box ? `Stufe ${box} von 5 · noch ${stepsLeft(box)}× richtig bis <b>»sitzt«</b>`
+          : `<b>Noch nicht gelernt</b>`;
+  const wann = box ? faellig(p.due) : "kommt in der nächsten Sitzung dran";
+  const bilanz = (p.seen||0) ? `${p.correct||0} richtig · ${p.wrong||0} daneben` : "";
+  return `<div class="lstate${box>=4?" fest":""}" title="Dein Lernstand für diese Art – dieselbe Stufe wie im Fortschritt und im Herbarium.">
+      <span class="pips">${pips}</span>
+      <span class="ls-t">${kopf}${wann?` <span class="ls-due">· ${esc(wann)}</span>`:""}</span>
+      ${bilanz?`<span class="ls-b">${esc(bilanz)}</span>`:""}
+    </div>`;
+}
 function openInfo(card){
   if(!card) return;
   closeInfo();
@@ -3455,6 +3533,7 @@ function openInfo(card){
        ${card.de?`<div class="mh-de">${esc(card.de)}</div>`:""}
        ${fam?`<div class="mh-fam">${esc(fam)}</div>`:""}
      </div>
+     ${learnStateHTML(card)}
      ${etyHTML}
      <div class="srcblock">
        <div class="srclabel">Nachschlagen · öffnet neuen Tab</div>
