@@ -1677,6 +1677,31 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       werden) und das Öffnen eines »voller Name«-Links (Richtung + Antwortart +
       Dropdown + Banner-Text).
 
+- [x] **Jede Lektion ist direkt teilbar – auch die geführte und der Bilder-Quiz**
+      (Rückmeldung: »nach dem Abschluss … muss man erst noch mal das Quiz machen,
+      das geht aber nicht als Bilderrätsel«). Zwei Ursachen. **(1) Geführte Lektion
+      ohne Teilen:** Der Abschluss-Screen zeigte den Teilen-Block nur bei reinen
+      Modi (`!auto && scoreable()`), weil der Link nur reine Modi kannte; als Ersatz
+      gab es den Umweg-Knopf »Diese Lektion als Duell-Quiz«. Jetzt kennt das
+      Link-Format den Modus **`guided`** (freier vierter Wert in `CH_MODES`): die
+      **Übungsform je Karte** fährt mit (`CH_FORMS`, **2 Bit pro Karte**, 4 Karten je
+      Byte – 20 Karten = 5 Byte) plus ein Byte mit **Antwortart und Bild-Richtung**
+      (die Lektion hat ja Bild- **und** Textkarten). `startChallenge` baut daraus
+      `formOf` und spielt exakt diese Formen – nicht die, die der Leitner-Stand des
+      Empfängers vorgäbe. Gezählt wird über die **bewerteten** Karten
+      (`sess.scored`; Karteikarten geben keine Quote) – das gilt jetzt auch für den
+      Duell-Vergleich (`accEff`). Der Umweg-Knopf ist entfallen.
+      **(2) Bilder-Lektion galt am Ende als Quiz:** Weicht eine Karte mangels Foto
+      aufs Quiz aus, setzt `renderPhoto` `mode="quiz"`; `nextCard` nahm das für die
+      Folgekarte zurück – bei der **letzten** Karte lief es aber direkt in
+      `finishSession`, sodass Abrechnung und Link »Quiz« sagten. `nextCard` stellt
+      `sess.baseMode` jetzt **vor** dem Abschluss wieder her. Banner/Nachricht nennen
+      die geführte Lektion als solche (»Geführte Lektion (gemischte Übungsformen)«).
+      `tests/learn.mjs` prüft: Teilen-Block direkt nach der geführten Lektion (ohne
+      Umweg-Knopf), Link kodiert `m:"guided"` + eine Form je Karte, Annehmen spielt
+      Quiz · Karteikarte · Tippen in genau dieser Reihenfolge, und eine Bilder-Lektion
+      mit ausgewichener letzter Karte wird als `photo` geteilt.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein
