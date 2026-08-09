@@ -1966,29 +1966,49 @@ function closeLightbox(){
   if(lbReturnFocus && lbReturnFocus.focus){ try{ lbReturnFocus.focus(); }catch(e){} }
   lbReturnFocus=null;
 }
-let lbList=[], lbIdx=0;
+let lbList=[], lbIdx=0, lbToken=0;
+/* Pfeile und Zähler entstehen erst, wenn es wirklich mehrere Bilder gibt – auch
+   nachträglich, falls eine Galerie erst nach dem Öffnen eintrifft. */
+function lbSync(){
+  const sc=document.querySelector(".lbscrim"); if(!sc) return;
+  const img=sc.querySelector(".lb-img");
+  if(lbList.length>1 && !sc.querySelector(".lb-nav")){
+    img.insertAdjacentHTML("beforebegin", `<button class="lb-nav prev" aria-label="Vorheriges Bild">‹</button>`);
+    img.insertAdjacentHTML("afterend", `<button class="lb-nav next" aria-label="Nächstes Bild">›</button>`+
+      `<div class="lb-count" aria-live="polite"></div>`);
+  }
+  const z=sc.querySelector(".lb-count"); if(z) z.textContent = `${lbIdx+1} / ${lbList.length}`;
+}
 function lbShow(i){
   const sc=document.querySelector(".lbscrim"); if(!sc || !lbList.length) return;
   lbIdx = (i%lbList.length + lbList.length) % lbList.length;
   const it = lbList[lbIdx], img = sc.querySelector(".lb-img");
   const big = lbBig(it.src);
   img.onerror = big!==it.src ? (()=>{ img.onerror=null; img.src=it.src; }) : null;
-  img.src = big; img.alt = it.file || "Bild";
-  const z = sc.querySelector(".lb-count"); if(z) z.textContent = `${lbIdx+1} / ${lbList.length}`;
+  img.src = big; img.alt = it.label || it.file || "Bild";
+  lbSync();
 }
-function openLightbox(src, alt, list, start){
+function lbLoad(loader){                                 // Galerie nachladen, während die Großansicht schon offen ist
+  if(typeof loader!=="function") return;
+  const token = lbToken;
+  Promise.resolve().then(loader).then(list=>{
+    if(token!==lbToken || !document.querySelector(".lbscrim")) return;
+    if(!Array.isArray(list) || !list.length) return;
+    const seen = new Set(lbList.map(i=>i.src));
+    const add = list.filter(i=>i && i.src && !seen.has(i.src));
+    if(!add.length) return;
+    lbList = lbList.concat(add);
+    lbSync();
+  }).catch(()=>{});
+}
+function openLightbox(src, alt, list, start, loader){
   closeLightbox();
-  lbReturnFocus=document.activeElement;
-  lbList = Array.isArray(list) && list.length ? list.slice() : [{src, file:alt||""}];
+  lbReturnFocus=document.activeElement; lbToken++;
+  lbList = Array.isArray(list) && list.length ? list.slice() : [{src, label:alt||""}];
   lbIdx = Math.max(0, Math.min(lbList.length-1, start||0));
   const sc=el("div","lbscrim");
   sc.setAttribute("role","dialog"); sc.setAttribute("aria-modal","true"); sc.setAttribute("aria-label","Bild vergrößert");
-  const many = lbList.length>1;
-  sc.innerHTML=`<button class="lb-x" aria-label="Schließen">×</button>
-    ${many?`<button class="lb-nav prev" aria-label="Vorheriges Bild">‹</button>`:""}
-    <img class="lb-img" src="" alt="">
-    ${many?`<button class="lb-nav next" aria-label="Nächstes Bild">›</button>
-    <div class="lb-count" aria-live="polite"></div>`:""}`;
+  sc.innerHTML=`<button class="lb-x" aria-label="Schließen">×</button><img class="lb-img" src="" alt="">`;
   sc.addEventListener("click",e=>{
     if(e.target.closest(".lb-nav.prev")) return lbShow(lbIdx-1);
     if(e.target.closest(".lb-nav.next")) return lbShow(lbIdx+1);
@@ -1997,6 +2017,7 @@ function openLightbox(src, alt, list, start){
   document.body.appendChild(sc);
   lbShow(lbIdx);
   sc.querySelector(".lb-x").focus();
+  lbLoad(loader);
 }
 document.addEventListener("keydown",e=>{                // Capture: Esc gilt zuerst der Lightbox
   if(!document.querySelector(".lbscrim")) return;
@@ -2005,12 +2026,12 @@ document.addEventListener("keydown",e=>{                // Capture: Esc gilt zue
     e.stopPropagation(); e.preventDefault(); lbShow(lbIdx + (e.key==="ArrowRight"?1:-1));
   }
 }, true);
-function lbWire(img, label, list){                       // Bild anklick- UND tastaturbedienbar machen
+function lbWire(img, label, list, loader){               // Bild anklick- UND tastaturbedienbar machen
   if(!img) return;
   img.classList.add("lb-zoom");
   img.setAttribute("role","button"); img.tabIndex=0;
   img.setAttribute("aria-label", label||"Bild vergrößern");
-  const go=()=>openLightbox(img.currentSrc||img.src, img.alt, list, 0);
+  const go=()=>openLightbox(img.currentSrc||img.src, img.alt, list, 0, loader);
   img.addEventListener("click",go);
   img.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); } });
 }

@@ -1582,6 +1582,33 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       mit **Data-URI-Fixtures**, weil erfundene Bild-URLs echte Netzfehler und
       damit Konsolenfehler im Test erzeugen würden.
 
+- [x] **Lernstand ans Ende der Info-Karte + Galerie auch im Bilder-Quiz** (zwei
+      Rückmeldungen). **(1) Reihenfolge:** `.lstate` steht jetzt **unten** in der
+      Info-Karte (nach dem Wikipedia-Block) statt direkt unter dem Kopf – oben die
+      Pflanze, unten der eigene Stand. **(2) Galerie im Bilder-Quiz:** Eine Pflanze
+      zeigt sich selten auf einem Bild vollständig (Habitus · Blatt · Blüte ·
+      Frucht) – deshalb lässt sich die Großansicht auch dort durchblättern.
+      `pickCommons` behält die **ohnehin schon geprüften** Kandidaten der
+      Commons-Suche (`p.gal`, max. 6, bester zuerst) – **kein zusätzlicher Abruf**,
+      die Sortierung `(-score, Fundreihenfolge)` reproduziert exakt die bisherige
+      Auswahl des Siegerbilds. Kam das Bild aus einem Wikipedia-**Artikel**
+      (`src:"wp"`, keine Kandidatenliste), holt `photoGalLoader` dessen Bilder über
+      `wikiGallery` **erst beim Öffnen** der Großansicht. Dafür kann die Lightbox
+      jetzt **nachwachsen**: `lbSync()` legt Pfeile und Zähler erst an, wenn es
+      wirklich mehrere Bilder gibt (auch nachträglich), `lbLoad(loader)` hängt eine
+      später eintreffende Liste an (Token gegen zwischenzeitliches Schließen, Dedup
+      über die URL); bei einem Bild bleibt alles wie bisher. Am Bild zeigt ein
+      dezenter Zähler »3 Bilder« (`.ph-more`), dass es mehr zu sehen gibt.
+      **Ohne Dateinamen:** die Galerie-Einträge tragen ein neutrales `label`
+      (»Bild 2 der gesuchten Pflanze«) statt des Dateinamens – der stünde sonst im
+      `alt`-Text und verriete die Lösung. Lightbox-Änderungen 1:1 auch in `app.js`
+      (Info-Karte des Prüfungswerkzeugs), `wikiGallery` nutzt jetzt den
+      austauschbaren `jsonp` (testbar ohne Netz). Offline-rein.
+      `tests/learn.mjs` prüft: Lernstand als letztes Element nach dem
+      Wikipedia-Block, `gal` sammelt die geprüften Kandidaten (bester zuerst),
+      Zähler/Blättern im Quiz, kein Dateiname im `alt`, und die nachgeladene
+      Artikel-Galerie (erst keine Pfeile, danach »1 / 3«).
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein
