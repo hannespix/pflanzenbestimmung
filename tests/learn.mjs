@@ -1201,6 +1201,44 @@ async function main() {
   assert(offen.leerOhneFortschritt,
     "Herbarium: ein noch gar nicht begonnenes Thema bekommt keine Fehl-Liste: " + JSON.stringify(offen));
 
+  // Der Weg zum »sitzt« muss IM TOOL erklärt sein – sonst sieht man nach der ersten
+  // Sitzung nur »0 sitzt« und hört auf. Drei Orte: Stufen-Anzeige nach jeder Antwort,
+  // Erklärzeile an der Fortschritts-Legende, Erklärkasten im Herbarium.
+  const erklaert = await page.evaluate(async () => {
+    const rest = [0, 1, 2, 3, 4, 5].map((b) => stepsLeft(b));      // neu/1 → 3 Treffer (Sprung 0→2!)
+    $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    renderProgress();
+    const legende = (document.querySelector(".plegend-note") || {}).textContent || "";
+    // Quiz: nach der Antwort steht die Stufe unter der Lösung
+    document.querySelector('#modeTabs button[data-mode="quiz"]').click();
+    $("#sessLen").value = "6"; startSession();
+    const soll = answerText(current);
+    [...document.querySelectorAll("#opts .opt")]
+      .find((o) => o.querySelector("span:last-child").textContent === soll).click();
+    const line = document.querySelector("#fb .stepline");
+    const nachTreffer = line ? line.textContent.replace(/\s+/g, " ") : "";
+    const pips = line ? line.querySelectorAll(".pips i").length : 0;
+    const an = line ? line.querySelectorAll(".pips i.on").length : 0;
+    // Karteikarte: Stufe schon VOR der Bewertung sichtbar
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    startSession(); flipCard();
+    const aufKarte = !!document.querySelector(".stepline");
+    document.querySelector("#btnStop").click();
+    openHerbarium();
+    const herbHow = (document.querySelector(".herb-how") || {}).textContent || "";
+    document.querySelector("#infoClose").click();
+    return { rest, legende, nachTreffer, pips, an, aufKarte, herbHow };
+  });
+  assert(JSON.stringify(erklaert.rest) === JSON.stringify([3, 3, 2, 1, 0, 0]),
+    "Restrechnung muss den Sprung neu→Stufe 2 berücksichtigen (3/3/2/1/0/0): " + JSON.stringify(erklaert.rest));
+  assert(/Stufe 4/.test(erklaert.legende) && /sitzt/.test(erklaert.legende),
+    "An der Fortschritts-Legende muss stehen, wie »sitzt« erreicht wird: " + erklaert.legende);
+  assert(erklaert.pips === 5 && erklaert.an === 2 && /Stufe 2 von 5/.test(erklaert.nachTreffer) && /noch 2× richtig/.test(erklaert.nachTreffer),
+    "Nach einem Treffer muss die Stufe (2 von 5, noch 2×) mit 5 Punkten erscheinen: " + JSON.stringify(erklaert));
+  assert(erklaert.aufKarte, "Karteikarte: die Stufe muss schon vor der Bewertung sichtbar sein");
+  assert(/gemeistert/.test(erklaert.herbHow) && /drei richtigen Antworten/.test(erklaert.herbHow),
+    "Im Herbarium muss erklärt sein, wie ein Thema gemeistert wird: " + erklaert.herbHow);
+
   // XP + botanische Ränge: freies Tippen bringt mehr als Ankreuzen, Rangaufstieg wird
   // einmalig gefeiert; Combo zählt Treffer in Folge (ab 3 sichtbar, Bonus gestaffelt).
   const xp = await page.evaluate(async () => {

@@ -265,7 +265,22 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .herblink{border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--green-deep);
   border-radius:99px; padding:5px 12px; font-family:var(--mono); font-size:11px; cursor:pointer; min-height:32px}
 .herblink:hover{background:var(--green-tint); border-color:var(--green)}
-/* Erfahrungspunkte + botanischer Rang (Keimling … Meistergärtner/in) */
+/* Erklärt die Fortschritts-Legende direkt (Tooltips sieht man am Handy nicht) */
+.plegend-note{font-size:11.5px; line-height:1.5; color:var(--ink-soft); margin-top:8px;
+  border-left:2px solid var(--rule-strong); padding-left:9px}
+.plegend-note b{color:var(--green-deep)}
+/* Stufen-Anzeige nach jeder Antwort: fünf Punkte + »noch N× richtig bis sitzt« */
+.stepline{display:flex; align-items:center; justify-content:center; gap:8px; margin-top:10px;
+  font-family:var(--mono); font-size:11.5px; color:var(--ink-soft); flex-wrap:wrap}
+.stepline .pips{display:inline-flex; gap:4px}
+.stepline .pips i{width:9px; height:9px; border-radius:50%; background:var(--rule);
+  border:1px solid var(--rule-strong); transition:background .3s, transform .3s}
+.stepline .pips i.on{background:var(--gold); border-color:var(--gold)}
+.stepline .pips i.on.fest{background:var(--green); border-color:var(--green)}
+.stepline.now{color:var(--green-deep)}
+.stepline.now .pips i.on{transform:scale(1.15)}
+.stepline b{color:var(--green-deep)}
+@media (prefers-reduced-motion: reduce){ .stepline .pips i{transition:none} }
 .rankrow{display:flex; align-items:center; gap:8px; margin-top:8px; font-family:var(--mono); font-size:11px; color:var(--ink-soft); flex-wrap:wrap}
 .rk-name{font-family:var(--serif); font-size:14px; font-style:italic; color:var(--green-deep); letter-spacing:.01em}
 .rk-bar{flex:1; height:6px; background:var(--surface-2); border:1px solid var(--rule); border-radius:99px; overflow:hidden; min-width:70px}
@@ -280,6 +295,10 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 /* Sammel-Herbarium: eine Sammelkarte je Thema – Klebestreifen oben, gepresste
    Pflanze (SVG, currentColor), »Gemeistert«-Schrägband; Unfertiges bleibt blass */
 .herbmodal{max-width:740px}
+/* Erklärt im Herbarium direkt, wie ein Thema gemeistert wird (nicht erst in der Hilfe) */
+.herb-how{font-size:12.5px; line-height:1.55; color:var(--ink-soft); background:var(--green-tint);
+  border-left:3px solid var(--green); border-radius:0 10px 10px 0; padding:10px 12px; margin:12px 0 2px}
+.herb-how b{color:var(--green-deep)}
 .herbgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin:14px 0 6px}
 .herbcard{position:relative; background:var(--card); border:1px solid var(--rule-strong); border-radius:12px;
   padding:16px 12px 10px; text-align:center; overflow:hidden; box-shadow:var(--shadow-1)}
@@ -1258,7 +1277,18 @@ body.stagefull #stage>.sessionbar{
 
     <h4>Fortschritt &amp; mehr</h4>
     <ul class="hnotes">
-      <li>Der Balken zeigt <b>neu · am Lernen · sitzt</b>. „sitzt" heißt sicher gemerkt (Box 4–5 von 5).</li>
+      <li>Der Balken zeigt <b>neu · am Lernen · sitzt</b>. „sitzt" heißt sicher gemerkt (Stufe 4–5 von 5).</li>
+      <li><b>Wie kommt eine Pflanze auf „sitzt"?</b> Jede richtige Antwort bringt sie eine Stufe weiter –
+        egal in welchem Modus (Karteikarte „Gewusst", richtige Quiz-/Bildantwort, beim Tippen alle Felder
+        richtig). Von <i>neu</i> aus sind das <b>drei Treffer</b>: neu → Stufe 2 → 3 → <b>4 = sitzt</b>.
+        Eine falsche Antwort setzt auf Stufe 1 zurück, „unsicher" bzw. teilweise richtig hält die Stufe.
+        Nach jeder Antwort steht unter der Lösung, auf welcher Stufe die Pflanze jetzt ist und wie viele
+        Treffer noch fehlen.</li>
+      <li><b>Warum das mehrere Tage dauert:</b> Nach jedem Treffer pausiert eine Pflanze – 1, 3, 7, 16 und
+        35 Tage je Stufe. Genau diese Pausen sorgen dafür, dass die Namen dauerhaft hängenbleiben. Am
+        ersten Tag ist „sitzt" deshalb noch nicht zu erwarten; dass Pflanzen von <i>neu</i> zu
+        <i>am Lernen</i> wandern, ist bereits der Fortschritt. Wer schneller wiederholen will, grenzt den
+        Lernstoff unter <b>Optionen · Auswahl</b> auf ein Thema ein.</li>
       <li><b>ℹ Mehr zur Pflanze</b> öffnet Quellen-Links (Wikipedia, NaturaDB u. a.) und – optional, nur
         auf Knopfdruck – einen deutschen Kurztext samt Bild von Wikipedia. Der Kern funktioniert komplett
         ohne Internet.</li>
