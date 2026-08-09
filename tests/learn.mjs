@@ -134,22 +134,19 @@ async function main() {
     document.querySelector("#btnStop").click();         // Sitzung beenden → Abschluss-Screen
     const doneTitle = (document.querySelector(".stage-empty h2") || {}).textContent || "";
     const summary = (document.querySelector(".stage-empty p") || {}).textContent || "";
-    const noShare = !document.querySelector(".stage-empty #shareBlock");
-    // Brücke zum Lernduell: gleiche Karten als reines Quiz – DESSEN Abschluss hat den Teilen-Block
+    // Direkt teilbar – ohne die Lektion noch einmal als Quiz spielen zu müssen
+    const hatShare = !!document.querySelector(".stage-empty #shareBlock");
+    const keinUmweg = !document.querySelector("#duelQuizBtn");
     const nCards = cards.length;
-    const bridge = !!document.querySelector("#duelQuizBtn");
-    document.querySelector("#duelQuizBtn").click();
-    const bridgeQuiz = !!document.querySelector("#opts .opt");
-    const bridgeTotal = (document.querySelector(".sessionbar span") || {}).textContent || "";
-    document.querySelector("#btnStop").click();
-    const bridgeShare = !!document.querySelector(".stage-empty #shareBlock");
+    const link = challengeURL().split("#c=")[1];
+    const dec = chDecode(link);
     document.querySelector("#btnOverview").click();
     localStorage.removeItem("pflanzenlernen.progress.gemuesebau_gaertner");   // aufräumen
     applyProfile();
     document.querySelector("#cat").value = "";
     document.querySelector("#cat").dispatchEvent(new Event("change"));
-    return { goLabel, firstQuiz, barThere, thenType, doneTitle, summary, noShare,
-      nCards, bridge, bridgeQuiz, bridgeTotal, bridgeShare };
+    return { goLabel, firstQuiz, barThere, thenType, doneTitle, summary,
+      hatShare, keinUmweg, nCards, dec };
   });
   assert(guided.goLabel === "Weiter lernen",
     "Mit vorhandenem Fortschritt muss der Knopf »Weiter lernen« heißen: " + guided.goLabel);
@@ -157,9 +154,12 @@ async function main() {
     "Geführte Sitzung muss die Übungsform je Lernstand mischen (Box 2 → Quiz, Box 4 → Tippen): " + JSON.stringify(guided));
   assert(/bewerteten/.test(guided.summary),
     "Abschluss der geführten Sitzung nennt die Quote über die bewerteten Karten: " + guided.summary);
-  assert(guided.noShare, "Geführte Sitzungen haben kein Lernduell/Teilen (gemischte Formen): " + JSON.stringify(guided));
-  assert(guided.bridge && guided.bridgeQuiz && guided.bridgeTotal.includes("/ " + guided.nCards) && guided.bridgeShare,
-    "»Diese Lektion als Duell-Quiz« muss dieselben Karten als reines Quiz spielen und am Ende den Teilen-Block bieten: " + JSON.stringify(guided));
+  assert(guided.hatShare && guided.keinUmweg,
+    "Geführte Lektion muss direkt teilbar sein – ohne Umweg über ein zweites Quiz: " + JSON.stringify(guided));
+  assert(guided.dec && guided.dec.m === "guided" && Array.isArray(guided.dec.f) && guided.dec.f.length === guided.dec.i.length,
+    "Duell-Link der geführten Lektion muss die Übungsform je Karte mitkodieren: " + JSON.stringify(guided.dec));
+  assert(guided.dec.f.includes("quiz") && guided.dec.f.includes("type"),
+    "Duell-Link der geführten Lektion: die gemischten Formen müssen erhalten bleiben: " + JSON.stringify(guided.dec.f));
 
   // Profil-Chip: zeigt den Beruf, öffnet das Modal mit beiden Auswahlfeldern, »Passt so« schließt
   const chip = await page.evaluate(() => {
@@ -989,6 +989,30 @@ async function main() {
   });
   assert(photoSkip.filterBad && photoSkip.filterGood,
     "Bilder-Quiz: Karten/Diagramme müssen aussortiert, Fotos behalten werden: " + JSON.stringify(photoSkip));
+  // Weicht die LETZTE Karte mangels Foto aufs Quiz aus, muss die Lektion trotzdem als
+  // BILDER-Lektion abgerechnet und geteilt werden – vorher stand am Ende »Quiz« im Link.
+  const phShare = await page.evaluate(async () => {
+    __clearPhotoCache(); photoTried.clear();
+    __setPhotoSource(() => Promise.resolve(null));
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();
+    document.querySelector("#sessLen").value = "1";
+    startSession();
+    await new Promise((r) => setTimeout(r, 80));
+    const ausweich = !!document.querySelector("#opts .opt");
+    document.querySelector("#opts .opt").click();
+    document.querySelector("#wt").click();                // letzte Karte → Abschluss-Screen
+    const share = !!document.querySelector("#shareBlock");
+    const dec = chDecode(challengeURL().split("#c=")[1]);
+    const modus = mode;                                   // vor dem Aufräum-Tabwechsel merken
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    __setPhotoSource(null); __clearPhotoCache(); photoTried.clear();
+    return { ausweich, share, m: dec && dec.m, modus };
+  });
+  assert(phShare.ausweich && phShare.share,
+    "Bilder-Lektion: nach der letzten (ausgewichenen) Karte muss der Teilen-Block da sein: " + JSON.stringify(phShare));
+  assert(phShare.m === "photo" && phShare.modus === "photo",
+    "Bilder-Lektion muss als Bilder-Lektion teilbar sein, nicht als Quiz: " + JSON.stringify(phShare));
+
   assert(photoSkip.fallbackHinweis && photoSkip.optionen === 4 && photoSkip.spaeterWieder,
     "Ohne Foto muss die Art als Quizfrage (4 Optionen) kommen – mit dem Hinweis, dass später erneut gesucht wird: " +
     JSON.stringify(photoSkip));
@@ -2314,6 +2338,8 @@ async function main() {
     const st = getComputedStyle(document.querySelector("#stage"));
     const during = { cls: document.body.classList.contains("stagefull"), pos: st.position,
       bar: getComputedStyle(document.querySelector(".sessionbar")).position };
+    document.querySelector("#opts .opt").click();  // eine Frage beantworten – sonst gibt es nichts zu teilen
+    document.querySelector("#wt").click();
     document.querySelector("#btnStop").click();   // Sitzung beenden -> Ergebnis-Screen
     const onResult = { cls: document.body.classList.contains("stagefull"),
       overview: !!document.querySelector("#btnOverview"),
@@ -2495,6 +2521,31 @@ async function main() {
   assert(/voller Name/.test(vollIn.txt),
     "Lernduell-Banner soll die Aufgabenstellung nennen: " + vollIn.txt);
 
+  // Geführte Lektion als Herausforderung: der Empfänger spielt genau die kodierten
+  // Übungsformen – nicht die, die sein eigener Leitner-Stand vorgeben würde.
+  const gefFrag = await page.evaluate(() =>
+    chEncode({ p: "gemuesebau_gaertner", m: "guided", r: "de2bot", a: "mc", rp: "img2bot",
+      f: ["quiz", "cards", "type"], i: [1, 2, 3], s: 2, t: 2, z: 40, n: "Kollegin" }));
+  await page.goto("about:blank");
+  await page.goto(FILE + "#c=" + gefFrag, { waitUntil: "load" });
+  await page.waitForFunction("window.startChallenge!=null", { timeout: 10000 });
+  const gefIn = await page.evaluate(() => {
+    const txt = (document.querySelector("#duelBanner") || {}).textContent || "";
+    document.querySelector("#btnAcceptDuel").click();
+    const erste = !!document.querySelector("#opts .opt");        // Karte 1: Quiz
+    document.querySelector("#opts .opt").click(); document.querySelector("#wt").click();
+    const zweite = !!document.querySelector("#card");            // Karte 2: Karteikarte
+    document.querySelector("#card").click();
+    document.querySelectorAll(".rate button")[2].click();        // »Gewusst«
+    const dritte = !!document.querySelector("#typeForm");        // Karte 3: Tippen
+    document.querySelector("#btnStop").click();
+    return { txt, erste, zweite, dritte, auto: !!sess.auto };
+  });
+  assert(/Geführte Lektion/.test(gefIn.txt) && /gemischte/.test(gefIn.txt),
+    "Lernduell-Banner muss die geführte Lektion als solche ansagen: " + gefIn.txt);
+  assert(gefIn.auto && gefIn.erste && gefIn.zweite && gefIn.dritte,
+    "Geführte Herausforderung muss genau die kodierten Übungsformen spielen (Quiz · Karte · Tippen): " + JSON.stringify(gefIn));
+
   // Zurück auf sauberen Zustand für die Aufräum-Schritte
   await page.goto("about:blank");
   await page.goto(FILE, { waitUntil: "load" });
@@ -2505,7 +2556,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand, kein Duell, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON- und v2-Links lesbar, Richtung inkl. »voller Name« + Antwortart wandern mit, Banner übernimmt Profil/Modus/Aufgabenstellung, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter, Galerie mit mehreren Ansichten – Commons-Kandidaten sofort, Artikelbilder nachgeladen, Wischen, Vorladen der Galerie, stille Wiederholung bei Aussetzern, neuer Versuch je Sitzung), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast, Lernserie/Tagesziel, Herbarium, XP-Ränge + Combo, Stufe 5 (Rang-Popover, Container Queries).");
+  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand, direkt teilbar, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON- und v2-Links lesbar, Richtung inkl. »voller Name«, Antwortart und die Übungsformen der geführten Lektion wandern mit, Banner übernimmt Profil/Modus/Aufgabenstellung, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter, Galerie mit mehreren Ansichten – Commons-Kandidaten sofort, Artikelbilder nachgeladen, Wischen, Vorladen der Galerie, stille Wiederholung bei Aussetzern, neuer Versuch je Sitzung), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast, Lernserie/Tagesziel, Herbarium, XP-Ränge + Combo, Stufe 5 (Rang-Popover, Container Queries).");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });

@@ -1180,17 +1180,20 @@ const CH_PROFILES = [
   "obstbau_gaertner","obstbau_fachwerker",
   "staudengaertnerei_gaertner","staudengaertnerei_fachwerker",
   "zierpflanzenbau_gaertner","zierpflanzenbau_fachwerker"];
-const CH_MODES = ["quiz","type","photo"];
+const CH_MODES = ["quiz","type","photo","guided"];   // 3 = geführte Lektion (gemischte Übungsformen)
 const CH_DIRS  = ["de2bot","bot2de","img2bot","img2de"];   // nur noch zum LESEN alter v2-Links
 /* v3: Die Richtung wird je Modus gezählt (Text: 2, Bild: 3 Möglichkeiten) – so passt
    auch »Bild → voller Name« (img2both) in die zwei Bit, die im Kopfbyte frei sind.
    In v2 war der Index global über CH_DIRS, deshalb fiel img2both dort heraus und die
    Herausforderung kam beim Empfänger als »nur botanisch« an. Zusätzlich wandert bei
    Bild-Lektionen die Antwortart mit (Auswahl/Tippen/wie in der Prüfung) – sonst ist
-   es nicht dieselbe Aufgabe. Reihenfolge von DIRS_TEXT, DIRS_PHOTO und CH_PHA
-   ebenfalls NICHT mehr ändern. */
-const CH_DIR3  = { quiz:DIRS_TEXT, type:DIRS_TEXT, photo:DIRS_PHOTO };
+   es nicht dieselbe Aufgabe. Die geführte Lektion (»Weiter lernen«) mischt die
+   Übungsformen je Karte – die wandern als 2 Bit pro Karte mit (CH_FORMS), sonst
+   wäre sie gar nicht teilbar. Reihenfolge von DIRS_TEXT, DIRS_PHOTO, CH_PHA und
+   CH_FORMS ebenfalls NICHT mehr ändern. */
+const CH_DIR3  = { quiz:DIRS_TEXT, type:DIRS_TEXT, photo:DIRS_PHOTO, guided:DIRS_TEXT };
 const CH_PHA   = ["mc","type","exam"];
+const CH_FORMS = ["cards","quiz","photo","type"];
 const CH_VER   = 3;
 
 function vPut(out, n){                     // Varint: kleine Zahlen = ein Byte
@@ -1228,9 +1231,20 @@ function chEncode(o){
   const dirs = CH_DIR3[o.m] || DIRS_TEXT, di = Math.max(0, dirs.indexOf(o.r));
   const out = [CH_VER, ((pi<0?15:pi)<<4) | (mi<<2) | di];
   if(pi<0){ const s=unescape(encodeURIComponent(o.p||"")); vPut(out,s.length); for(let i=0;i<s.length;i++) out.push(s.charCodeAt(i) & 255); }
-  if(o.m==="photo") out.push(Math.max(0, CH_PHA.indexOf(o.a||"mc")));   // Antwortart gehört zur Aufgabe
+  // Antwortart gehört zur Aufgabe; bei der geführten Lektion zusätzlich die
+  // Bild-Richtung (sie hat ja Bild- UND Textkarten) – beides in einem Byte.
+  if(o.m==="photo") out.push(Math.max(0, CH_PHA.indexOf(o.a||"mc")));
+  else if(o.m==="guided") out.push((Math.max(0, CH_PHA.indexOf(o.a||"mc"))<<2) | Math.max(0, DIRS_PHOTO.indexOf(o.rp||"img2bot")));
   const idx = o.i||[];
   vPut(out, idx.length); idx.forEach(n=>vPut(out,n));
+  if(o.m==="guided"){                                   // Übungsform je Karte, 4 Karten pro Byte
+    const f = o.f||[];
+    for(let k=0;k<idx.length;k+=4){
+      let b=0;
+      for(let j=0;j<4;j++) b |= (Math.max(0, CH_FORMS.indexOf(f[k+j]||"quiz")) << (j*2));
+      out.push(b);
+    }
+  }
   vPut(out, o.s||0); vPut(out, o.t||0); vPut(out, o.z||0);
   const nm = unescape(encodeURIComponent((o.n||"").slice(0,40)));
   vPut(out, nm.length); for(let i=0;i<nm.length;i++) out.push(nm.charCodeAt(i) & 255);
@@ -1251,16 +1265,23 @@ function chDecode(s){
         if(pi===15){ const len=vGet(raw,st); let t=""; for(let k=0;k<len;k++) t+=String.fromCharCode(raw[st.i++]); p=decodeURIComponent(escape(t)); }
         else p = CH_PROFILES[pi] || "";
         const m = CH_MODES[(head>>>2)&3] || "quiz";
-        let a = "mc";
+        let a = "mc", rp = "img2bot";
         if(ver===3 && m==="photo") a = CH_PHA[raw[st.i++]] || "mc";
+        else if(ver===3 && m==="guided"){ const b=raw[st.i++]; a = CH_PHA[(b>>>2)&3]||"mc"; rp = DIRS_PHOTO[b&3]||"img2bot"; }
         const cnt=vGet(raw,st), i=[];
         for(let k=0;k<cnt;k++) i.push(vGet(raw,st));
+        let f = null;
+        if(ver===3 && m==="guided"){                     // Übungsform je Karte, 4 pro Byte
+          f=[];
+          for(let k=0;k<cnt;k+=4){ const b=raw[st.i++];
+            for(let j=0;j<4 && k+j<cnt;j++) f.push(CH_FORMS[(b>>>(j*2))&3]||"quiz"); }
+        }
         const sc=vGet(raw,st), t=vGet(raw,st), z=vGet(raw,st);
         const nl=vGet(raw,st); let nm="";
         for(let k=0;k<nl;k++) nm += String.fromCharCode(raw[st.i++]);
         const dirs = CH_DIR3[m] || DIRS_TEXT;
         const r = ver===3 ? (dirs[head&3] || dirs[0]) : (CH_DIRS[head&3] || "de2bot");
-        const o = { v:ver, p, m, r, a, i, s:sc, t, z, n:decodeURIComponent(escape(nm)) };
+        const o = { v:ver, p, m, r, a, rp, f, i, s:sc, t, z, n:decodeURIComponent(escape(nm)) };
         return chPlausible(o) ? o : null;
       }
     }
@@ -1284,21 +1305,32 @@ function nivNameOf(pid){ return /_fachwerker$/.test(pid)?"Fachwerker/in":"Gärtn
 
 function challengeURL(){                  // aktuelle Sitzung als Herausforderungs-Link kodieren
   const idx = (sess.cards||[]).map(c=>allCards.indexOf(c)).filter(i=>i>=0);
+  const auto = !!sess.auto;
   // z = Denkzeit in Sekunden; ältere Links ohne z werden weiterhin verstanden.
   // Seit v3 wandern Richtung (auch »voller Name«) und die Antwortart des Bilder-Quiz
   // mit – sonst bekäme der Herausgeforderte eine andere Aufgabe als man selbst.
-  const payload = { v:CH_VER, p:profileId, m:mode, r:curDir(), a:photoAnswer, i:idx,
-                    s:sess.correct, t:sess.done,
+  // Die geführte Lektion wird als eigener Modus geteilt: die Übungsform je Karte
+  // fährt mit, gezählt wird über die BEWERTETEN Karten (Karteikarten geben keine Quote).
+  const payload = { v:CH_VER, p:profileId, m: auto ? "guided" : mode,
+                    r: auto ? dirText : curDir(), a:photoAnswer, rp: dirPhoto,
+                    f: auto ? (sess.cards||[]).map(c=>(sess.formOf&&sess.formOf.get(c))||"quiz") : null,
+                    i:idx, s:sess.correct, t: auto ? (sess.scored||0) : sess.done,
                     z:Math.round((sess.ms||0)/1000), n:duelName() };
   return location.href.split("#")[0] + "#c=" + chEncode(payload);
 }
+function chModeLabel(m){
+  return m==="quiz" ? "Quiz" : m==="photo" ? "Bilder-Quiz" : m==="guided" ? "Geführte Lektion" : "Tippen";
+}
 function duelMessage(url){
   const who = duelName().trim();
-  const modeLabel = mode==="quiz" ? "Quiz" : mode==="photo" ? "Bilder-Quiz" : "Tippen";
+  const auto = !!sess.auto;
+  const modeLabel = chModeLabel(auto ? "guided" : mode);
   const fr = frNameOf(profileId);
   const zeit = sess.ms ? ` in ${fmtDur(sess.ms)} min` : "";
+  const von = auto ? (sess.scored||0) : sess.done;
+  const quote = von ? Math.round(sess.correct/von*100) : 0;
   return `Pflanzen-Lernduell (${modeLabel}${fr?" · "+fr:""})\n`+
-    `${who?who+" hat":"Ich habe"} ${sess.correct} von ${sess.done} richtig (${sessAcc()} %)${zeit}. Schaffst du mehr?\n`+
+    `${who?who+" hat":"Ich habe"} ${sess.correct} von ${von} richtig (${quote} %)${zeit}. Schaffst du mehr?\n`+
     `Gleiche Karten, gleiche Fragen – tippe den Link:\n${url}`;
 }
 function shareChallenge(){
@@ -1344,9 +1376,10 @@ function showChallengeBanner(ch){
   const b=$("#duelBanner"); if(!b) return;
   const who=(ch.n||"").trim();
   const theirAcc = ch.t ? Math.round(ch.s/ch.t*100) : 0;
-  const modeLabel = ch.m==="quiz" ? "Quiz" : ch.m==="photo" ? "Bilder-Quiz" : "Tippen";
+  const modeLabel = chModeLabel(ch.m);
   // Aufgabenstellung mit ansagen – gefragt ist genau dasselbe wie beim Herausforderer
-  const wie = ch.m==="photo" && ch.a==="exam" ? "wie in der Prüfung"
+  const wie = ch.m==="guided" ? "gemischte Übungsformen"
+            : ch.m==="photo" && ch.a==="exam" ? "wie in der Prüfung"
             : (DIRS[ch.r] ? DIRS[ch.r].label : "");
   const n=(ch.i||[]).length;
   b.innerHTML = `<div class="duel-ic">${ico("trophy")}</div>
@@ -1370,6 +1403,13 @@ function startChallenge(){                // genau die Karten der Herausforderun
   const b=$("#duelBanner"); if(b) b.hidden=true;
   queue = cards.slice(); qi = 0; photoMisses = 0; qStart = 0;
   sess = { total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, baseMode:mode, cards:cards.slice(), challenge:ch };
+  // Geführte Lektion: die Übungsform je Karte kommt aus dem Link, damit wirklich
+  // dieselbe Aufgabe läuft (nicht die, die der eigene Leitner-Stand vorgeben würde).
+  if(ch.m==="guided" && Array.isArray(ch.f) && ch.f.length===cards.length){
+    const formOf = new Map();
+    cards.forEach((c,k)=>formOf.set(c, ch.f[k]));
+    sess.auto = true; sess.scored = 0; sess.formOf = formOf; sess.modeBefore = mode;
+  }
   clockRun(true); stageFull(true);
   nextCard();
 }
@@ -1416,10 +1456,9 @@ function startGuided(){
   clockRun(true); stageFull(true);
   nextCard();
 }
-/* Brücke von der geführten Sitzung zum Lernduell: dieselben Karten als REINES
-   Auswahl-Quiz spielen – dessen Abschluss hat den normalen Teilen-/Herausfordern-
-   Block. So bleibt das Duell fair und reproduzierbar (der Link kodiert nur reine
-   Modi), und die Teilen-Funktion ist auch vom Ein-Knopf-Weg aus einen Tap entfernt. */
+/* Dieselben Karten als REINES Auswahl-Quiz spielen – z. B. um eine geführte
+   Lektion noch einmal am Stück abzufragen. (Fürs Teilen braucht es das nicht
+   mehr: die geführte Lektion ist seit v3 des Links direkt duellfähig.) */
 function startQuizWith(cards){
   mode="quiz"; store.set(LS_PREFIX+"mode",mode);
   $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.mode===mode));
@@ -1438,7 +1477,12 @@ function sessionBar(){
     `<button class="btn ghost" id="btnStop" title="Sitzung beenden">beenden</button></div>`;
 }
 function nextCard(){
-  if(qi>=queue.length){ return finishSession(); }
+  if(qi>=queue.length){
+    // Ausweich-Umschaltung der LETZTEN Karte zurücknehmen, bevor abgerechnet wird –
+    // sonst gilt eine Bilder-Lektion als Quiz (und wäre auch nur als Quiz teilbar).
+    if(sess.baseMode && !sess.auto) mode = sess.baseMode;
+    return finishSession();
+  }
   current = queue[qi]; flipped=false;
   if(sess.auto && sess.formOf && sess.formOf.has(current))
     mode = sess.formOf.get(current);   // geführte Sitzung: Übungsform je Karte (wird nicht gespeichert)
@@ -1467,23 +1511,30 @@ function finishSession(){
   const scoredN = auto ? (sess.scored||0) : sess.done;
   const accS = auto ? (scoredN ? Math.round(sess.correct/scoredN*100) : 0) : acc;
   const ch = sess.challenge;                     // angenommene Herausforderung (falls vorhanden)
+  // Quote fürs Vergleichen und Teilen: bei der geführten Lektion zählen nur die
+  // BEWERTETEN Karten – Karteikarten geben keine Trefferquote.
+  const accEff = auto ? accS : acc, doneEff = auto ? scoredN : sess.done;
   let extra = "", gewonnen = auto ? (scoredN>0 && accS>=80) : (scoreable() && sess.done>0 && acc>=80);   // ohne Duell: gute Quote reicht
   if(ch){                                        // Vergleich Du ↔ Herausforderer
     const theirAcc = ch.t ? Math.round(ch.s/ch.t*100) : 0;
     const who = (ch.n||"").trim() || "Herausforderer";
     const mine = sess.ms||0, theirs = (ch.z||0)*1000;   // Zeit entscheidet nur bei gleicher Quote
-    gewonnen = acc>theirAcc || (acc===theirAcc && !!mine && !!theirs && mine<theirs);
-    const verdict = acc>theirAcc ? `<b class="duel-win">Du hast gewonnen!</b>`
-      : acc<theirAcc ? `<b class="duel-lose">Knapp – ${esc(who)} liegt vorn. Nochmal versuchen?</b>`
+    gewonnen = accEff>theirAcc || (accEff===theirAcc && !!mine && !!theirs && mine<theirs);
+    const verdict = accEff>theirAcc ? `<b class="duel-win">Du hast gewonnen!</b>`
+      : accEff<theirAcc ? `<b class="duel-lose">Knapp – ${esc(who)} liegt vorn. Nochmal versuchen?</b>`
       : (mine && theirs && mine<theirs) ? `<b class="duel-win">Gleiche Quote – aber du warst schneller!</b>`
       : (mine && theirs && mine>theirs) ? `<b class="duel-lose">Gleiche Quote – ${esc(who)} war schneller. Revanche?</b>`
       : `<b>Gleichstand!</b>`;
     extra = `<div class="duel-result">
-      <div class="duel-row"><span>Du</span><span class="duel-pct">${acc} %</span><span class="duel-raw">${sess.correct}/${sess.done}</span>${mine?`<span class="duel-time">${fmtDur(mine)}</span>`:""}</div>
+      <div class="duel-row"><span>Du</span><span class="duel-pct">${accEff} %</span><span class="duel-raw">${sess.correct}/${doneEff}</span>${mine?`<span class="duel-time">${fmtDur(mine)}</span>`:""}</div>
       <div class="duel-row"><span>${esc(who)}</span><span class="duel-pct">${theirAcc} %</span><span class="duel-raw">${ch.s}/${ch.t}</span>${theirs?`<span class="duel-time">${fmtDur(theirs)}</span>`:""}</div>
       <p class="duel-verdict">${verdict}</p></div>`;
   }
-  const share = (!auto && scoreable()) ? shareBlockHTML(ch ? "Mein Ergebnis zurückschicken" : "Ergebnis teilen · herausfordern") : "";   // geführt: kein Duell (gemischte Formen)
+  // Teilen direkt nach JEDER bewerteten Lektion – auch nach der geführten und nach
+  // dem Bilder-Quiz. Früher musste man dafür dieselben Karten noch einmal als
+  // Auswahl-Quiz spielen; die Übungsformen wandern jetzt im Link mit.
+  const teilbar = auto ? scoredN>0 : (scoreable() && sess.done>0);
+  const share = teilbar ? shareBlockHTML(ch ? "Mein Ergebnis zurückschicken" : "Ergebnis teilen · herausfordern") : "";
   const stage=$("#stage");
   stage.innerHTML = `<div class="stage-empty">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6L9 17l-5-5"/></svg>
@@ -1494,12 +1545,10 @@ function finishSession(){
     ${share}
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px">
       <button class="btn primary" id="againBtn">Weiter lernen</button>
-      ${auto && sess.cards && sess.cards.length ? `<button class="btn ghost" id="duelQuizBtn" title="Genau diese Karten noch einmal als Auswahl-Quiz spielen – an dessen Ende kannst du dein Ergebnis teilen und Kollegen herausfordern (das Duell braucht eine reine, vergleichbare Quote).">Diese Lektion als Duell-Quiz</button>` : ``}
       <button class="btn ghost" id="btnOverview">Zur Übersicht</button>
     </div></div>`;
   wireShareBlock();
   const a=$("#againBtn"); if(a) a.onclick = auto ? startGuided : startSession;
-  const dq=$("#duelQuizBtn"); if(dq){ const cs=sess.cards.slice(); dq.onclick=()=>startQuizWith(cs); }
   const ov=$("#btnOverview"); if(ov) ov.onclick=exitSession;
   if(gewonnen) celebrate(stage.querySelector("h2"), 2);
   herbCheck();                                 // frisch gemeisterte Themen einmalig feiern
