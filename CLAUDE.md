@@ -1487,6 +1487,33 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       (der Bild-Cache liegt in einer Modul-Variable, `localStorage` allein reicht
       nicht). Screenshot verifiziert.
 
+- [x] **Der Weg zum »sitzt« wird im Tool erklärt** (Nutzersorge: »habe Angst, dass
+      Leute abspringen – erste Erfolge sind zu spät sichtbar«). Bis dahin war die
+      Leitner-Mechanik unsichtbar: Wer eine Sitzung beendete, sah »0 sitzt« und
+      konnte nicht wissen, dass er trotzdem vorangekommen ist. Vier Einbauten,
+      alle im Lern-Tool: **(1) Stufen-Anzeige nach jeder Antwort** (`stepHTML()`,
+      gefüttert aus `lastStep`, das `grade()` setzt): fünf Punkte + »Stufe 2 von 5 ·
+      noch 2× richtig bis »sitzt«« – eingehängt in die Rückmeldung von Quiz, Tippen
+      und Bilder-Quiz; auf der **Karteikarte** steht die Stufe schon **vor** der
+      Bewertung (danach geht es sofort weiter). `stepsLeft(box)` rechnet den Sprung
+      **neu → Stufe 2** korrekt mit (nicht 4−Stufe: von neu sind es **drei** Treffer).
+      **(2) Der Moment selbst wird gefeiert:** Erreicht eine Art Stufe 4, kommt
+      Toast »»X« sitzt jetzt! 🌿« + großes Feuerwerk (`lastStep.neuFest`).
+      **(3) Erklärzeile an der Fortschritts-Legende** (`.plegend-note`) – die
+      bisherigen `title`-Tooltips sind am Handy unsichtbar; jetzt steht dort im
+      Klartext, dass ab Stufe 4 »sitzt« gilt und **schon der erste Treffer zählt**
+      (neu → am Lernen). **(4) Herbarium** (`.herb-how`, auf Zuruf ergänzt): Kasten
+      über dem Raster erklärt, dass ein Thema gemeistert ist, wenn **jede** Art
+      »sitzt«, dass drei richtige Antworten dorthin führen und warum der Balken über
+      Tage wächst. Dazu **Intro** (»So wächst dein Fortschritt« inkl. der ehrlichen
+      Erwartung: am ersten Tag ist »sitzt« nicht zu erwarten – Punkte, Serie und der
+      Wechsel neu → am Lernen sind der Erfolg) und **zwei neue Hilfe-Absätze**
+      (»Wie kommt eine Pflanze auf sitzt?« / »Warum das mehrere Tage dauert«).
+      `tests/learn.mjs` sichert alles ab: `stepsLeft`-Kette (3/3/2/1/0/0),
+      Stufen-Zeile nach einem Treffer (5 Punkte, 2 aktiv, »noch 2× richtig«),
+      Stufe auf der Karteikarte vor der Bewertung, Erklärtexte an Legende und
+      im Herbarium. Screenshots verifiziert.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein

@@ -265,7 +265,22 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .herblink{border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--green-deep);
   border-radius:99px; padding:5px 12px; font-family:var(--mono); font-size:11px; cursor:pointer; min-height:32px}
 .herblink:hover{background:var(--green-tint); border-color:var(--green)}
-/* Erfahrungspunkte + botanischer Rang (Keimling … Meistergärtner/in) */
+/* Erklärt die Fortschritts-Legende direkt (Tooltips sieht man am Handy nicht) */
+.plegend-note{font-size:11.5px; line-height:1.5; color:var(--ink-soft); margin-top:8px;
+  border-left:2px solid var(--rule-strong); padding-left:9px}
+.plegend-note b{color:var(--green-deep)}
+/* Stufen-Anzeige nach jeder Antwort: fünf Punkte + »noch N× richtig bis sitzt« */
+.stepline{display:flex; align-items:center; justify-content:center; gap:8px; margin-top:10px;
+  font-family:var(--mono); font-size:11.5px; color:var(--ink-soft); flex-wrap:wrap}
+.stepline .pips{display:inline-flex; gap:4px}
+.stepline .pips i{width:9px; height:9px; border-radius:50%; background:var(--rule);
+  border:1px solid var(--rule-strong); transition:background .3s, transform .3s}
+.stepline .pips i.on{background:var(--gold); border-color:var(--gold)}
+.stepline .pips i.on.fest{background:var(--green); border-color:var(--green)}
+.stepline.now{color:var(--green-deep)}
+.stepline.now .pips i.on{transform:scale(1.15)}
+.stepline b{color:var(--green-deep)}
+@media (prefers-reduced-motion: reduce){ .stepline .pips i{transition:none} }
 .rankrow{display:flex; align-items:center; gap:8px; margin-top:8px; font-family:var(--mono); font-size:11px; color:var(--ink-soft); flex-wrap:wrap}
 .rk-name{font-family:var(--serif); font-size:14px; font-style:italic; color:var(--green-deep); letter-spacing:.01em}
 .rk-bar{flex:1; height:6px; background:var(--surface-2); border:1px solid var(--rule); border-radius:99px; overflow:hidden; min-width:70px}
@@ -280,6 +295,10 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 /* Sammel-Herbarium: eine Sammelkarte je Thema – Klebestreifen oben, gepresste
    Pflanze (SVG, currentColor), »Gemeistert«-Schrägband; Unfertiges bleibt blass */
 .herbmodal{max-width:740px}
+/* Erklärt im Herbarium direkt, wie ein Thema gemeistert wird (nicht erst in der Hilfe) */
+.herb-how{font-size:12.5px; line-height:1.55; color:var(--ink-soft); background:var(--green-tint);
+  border-left:3px solid var(--green); border-radius:0 10px 10px 0; padding:10px 12px; margin:12px 0 2px}
+.herb-how b{color:var(--green-deep)}
 .herbgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin:14px 0 6px}
 .herbcard{position:relative; background:var(--card); border:1px solid var(--rule-strong); border-radius:12px;
   padding:16px 12px 10px; text-align:center; overflow:hidden; box-shadow:var(--shadow-1)}
@@ -1258,7 +1277,18 @@ body.stagefull #stage>.sessionbar{
 
     <h4>Fortschritt &amp; mehr</h4>
     <ul class="hnotes">
-      <li>Der Balken zeigt <b>neu · am Lernen · sitzt</b>. „sitzt" heißt sicher gemerkt (Box 4–5 von 5).</li>
+      <li>Der Balken zeigt <b>neu · am Lernen · sitzt</b>. „sitzt" heißt sicher gemerkt (Stufe 4–5 von 5).</li>
+      <li><b>Wie kommt eine Pflanze auf „sitzt"?</b> Jede richtige Antwort bringt sie eine Stufe weiter –
+        egal in welchem Modus (Karteikarte „Gewusst", richtige Quiz-/Bildantwort, beim Tippen alle Felder
+        richtig). Von <i>neu</i> aus sind das <b>drei Treffer</b>: neu → Stufe 2 → 3 → <b>4 = sitzt</b>.
+        Eine falsche Antwort setzt auf Stufe 1 zurück, „unsicher" bzw. teilweise richtig hält die Stufe.
+        Nach jeder Antwort steht unter der Lösung, auf welcher Stufe die Pflanze jetzt ist und wie viele
+        Treffer noch fehlen.</li>
+      <li><b>Warum das mehrere Tage dauert:</b> Nach jedem Treffer pausiert eine Pflanze – 1, 3, 7, 16 und
+        35 Tage je Stufe. Genau diese Pausen sorgen dafür, dass die Namen dauerhaft hängenbleiben. Am
+        ersten Tag ist „sitzt" deshalb noch nicht zu erwarten; dass Pflanzen von <i>neu</i> zu
+        <i>am Lernen</i> wandern, ist bereits der Fortschritt. Wer schneller wiederholen will, grenzt den
+        Lernstoff unter <b>Optionen · Auswahl</b> auf ein Thema ein.</li>
       <li><b>ℹ Mehr zur Pflanze</b> öffnet Quellen-Links (Wikipedia, NaturaDB u. a.) und – optional, nur
         auf Knopfdruck – einen deutschen Kurztext samt Bild von Wikipedia. Der Kern funktioniert komplett
         ohne Internet.</li>
@@ -1795,14 +1825,40 @@ function saveProgress(){ store.set(progKey(), JSON.stringify(progress)); }
 function pget(key){ return progress[key] || {box:0,due:"",seen:0,correct:0,wrong:0}; }
 function grade(card, g){ // g: 'again' | 'hard' | 'good'
   const p = pget(card.key);
+  const vor = p.box||0;
   p.seen = (p.seen||0)+1;
-  const nb = boxAfter(p.box||0, g);
+  const nb = boxAfter(vor, g);
   p.box = nb;
   if(g==="again"){ p.wrong=(p.wrong||0)+1; p.due=todayISO(); }        // heute nochmal fällig
   else { p.correct=(p.correct||0)+1; p.due=addDays(todayISO(), BOX_DAYS[nb-1]); }
   progress[card.key]=p; saveProgress();
+  lastStep = { vor, nach:nb, neuFest: vor<4 && nb>=4 };               // für die Stufen-Anzeige der Rückmeldung
+  if(lastStep.neuFest){                                              // DER Moment: die Art sitzt jetzt
+    toast(`»${deMain(card)||norm(card.g+" "+card.a)}« sitzt jetzt! 🌿`);
+    celebrate($("#fb")||$("#stage")||document.body, 2);
+  }
   streakBump();                                // jede bearbeitete Karte zählt fürs Tagesziel
   if(sess.active) renderProgress();            // Fortschritt sofort sichtbar aktualisieren
+}
+/* ---------- Der Weg zum »sitzt« sichtbar machen ----------
+   Ohne Anzeige sieht man nach der ersten Sitzung nur »0 sitzt« und hört auf. Deshalb
+   zeigt jede Rückmeldung, auf welcher Stufe die Karte jetzt steht und wie viele
+   richtige Antworten noch bis »sitzt« fehlen – jeder einzelne Schritt wird sichtbar. */
+let lastStep = null;
+/* Wie viele richtige Antworten fehlen noch bis Stufe 4? Der erste Treffer springt von
+   »neu« gleich auf Stufe 2, deshalb nicht einfach 4−Stufe rechnen. */
+function stepsLeft(box){ return box>=4 ? 0 : box<=1 ? 3 : 4-box; }
+function stepHTML(boxOpt){
+  const nach = boxOpt!=null ? boxOpt : (lastStep ? lastStep.nach : null);
+  if(nach==null) return "";
+  const neuFest = boxOpt==null && lastStep && lastStep.neuFest;
+  const pips = [1,2,3,4,5].map(i=>`<i class="${i<=nach?(nach>=4?"on fest":"on"):""}"></i>`).join("");
+  const rest = stepsLeft(nach);
+  const txt = neuFest ? `<b>Sitzt!</b> Kommt jetzt nur noch selten dran.`
+    : nach>=4 ? `Sitzt sicher – Stufe ${nach} von 5.`
+    : `Stufe ${nach} von 5 · noch ${rest}× richtig bis <b>»sitzt«</b>`;
+  return `<div class="stepline${neuFest?" now":""}" title="Jede richtige Antwort bringt die Karte eine Stufe weiter; ab Stufe 4 gilt sie als sicher gemerkt und kommt nur noch selten dran.">
+      <span class="pips">${pips}</span><span class="step-t">${txt}</span></div>`;
 }
 
 /* ---------- Lernserie + Tagesziel (Gewohnheits-Motor) ----------
@@ -2323,6 +2379,9 @@ function renderProgress(){
        <span title="Noch nie bewertet.">
          <i class="b-neu" style="background:var(--rule-strong)"></i>${neu} neu</span>
      </div>
+     <div class="plegend-note">Jede richtige Antwort bringt eine Art eine Stufe weiter.
+       <b>Ab Stufe 4 »sitzt« sie</b> – bis dahin sind es ab »neu« drei Treffer, verteilt über mehrere Tage.
+       Schon der erste Treffer zählt: die Art wandert von <i>neu</i> zu <i>am Lernen</i>.</div>
      ${(()=>{ const st=streakState(), goal=streakGoal(), done=Math.min(st.n||0, goal);
        return `<div class="streakrow" id="streakRow" title="Lernserie: an so vielen Tagen in Folge hast du dein Tagesziel erreicht (einstellbar unter Optionen · Tagesziel). Rekord: ${st.b||0} ${(st.b||0)===1?"Tag":"Tage"}.">
          <span class="sflame${(st.s||0)>0?" on":""}"><svg class="fl" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c-4 0-7-2.9-7-6.7 0-2.6 1.4-4.6 2.7-6.2.9-1.2 1.9-2.3 2.3-3.6.9 1 1.4 2 1.5 3.2 0 .6 0 1.2-.2 1.9 1-.7 1.7-1.7 1.9-3.1C15.6 9 19 11.5 19 15.3 19 19.1 16 22 12 22z"/></svg><b>${st.s||0}</b></span>
@@ -2807,6 +2866,9 @@ function flipCard(){
     <button class="r-hard">Unsicher<small>${when(days("hard"))}</small></button>
     <button class="r-good">Gewusst<small>${when(days("good"))}</small></button>`;
   $("#stage").appendChild(rate);
+  // Karteikarte: Stufe VOR der Bewertung zeigen (danach geht es sofort weiter) –
+  // so sieht man auch hier, wie weit die Karte schon ist.
+  rate.insertAdjacentHTML("afterend", stepHTML(cur));
   rate.querySelector(".r-again").onclick=()=>{ grade(c,"again"); requeueCurrent(); advance(); };
   rate.querySelector(".r-hard").onclick =()=>{ grade(c,"hard"); xpAdd(1); advance(); };   // Teilwissen zählt ein wenig
   rate.querySelector(".r-good").onclick =()=>{ grade(c,"good"); scoreHit("cards", true, 1); advance(); };
@@ -2845,7 +2907,7 @@ function answerQuiz(btn, chosen, opts){
   if(!ok) btn.classList.add("wrong");
   grade(c, ok?"good":"again"); if(ok) sess.correct++; else requeueCurrent();
   $("#fb").innerHTML = (ok ? `<span class="good">Richtig!</span>` : `<span class="bad">Leider falsch.</span>`)+
-    ` <span class="sol">${solutionLine(c)}</span>`;
+    ` <span class="sol">${solutionLine(c)}</span>` + stepHTML();
   if(ok) celebrate(btn, 1);
   scoreHit("quiz", ok, ok?1:0, btn);                   // Punkte + Combo (Auswahl = mittlere Schwierigkeit)
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
@@ -2915,7 +2977,7 @@ function submitType(ins){
     (buch.nach>0 ? ` · <b>+${nfmt(buch.nach)}</b> nachträglich gutgeschrieben` : "")+
     (near&&!all ? ` · <b>≈</b> Schreibfehler zählen halb – schreibst du es gleich fehlerfrei, gibt es den Rest`
                 : near ? ` · <b>≈</b> Schreibfehler zählen halb – so steht es auf dem Prüfungsbogen` : "")+
-    (all?"":" · "+solutionLine(c))+`</span>`;
+    (all?"":" · "+solutionLine(c))+`</span>` + stepHTML();
   if(all) celebrate($("#fb"), 1);
   scoreHit("type", all, max?got/max:0, $("#fb"));      // freies Tippen zählt doppelt; Teilpunkte anteilig
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
@@ -4655,9 +4717,9 @@ function finishPhotoAnswer(ok, g, p, solHTML, full){
   clockStop();                                        // gilt für alle drei Antwortarten
   const c=current;
   grade(c, g); if(ok) sess.correct++; else requeueCurrent();
-  $("#fb").innerHTML = full ? solHTML                 // Tippen bringt seinen Text schon fertig mit
+  $("#fb").innerHTML = (full ? solHTML                 // Tippen bringt seinen Text schon fertig mit
     : (ok ? `<span class="good">Richtig!</span>`
-      : g==="hard" ? `<span class="near">Teilweise richtig.</span>` : `<span class="bad">Leider falsch.</span>`)+" "+solHTML;
+      : g==="hard" ? `<span class="near">Teilweise richtig.</span>` : `<span class="bad">Leider falsch.</span>`)+" "+solHTML) + stepHTML();
   if(ok) celebrate($("#fb"), 1);
   // Punkte + Combo: Auswahl zählt wie Quiz, Tippen/»wie in der Prüfung« wie freies Tippen;
   // teilweise richtig (»hard«) gibt die Hälfte.
@@ -4855,8 +4917,12 @@ function openHerbarium(){
      <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
      <div class="modal-head">
        <div class="mh-bot fam">Mein Herbarium</div>
-       <div class="mh-fam">${done}/${rows.length} Themen gemeistert · gemeistert = jede Art des Themas sitzt sicher (Box 4–5)</div>
+       <div class="mh-fam">${done}/${rows.length} Themen gemeistert</div>
      </div>
+     <div class="herb-how"><b>So füllt sich dein Herbarium:</b> Ein Thema ist gemeistert, wenn <b>jede</b> Art darin
+       »sitzt« – also Stufe 4 von 5 erreicht hat. Dorthin kommt eine Pflanze mit <b>drei richtigen Antworten</b>
+       (neu → Stufe 2 → 3 → 4), in jedem Modus gleich viel wert. Zwischen den Treffern liegen Pausen, darum
+       wächst der Balken über mehrere Tage. Der grüne Balken auf jeder Karte zeigt, wie weit das Thema ist.</div>
      <div class="herbgrid">${cards}</div>
      <div class="famfoot">Jedes gemeisterte Thema legt eine gepresste Pflanze in deine Sammlung – so siehst du auf einen Blick, welche Themen noch Pflege brauchen.</div>
    </div>`;
@@ -5047,6 +5113,10 @@ function openIntro(auto, onClose){
       <li><span class="is-ic" aria-hidden="true">⌨️</span><div><b>Tippen</b><span class="is-tag">prüfungsnah</span><br>Jedes bewertete Feld frei schreiben (Gattung, Art, Familie) – mit Punkten, wie in der Prüfungstabelle.</div></li>
     </ol>
     <p class="intro-tip"><span aria-hidden="true">⚙️</span> Jede Stufe kannst du unter <b>»Optionen«</b> feiner einstellen: was gefragt wird – vom <b>deutschen Namen</b> allein bis zur prüfungsechten Abfrage von <b>Gattung, Art und Familie</b> (Felder einzeln wählbar) – dazu Lernstoff, ZP-Filter und Sitzungslänge.</p>
+    <p class="intro-tip"><span aria-hidden="true">🌱</span> <b>So wächst dein Fortschritt:</b> Jede richtige Antwort bringt eine Pflanze
+      eine Stufe weiter – nach jeder Antwort siehst du, auf welcher Stufe sie steht. <b>Ab Stufe 4 »sitzt« sie</b> (ab »neu« drei
+      Treffer, mit Pausen dazwischen – so merkt man sich Namen dauerhaft). Erwarte am ersten Tag also kein »sitzt«: Dass Pflanzen
+      von <i>neu</i> zu <i>am Lernen</i> wandern, deine Punkte steigen und die Lernserie 🔥 läuft, ist schon der Erfolg.</p>
     <p class="intro-foot"><b>Ziel:</b> Du benennst Gattung, Art und Familie sicher. Diese Einführung findest du jederzeit über <b>»So funktioniert der Lernpfad«</b> wieder.</p>
     <div class="intro-cta"><button class="btn primary" id="introGo">Los geht's</button></div>
   </div>`;
@@ -5156,6 +5226,8 @@ window.__setJsonp=fn=>{ jsonp = fn || ((...a)=>jsonpGet(...a)); };   // API-Antw
 window.__clearPhotoCache=()=>{ photoStore={}; try{ store.set(LS_PHOTOS,"{}"); }catch(e){} };
 window.__rememberPhoto=photoRemember;   // für Tests: »für diese Art gibt es kein Bild« (null) vormerken
 window.photoless=photoless;
+window.stepsLeft=stepsLeft;   // für Tests: Treffer bis »sitzt«
+window.stepHTML=stepHTML;
 window.renderListControls=renderListControls;
 window.openFamilyInfo=openFamilyInfo;
 window.shareChallenge=shareChallenge;
