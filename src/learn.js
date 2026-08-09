@@ -2963,6 +2963,33 @@ function lbSync(){
   }
   const z=sc.querySelector(".lb-count"); if(z) z.textContent = `${lbIdx+1} / ${lbList.length}`;
 }
+/* Vorladen: Sobald die Großansicht offen ist, holen wir die übrigen Bilder der
+   Galerie schon im Hintergrund – dann steht das nächste beim Wischen/Blättern
+   sofort da. Reihenfolge von innen nach außen (die Nachbarn kommen als Erstes
+   dran). Im Datensparmodus oder auf 2G nur die direkten Nachbarn: 12 Bilder in
+   1600 px sind unterwegs schnell einige Megabyte. Geladen wird dieselbe URL, die
+   auch angezeigt wird (lbBig), sonst nützt der Browser-Cache nichts. */
+const lbPre = new Map();                                 // URL → Image; verhindert Doppel-Anfragen
+function lbThrifty(){
+  try{ const c = navigator.connection;
+    return !!c && (c.saveData === true || /(^|-)2g$/.test(c.effectiveType||"")); }catch(e){ return false; }
+}
+function lbPreload(){
+  const n = lbList.length; if(n<2) return;
+  const order = [];
+  for(let d=1; d<n; d++){                                // 1 vor, 1 zurück, 2 vor, 2 zurück …
+    const a=(lbIdx+d)%n, b=(lbIdx-d+n)%n;
+    if(order.indexOf(a)<0) order.push(a);
+    if(order.indexOf(b)<0) order.push(b);
+  }
+  for(const i of order.slice(0, lbThrifty() ? 2 : order.length)){
+    const u = lbBig(lbList[i].src);
+    if(lbPre.has(u)) continue;
+    const im = new Image(); im.decoding = "async";
+    lbPre.set(u, im); im.src = u;
+    if(lbPre.size > 80) lbPre.delete(lbPre.keys().next().value);   // Deckel; der Browser-Cache trägt weiter
+  }
+}
 function lbShow(i){
   const sc=document.querySelector(".lbscrim"); if(!sc || !lbList.length) return;
   lbIdx = (i%lbList.length + lbList.length) % lbList.length;
@@ -2970,7 +2997,9 @@ function lbShow(i){
   const big = lbBig(it.src);
   img.onerror = big!==it.src ? (()=>{ img.onerror=null; img.src=it.src; }) : null;
   img.src = big; img.alt = it.label || it.file || "Bild";
+  if(!lbPre.has(big)) lbPre.set(big, img);               // das gezeigte Bild gilt als geholt
   lbSync();
+  lbPreload();                                           // Nachbarn im Hintergrund holen
 }
 function lbLoad(loader){                                 // Galerie nachladen, während die Großansicht schon offen ist
   if(typeof loader!=="function") return;
@@ -2983,6 +3012,7 @@ function lbLoad(loader){                                 // Galerie nachladen, w
     if(!add.length) return;
     lbList = lbList.concat(add);
     lbSync();
+    lbPreload();                                         // die neuen Bilder gleich mit vorladen
   }).catch(()=>{});                                      // ohne Netz bleibt es beim einen Bild
 }
 /* Wischen (Handy/Tablet): einen Finger nach links = nächstes Bild, nach rechts =
@@ -3321,11 +3351,19 @@ async function wikiPhoto(card){                        // → {thumb,title,file,
   return null;                                         // beantwortet, aber ohne passendes Bild
 }
 let photoSource = wikiPhoto;                           // austauschbar (Tests laufen ohne Netz)
+/* »Kein Bild« gilt nur für DIESE Sitzung. Früher wurde ein Fehlversuch dauerhaft
+   gemerkt – ein einziger Aussetzer (schwache Verbindung, ein Suchweg lief ins
+   Leere) machte die Art damit für immer bildlos, und der Bilder-Quiz fiel bei ihr
+   auf eine Quizfrage zurück. Jetzt bekommt jede solche Art bei jedem neuen Start
+   einen frischen Versuch; gefundene Bilder bleiben wie bisher dauerhaft gemerkt. */
+const photoTried = new Set();
 async function photoFor(card){
   const known = photoStoreLoad()[card.key];
-  if(known !== undefined) return known;                // null = sicher kein Bild
-  const p = await photoSource(card);                   // wirft bei Netzfehler
+  if(known) return known;                              // gemerktes Bild – sofort da
+  if(photoTried.has(card.key)) return null;            // in dieser Sitzung schon erfolglos gesucht
+  const p = await photoSource(card);                   // wirft bei Netzfehler (dann KEIN Merken → später erneut)
   photoRemember(card.key, p);
+  if(!p) photoTried.add(card.key);
   return p;
 }
 /* Bildnachweis (Urheber + Lizenz) – erst nach der Antwort, damit die Frage nicht
@@ -3370,8 +3408,20 @@ async function renderPhoto(){
   $("#stage").innerHTML = sessionBar() + `<div class="photobox"><div class="ph-load">Bild wird geladen …</div></div>
     <div class="options" id="opts"></div><div class="feedback" id="fb" aria-live="polite"></div><div class="nav" id="nav"></div>`;
   const stop=$("#btnStop"); if(stop) stop.onclick=finishSession;
+  const box = ()=>$("#stage").querySelector(".photobox");
+  // Lieber hartnäckig als schnell aufgeben: Ein kurzer Aussetzer (Funkloch,
+  // überlastete API) heilt sich meist von selbst, deshalb zwei stille Wiederholungen
+  // mit wachsender Pause, bevor überhaupt eine Meldung erscheint.
   let p=null, netFail=false;
-  try{ p = await photoFor(c); }catch(e){ netFail=true; }
+  for(let versuch=1; versuch<=3; versuch++){
+    try{ p = await photoFor(c); netFail=false; break; }
+    catch(e){ netFail=true; }
+    if(current!==c) return;
+    if(versuch===3) break;
+    const b=box(); if(b) b.innerHTML=`<div class="ph-load">Bild wird geladen … <span class="ph-try">neuer Versuch ${versuch+1} von 3</span></div>`;
+    await new Promise(r=>setTimeout(r, versuch*900));
+    if(current!==c) return;
+  }
   if(current!==c) return;                              // Sitzung weitergelaufen (Abbruch/Weiter)
   if(netFail){
     photoNotice(`<b>Keine Verbindung.</b> Der Bilder-Quiz braucht Internet – die Bilder kommen von Wikipedia.
@@ -3387,11 +3437,12 @@ async function renderPhoto(){
     // Box 0 und das Thema ließ sich im Herbarium nie abschließen. Jetzt weicht genau diese
     // eine Karte auf das Quiz aus (nextCard stellt danach über sess.baseMode wieder um);
     // die Sitzung läuft weiter, nur bei auffällig vielen Ausweichern gibt es einen Hinweis.
-    if(photoMisses===6) toast("In dieser Auswahl gibt es kaum Bilder – die Fragen kommen als Quiz.");
+    if(photoMisses===6) toast("In dieser Auswahl gibt es gerade kaum Bilder – die Fragen kommen als Quiz.");
     mode = "quiz"; renderQuiz();
     const q=$("#stage").querySelector(".qprompt");
     if(q) q.insertAdjacentHTML("beforebegin",
-      `<div class="ph-fallback">Für diese Art gibt es kein brauchbares Foto – deshalb als Quizfrage.</div>`);
+      `<div class="ph-fallback">Für diese Art war gerade kein Foto zu finden – deshalb als Quizfrage.
+       Beim nächsten Start sucht das Tool erneut danach.</div>`);
     return;
   }
   photoMisses = 0;
@@ -3400,8 +3451,16 @@ async function renderPhoto(){
     `<div class="ph-wrap"><img class="ph-img" id="phImg" src="${esc(p.thumb)}" alt="Bild der gesuchten Pflanze">`+
     (viele ? `<span class="ph-more">${gal.length} Bilder</span>` : "")+`</div>`;
   const img=$("#phImg");
-  if(img) img.onerror=()=>{ const b=$("#stage").querySelector(".photobox");
-    if(b) b.innerHTML=`<div class="ph-load">Bild konnte nicht geladen werden.</div>`; };
+  // Lädt die Datei selbst nicht (kaputt, gesperrt, gerade nicht erreichbar), nehmen
+  // wir der Reihe nach die übrigen Ansichten derselben Art – erst wenn keine geht,
+  // steht da eine Meldung.
+  if(img){
+    let weiter = 1;
+    img.onerror=()=>{
+      if(weiter < gal.length){ img.src = gal[weiter++].src; return; }
+      const b=box(); if(b) b.innerHTML=`<div class="ph-load">Bild konnte nicht geladen werden.</div>`;
+    };
+  }
   // antippen/Enter → Großansicht; mehrere Ansichten derselben Art als Galerie
   lbWire(img, viele ? "Bilder ansehen" : "Bild vergrößern", gal, photoGalLoader(p));
   if(photoAnswer==="exam")      renderPhotoExam(p);
@@ -3526,7 +3585,9 @@ function photoRevealCredit(p){                        // Bildnachweis erst jetzt
 }
 function prefetchPhoto(){
   const nx = queue[qi+1];
-  if(nx && photoStoreLoad()[nx.key]===undefined) photoFor(nx).catch(()=>{});
+  // auch Arten, die früher einmal ohne Treffer blieben (gemerkte null) – sie bekommen
+  // je Sitzung einen neuen Versuch, und der soll schon vorab laufen
+  if(nx && !photoStoreLoad()[nx.key] && !photoTried.has(nx.key)) photoFor(nx).catch(()=>{});
 }
 function answerPhoto(btn, chosen, p){
   const c=current, correct=answerText(c);

@@ -3180,6 +3180,32 @@ function lbSync(){
   }
   const z=sc.querySelector(".lb-count"); if(z) z.textContent = `${lbIdx+1} / ${lbList.length}`;
 }
+/* Vorladen: Sobald die Großansicht offen ist, holen wir die übrigen Bilder der
+   Galerie schon im Hintergrund – dann steht das nächste beim Wischen/Blättern
+   sofort da. Reihenfolge von innen nach außen (Nachbarn zuerst). Im Datenspar-
+   modus oder auf 2G nur die direkten Nachbarn. Geladen wird dieselbe URL, die
+   auch angezeigt wird (lbBig), sonst nützt der Browser-Cache nichts. */
+const lbPre = new Map();                                 // URL → Image; verhindert Doppel-Anfragen
+function lbThrifty(){
+  try{ const c = navigator.connection;
+    return !!c && (c.saveData === true || /(^|-)2g$/.test(c.effectiveType||"")); }catch(e){ return false; }
+}
+function lbPreload(){
+  const n = lbList.length; if(n<2) return;
+  const order = [];
+  for(let d=1; d<n; d++){
+    const a=(lbIdx+d)%n, b=(lbIdx-d+n)%n;
+    if(order.indexOf(a)<0) order.push(a);
+    if(order.indexOf(b)<0) order.push(b);
+  }
+  for(const i of order.slice(0, lbThrifty() ? 2 : order.length)){
+    const u = lbBig(lbList[i].src);
+    if(lbPre.has(u)) continue;
+    const im = new Image(); im.decoding = "async";
+    lbPre.set(u, im); im.src = u;
+    if(lbPre.size > 80) lbPre.delete(lbPre.keys().next().value);
+  }
+}
 function lbShow(i){
   const sc=document.querySelector(".lbscrim"); if(!sc || !lbList.length) return;
   lbIdx = (i%lbList.length + lbList.length) % lbList.length;
@@ -3187,7 +3213,9 @@ function lbShow(i){
   const big = lbBig(it.src);
   img.onerror = big!==it.src ? (()=>{ img.onerror=null; img.src=it.src; }) : null;
   img.src = big; img.alt = it.label || it.file || "Bild";
+  if(!lbPre.has(big)) lbPre.set(big, img);               // das gezeigte Bild gilt als geholt
   lbSync();
+  lbPreload();                                           // Nachbarn im Hintergrund holen
 }
 function lbLoad(loader){                                 // Galerie nachladen, während die Großansicht schon offen ist
   if(typeof loader!=="function") return;
@@ -3200,6 +3228,7 @@ function lbLoad(loader){                                 // Galerie nachladen, w
     if(!add.length) return;
     lbList = lbList.concat(add);
     lbSync();
+    lbPreload();                                         // die neuen Bilder gleich mit vorladen
   }).catch(()=>{});
 }
 /* Wischen (Handy/Tablet): einen Finger nach links = nächstes Bild, nach rechts =
