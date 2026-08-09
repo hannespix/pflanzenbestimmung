@@ -1255,6 +1255,9 @@ async function main() {
     renderProgress(); sammle(document.body);
     openHowModal(); sammle(document.querySelector(".howmodal")); document.querySelector("#infoClose").click();
     openHerbarium(); sammle(document.querySelector(".herbmodal")); document.querySelector("#infoClose").click();
+    document.querySelectorAll("[title]").forEach((e) => {          // Tooltips zählen mit
+      if (EMO.test(e.getAttribute("title"))) treffer.push("title: " + e.getAttribute("title").slice(0, 40));
+    });
     const icons = document.querySelectorAll("#progress svg.ic").length;
     return { treffer, icons };
   });
