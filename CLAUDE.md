@@ -1461,6 +1461,32 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       `tests/learn.mjs` prüft Rang-Popover (sechs Ränge, aktueller markiert) und
       den Container-Typ. Screenshots verifiziert.
 
+- [x] **Herbarium lückenlos: bildlose Arten weichen aufs Quiz aus + »Es fehlen noch«**
+      (Nutzerfrage »kann man im Herbarium auch Pflanzen freischalten, wenn man nur den
+      Bildermodus nutzt?«). Antwort: **ja** – alle fünf Modi speisen über `grade()`
+      denselben Leitner-Stand, und das Herbarium liest ausschließlich die Box (≥4),
+      nicht den Modus. **Aber** es gab eine echte Lücke: Fand die Bildersuche kein
+      brauchbares Foto, wurde die Art im Bilder-Modus **übersprungen**
+      (`queue.splice`) – sie kam nie dran, blieb in Box 0, und das Thema ließ sich
+      mit reinem Bilder-Lernen nie abschließen. Zwei Gegenmaßnahmen, beide umgesetzt:
+      **(1) Ausweichen statt Überspringen:** Genau diese eine Karte wird als
+      **Quizfrage** gestellt (`mode="quiz"` lokal; `nextCard` stellt über das neue
+      `sess.baseMode` danach wieder auf Bilder um – dasselbe Muster wie die geführte
+      Sitzung, nur ohne `formOf`), mit Hinweiszeile »Für diese Art gibt es kein
+      brauchbares Foto – deshalb als Quizfrage« (`.ph-fallback`). Die frühere
+      **Blockade** nach sechs Fehlversuchen entfällt (es geht ja nichts mehr
+      verloren) und wird zum nicht-blockierenden Toast. **(2) »Es fehlen noch«:**
+      `herbData` liefert je Thema zusätzlich die offenen Arten; die Sammelkarte
+      listet sie (max. 6 + »+N weitere«) – **nur bei angefangenen Themen**
+      (`fest>0`, ≤12 offen), sonst wäre es die ganze Liste. Arten, für die sicher
+      kein Foto existiert (`photoless()` = Cache-Eintrag `null`), tragen die
+      Markierung »ohne Foto« samt Tooltip. `tests/learn.mjs`: alter Skip-Test auf
+      das neue Verhalten umgestellt (Quizfrage mit 4 Optionen + Hinweis statt
+      Überspringen), neuer Test für die Fehl-Liste (Anzahl, »ohne Foto«-Markierung,
+      keine Liste bei unbegonnenem Thema); `__rememberPhoto` für Tests exponiert
+      (der Bild-Cache liegt in einer Modul-Variable, `localStorage` allein reicht
+      nicht). Screenshot verifiziert.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein
