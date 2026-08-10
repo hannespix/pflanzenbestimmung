@@ -1448,11 +1448,11 @@ function startGuided(){
   const q = buildQueue();
   if(!q.length){ toast("Keine Arten im aktuellen Filter",true); return; }
   const online = navigator.onLine !== false;
-  const formOf = new Map();
-  q.forEach(c=>formOf.set(c, guidedForm(pget(c.key).box||0, online)));
+  const formOf = new Map(), boxOf = new Map();
+  q.forEach(c=>{ const b = pget(c.key).box||0; boxOf.set(c, b); formOf.set(c, guidedForm(b, online)); });
   queue=q; qi=0; photoMisses=0; qStart=0;
   sess = { total:q.length, done:0, correct:0, scored:0, ms:0, pts:null, active:true, baseMode:mode,
-           cards:q.slice(), challenge:null, auto:true, formOf, modeBefore:mode };
+           cards:q.slice(), challenge:null, auto:true, formOf, boxOf, modeBefore:mode };
   clockRun(true); stageFull(true);
   nextCard();
 }
@@ -1476,6 +1476,28 @@ function sessionBar(){
     (scoreable()?`<span class="sclock" id="sclock" title="Denkzeit dieser Sitzung – die Uhr läuft nur, solange eine Frage offen ist">${fmtDur(clockNow())}</span>`:``)+
     `<button class="btn ghost" id="btnStop" title="Sitzung beenden">beenden</button></div>`;
 }
+/* Warum kommt DIESE Karte gerade so? In der geführten Lektion wechselt die
+   Übungsform mit dem Lernstand (neu → Bild, dann ohne Bild, dann selbst abrufen,
+   zuletzt tippen). Ohne Hinweis wirkt das wie ein zufällig »eingemischtes« Quiz –
+   deshalb eine ruhige Zeile über der Aufgabe. Nur in der geführten Lektion; bei
+   einer angenommenen Herausforderung fehlt der fremde Lernstand, dann nennt sie
+   nur die Übungsform. */
+const GUIDED_WIE = { photo:"am Bild erkennen", quiz:"jetzt ohne Bild",
+                     cards:"selbst abrufen", type:"prüfungsnah tippen" };
+function guidedNoteHTML(card){
+  if(!sess.auto || !card) return "";
+  const wie = GUIDED_WIE[mode]; if(!wie) return "";
+  const box = sess.boxOf ? sess.boxOf.get(card) : undefined;
+  const stufe = box===undefined ? "" : box ? `Stufe ${box} von 5` : "Neu";
+  return `<div class="gnote" title="Die geführte Lektion wählt die Übungsform nach deinem Lernstand: `+
+    `neu → am Bild erkennen, dann ohne Bild, dann selbst abrufen, zuletzt tippen wie in der Prüfung.">`+
+    `${stufe?esc(stufe)+" · ":""}${esc(wie)}</div>`;
+}
+function showGuidedNote(){
+  const html = guidedNoteHTML(current); if(!html) return;
+  const bar = $("#stage") && $("#stage").querySelector(".sessionbar");
+  if(bar && !$("#stage").querySelector(".gnote")) bar.insertAdjacentHTML("afterend", html);
+}
 function nextCard(){
   if(qi>=queue.length){
     // Ausweich-Umschaltung der LETZTEN Karte zurücknehmen, bevor abgerechnet wird –
@@ -1491,6 +1513,7 @@ function nextCard(){
   else if(mode==="quiz") renderQuiz();
   else if(mode==="photo") renderPhoto();
   else renderType();
+  showGuidedNote();                    // geführte Lektion: Lernstand + Übungsform ansagen
   const stop=$("#btnStop"); if(stop) stop.onclick=finishSession;
 }
 function advance(){ if(sess.auto && mode!=="cards") sess.scored=(sess.scored||0)+1; qi++; sess.done++; nextCard(); }
@@ -3506,7 +3529,7 @@ async function renderPhoto(){
     // eine Karte auf das Quiz aus (nextCard stellt danach über sess.baseMode wieder um);
     // die Sitzung läuft weiter, nur bei auffällig vielen Ausweichern gibt es einen Hinweis.
     if(photoMisses===6) toast("In dieser Auswahl gibt es gerade kaum Bilder – die Fragen kommen als Quiz.");
-    mode = "quiz"; renderQuiz();
+    mode = "quiz"; renderQuiz(); showGuidedNote();
     const q=$("#stage").querySelector(".qprompt");
     if(q) q.insertAdjacentHTML("beforebegin",
       `<div class="ph-fallback">Für diese Art war gerade kein Foto zu finden – deshalb als Quizfrage.

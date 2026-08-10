@@ -84,6 +84,12 @@ input,select{font-family:inherit; color:inherit}
 .ph-more{position:absolute; right:8px; bottom:8px; pointer-events:none;
   padding:3px 8px; border-radius:999px; font-family:var(--mono); font-size:10.5px; letter-spacing:.04em;
   color:#fff; background:rgba(20,28,22,.62); backdrop-filter:blur(3px)}
+/* Geführte Lektion: Lernstand + Übungsform über der Aufgabe – der Formwechsel
+   soll als Fortschritt lesbar sein, nicht wie ein zufällig eingemischtes Quiz. */
+.gnote{margin:10px auto 0; width:max-content; max-width:100%; align-self:center; text-align:center;
+  padding:3px 11px; border-radius:999px;
+  border:1px solid var(--rule); background:var(--surface-2);
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.04em; color:var(--ink-faint)}
 .ph-try{display:block; margin-top:6px; font-family:var(--mono); font-size:11px; color:var(--sepia)}
 .ph-load{padding:44px 16px; border:1px dashed var(--rule-strong); border-radius:6px; color:var(--ink-faint);
   font-size:13.5px; background:var(--surface-2)}
@@ -631,6 +637,7 @@ body.stagefull #stage{
   overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
 }
 body.stagefull #stage>*{width:100%; max-width:720px}   /* zentrierte Spalte auf großen Screens; mobil randfüllend */
+body.stagefull #stage>.gnote{width:max-content}        /* die Lernstand-Pille bleibt schmal */
 body.stagefull .sessionbar{position:sticky; top:0; z-index:2; margin:0 0 14px; padding:4px 0 8px; background:var(--paper); border-bottom:1px solid var(--rule)}
 body.stagefull #card{flex:1 0 auto; min-height:40vh; display:flex; flex-direction:column; justify-content:center}
 body.stagefull .photobox{margin:8px auto 6px}

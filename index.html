@@ -84,6 +84,12 @@ input,select{font-family:inherit; color:inherit}
 .ph-more{position:absolute; right:8px; bottom:8px; pointer-events:none;
   padding:3px 8px; border-radius:999px; font-family:var(--mono); font-size:10.5px; letter-spacing:.04em;
   color:#fff; background:rgba(20,28,22,.62); backdrop-filter:blur(3px)}
+/* Geführte Lektion: Lernstand + Übungsform über der Aufgabe – der Formwechsel
+   soll als Fortschritt lesbar sein, nicht wie ein zufällig eingemischtes Quiz. */
+.gnote{margin:10px auto 0; width:max-content; max-width:100%; align-self:center; text-align:center;
+  padding:3px 11px; border-radius:999px;
+  border:1px solid var(--rule); background:var(--surface-2);
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.04em; color:var(--ink-faint)}
 .ph-try{display:block; margin-top:6px; font-family:var(--mono); font-size:11px; color:var(--sepia)}
 .ph-load{padding:44px 16px; border:1px dashed var(--rule-strong); border-radius:6px; color:var(--ink-faint);
   font-size:13.5px; background:var(--surface-2)}
@@ -631,6 +637,7 @@ body.stagefull #stage{
   overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
 }
 body.stagefull #stage>*{width:100%; max-width:720px}   /* zentrierte Spalte auf großen Screens; mobil randfüllend */
+body.stagefull #stage>.gnote{width:max-content}        /* die Lernstand-Pille bleibt schmal */
 body.stagefull .sessionbar{position:sticky; top:0; z-index:2; margin:0 0 14px; padding:4px 0 8px; background:var(--paper); border-bottom:1px solid var(--rule)}
 body.stagefull #card{flex:1 0 auto; min-height:40vh; display:flex; flex-direction:column; justify-content:center}
 body.stagefull .photobox{margin:8px auto 6px}
@@ -2880,11 +2887,11 @@ function startGuided(){
   const q = buildQueue();
   if(!q.length){ toast("Keine Arten im aktuellen Filter",true); return; }
   const online = navigator.onLine !== false;
-  const formOf = new Map();
-  q.forEach(c=>formOf.set(c, guidedForm(pget(c.key).box||0, online)));
+  const formOf = new Map(), boxOf = new Map();
+  q.forEach(c=>{ const b = pget(c.key).box||0; boxOf.set(c, b); formOf.set(c, guidedForm(b, online)); });
   queue=q; qi=0; photoMisses=0; qStart=0;
   sess = { total:q.length, done:0, correct:0, scored:0, ms:0, pts:null, active:true, baseMode:mode,
-           cards:q.slice(), challenge:null, auto:true, formOf, modeBefore:mode };
+           cards:q.slice(), challenge:null, auto:true, formOf, boxOf, modeBefore:mode };
   clockRun(true); stageFull(true);
   nextCard();
 }
@@ -2908,6 +2915,28 @@ function sessionBar(){
     (scoreable()?`<span class="sclock" id="sclock" title="Denkzeit dieser Sitzung – die Uhr läuft nur, solange eine Frage offen ist">${fmtDur(clockNow())}</span>`:``)+
     `<button class="btn ghost" id="btnStop" title="Sitzung beenden">beenden</button></div>`;
 }
+/* Warum kommt DIESE Karte gerade so? In der geführten Lektion wechselt die
+   Übungsform mit dem Lernstand (neu → Bild, dann ohne Bild, dann selbst abrufen,
+   zuletzt tippen). Ohne Hinweis wirkt das wie ein zufällig »eingemischtes« Quiz –
+   deshalb eine ruhige Zeile über der Aufgabe. Nur in der geführten Lektion; bei
+   einer angenommenen Herausforderung fehlt der fremde Lernstand, dann nennt sie
+   nur die Übungsform. */
+const GUIDED_WIE = { photo:"am Bild erkennen", quiz:"jetzt ohne Bild",
+                     cards:"selbst abrufen", type:"prüfungsnah tippen" };
+function guidedNoteHTML(card){
+  if(!sess.auto || !card) return "";
+  const wie = GUIDED_WIE[mode]; if(!wie) return "";
+  const box = sess.boxOf ? sess.boxOf.get(card) : undefined;
+  const stufe = box===undefined ? "" : box ? `Stufe ${box} von 5` : "Neu";
+  return `<div class="gnote" title="Die geführte Lektion wählt die Übungsform nach deinem Lernstand: `+
+    `neu → am Bild erkennen, dann ohne Bild, dann selbst abrufen, zuletzt tippen wie in der Prüfung.">`+
+    `${stufe?esc(stufe)+" · ":""}${esc(wie)}</div>`;
+}
+function showGuidedNote(){
+  const html = guidedNoteHTML(current); if(!html) return;
+  const bar = $("#stage") && $("#stage").querySelector(".sessionbar");
+  if(bar && !$("#stage").querySelector(".gnote")) bar.insertAdjacentHTML("afterend", html);
+}
 function nextCard(){
   if(qi>=queue.length){
     // Ausweich-Umschaltung der LETZTEN Karte zurücknehmen, bevor abgerechnet wird –
@@ -2923,6 +2952,7 @@ function nextCard(){
   else if(mode==="quiz") renderQuiz();
   else if(mode==="photo") renderPhoto();
   else renderType();
+  showGuidedNote();                    // geführte Lektion: Lernstand + Übungsform ansagen
   const stop=$("#btnStop"); if(stop) stop.onclick=finishSession;
 }
 function advance(){ if(sess.auto && mode!=="cards") sess.scored=(sess.scored||0)+1; qi++; sess.done++; nextCard(); }
@@ -4938,7 +4968,7 @@ async function renderPhoto(){
     // eine Karte auf das Quiz aus (nextCard stellt danach über sess.baseMode wieder um);
     // die Sitzung läuft weiter, nur bei auffällig vielen Ausweichern gibt es einen Hinweis.
     if(photoMisses===6) toast("In dieser Auswahl gibt es gerade kaum Bilder – die Fragen kommen als Quiz.");
-    mode = "quiz"; renderQuiz();
+    mode = "quiz"; renderQuiz(); showGuidedNote();
     const q=$("#stage").querySelector(".qprompt");
     if(q) q.insertAdjacentHTML("beforebegin",
       `<div class="ph-fallback">Für diese Art war gerade kein Foto zu finden – deshalb als Quizfrage.

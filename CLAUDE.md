@@ -1702,6 +1702,21 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Quiz · Karteikarte · Tippen in genau dieser Reihenfolge, und eine Bilder-Lektion
       mit ausgewichener letzter Karte wird als `photo` geteilt.
 
+- [x] **Die geführte Lektion sagt ihren Formwechsel an** (Rückmeldung: »teilweise
+      wurde ins Bilder-Quiz komischerweise ein normales Quiz gemischt«). Es war kein
+      Fehler: `startGuided` wählt die Übungsform **je Karte nach Leitner-Stufe**
+      (`guidedForm`: Box 0–1 → Bild, 2 → Quiz, 3 → Karteikarte, 4–5 → Tippen), und
+      `buildQueue` sortiert neu-zuerst – die schon einmal gekonnten Arten landen
+      deshalb als Quizfragen am Stück hinten. Ohne Hinweis liest sich das wie Zufall.
+      Jetzt steht über der Aufgabe eine ruhige Pille (`.gnote`, `guidedNoteHTML`):
+      **»Neu · am Bild erkennen«**, **»Stufe 2 von 5 · jetzt ohne Bild«**,
+      **»Stufe 3 von 5 · selbst abrufen«**, **»Stufe 4 von 5 · prüfungsnah tippen«**
+      – mit `title`, der den ganzen Weg erklärt. Die Stufe stammt aus `sess.boxOf`
+      (beim Start eingefroren, sonst wanderte sie während der Sitzung mit); bei einer
+      **angenommenen Herausforderung** fehlt der fremde Lernstand, dort nennt die
+      Pille nur die Übungsform. Nur in der geführten Lektion, in den reinen Modi
+      wechselt ja nichts. `tests/learn.mjs` prüft Stufe + Formtext.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein
