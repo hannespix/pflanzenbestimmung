@@ -1717,6 +1717,44 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Pille nur die Übungsform. Nur in der geführten Lektion, in den reinen Modi
       wechselt ja nichts. `tests/learn.mjs` prüft Stufe + Formtext.
 
+- [x] **Themen-Zuordnung nachgeschärft** (Rückmeldung: »eine Birne bei Blüten- und
+      Ziersträuchern?«). Sie war falsch – und ein systematischer Durchgang über alle
+      2114 Arten (Auswurf je Thema + Gattung, botanisch durchgesehen) förderte weitere
+      Fälle zutage. Korrigiert:
+      **(1) Gehölze:** `Pyrus` in `G_SMALL` (Zier-/Wildbirnen sind Kleinbäume; im
+      Obstbau bleibt Kernobst, weil `FRUIT_THEME` vorher greift). `Wisteria`
+      (Blauregen) und `Jasminum nudiflorum` sind **Schlinger** → Kletterpflanzen
+      (*J. officinale* stand dort schon). `Cornus florida`/`kousa`/`mas` sind
+      Kleinbäume/Großsträucher – *C. alba*/*sanguinea*/*sericea* bleiben Ziersträucher,
+      *C. mas* im Obstbau bleibt Wildobst.
+      **(2) Roh-Kategorien, die keine Wuchsform sind,** rutschten bisher als eigenes
+      »Thema« durch: **»Blühpflanzen«** (3 Arten: Sommerflieder + zwei Wildrosen) und
+      **»Wirtspflanzen«** (4 Feuerbrand-Wirte) laufen jetzt über `VAGUE_KAT` →
+      `woodyTheme` (Rosa→Rosen, Buddleja→Ziersträucher, Weißdorn→Kleinbaum,
+      Eibe→Nadelbaum); **»Topf- und Grünpflanzen«** gilt über `ZIMMER_KAT` als
+      Zimmerpflanze.
+      **(3) Beikräuter unter »Stauden«:** Vogelmiere, Löwenzahn, Brennnessel,
+      Acker-Kratzdistel, Breitwegerich, Greiskraut, Sauerampfer, Riesen-Bärenklau und
+      Weißklee standen bei den **Beet- & Prachtstauden**. Neu `ST_WEED` (art-genau) +
+      `ST_WEED_G` (nur `Urtica`/`Taraxacum`, in allen Listen ausnahmslos Beikräuter) –
+      art-genau, damit *Senecio cineraria* (Silberblatt) und *Rumex sanguineus*
+      Beetstauden bleiben und **Weißklee in der Gründüngungsliste** Gründüngung bleibt.
+      Dazu *Ranunculus repens* (unter »Zwiebel- und Knollenpflanzen« geführt) und
+      *Lathyrus vernus* (bisher aufs Roh-Thema »Stauden« gemappt → Schatten- &
+      Gehölzrandstauden).
+      **(4) Vorbestehender Fehler mitgefunden:** *Euphorbia pulcherrima*
+      (Weihnachtsstern) lag bei den **Sukkulenten** – die Gattungsregel stimmt für
+      *E. milii*/*trigona*, für den Weihnachtsstern nicht. Neue Art-Ausnahme `ZI_SPEC`
+      → Blühende Zimmerpflanzen; `zimmerTheme(g, ep)` bekommt dafür das Epitheton.
+      Danach gibt es **keine Kleinstthemen aus Roh-Kategorien** mehr; »Ohne Thema«
+      bleiben bewusst nur die zwei Nicht-Gefäßpflanzen (Flechte, Torfmoos).
+      *Hinweis für später:* `SPEC_THEME` steht **vor** den Staudenkonstanten – dort
+      Themen als Text schreiben, sonst greift die temporale Totzone.
+      `tests/learn.mjs` prüft 21 zusätzliche Referenz-Zuordnungen (Birne im
+      Baumschul- **und** Obstbau-Kontext, Blauregen, Winterjasmin, Kornelkirsche in
+      beiden Kontexten, Wildrose/Sommerflieder aus »Blühpflanzen«, Wirtspflanze,
+      Topfpflanze, Weihnachtsstern vs. Christusdorn, fünf Beikraut-/Gegenprobenfälle).
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein
