@@ -1508,7 +1508,8 @@ function slug(s){ return s.toLowerCase().replace(/[äöü]/g,m=>({"ä":"ae","ö"
    Die Seeds bleiben unverändert – das Thema wird zur Laufzeit bestimmt. */
 const TH_TREE="Große Laubbäume", TH_SMALL="Kleinbäume & Großsträucher", TH_SHRUB="Blüten- & Ziersträucher",
       TH_EVER="Immergrüne Laubgehölze", TH_GC="Bodendecker & Zwergsträucher", TH_CLIMB="Kletterpflanzen",
-      TH_ROSE="Rosen", TH_CONIF="Nadelbäume", TH_DWARF="Zwerg- & Kriechkoniferen";
+      TH_ROSE="Rosen", TH_CONIF="Nadelbäume", TH_DWARF="Zwerg- & Kriechkoniferen",
+      TH_WEED="Wild- & Beikräuter";
 const THEME_ORDER = [TH_TREE,TH_SMALL,TH_SHRUB,TH_EVER,TH_GC,TH_CLIMB,TH_ROSE,TH_CONIF,TH_DWARF,
   "Kernobst","Steinobst","Beerenobst","Schalenobst","Wildobst","Zitrusfrüchte","Obst","Wirtspflanzen",
   "Beet- & Prachtstauden","Schatten- & Gehölzrandstauden","Steingarten- & Polsterstauden","Wasser- & Uferstauden",
@@ -1519,7 +1520,11 @@ const THEME_ORDER = [TH_TREE,TH_SMALL,TH_SHRUB,TH_EVER,TH_GC,TH_CLIMB,TH_ROSE,TH
   "Fruchtgemüse","Kohlgemüse","Wurzel- & Knollengemüse","Blatt- & Salatgemüse","Zwiebelgemüse","Hülsenfrüchte",
   "Gemüsepflanzen","Gewürzkräuter","Gründüngungspflanzen","Wild- & Beikräuter"];
 function themeRank(k){ const i=THEME_ORDER.indexOf(k); return i<0?99:i; }
-const VAGUE_KAT = new Set(["Laubgehölze","Nadelgehölze","Gehölze"]);   // sagen nichts über die Verwendung
+/* »Laubgehölze«/»Nadelgehölze«/»Gehölze« sagen nichts über die Verwendung – ebenso
+   wenig »Blühpflanzen« (Buddleja neben Wildrosen) und »Wirtspflanzen« (Feuerbrand-
+   Wirte: Weißdorn, Feuerdorn, Eibe, Wacholder). Alle laufen über woodyTheme. */
+const VAGUE_KAT = new Set(["Laubgehölze","Nadelgehölze","Gehölze","Blühpflanzen","Wirtspflanzen","Wirtpflanzen"]);
+const ZIMMER_KAT = new Set(["Zimmerpflanzen","Topf- und Grünpflanzen"]);
 const KAT_ALIAS = {                                                    // uneinheitliche Kategorien der Quelllisten
   "Ziergräser":"Gräser", "Bodendecker":TH_GC,
   "Unkräuter, Wildkräuter":"Wild- & Beikräuter", "Wildkräuter":"Wild- & Beikräuter",
@@ -1537,7 +1542,7 @@ const G_TREE = new Set(["Quercus","Fagus","Tilia","Fraxinus","Platanus","Aesculu
   "Juglans","Castanea","Liriodendron","Liquidambar","Ulmus","Zelkova","Robinia","Gleditsia","Sophora",
   "Styphnolobium","Ailanthus","Paulownia","Celtis","Pterocarya","Alnus","Nothofagus","Catalpa","Carpinus"]);
 const G_SMALL = new Set(["Acer","Prunus","Salix","Amelanchier","Crataegus","Sorbus","Scandosorbus",
-  "Mespilus","Cydonia","Malus","Cercis","Cercidiphyllum","Parrotia","Laburnum","Albizia","Corylus",
+  "Mespilus","Cydonia","Malus","Pyrus","Cercis","Cercidiphyllum","Parrotia","Laburnum","Albizia","Corylus",
   "Ficus","Magnolia","Rhus","Aralia","Olea","Punica","Trachycarpus","Eucalyptus","Sambucus","Diospyros","Asimina"]);
 const G_EVER = new Set(["Buxus","Ilex","Aucuba","Skimmia","Osmanthus","Mahonia","Photinia","Laurus",
   "Pittosporum","Nandina","Choisya","Pieris","Arbutus","Myrtus","Yucca","Hebe","Camellia","Citrus",
@@ -1560,9 +1565,16 @@ const SPEC_THEME = {   // "Gattung|Art-Epitheton" → Thema (Ausnahmen von der G
   "Cytisus|decumbens":TH_GC, "Daphne|cneorum":TH_GC, "Muehlenbeckia|axillaris":TH_GC,
   "Rhododendron|forrestii":TH_GC, "Rhododendron|impeditum":TH_GC,
   "Lonicera|xylosteum":TH_SHRUB, "Lonicera|purpusii":TH_SHRUB,   // stehen in den Listen unter »Kletterpflanzen«
-  "Lathyrus|vernus":"Stauden",
+  "Lathyrus|vernus":"Schatten- & Gehölzrandstauden",   // Konstante steht weiter unten – hier als Text
   "Prunus|spinosa":TH_SHRUB, "Prunus|tenella":TH_SHRUB, "Prunus|triloba":TH_SHRUB, "Daphne|mezereum":TH_SHRUB,
-  "Juniperus|scopulorum":TH_CONIF
+  "Juniperus|scopulorum":TH_CONIF,
+  // Schlinger, die in den Listen unter »Laubgehölze« stehen (Blauregen, Winterjasmin –
+  // Jasminum officinale steht dort bereits als Kletterpflanze)
+  "Wisteria|floribunda":TH_CLIMB, "Wisteria|sinensis":TH_CLIMB, "Jasminum|nudiflorum":TH_CLIMB,
+  // Hartriegel: die Blüten-Hartriegel und die Kornelkirsche sind Kleinbäume/Großsträucher,
+  // nicht Blütensträucher wie Cornus alba/sanguinea (im Obstbau bleibt C. mas Wildobst)
+  "Cornus|florida":TH_SMALL, "Cornus|kousa":TH_SMALL, "Cornus|mas":TH_SMALL,
+  "Ranunculus|repens":TH_WEED                   // Kriechender Hahnenfuß – steht unter »Zwiebel- und Knollenpflanzen«
 };
 const FRUIT_THEME = {  // nur in den Obstbau-Profilen (dort zählt die Obstart, nicht die Wuchsform)
   "Malus|domestica":"Kernobst", "Pyrus|communis":"Kernobst", "Pyrus|pyrifolia":"Kernobst",
@@ -1619,8 +1631,17 @@ const ST_SPEC = {   // Art-Ausnahmen (Gattung|Epitheton) – überstimmen die Ga
   "Myosotis|palustris":TH_ST_WASSER, "Mentha|aquatica":TH_ST_WASSER,
   "Salvia|nemorosa":TH_ST_BEET
 };
+/* Beikräuter, die eine Liste unter »Stauden« führt (Vogelmiere, Löwenzahn,
+   Brennnessel …) – sie gehören zu den Wild- & Beikräutern, nicht zu den Beet-
+   stauden. Art-genau, damit echte Beetstauden derselben Gattung nicht mitgerissen
+   werden (Senecio cineraria, Rumex sanguineus); nur Urtica und Taraxacum sind in
+   allen Listen ausnahmslos Beikräuter. */
+const ST_WEED = new Set(["Stellaria|media","Cirsium|arvense","Plantago|major","Plantago|lanceolata",
+  "Senecio|vulgaris","Rumex|acetosa","Heracleum|mantegazzianum","Trifolium|repens"]);
+const ST_WEED_G = new Set(["Urtica","Taraxacum"]);
 function staudeTheme(g, ep, art){
   const sp=g+"|"+ep;
+  if(ST_WEED.has(sp) || ST_WEED_G.has(g)) return TH_WEED;
   if(ST_SPEC[sp]) return ST_SPEC[sp];
   if(ST_WASSER.has(g)) return TH_ST_WASSER;
   if(ST_STEIN.has(g))  return TH_ST_STEIN;
@@ -1661,7 +1682,11 @@ const ZI_BROM=new Set(["Aechmea","Guzmania","Tillandsia","Vriesea"]);
 const ZI_SUK=new Set(["Aloe","Aichryson","Crassula","Echeveria","Kalanchoe","Rhipsalidopsis","Schlumbergera","Echinocactus","Euphorbia"]);
 const ZI_PALM=new Set(["Chamaedorea","Phoenix","Washingtonia","Cycas","Nephrolepis","Platycerium"]);
 const ZI_BLUEH=new Set(["Abutilon","Aeschynanthus","Anthurium","Aphelandra","Bougainvillea","Brugmansia","Calceolaria","Clivia","Columnea","Cyclamen","Exacum","Gardenia","Hibiscus","Hoya","Mandevilla","Medinilla","Primula","Saintpaulia","Sinningia","Spathiphyllum","Stephanotis","Streptocarpus","Cuphea"]);
-function zimmerTheme(g){
+/* Art-Ausnahmen: Der Weihnachtsstern ist eine blühende Topfpflanze, kein Sukkulent –
+   die Gattung Euphorbia führt sonst zu Recht zu den Sukkulenten (E. milii, E. trigona). */
+const ZI_SPEC = { "Euphorbia|pulcherrima":"Blühende Zimmerpflanzen" };
+function zimmerTheme(g, ep){
+  if(ZI_SPEC[g+"|"+ep]) return ZI_SPEC[g+"|"+ep];
   if(ZI_ORCH.has(g)) return TH_ZI_ORCH;
   if(ZI_BROM.has(g)) return TH_ZI_BROM;
   if(ZI_SUK.has(g))  return TH_ZI_SUK;
@@ -1678,7 +1703,7 @@ function themeOf(g, art, kat, pid){
   if(g && VAGUE_KAT.has(kat)) return woodyTheme(g, ep);
   if(kat==="Stauden") return staudeTheme(g, ep, art);
   if(kat==="Gemüsepflanzen") return gemueseTheme(g, ep, art);
-  if(kat==="Zimmerpflanzen") return zimmerTheme(g);
+  if(ZIMMER_KAT.has(kat)) return zimmerTheme(g, ep);   // auch »Topf- und Grünpflanzen« sind Zimmerpflanzen
   return KAT_ALIAS[kat] || kat || "Ohne Thema";
 }
 
