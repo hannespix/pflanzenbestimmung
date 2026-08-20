@@ -1550,7 +1550,7 @@ function requeueCurrent(){ // "Nochmal"/falsch: Karte in dieser Sitzung später 
 /* »Zur Übersicht«: Fokus-Modus verlassen und zurück zur Startansicht (Bereit-Screen). */
 function exitSession(){ stageFull(false); startHintOnly(); try{ window.scrollTo(0,0); }catch(e){} }
 function finishSession(){
-  clockStop(); clockRun(false);        // Fokus-Overlay bleibt an: Ergebnis + Teilen im Vollbild
+  clockStop(); clockRun(false); phWaitStop();   // Fokus-Overlay bleibt an: Ergebnis + Teilen im Vollbild
   sess.active=false;
   const auto = !!sess.auto;
   if(auto && sess.modeBefore) mode = sess.modeBefore;   // Übungsform-Umschaltung der geführten Sitzung zurücknehmen
@@ -2098,7 +2098,7 @@ function syncOptsSummary(){
 }
 function applyMode(){
   const isList = mode==="list";
-  sess.active=false; qStart=0; clockRun(false); stageFull(false);   // Moduswechsel bricht die Sitzung ab
+  sess.active=false; qStart=0; clockRun(false); phWaitStop(); stageFull(false);   // Moduswechsel bricht die Sitzung ab
   const sr=$("#startRow"), lsr=$("#listSearchRow"), lc=$("#listControls");
   if(sr) sr.hidden = isList;
   const bg=$("#btnGo"), gh=$("#goHint");                    // Ein-Knopf-Start nur außerhalb der Liste
@@ -3439,7 +3439,7 @@ function pickCommons(d, card){                        // bester Treffer der Comm
            url: best.url, src:"cm", gal: ok.slice(0,6).map(o=>o.thumb) };
 }
 async function wikiPhoto(card){                        // → {thumb,title,file,url,src} | null
-  let answered = false, weak = null;                   // weak: Zeichnung/Tafel nur als Notnagel
+  let answered = false, weak = null, fehler = 0;       // weak: Zeichnung/Tafel nur als Notnagel
   const inf = infraEpithet(card.a), strict = inf && !artLevelOk(card);
   for(const st of photoSteps(card)){
     try{
@@ -3460,10 +3460,14 @@ async function wikiPhoto(card){                        // → {thumb,title,file,
         if(!looksIllustration(p.pageimage)) return hit;
         weak = weak || hit;                                        // Tafel merken, erst ganz am Ende nehmen
       }
-    }catch(e){ continue; }                             // einzelner Fehlversuch – nächster Weg
+    }catch(e){ fehler++; continue; }                   // einzelner Fehlversuch – nächster Weg
   }
   if(weak) return weak;
-  if(!answered) throw new Error("network");            // gar keine Antwort → offline/blockiert
+  // »Kein Bild« darf nur heißen: ALLE Suchwege sind sauber durchgelaufen und keiner
+  // hatte einen Treffer. Kam auch nur ein Weg nicht durch (Zeitüberschreitung,
+  // Funkloch), ist das ein Verbindungsproblem – sonst gilt die Art fälschlich als
+  // bildlos und der Bilder-Quiz fiele wegen einer schwachen Leitung zurück.
+  if(!answered || fehler) throw new Error("network");
   return null;                                         // beantwortet, aber ohne passendes Bild
 }
 let photoSource = wikiPhoto;                           // austauschbar (Tests laufen ohne Netz)
@@ -3515,12 +3519,34 @@ function photoGalLoader(p){
   if(!p || p.src!=="wp" || !p.title) return null;
   return ()=>wikiGallery(p.title).then(l=>l.map(it=>({ src:it.src, label:"Weiteres Bild der gesuchten Pflanze" })));
 }
+/* ---------- Geduld statt Ersatzmodus ----------
+   Der Bilder-Quiz bleibt der Bilder-Quiz. Eine schwache Leitung darf nicht dazu
+   führen, dass plötzlich Textfragen kommen – das fühlt sich an, als wäre das
+   Werkzeug kaputt. Zwei Wege statt Moduswechsel:
+     · Findet sich für EINE Art gerade kein Foto, kommt sie ans Ende der Runde und
+       wir machen mit der nächsten Art weiter (sie ist später wieder dran).
+     · Kommt gar nichts durch, wartet der Bildschirm sichtbar auf die Verbindung
+       und versucht es von selbst weiter, bis das Netz zurück ist.
+   Erst wenn eine ganze Runde ohne ein einziges Bild vergangen ist, fragen wir –
+   und wechseln auch dann nur, wenn der Lernende es ausdrücklich will. */
+function deferPhotoCard(){
+  const rest = queue.length - qi;                      // noch offene Karten (inkl. dieser)
+  if(rest < 2) return false;                           // nichts zum Tauschen
+  if((sess.photoDefer||0) >= rest) return false;       // schon einmal im Kreis – nicht endlos
+  queue.push(queue.splice(qi,1)[0]);
+  sess.photoDefer = (sess.photoDefer||0)+1;
+  return true;
+}
+let phWaitTimer = null, phWaitMs = 6000;             // Takt des selbsttätigen neuen Versuchs
+function phWaitStop(){ if(phWaitTimer){ clearTimeout(phWaitTimer); phWaitTimer=null; } }
 function photoNotice(html){
   $("#stage").innerHTML = sessionBar() + `<div class="ph-note">${html}</div>`;
   const stop=$("#btnStop"); if(stop) stop.onclick=finishSession;
 }
 async function renderPhoto(){
   const c = current;
+  phWaitStop();
+  if(sess.photoGiveUp){ mode = "quiz"; return renderQuiz(); }   // ausdrücklich gewählt (s. u.)
   $("#stage").innerHTML = sessionBar() + `<div class="photobox"><div class="ph-load">Bild wird geladen …</div></div>
     <div class="options" id="opts"></div><div class="feedback" id="fb" aria-live="polite"></div><div class="nav" id="nav"></div>`;
   const stop=$("#btnStop"); if(stop) stop.onclick=finishSession;
@@ -3540,28 +3566,34 @@ async function renderPhoto(){
   }
   if(current!==c) return;                              // Sitzung weitergelaufen (Abbruch/Weiter)
   if(netFail){
-    photoNotice(`<b>Keine Verbindung.</b> Der Bilder-Quiz braucht Internet – die Bilder kommen von Wikipedia.
-      <div class="ph-actions"><button class="btn" id="phRetry">Erneut versuchen</button>
-      <button class="btn" id="phSkip">Diese Art überspringen</button></div>`);
-    $("#phRetry").onclick=()=>renderPhoto();
-    $("#phSkip").onclick=()=>advance();
+    // Kein Moduswechsel: Der Bildschirm wartet sichtbar auf die Verbindung und
+    // versucht es von selbst weiter – sobald das Netz zurück ist, geht es weiter.
+    photoNotice(`<b>Warte auf die Bilder …</b> Die Fotos kommen von Wikipedia; die Verbindung ist gerade
+      langsam oder weg. Sobald sie wieder da ist, geht es automatisch weiter.
+      <div class="ph-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="ph-actions"><button class="btn primary" id="phRetry">Jetzt nochmal versuchen</button>
+      <button class="btn ghost" id="phOther">Andere Art zeigen</button></div>`);
+    $("#phRetry").onclick=()=>{ phWaitStop(); renderPhoto(); };
+    $("#phOther").onclick=()=>{ phWaitStop(); if(deferPhotoCard()) nextCard(); else renderPhoto(); };
+    phWaitTimer = setTimeout(()=>{ if(current===c && sess.active) renderPhoto(); }, phWaitMs);
     return;
   }
-  if(!p){                                              // kein brauchbares Bild → als Quizfrage stellen
+  if(!p){
+    // Für DIESE Art gibt es gerade kein brauchbares Foto: Karte ans Ende der Runde,
+    // weiter mit der nächsten – der Bilder-Quiz bleibt ein Bilder-Quiz.
     photoMisses++;
-    // Früher wurde die Art übersprungen – dann kam sie im Bilder-Modus nie dran, blieb in
-    // Box 0 und das Thema ließ sich im Herbarium nie abschließen. Jetzt weicht genau diese
-    // eine Karte auf das Quiz aus (nextCard stellt danach über sess.baseMode wieder um);
-    // die Sitzung läuft weiter, nur bei auffällig vielen Ausweichern gibt es einen Hinweis.
-    if(photoMisses===6) toast("In dieser Auswahl gibt es gerade kaum Bilder – die Fragen kommen als Quiz.");
-    mode = "quiz"; renderQuiz(); showGuidedNote();
-    const q=$("#stage").querySelector(".qprompt");
-    if(q) q.insertAdjacentHTML("beforebegin",
-      `<div class="ph-fallback">Für diese Art war gerade kein Foto zu finden – deshalb als Quizfrage.
-       Beim nächsten Start sucht das Tool erneut danach.</div>`);
+    if(deferPhotoCard()) return nextCard();
+    // Eine ganze Runde ohne ein einziges Bild – jetzt ehrlich fragen statt still
+    // den Modus zu wechseln. Der Wechsel passiert nur auf Knopfdruck.
+    photoNotice(`<b>Zu diesen Arten finde ich gerade keine Fotos.</b> Das liegt meist an der Verbindung;
+      zu wenigen Arten gibt es auch schlicht kein brauchbares Bild.
+      <div class="ph-actions"><button class="btn primary" id="phRetry">Nochmal versuchen</button>
+      <button class="btn ghost" id="phQuiz">Ohne Bilder weiterlernen</button></div>`);
+    $("#phRetry").onclick=()=>{ sess.photoDefer=0; renderPhoto(); };
+    $("#phQuiz").onclick=()=>{ sess.photoGiveUp=true; mode="quiz"; renderQuiz(); showGuidedNote(); };
     return;
   }
-  photoMisses = 0;
+  photoMisses = 0; sess.photoDefer = 0;
   const gal = photoGalList(p), viele = gal.length>1;
   $("#stage").querySelector(".photobox").innerHTML =
     `<div class="ph-wrap"><img class="ph-img" id="phImg" src="${esc(p.thumb)}" alt="Bild der gesuchten Pflanze">`+
@@ -3700,10 +3732,12 @@ function photoRevealCredit(p){                        // Bildnachweis erst jetzt
   }).catch(()=>{});
 }
 function prefetchPhoto(){
-  const nx = queue[qi+1];
-  // auch Arten, die früher einmal ohne Treffer blieben (gemerkte null) – sie bekommen
-  // je Sitzung einen neuen Versuch, und der soll schon vorab laufen
-  if(nx && !photoStoreLoad()[nx.key] && !photoTried.has(nx.key)) photoFor(nx).catch(()=>{});
+  // Die nächsten ZWEI Karten vorab holen – auf einer langsamen Leitung ist der
+  // Vorsprung genau das, was den Unterschied zwischen »flüssig« und »hakelig« macht.
+  // Auch Arten, die früher einmal ohne Treffer blieben (gemerkte null), bekommen je
+  // Sitzung einen neuen Versuch, und der soll schon vorab laufen.
+  for(const nx of [queue[qi+1], queue[qi+2]])
+    if(nx && !photoStoreLoad()[nx.key] && !photoTried.has(nx.key)) photoFor(nx).catch(()=>{});
 }
 function answerPhoto(btn, chosen, p){
   const c=current, correct=answerText(c);
@@ -4252,6 +4286,7 @@ window.examFieldList=examFieldList;
 window.wikiPhoto=wikiPhoto;
 /* Bild-Quelle austauschbar + Bild-Cache leerbar: Die Tests laufen ohne Netz. */
 window.__setPhotoSource=fn=>{ photoSource = fn || wikiPhoto; };
+window.__setPhotoWait=ms=>{ phWaitMs = ms || 6000; };   // für Tests: Takt des Wartebildschirms
 window.__setJsonp=fn=>{ jsonp = fn || ((...a)=>jsonpGet(...a)); };   // API-Antworten für Tests vorgeben
 window.__clearPhotoCache=()=>{ photoStore={}; try{ store.set(LS_PHOTOS,"{}"); }catch(e){} };
 window.__rememberPhoto=photoRemember;   // für Tests: »für diese Art gibt es kein Bild« (null) vormerken

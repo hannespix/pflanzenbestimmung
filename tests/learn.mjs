@@ -953,8 +953,8 @@ async function main() {
   assert(phBoth.italics === 4 && phBoth.hasCorrect && phBoth.good && phBoth.scored,
     "Bilder-Quiz »voller Name«: botanischer Teil kursiv, richtige volle Option wertbar: " + JSON.stringify(phBoth));
 
-  // Bilder-Quiz ohne Netz: erst still wiederholen (»neuer Versuch 2 von 3«),
-  // und erst wenn auch das nichts bringt, eine klare Ansage statt kaputter Ansicht
+  // Bilder-Quiz ohne Netz: erst still wiederholen, dann sichtbar auf die Verbindung
+  // WARTEN und von selbst weiterprobieren – niemals still in Textfragen umschalten.
   const photoOff = await page.evaluate(async () => {
     __clearPhotoCache(); photoTried.clear();
     __setPhotoSource(() => Promise.reject(new Error("network")));
@@ -963,62 +963,107 @@ async function main() {
     const frueh = document.querySelector("#stage").textContent;
     await new Promise((r) => setTimeout(r, 3200));        // 0,9 s + 1,8 s Wiederholungen
     const txt = document.querySelector("#stage").textContent;
-    return { wiederholt: /neuer Versuch/i.test(frueh), fruehKeineMeldung: !/Keine Verbindung/i.test(frueh),
-      note: /Keine Verbindung/i.test(txt), retry: !!document.querySelector("#phRetry") };
+    const res = { wiederholt: /neuer Versuch/i.test(frueh), fruehKeineMeldung: !/Warte auf die Bilder/i.test(frueh),
+      note: /Warte auf die Bilder/i.test(txt), retry: !!document.querySelector("#phRetry"),
+      andere: !!document.querySelector("#phOther"),
+      keinQuiz: document.querySelectorAll("#opts .opt").length === 0,
+      heiltSichSelbst: !!phWaitTimer };
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();   // Warte-Timer beenden
+    return res;
   });
   assert(photoOff.wiederholt && photoOff.fruehKeineMeldung,
     "Bilder-Quiz offline: erst still wiederholen, nicht sofort aufgeben: " + JSON.stringify(photoOff));
-  assert(photoOff.note && photoOff.retry,
-    "Bilder-Quiz offline: nach den Wiederholungen Hinweis + »Erneut versuchen« erwartet: " + JSON.stringify(photoOff));
+  assert(photoOff.note && photoOff.retry && photoOff.andere,
+    "Bilder-Quiz offline: Warte-Ansage mit »nochmal versuchen« und »andere Art« erwartet: " + JSON.stringify(photoOff));
+  assert(photoOff.keinQuiz && photoOff.heiltSichSelbst,
+    "Bilder-Quiz offline: kein stiller Wechsel zu Textfragen, dafür automatischer neuer Versuch: " + JSON.stringify(photoOff));
+
+  // … und sobald die Verbindung zurück ist, geht es VON SELBST weiter – ohne Zutun
+  // und ohne dass zwischendurch Textfragen erschienen wären.
+  const heilt = await page.evaluate(async (PX) => {
+    __clearPhotoCache(); photoTried.clear(); __setPhotoWait(250);
+    let netzWeg = true;
+    __setPhotoSource(() => netzWeg ? Promise.reject(new Error("network"))
+      : Promise.resolve({ thumb: PX, title: "T", file: "T.jpg", url: "https://x/y", src: "cm" }));
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();
+    document.querySelector("#sessLen").value = "4";
+    startSession();
+    // warten, bis der Wartebildschirm steht (die stillen Wiederholungen brauchen ~2,7 s)
+    const bisZu = async (test, ms) => { const t0 = Date.now();
+      while (Date.now() - t0 < ms) { if (test()) return true; await new Promise((r) => setTimeout(r, 50)); }
+      return false; };
+    const kamWarte = await bisZu(() => !!document.querySelector(".ph-dots"), 6000);
+    const warte = { ansage: kamWarte && /Warte auf die Bilder/.test(document.querySelector("#stage").textContent),
+      punkte: kamWarte, quiz: document.querySelectorAll("#opts .opt").length };
+    netzWeg = false;                                     // Netz kommt zurück – NICHTS weiter tun
+    await bisZu(() => !!document.querySelector("#phImg"), 6000);
+    const danach = { bild: !!document.querySelector("#phImg"),
+      ansage: /Warte auf die Bilder/.test(document.querySelector("#stage").textContent),
+      opts: document.querySelectorAll("#opts .opt").length };
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    __setPhotoSource(null); __setPhotoWait(); __clearPhotoCache(); photoTried.clear();
+    return { warte, danach };
+  }, PX);
+  assert(heilt.warte.ansage && heilt.warte.punkte && heilt.warte.quiz === 0,
+    "Ohne Netz muss der Bilder-Quiz sichtbar warten (mit Fortschrittspunkten), nicht umschalten: " + JSON.stringify(heilt));
+  assert(heilt.danach.bild && !heilt.danach.ansage && heilt.danach.opts === 4,
+    "Sobald die Verbindung zurück ist, muss der Bilder-Quiz von selbst weiterlaufen: " + JSON.stringify(heilt));
 
   // Unbrauchbare Dateien (Karte/Diagramm/Wappen) müssen aussortiert werden. Findet sich für
-  // eine Art gar kein Foto, wird sie NICHT mehr übersprungen (sonst käme sie im Bilder-Modus
-  // nie dran und bliebe im Herbarium ewig offen), sondern als Quizfrage gestellt.
+  // eine Art gerade kein Foto, kommt sie ans Ende der Runde und es geht mit der nächsten
+  // ART weiter – erst nach einer ganzen Runde ohne Bild wird gefragt (nie still gewechselt).
   const photoSkip = await page.evaluate(async () => {
     const bad = ["Quercus_robur_range_map.svg", "Verbreitung_Fagus.png", "Wappen_Baden.svg"];
     const good = ["Quercus_robur_Blatt.jpg", "Rosa-canina-Bluete.JPG"];
     __clearPhotoCache(); photoTried.clear(); __setPhotoSource(() => Promise.resolve(null));
-    const vorher = queue.length;
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();
+    document.querySelector("#sessLen").value = "4";
     startSession();
-    const nachStart = queue.length;
-    await new Promise((r) => setTimeout(r, 60));
+    await new Promise((r) => setTimeout(r, 400));         // vier Karten durchprobiert
     const txt = document.querySelector("#stage").textContent;
     const opts = document.querySelectorAll("#opts .opt").length;
-    __setPhotoSource(null);   // wieder die echte Quelle (wird hier nicht mehr aufgerufen)
+    const verschoben = sess.photoDefer;
+    const frage = /keine Fotos/i.test(txt), knopf = !!document.querySelector("#phQuiz");
+    if (knopf) document.querySelector("#phQuiz").click();  // ausdrücklich: ohne Bilder weiterlernen
+    const nachWahl = document.querySelectorAll("#opts .opt").length;
+    __setPhotoSource(null);
     document.querySelector('#modeTabs button[data-mode="cards"]').click();
     return { filterBad: bad.every((f) => !usablePhoto(f)), filterGood: good.every((f) => usablePhoto(f)),
-      fallbackHinweis: /kein Foto zu finden/i.test(txt), spaeterWieder: /erneut/i.test(txt),
-      optionen: opts, vorher, nachStart };
+      opts, verschoben, frage, knopf, nachWahl };
   });
   assert(photoSkip.filterBad && photoSkip.filterGood,
     "Bilder-Quiz: Karten/Diagramme müssen aussortiert, Fotos behalten werden: " + JSON.stringify(photoSkip));
-  // Weicht die LETZTE Karte mangels Foto aufs Quiz aus, muss die Lektion trotzdem als
-  // BILDER-Lektion abgerechnet und geteilt werden – vorher stand am Ende »Quiz« im Link.
-  const phShare = await page.evaluate(async () => {
+  assert(photoSkip.verschoben > 0 && photoSkip.opts === 0,
+    "Ohne Foto muss die Art ans Ende der Runde – ohne stillen Wechsel zu Textfragen: " + JSON.stringify(photoSkip));
+  assert(photoSkip.frage && photoSkip.knopf && photoSkip.nachWahl === 4,
+    "Nach einer Runde ohne Bild wird gefragt; erst der Knopf schaltet auf Textfragen um: " + JSON.stringify(photoSkip));
+
+  // Eine Bilder-Lektion muss auch als BILDER-Lektion abgerechnet und geteilt werden
+  const phShare = await page.evaluate(async (PX) => {
     __clearPhotoCache(); photoTried.clear();
-    __setPhotoSource(() => Promise.resolve(null));
+    __setPhotoSource(() => Promise.resolve({ thumb: PX, title: "T", file: "T.jpg", url: "https://x/y", src: "cm" }));
     document.querySelector('#modeTabs button[data-mode="photo"]').click();
     document.querySelector("#sessLen").value = "1";
     startSession();
     await new Promise((r) => setTimeout(r, 80));
-    const ausweich = !!document.querySelector("#opts .opt");
-    document.querySelector("#opts .opt").click();
+    const bild = !!document.querySelector("#phImg");
+    const richtig = answerText(current).toLowerCase();    // richtig antworten, sonst kommt die Karte nochmal
+    ([...document.querySelectorAll("#opts .opt")]
+      .find((o) => o.querySelector("span:last-child").textContent.toLowerCase() === richtig)
+      || document.querySelector("#opts .opt")).click();
     document.querySelector("#wt").click();                // letzte Karte → Abschluss-Screen
     const share = !!document.querySelector("#shareBlock");
     const dec = chDecode(challengeURL().split("#c=")[1]);
     const modus = mode;                                   // vor dem Aufräum-Tabwechsel merken
     document.querySelector('#modeTabs button[data-mode="cards"]').click();
     __setPhotoSource(null); __clearPhotoCache(); photoTried.clear();
-    return { ausweich, share, m: dec && dec.m, modus };
-  });
-  assert(phShare.ausweich && phShare.share,
-    "Bilder-Lektion: nach der letzten (ausgewichenen) Karte muss der Teilen-Block da sein: " + JSON.stringify(phShare));
+    return { bild, share, m: dec && dec.m, modus };
+  }, PX);
+  assert(phShare.bild && phShare.share,
+    "Bilder-Lektion: nach der letzten Karte muss der Teilen-Block da sein: " + JSON.stringify(phShare));
   assert(phShare.m === "photo" && phShare.modus === "photo",
     "Bilder-Lektion muss als Bilder-Lektion teilbar sein, nicht als Quiz: " + JSON.stringify(phShare));
 
-  assert(photoSkip.fallbackHinweis && photoSkip.optionen === 4 && photoSkip.spaeterWieder,
-    "Ohne Foto muss die Art als Quizfrage (4 Optionen) kommen – mit dem Hinweis, dass später erneut gesucht wird: " +
-    JSON.stringify(photoSkip));
 
   // Bildzuordnung: das Bild muss zur ART passen – nicht zur Art statt zur Sorte,
   // nicht zu einem Homonym, keine Tafel mit zwei Arten. Die API-Antworten sind
@@ -2594,7 +2639,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand und sagt sie an, direkt teilbar, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON- und v2-Links lesbar, Richtung inkl. »voller Name«, Antwortart und die Übungsformen der geführten Lektion wandern mit, Banner übernimmt Profil/Modus/Aufgabenstellung, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, Offline-Hinweis, Karten-Filter, Galerie mit mehreren Ansichten – Commons-Kandidaten sofort, Artikelbilder nachgeladen, Wischen, Vorladen der Galerie, stille Wiederholung bei Aussetzern, neuer Versuch je Sitzung), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast, Lernserie/Tagesziel, Herbarium, XP-Ränge + Combo, Stufe 5 (Rang-Popover, Container Queries).");
+  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand und sagt sie an, direkt teilbar, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON- und v2-Links lesbar, Richtung inkl. »voller Name«, Antwortart und die Übungsformen der geführten Lektion wandern mit, Banner übernimmt Profil/Modus/Aufgabenstellung, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, wartet bei schwacher Verbindung sichtbar und heilt sich selbst statt in Textfragen zu wechseln, Galerie mit mehreren Ansichten – Commons-Kandidaten sofort, Artikelbilder nachgeladen, Wischen, Vorladen der Galerie, stille Wiederholung bei Aussetzern, neuer Versuch je Sitzung), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast, Lernserie/Tagesziel, Herbarium, XP-Ränge + Combo, Stufe 5 (Rang-Popover, Container Queries).");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });

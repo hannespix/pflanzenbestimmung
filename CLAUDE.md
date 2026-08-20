@@ -1755,6 +1755,34 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       beiden Kontexten, Wildrose/Sommerflieder aus »Blühpflanzen«, Wirtspflanze,
       Topfpflanze, Weihnachtsstern vs. Christusdorn, fünf Beikraut-/Gegenprobenfälle).
 
+- [x] **Bilder-Quiz bleibt Bilder-Quiz – Geduld statt Ersatzmodus** (Rückmeldung:
+      »sobald die Verbindung schlecht ist, fällt das Bilderrätsel auf einen
+      Ersatzmodus zurück … das fühlt sich an, als wäre das Tool kaputt«). Drei
+      Ursachen/Änderungen:
+      **(1) Schwache Leitung galt als »kein Bild«:** `wikiPhoto` setzte `answered`
+      schon beim ersten beantworteten Suchweg – lief auch nur ein weiterer in eine
+      Zeitüberschreitung (`jsonpGet`, 7 s), kam ohne Treffer ein `null` zurück und
+      die Art galt als **bildlos** → Quizfrage. Jetzt zählt `fehler`: »kein Bild«
+      gilt nur, wenn **alle** Suchwege sauber durchgelaufen sind; sonst wird es als
+      **Verbindungsproblem** gemeldet und weiter versucht.
+      **(2) Kein Moduswechsel mehr.** Findet sich für eine Art gerade kein Foto,
+      kommt sie über `deferPhotoCard()` **ans Ende der Runde** und es geht mit der
+      nächsten Art weiter (später ist sie wieder dran) – der Zähler `sess.photoDefer`
+      verhindert Endlosschleifen (max. eine Runde). Kommt gar nichts durch, zeigt der
+      Bildschirm **»Warte auf die Bilder …«** mit drei ruhigen Punkten (`.ph-dots`)
+      und versucht es **von selbst** alle `phWaitMs` (6 s) erneut – sobald das Netz
+      zurück ist, läuft die Lektion ohne Zutun weiter. Knöpfe: »Jetzt nochmal
+      versuchen« und »Andere Art zeigen«.
+      **(3) Umschalten nur auf ausdrücklichen Wunsch.** Erst wenn eine **ganze Runde**
+      ohne ein einziges Bild vergangen ist, fragt das Werkzeug – und wechselt nur per
+      Knopf »Ohne Bilder weiterlernen« (`sess.photoGiveUp`, gilt dann für den Rest der
+      Sitzung). Zusätzlich holt `prefetchPhoto` jetzt die **nächsten zwei** Karten
+      vorab statt einer. Test-Haken `__setPhotoWait(ms)` für den Warte-Takt.
+      `tests/learn.mjs` prüft: Warte-Ansage + Punkte statt Umschalten, **Selbstheilung**
+      (Netz zurück → Bilder-Quiz läuft ohne Zutun weiter), Verschieben statt
+      Moduswechsel, und dass der Wechsel erst nach einer Runde **und nur per Knopf**
+      passiert.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein
