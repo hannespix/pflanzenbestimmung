@@ -75,7 +75,36 @@ zertifiziert.
    wegzulassen — es ist bereits eine eigene Datei unter eigener Adresse, auf die die
    Lernanwendung nirgends verweist. Dafür ist **keine Programmänderung nötig.**
 
-## 6. Hinweise zur Sorgfalt
+## 6. Pflege und Aktualisierung
+
+**Wenn sich eine amtliche Liste ändert.** Die Original-Excel-Dateien aller vierzehn Listen liegen
+im Projekt und sind die alleinige Datenquelle; die Anwendung führt keine davon abweichende
+Zweitfassung. Eine Aktualisierung besteht aus drei Schritten: die neue Excel-Datei unter dem Namen
+des betreffenden Profils ablegen, ein Skript starten (es liest alle Listen neu ein, trennt Gattung
+und Art und ordnet die Lerngruppen zu) und die automatischen Prüfungen abwarten. Die
+Veröffentlichung läuft anschließend selbsttätig. Der Vorgang wurde zuletzt am 15. Oktober 2026 über
+alle vierzehn Listen durchgespielt; er dauert Minuten, und es werden keine Einzeldatensätze von
+Hand nachgeführt.
+
+**Meldeweg.** Vorschlag: Die zuständige Stelle übersendet die geänderte Liste als Excel-Datei an
+eine feste Adresse und erhält eine Rückmeldung, sobald die Umstellung erfolgt ist. Eine verbindliche
+Frist ist bislang nicht vereinbart und lässt sich festlegen.
+
+**Zuständigkeit und Fortführung.** Entwicklung und Pflege liegen derzeit allein beim Autor, ohne
+Vertragsverhältnis zum Land. Das ist der größte Risikopunkt des Vorhabens und soll hier nicht
+beschönigt werden. Drei Wege sind denkbar:
+
+1. **Fortführung wie bisher** — schnell und unbürokratisch, aber an eine Person gebunden.
+2. **Zweite Person einarbeiten** — das Land benennt jemanden, der den Aktualisierungsvorgang
+   mitbeherrscht. Der Vorgang ist dokumentiert; eingearbeitet dauert er etwa eine Stunde.
+3. **Vollständige Übergabe** — Quelltext und Datenbestand gehen an das Land, das die Pflege selbst
+   übernimmt.
+
+Für alle drei Wege gilt: Der Quelltext liegt in einer Versionsverwaltung, jeder Schritt ist
+nachvollziehbar dokumentiert, und die automatischen Prüfungen fangen Fehler vor der
+Veröffentlichung ab. Eine Nachfolge beginnt also nicht bei null.
+
+## 7. Hinweise zur Sorgfalt
 
 Lerninhalte wie Themenzuordnung, Bildauswahl, botanische Namensherleitung und
 Familien-Steckbriefe werden automatisiert, teils mithilfe generativer KI erzeugt. Darauf
