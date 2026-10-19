@@ -169,8 +169,9 @@ Grundsatz: **Erst bauen, dann Offline-Check, dann Puppeteer-Smoke**, bevor ein P
 als fertig gilt.
 
 **Datenherkunft prüfen:** `bash tools/rebuild_seeds.sh && git diff --exit-code seeds/` – die
-Seeds müssen sich byte-genau aus den amtlichen Excel-Listen in `data/` ergeben (läuft in CI).
-Seeds nie von Hand ändern; Formanpassungen in den Konverter, Lücken in `fix_source_gaps.py`.
+Seeds müssen sich byte-genau aus den amtlichen Excel-Listen in `data/` ergeben (läuft in CI und
+vor jedem Deploy; bei Abweichung geht nichts online). Seeds nie von Hand ändern;
+Formanpassungen in den Konverter, Lücken in `fix_source_gaps.py`.
 
 ---
 
@@ -1796,9 +1797,11 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Unkräuter« / »Unkräuter, Wildkräuter«, ausgeliefert wurde einheitlich »Wild- & Beikräuter«
       (59 Arten; ein Neubau hätte das stillschweigend zurückgedreht). Jetzt im Konverter
       (`KAT_ALIAS`/`katName` in `tools/xlsx_to_seed.mjs`, nur die Bezeichnung, Zugehörigkeit
-      unverändert) → **Neubau = Ausgeliefertes, byte-genau**; neuer CI-Schritt in `build.yml`
-      (`rebuild_seeds.sh && git diff --exit-code seeds/`) hält das dauerhaft wahr (schlägt bei
-      Hand-Edits im Seed oder unkonvertierter neuer Excel fehl). **Kennzeichnung dort, wo Namen
+      unverändert) → **Neubau = Ausgeliefertes, byte-genau**; neuer Schritt
+      (`rebuild_seeds.sh && git diff --exit-code seeds/`) in `build.yml` **und** in beiden
+      Deploy-Jobs von `deploy.yml` (vor Build/Upload) hält das dauerhaft wahr: Hand-Edits im Seed
+      oder eine unkonvertierte neue Excel lassen die CI scheitern und **blockieren die
+      Veröffentlichung**. **Kennzeichnung dort, wo Namen
       gelesen werden:** (1) `.learnnote` (Lern-Tool) – Zusammenfassung »Datenherkunft:
       Pflanzennamen unverändert aus den amtlichen Prüfungslisten · Lernhilfen teils KI-erzeugt«,
       Volltext als zwei Zeilen mit Icon (✓ Quelle / Regler erzeugt), **drei offengelegte
