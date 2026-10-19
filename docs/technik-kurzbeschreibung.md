@@ -86,7 +86,7 @@ Veröffentlichung läuft anschließend selbsttätig. Der Vorgang wurde zuletzt a
 alle vierzehn Listen durchgespielt; er dauert Minuten, und es werden keine Einzeldatensätze von
 Hand nachgeführt. Eine automatische Prüfung erzeugt den Datenbestand bei jeder Änderung neu aus den
 Original-Dateien und schlägt fehl, sobald er auch nur in einem Zeichen von dem abweicht, was
-veröffentlicht wird. Eine unbemerkte Abweichung von den hinterlegten Original-Dateien ist damit
+veröffentlicht wird; die Veröffentlichung unterbleibt dann. Eine unbemerkte Abweichung von den hinterlegten Original-Dateien ist damit
 ausgeschlossen; dass diese dem aktuellen amtlichen Stand entsprechen, sichert der Meldeweg.
 
 **Meldeweg.** Vorschlag: Die zuständige Stelle übersendet die geänderte Liste als Excel-Datei an

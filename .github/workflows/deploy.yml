@@ -66,6 +66,18 @@ jobs:
         with:
           python-version: "3.12"
 
+      # Erst die Daten prüfen: Die Pflanzendaten müssen sich byte-genau aus den
+      # amtlichen Excel-Listen in data/ ergeben (wie in build.yml). Weichen sie ab,
+      # wird gar nicht erst gebaut und hochgeladen.
+      - uses: actions/setup-node@v4
+        if: steps.cred.outputs.ok == 'yes'
+        with:
+          node-version: "20"
+
+      - name: Pflanzendaten = amtliche Listen (Seeds aus data/ reproduzierbar)
+        if: steps.cred.outputs.ok == 'yes'
+        run: bash tools/rebuild_seeds.sh && git diff --exit-code seeds/
+
       - name: Build (Single-File HTML + PWA-Dateien)
         if: steps.cred.outputs.ok == 'yes'
         run: python3 build.py
@@ -199,6 +211,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Pflanzendaten = amtliche Listen (Seeds aus data/ reproduzierbar)
+        run: bash tools/rebuild_seeds.sh && git diff --exit-code seeds/
 
       - name: Build (Single-File HTML + PWA-Dateien)
         run: python3 build.py
