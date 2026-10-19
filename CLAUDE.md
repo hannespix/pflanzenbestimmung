@@ -1810,8 +1810,9 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Hilfe: Abschnitt »Datenherkunft« (Namensherkunft = erzeugt, Wikipedia = Wikipedia, Bogen/
       Musterlösung/Noten frei davon). (6) `recht.html`: neuer Abschnitt **»Datenquellen &
       Inhalte«** (`#datenquellen`) mit Feldliste, Formanpassungen, den drei Eingriffen samt
-      Skriptnamen, Lernhilfen und Verbindlichkeit. **Wortwahl:** Fotos sind *echte* Commons-
-      Aufnahmen, automatisch ist nur die Auswahl – nie »Bilder KI-erzeugt« schreiben.
+      Skriptnamen, Lernhilfen und Verbindlichkeit. **Wortwahl:** Die Bilder sind *echte* Commons-
+      Bilder (Fotos, als Notnagel selten historische Pflanzentafeln), nicht KI-erzeugt; automatisch
+      ist nur die Auswahl – nie »Bilder KI-erzeugt« und nicht pauschal »Fotos« schreiben.
       `docs/technik-kurzbeschreibung.md` Abschnitt 6/7 entsprechend. **Nebenbei:** `photoCredit`
       rief `jsonpGet` direkt statt des austauschbaren `jsonp` – die Bilder-Quiz-Tests fragten
       deshalb live bei Commons an und fielen bei dessen Ratenbegrenzung (HTTP 429) um; jetzt über

@@ -119,8 +119,9 @@ und eine Kategorie, die in vier Listen unterschiedlich heißt, trägt einheitlic
 »Wild- & Beikräuter« (welche Arten dazugehören, bleibt unverändert).
 
 **Lernhilfen: automatisch erzeugt, teils mithilfe generativer KI.** Themenzuordnung, botanische
-Namensherleitung, Familien-Steckbriefe und die Auswahl der Fotos im Bilder-Quiz (echte Aufnahmen
-von Wikimedia Commons) stammen nicht aus den Prüfungslisten. Die Anwendung kennzeichnet diese
+Namensherleitung, Familien-Steckbriefe und die Auswahl der Bilder im Bilder-Quiz (Fotos, selten
+historische Pflanzentafeln von Wikimedia Commons – nicht KI-erzeugt) stammen nicht aus den
+Prüfungslisten. Die Anwendung kennzeichnet diese
 Trennung dort, wo die Namen gelesen werden – im Hinweis vor den Lektionen, an der Artenliste, in
 der Info-Karte jeder Pflanze und auf der gedruckten Lernliste. Prüfungsbogen, Musterlösung und
 Notenberechnung enthalten keine automatisch erzeugten Inhalte. **Verbindlich sind allein die
