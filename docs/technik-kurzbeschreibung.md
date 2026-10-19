@@ -1,6 +1,6 @@
 # Pflanze-BW — Technische Kurzbeschreibung
 
-Stand: 15.10.2026 · Kontakt: Hannes Pix, pflanzenbestimmung@pix-el.de · https://pflanze-bw.de
+Stand: 19.10.2026 · Kontakt: Hannes Pix, pflanzenbestimmung@pix-el.de · https://pflanze-bw.de
 
 ## 1. Was es ist
 
@@ -82,9 +82,12 @@ im Projekt und sind die alleinige Datenquelle; die Anwendung führt keine davon 
 Zweitfassung. Eine Aktualisierung besteht aus drei Schritten: die neue Excel-Datei unter dem Namen
 des betreffenden Profils ablegen, ein Skript starten (es liest alle Listen neu ein, trennt Gattung
 und Art und ordnet die Lerngruppen zu) und die automatischen Prüfungen abwarten. Die
-Veröffentlichung läuft anschließend selbsttätig. Der Vorgang wurde zuletzt am 15. Oktober 2026 über
+Veröffentlichung läuft anschließend selbsttätig. Der Vorgang wurde zuletzt am 19. Oktober 2026 über
 alle vierzehn Listen durchgespielt; er dauert Minuten, und es werden keine Einzeldatensätze von
-Hand nachgeführt.
+Hand nachgeführt. Eine automatische Prüfung erzeugt den Datenbestand bei jeder Änderung neu aus den
+Original-Dateien und schlägt fehl, sobald er auch nur in einem Zeichen von dem abweicht, was
+veröffentlicht wird. Eine unbemerkte Abweichung von den hinterlegten Original-Dateien ist damit
+ausgeschlossen; dass diese dem aktuellen amtlichen Stand entsprechen, sichert der Meldeweg.
 
 **Meldeweg.** Vorschlag: Die zuständige Stelle übersendet die geänderte Liste als Excel-Datei an
 eine feste Adresse und erhält eine Rückmeldung, sobald die Umstellung erfolgt ist. Eine verbindliche
@@ -104,12 +107,24 @@ Für alle drei Wege gilt: Der Quelltext liegt in einer Versionsverwaltung, jeder
 nachvollziehbar dokumentiert, und die automatischen Prüfungen fangen Fehler vor der
 Veröffentlichung ab. Eine Nachfolge beginnt also nicht bei null.
 
-## 7. Hinweise zur Sorgfalt
+## 7. Datenherkunft und Sorgfalt
 
-Lerninhalte wie Themenzuordnung, Bildauswahl, botanische Namensherleitung und
-Familien-Steckbriefe werden automatisiert, teils mithilfe generativer KI erzeugt. Darauf
-weist die Anwendung an mehreren Stellen hin; **verbindlich sind allein die amtlichen
-Prüfungslisten.** Für Richtigkeit und Vollständigkeit wird keine Gewähr übernommen.
+**Pflanzennamen: unverändert aus den amtlichen Prüfungslisten.** Botanischer Name (Gattung, Art),
+Familie, deutscher Name, Synonyme, ZP-Kennzeichnung und – soweit vorhanden – Kategorie werden aus
+den Excel-Dateien übernommen. Angepasst wird nur die Form: das Hybrid-Zeichen, Abstände und die
+Aufteilung des botanischen Namens in Gattung und Art. Drei Eingriffe sind offengelegt und als
+Skripte nachvollziehbar: eine in der Quellliste leere Familie wurde ergänzt (*Chimonanthus
+praecox*: Calycanthaceae), zehn Listen ohne eigene Kategorie erhalten eine Wuchsform-Zuordnung,
+und eine Kategorie, die in vier Listen unterschiedlich heißt, trägt einheitlich den Namen
+»Wild- & Beikräuter« (welche Arten dazugehören, bleibt unverändert).
+
+**Lernhilfen: automatisch erzeugt, teils mithilfe generativer KI.** Themenzuordnung, botanische
+Namensherleitung, Familien-Steckbriefe und die Auswahl der Fotos im Bilder-Quiz (echte Aufnahmen
+von Wikimedia Commons) stammen nicht aus den Prüfungslisten. Die Anwendung kennzeichnet diese
+Trennung dort, wo die Namen gelesen werden – im Hinweis vor den Lektionen, an der Artenliste, in
+der Info-Karte jeder Pflanze und auf der gedruckten Lernliste. Prüfungsbogen, Musterlösung und
+Notenberechnung enthalten keine automatisch erzeugten Inhalte. **Verbindlich sind allein die
+amtlichen Prüfungslisten.** Für Richtigkeit und Vollständigkeit wird keine Gewähr übernommen.
 
 Der Quelltext liegt in einem Versionsverwaltungssystem; jede Änderung ist nachvollziehbar
 und kann bei Bedarf offengelegt werden.

@@ -224,6 +224,13 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .learnnote .ln-more{color:var(--sepia); text-decoration:underline; margin-left:2px}
 .learnnote[open] .ln-more{display:none}
 .learnnote>p{margin:7px 0 0}
+/* Datenherkunft: Quelle und automatisch Erzeugtes optisch getrennt, nicht als Fließtext */
+.learnnote .ln-row{display:flex; gap:9px; align-items:flex-start; margin:10px 0 0}
+.learnnote .ln-row>.ic{width:16px; height:16px; flex:none; margin-top:2px}
+.learnnote .ln-src>.ic{color:var(--green-deep)}
+.learnnote .ln-gen>.ic{color:var(--gold)}
+.learnnote .ln-foot{margin:11px 0 0; padding-top:8px; border-top:1px solid var(--rule); font-size:11px}
+.learnnote a{color:var(--green-deep); text-underline-offset:2px}
 .startrow .hint{font-size:12.5px; color:var(--ink-soft)}
 /* Optionen (einklappbar) – hält die Startansicht ruhig, alle Einstellungen bleiben einen Klick entfernt */
 .setopts{border:1px solid var(--rule); border-radius:6px; background:var(--surface-2); overflow:hidden}
@@ -542,7 +549,10 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .sortbtn:last-child{border-right:none}
 .sortbtn:hover{background:var(--card); color:var(--green-deep)}
 .sortbtn.on{background:var(--green); color:#f4f7f1; font-weight:600}
-.listtop{font-family:var(--mono); font-size:11.5px; color:var(--ink-soft); margin:14px 2px 14px; letter-spacing:.02em}
+.listtop{font-family:var(--mono); font-size:11.5px; color:var(--ink-soft); margin:14px 2px 6px; letter-spacing:.02em}
+/* Datenherkunft direkt an der Liste – hier werden die Namen nachgeschlagen */
+.listsrc{display:flex; gap:7px; align-items:flex-start; margin:0 2px 14px; font-size:11.5px; line-height:1.5; color:var(--ink-soft)}
+.listsrc>.ic{width:15px; height:15px; flex:none; margin-top:2px; color:var(--green-deep)}
 .catblock{margin-bottom:22px}
 .cathead{display:flex; align-items:center; gap:10px; font-family:var(--serif); font-size:18px; font-weight:600; color:var(--green-deep); padding-bottom:6px; margin-bottom:10px; border-bottom:1.5px solid var(--rule)}
 .cathead-i{margin-left:auto; flex:none; width:24px; height:24px; border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--green-deep); border-radius:50%; font-size:12px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:background .12s,border-color .12s,transform .05s}
@@ -578,6 +588,10 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .mh-bot{font-family:var(--serif); font-size:22px; font-style:italic; color:var(--ink); line-height:1.15; overflow-wrap:anywhere}
 .mh-de{font-family:var(--serif); font-size:17px; color:var(--green-deep); margin-top:2px}
 .mh-fam{font-family:var(--mono); font-size:11px; letter-spacing:.04em; color:var(--sepia); text-transform:uppercase; margin-top:6px}
+/* Woher der Name stammt – im Kopf der Info-Karte, direkt an den Namen */
+.mh-src{display:flex; gap:6px; align-items:center; margin-top:8px;
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.03em; color:var(--green-deep)}
+.mh-src>.ic{width:13px; height:13px; flex:none}
 /* Namensherleitung (Merkhilfe) – dezentes Akkordeon unter dem botanischen Namen */
 .etym{margin:0 0 14px; border:1px solid var(--rule); border-radius:10px; background:var(--surface-2); overflow:hidden}
 .etym>summary{cursor:pointer; list-style:none; padding:9px 13px; font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); user-select:none}
@@ -1233,11 +1247,33 @@ body.stagefull #stage>.sessionbar{
          »Selbst wählen«-Klappe; ihre listenrelevanten Schalter sind hier gespiegelt). -->
     <div class="listcontrols" id="listControls" hidden></div>
     <details class="learnnote" id="learnNote">
-      <summary><b>Bitte beachten:</b> Inhalte teils <b>KI-erzeugt</b>, ohne Gewähr <span class="ln-more">(mehr)</span></summary>
-      <p>Karteikarten, Quizfragen, die <b>Bildauswahl</b> und die thematische Zuordnung werden
-        <b>automatisch erzeugt – teils mithilfe generativer KI</b>. Ich übernehme keine Gewähr und keine
-        Haftung für Richtigkeit oder Vollständigkeit. Verbindlich sind allein die offiziellen Prüfungslisten;
-        im Zweifel bitte dort und in der Fachliteratur nachprüfen.</p>
+      <summary><b>Datenherkunft:</b> Pflanzennamen unverändert aus den <b>amtlichen Prüfungslisten</b>&nbsp;·
+        Lernhilfen teils <b>KI-erzeugt</b> <span class="ln-more">(mehr)</span></summary>
+      <div class="ln-row ln-src">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.2 12.4l2.6 2.6 5-5.4"/></svg>
+        <div><b>Unverändert aus der amtlichen Prüfungsliste</b> deiner Fachrichtung: botanischer Name
+          (Gattung und Art), Familie, deutscher Name, Synonyme und die ZP-Kennzeichnung. Angepasst wird
+          allein die <i>Schreibweise</i> – das Hybrid-Zeichen, Abstände und die Aufteilung des
+          botanischen Namens in Gattung und Art. In der Anzeige schreibt das Lern-Tool zudem
+          Abkürzungen aus (»Gew.« → »Gewöhnlicher«) und berichtigt offensichtliche Tippfehler in
+          Familiennamen (»Malvacea« → »Malvaceae«); beim Tippen gilt die Form der Liste weiterhin
+          als richtig.</div>
+      </div>
+      <div class="ln-row ln-gen">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg>
+        <div><b>Automatisch erzeugt – teils mithilfe generativer KI</b> und deshalb ohne Gewähr: die
+          thematische Zuordnung, die Namensherkunft, die Familien-Steckbriefe, die <b>Bildauswahl</b>
+          (echte Fotos von Wikimedia Commons, automatisch ausgesucht) und die falschen Antworten im
+          Quiz – letztere stammen ihrerseits aus derselben amtlichen Liste.</div>
+      </div>
+      <p class="ln-foot">Drei Eingriffe sind offengelegt: bei <i>Chimonanthus praecox</i> war die
+        Familie in der Quellliste leer (ergänzt: Calycanthaceae); für die zehn Listen ohne eigene
+        Kategorie ist die Wuchsform zugeordnet; und die Kategorie der Beikräuter, die in vier Listen
+        unterschiedlich heißt, trägt einheitlich den Namen »Wild- &amp; Beikräuter«.
+        Ich übernehme keine Gewähr und keine Haftung für
+        Richtigkeit oder Vollständigkeit – <b>verbindlich sind allein die offiziellen Prüfungslisten</b>;
+        im Zweifel bitte dort und in der Fachliteratur nachprüfen.
+        <a href="rechtliches.html#datenquellen">Ausführlich: Datenquellen &amp; Inhalte</a></p>
     </details>
   </div>
 
@@ -2188,12 +2224,25 @@ const botName = c => norm(c.g+" "+c.a);
 const fullName = c => botName(c)+" · "+deMain(c);   // voller Name: botanisch · deutsch (Bilder-Quiz »voller Name«)
 // Abkürzungen, wie sie in den Quelllisten vorkommen → ausgeschriebene Anzeigeform
 // (nur fürs Lern-Tool; das Prüfungswerkzeug zeigt den amtlichen Namen unverändert).
-const DE_ABBR = { gew:"Gewöhnliche", amerik:"Amerikanische", austr:"Australische",
-  jap:"Japanische", japan:"Japanische", kriech:"Kriechender", einj:"Einjähriges",
-  treibh:"Treibhaus", "zurückgekr":"Zurückgekrümmter", strauchmarg:"Strauchmargerite" };
+// Adjektive stehen als STAMM: die Endung richtet sich nach dem Geschlecht des Nomens
+// (ohne Artikel: der → -er, die → -e, das → -es) – eine feste Endung ergab früher
+// »Gewöhnliche Trompetenbaum« und »Amerikanische Blumen-Hartriegel«.
+const DE_ADJ_ABBR = { gew:"Gewöhnlich", amerik:"Amerikanisch", austr:"Australisch",
+  jap:"Japanisch", japan:"Japanisch", kriech:"Kriechend", einj:"Einjährig", "zurückgekr":"Zurückgekrümmt" };
+const DE_ABBR = { treibh:"Treibhaus", strauchmarg:"Strauchmargerite" };
+const ADJ_END = { m:"er", f:"e", n:"es" };
+function deGenus(noun){                                    // Geschlecht nach dem letzten Wortteil
+  const w = deacc(String(noun||"")).toLowerCase().split(/[-\s]/).filter(Boolean).pop() || "";
+  if(/(chen|lein|kraut|gras|blatt)$/.test(w)) return "n";  // das Gänseblümchen, das Bohnenkraut
+  if(/(nessel|heit|keit|ung|schaft|ion|ie|e)$/.test(w)) return "f";   // die Eiche, Melone, Heide
+  return "m";                                              // der Baum, Salat, Rettich, Ysop, Hartriegel
+}
 function expandAbbr(s){
   s = String(s==null?"":s).replace(/[\[\]]/g," ");           // eckige Qualifier-Klammern raus
   s = s.replace(/\.(?=[A-Za-zÄÖÜäöüß])/g, ". ");              // fehlendes Leerzeichen nach Abk.-Punkt (»jap.Azalee«)
+  const end = ADJ_END[deGenus(norm(s).split(" ").pop())];     // Kopfnomen = letztes Wort des Namens
+  for(const k in DE_ADJ_ABBR)
+    s = s.replace(new RegExp("\\b"+k+"\\.\\s*", "gi"), DE_ADJ_ABBR[k]+end+" ");
   for(const k in DE_ABBR)
     s = s.replace(new RegExp("\\b"+k+"\\.\\s*", "gi"), DE_ABBR[k]+" ");
   return norm(s);
@@ -2371,7 +2420,9 @@ function deHeads(name){                                   // Grundwort: letztes 
 function deForms(c){                                      // {names, prefixes, heads} – je Karte gemerkt
   if(c.__de) return c.__de;
   const names=[], prefixes=[], heads=new Set();
-  const add=v=>{ v=norm(v).replace(/^[-\s]+|[-\s]+$/g,""); if(v){ names.push(v); deHeads(v).forEach(h=>heads.add(h)); } };
+  const add=v=>{ v=norm(v).replace(/^[-\s]+|[-\s]+$/g,""); if(!v) return;
+    names.push(v); deHeads(v).forEach(h=>heads.add(h));
+    const x=expandAbbr(v); if(x && x!==v) names.push(x); };   // ausgeschriebene Anzeigeform gilt ebenfalls
   for(const part of (c.de||"").split(/[,;]/)){
     const withParens = /\(/.test(part)
       ? [part.replace(/[()]/g,""), part.replace(/\([^)]*\)/g,"")]   // »(Arznei-)Engelwurz«: mit und ohne
@@ -3354,6 +3405,11 @@ function renderList(){
       ${sub?`<div class="sp-sub">${sub}</div>`:""}
     </li>`; };
   let html=`<div class="listtop">${p.length} ${p.length===1?"Art":"Arten"}${term?(" · Treffer für »"+esc(raw)+"«"):""} · sortiert nach ${SORT_LABEL[listSort]} · zum Nachschlagen antippen</div>`;
+  // Datenherkunft dort nennen, wo nachgeschlagen wird: Namen = amtliche Liste, Gliederung = erzeugt
+  const profL = profilLabel();
+  html+=`<div class="listsrc">${ico("check")}<div><b>Artnamen unverändert aus der amtlichen
+    Prüfungsliste</b>${profL?" ("+esc(profL)+")":""} · die Gruppierung nach Themen ist
+    automatisch erzeugt, teils mit KI</div></div>`;
   if(p.some(c=>c.zp)) html+=`<div class="zpnote"><span class="sp-zp">ZP</span> = für die Zwischenprüfung relevant</div>`;
 
   if(listSort==="bot" || listSort==="de"){
@@ -3510,6 +3566,7 @@ function buildPrintList(){
     (showZP&&hasZP)?"ZP = für die Zwischenprüfung relevant":"",
     showChk?"Spalte »gelernt« zum Abhaken, was sitzt":"",
     showBot?"Botanischer Name (grün) = Lernziel":"",
+    "Artnamen unverändert aus der amtlichen Prüfungsliste der Regierungspräsidien Baden-Württemberg",
     "Pflanzenkenntnis · Lernliste in der Form des Prüfungsbogens (Spalten und Punkte wie in der Prüfung)",
     wantEty?"Namensherkunft: Kurzherleitung (Latein/Griechisch → Deutsch), kuratiert – ohne Gewähr":""
   ].filter(Boolean).join(" · ");
@@ -4937,7 +4994,7 @@ async function photoFor(card){
 /* Bildnachweis (Urheber + Lizenz) – erst nach der Antwort, damit die Frage nicht
    verraten wird und die Anzeige nicht wartet. */
 async function photoCredit(file){
-  const d = await jsonpGet("https://commons.wikimedia.org/w/api.php?action=query&format=json"+
+  const d = await jsonp("https://commons.wikimedia.org/w/api.php?action=query&format=json"+
     "&prop=imageinfo&iiprop=extmetadata&iiextmetadatafilter=Artist%7CLicenseShortName&titles=File:"+
     encodeURIComponent(file));
   const p = wikiPage(d), m = p && p.imageinfo && p.imageinfo[0] && p.imageinfo[0].extmetadata;
@@ -5259,6 +5316,7 @@ function openInfo(card){
        <div class="mh-bot">${esc(norm(card.g+" "+card.a))}</div>
        ${card.de?`<div class="mh-de">${esc(card.de)}</div>`:""}
        ${fam?`<div class="mh-fam">${esc(fam)}</div>`:""}
+       <div class="mh-src" title="Gattung, Art, Familie, deutscher Name und Synonyme stehen unverändert so in der amtlichen Prüfungsliste. Namensherkunft und Thema sind automatisch erzeugt (teils mit KI), die Online-Infos stammen von Wikipedia.">${ico("check")}Name aus der amtlichen Prüfungsliste</div>
      </div>
      ${etyHTML}
      <div class="srcblock">
@@ -5512,12 +5570,15 @@ function syncExamFieldsUI(){
     saveExamFields(); syncExamFieldsUI();
   });
 }
-function syncProfileChip(){
-  const t=$("#profChipText"); if(!t) return;
+function profilLabel(){                                   // »Gemüsebau · Gärtner/in« (Chip, Listen-Quelle)
   const fr=$("#frSelect"), nv=$("#nivSelect");
   const frL = fr && fr.selectedIndex>=0 ? fr.options[fr.selectedIndex].textContent : "";
   const nvL = nv && nv.selectedIndex>=0 ? nv.options[nv.selectedIndex].textContent : "";
-  t.textContent = frL && nvL ? frL+" · "+nvL : "Beruf wählen";
+  return frL && nvL ? frL+" · "+nvL : "";
+}
+function syncProfileChip(){
+  const t=$("#profChipText"); if(!t) return;
+  t.textContent = profilLabel() || "Beruf wählen";
 }
 function profSub(){
   const fr = FR_LIST.find(f=>slug(f)===$("#frSelect").value)||"";

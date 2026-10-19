@@ -740,12 +740,25 @@ const botName = c => norm(c.g+" "+c.a);
 const fullName = c => botName(c)+" · "+deMain(c);   // voller Name: botanisch · deutsch (Bilder-Quiz »voller Name«)
 // Abkürzungen, wie sie in den Quelllisten vorkommen → ausgeschriebene Anzeigeform
 // (nur fürs Lern-Tool; das Prüfungswerkzeug zeigt den amtlichen Namen unverändert).
-const DE_ABBR = { gew:"Gewöhnliche", amerik:"Amerikanische", austr:"Australische",
-  jap:"Japanische", japan:"Japanische", kriech:"Kriechender", einj:"Einjähriges",
-  treibh:"Treibhaus", "zurückgekr":"Zurückgekrümmter", strauchmarg:"Strauchmargerite" };
+// Adjektive stehen als STAMM: die Endung richtet sich nach dem Geschlecht des Nomens
+// (ohne Artikel: der → -er, die → -e, das → -es) – eine feste Endung ergab früher
+// »Gewöhnliche Trompetenbaum« und »Amerikanische Blumen-Hartriegel«.
+const DE_ADJ_ABBR = { gew:"Gewöhnlich", amerik:"Amerikanisch", austr:"Australisch",
+  jap:"Japanisch", japan:"Japanisch", kriech:"Kriechend", einj:"Einjährig", "zurückgekr":"Zurückgekrümmt" };
+const DE_ABBR = { treibh:"Treibhaus", strauchmarg:"Strauchmargerite" };
+const ADJ_END = { m:"er", f:"e", n:"es" };
+function deGenus(noun){                                    // Geschlecht nach dem letzten Wortteil
+  const w = deacc(String(noun||"")).toLowerCase().split(/[-\s]/).filter(Boolean).pop() || "";
+  if(/(chen|lein|kraut|gras|blatt)$/.test(w)) return "n";  // das Gänseblümchen, das Bohnenkraut
+  if(/(nessel|heit|keit|ung|schaft|ion|ie|e)$/.test(w)) return "f";   // die Eiche, Melone, Heide
+  return "m";                                              // der Baum, Salat, Rettich, Ysop, Hartriegel
+}
 function expandAbbr(s){
   s = String(s==null?"":s).replace(/[\[\]]/g," ");           // eckige Qualifier-Klammern raus
   s = s.replace(/\.(?=[A-Za-zÄÖÜäöüß])/g, ". ");              // fehlendes Leerzeichen nach Abk.-Punkt (»jap.Azalee«)
+  const end = ADJ_END[deGenus(norm(s).split(" ").pop())];     // Kopfnomen = letztes Wort des Namens
+  for(const k in DE_ADJ_ABBR)
+    s = s.replace(new RegExp("\\b"+k+"\\.\\s*", "gi"), DE_ADJ_ABBR[k]+end+" ");
   for(const k in DE_ABBR)
     s = s.replace(new RegExp("\\b"+k+"\\.\\s*", "gi"), DE_ABBR[k]+" ");
   return norm(s);
@@ -923,7 +936,9 @@ function deHeads(name){                                   // Grundwort: letztes 
 function deForms(c){                                      // {names, prefixes, heads} – je Karte gemerkt
   if(c.__de) return c.__de;
   const names=[], prefixes=[], heads=new Set();
-  const add=v=>{ v=norm(v).replace(/^[-\s]+|[-\s]+$/g,""); if(v){ names.push(v); deHeads(v).forEach(h=>heads.add(h)); } };
+  const add=v=>{ v=norm(v).replace(/^[-\s]+|[-\s]+$/g,""); if(!v) return;
+    names.push(v); deHeads(v).forEach(h=>heads.add(h));
+    const x=expandAbbr(v); if(x && x!==v) names.push(x); };   // ausgeschriebene Anzeigeform gilt ebenfalls
   for(const part of (c.de||"").split(/[,;]/)){
     const withParens = /\(/.test(part)
       ? [part.replace(/[()]/g,""), part.replace(/\([^)]*\)/g,"")]   // »(Arznei-)Engelwurz«: mit und ohne
@@ -1906,6 +1921,11 @@ function renderList(){
       ${sub?`<div class="sp-sub">${sub}</div>`:""}
     </li>`; };
   let html=`<div class="listtop">${p.length} ${p.length===1?"Art":"Arten"}${term?(" · Treffer für »"+esc(raw)+"«"):""} · sortiert nach ${SORT_LABEL[listSort]} · zum Nachschlagen antippen</div>`;
+  // Datenherkunft dort nennen, wo nachgeschlagen wird: Namen = amtliche Liste, Gliederung = erzeugt
+  const profL = profilLabel();
+  html+=`<div class="listsrc">${ico("check")}<div><b>Artnamen unverändert aus der amtlichen
+    Prüfungsliste</b>${profL?" ("+esc(profL)+")":""} · die Gruppierung nach Themen ist
+    automatisch erzeugt, teils mit KI</div></div>`;
   if(p.some(c=>c.zp)) html+=`<div class="zpnote"><span class="sp-zp">ZP</span> = für die Zwischenprüfung relevant</div>`;
 
   if(listSort==="bot" || listSort==="de"){
@@ -2062,6 +2082,7 @@ function buildPrintList(){
     (showZP&&hasZP)?"ZP = für die Zwischenprüfung relevant":"",
     showChk?"Spalte »gelernt« zum Abhaken, was sitzt":"",
     showBot?"Botanischer Name (grün) = Lernziel":"",
+    "Artnamen unverändert aus der amtlichen Prüfungsliste der Regierungspräsidien Baden-Württemberg",
     "Pflanzenkenntnis · Lernliste in der Form des Prüfungsbogens (Spalten und Punkte wie in der Prüfung)",
     wantEty?"Namensherkunft: Kurzherleitung (Latein/Griechisch → Deutsch), kuratiert – ohne Gewähr":""
   ].filter(Boolean).join(" · ");
@@ -3489,7 +3510,7 @@ async function photoFor(card){
 /* Bildnachweis (Urheber + Lizenz) – erst nach der Antwort, damit die Frage nicht
    verraten wird und die Anzeige nicht wartet. */
 async function photoCredit(file){
-  const d = await jsonpGet("https://commons.wikimedia.org/w/api.php?action=query&format=json"+
+  const d = await jsonp("https://commons.wikimedia.org/w/api.php?action=query&format=json"+
     "&prop=imageinfo&iiprop=extmetadata&iiextmetadatafilter=Artist%7CLicenseShortName&titles=File:"+
     encodeURIComponent(file));
   const p = wikiPage(d), m = p && p.imageinfo && p.imageinfo[0] && p.imageinfo[0].extmetadata;
@@ -3811,6 +3832,7 @@ function openInfo(card){
        <div class="mh-bot">${esc(norm(card.g+" "+card.a))}</div>
        ${card.de?`<div class="mh-de">${esc(card.de)}</div>`:""}
        ${fam?`<div class="mh-fam">${esc(fam)}</div>`:""}
+       <div class="mh-src" title="Gattung, Art, Familie, deutscher Name und Synonyme stehen unverändert so in der amtlichen Prüfungsliste. Namensherkunft und Thema sind automatisch erzeugt (teils mit KI), die Online-Infos stammen von Wikipedia.">${ico("check")}Name aus der amtlichen Prüfungsliste</div>
      </div>
      ${etyHTML}
      <div class="srcblock">
@@ -4064,12 +4086,15 @@ function syncExamFieldsUI(){
     saveExamFields(); syncExamFieldsUI();
   });
 }
-function syncProfileChip(){
-  const t=$("#profChipText"); if(!t) return;
+function profilLabel(){                                   // »Gemüsebau · Gärtner/in« (Chip, Listen-Quelle)
   const fr=$("#frSelect"), nv=$("#nivSelect");
   const frL = fr && fr.selectedIndex>=0 ? fr.options[fr.selectedIndex].textContent : "";
   const nvL = nv && nv.selectedIndex>=0 ? nv.options[nv.selectedIndex].textContent : "";
-  t.textContent = frL && nvL ? frL+" · "+nvL : "Beruf wählen";
+  return frL && nvL ? frL+" · "+nvL : "";
+}
+function syncProfileChip(){
+  const t=$("#profChipText"); if(!t) return;
+  t.textContent = profilLabel() || "Beruf wählen";
 }
 function profSub(){
   const fr = FR_LIST.find(f=>slug(f)===$("#frSelect").value)||"";

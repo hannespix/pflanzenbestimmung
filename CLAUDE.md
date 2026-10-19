@@ -168,6 +168,10 @@ await b.close();
 Grundsatz: **Erst bauen, dann Offline-Check, dann Puppeteer-Smoke**, bevor ein PR
 als fertig gilt.
 
+**Datenherkunft prüfen:** `bash tools/rebuild_seeds.sh && git diff --exit-code seeds/` – die
+Seeds müssen sich byte-genau aus den amtlichen Excel-Listen in `data/` ergeben (läuft in CI).
+Seeds nie von Hand ändern; Formanpassungen in den Konverter, Lücken in `fix_source_gaps.py`.
+
 ---
 
 ## Datenmodell
@@ -1783,12 +1787,59 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Moduswechsel, und dass der Wechsel erst nach einer Runde **und nur per Knopf**
       passiert.
 
+- [x] **Datenherkunft gekennzeichnet: Namen amtlich, Lernhilfen erzeugt** (Rückfrage aus dem
+      RP: »Sind die Pflanzennamen nur aus den Listen oder mit KI gemischt? Da steht ja
+      KI-unterstützt.«). Der alte Hinweis nannte nur die KI (»Inhalte teils KI-erzeugt«), nicht
+      die Quelle – zugeklappt las er sich, als seien auch die Namen erzeugt. **Verifiziert statt
+      behauptet:** Neubau aller 14 Seeds aus `data/` ergab genau eine nicht erfasste Abweichung –
+      die Kategorie der Beikräuter heißt in vier Excel-Listen »Wildkräuter« / »Bei-, Wild- oder
+      Unkräuter« / »Unkräuter, Wildkräuter«, ausgeliefert wurde einheitlich »Wild- & Beikräuter«
+      (59 Arten; ein Neubau hätte das stillschweigend zurückgedreht). Jetzt im Konverter
+      (`KAT_ALIAS`/`katName` in `tools/xlsx_to_seed.mjs`, nur die Bezeichnung, Zugehörigkeit
+      unverändert) → **Neubau = Ausgeliefertes, byte-genau**; neuer CI-Schritt in `build.yml`
+      (`rebuild_seeds.sh && git diff --exit-code seeds/`) hält das dauerhaft wahr (schlägt bei
+      Hand-Edits im Seed oder unkonvertierter neuer Excel fehl). **Kennzeichnung dort, wo Namen
+      gelesen werden:** (1) `.learnnote` (Lern-Tool) – Zusammenfassung »Datenherkunft:
+      Pflanzennamen unverändert aus den amtlichen Prüfungslisten · Lernhilfen teils KI-erzeugt«,
+      Volltext als zwei Zeilen mit Icon (✓ Quelle / Regler erzeugt), **drei offengelegte
+      Eingriffe** (Chimonanthus-Familie, Wuchsform für 10 Listen, Beikräuter-Bezeichnung), Link
+      auf `rechtliches.html#datenquellen`. (2) Nachschlage-Liste: Quellzeile `.listsrc` mit Profil
+      (`profilLabel()`, aus `syncProfileChip` herausgezogen). (3) Info-Karte: `.mh-src` »Name aus
+      der amtlichen Prüfungsliste« (nur Lern-Tool – im Prüfungswerkzeug ist die Liste editierbar).
+      (4) Druckliste: Quelle in der Fußzeile (Ausdrucke wandern weiter). (5) Prüfungswerkzeug-
+      Hilfe: Abschnitt »Datenherkunft« (Namensherkunft = erzeugt, Wikipedia = Wikipedia, Bogen/
+      Musterlösung/Noten frei davon). (6) `recht.html`: neuer Abschnitt **»Datenquellen &
+      Inhalte«** (`#datenquellen`) mit Feldliste, Formanpassungen, den drei Eingriffen samt
+      Skriptnamen, Lernhilfen und Verbindlichkeit. **Wortwahl:** Fotos sind *echte* Commons-
+      Aufnahmen, automatisch ist nur die Auswahl – nie »Bilder KI-erzeugt« schreiben.
+      `docs/technik-kurzbeschreibung.md` Abschnitt 6/7 entsprechend. **Nebenbei:** `photoCredit`
+      rief `jsonpGet` direkt statt des austauschbaren `jsonp` – die Bilder-Quiz-Tests fragten
+      deshalb live bei Commons an und fielen bei dessen Ratenbegrenzung (HTTP 429) um; jetzt über
+      `jsonp`, und `tests/learn.mjs` setzt `__setJsonp(window.__offlineJsonp)` als Standard (auch
+      statt der Rücksetzungen auf `null`) → **der Lern-Test macht keine einzige Anfrage ins Netz**.
+      **Beim Verifizieren gefunden – Anzeige-Bug:** `DE_ABBR` hatte feste Adjektiv-Endungen
+      (`gew:"Gewöhnliche"`), das Lern-Tool zeigte so »Gewöhnliche Trompetenbaum«, »Gewöhnliche
+      Buchsbaum/Feldsalat/Meerrettich/Ysop«, »Amerikanische Blumen-Hartriegel« – Formen, die in
+      keiner Liste stehen und falsch sind; zudem wurde die angezeigte Vollform beim Tippen NICHT
+      anerkannt (deForms kannte nur die Listenform). Jetzt `DE_ADJ_ABBR` (Stämme) + `deGenus()`
+      (Geschlecht nach letztem Wortteil: -chen/-kraut… = n, -e/-nessel… = f, sonst m) +
+      `ADJ_END`; `deForms` nimmt `expandAbbr(v)` zusätzlich zur Listenform auf. Offengelegt als
+      Anzeige-Anpassung (Abkürzungen ausgeschrieben, 30 Einträge; Familien-Tippfehler berichtigt,
+      17 Einträge inkl. »Caesalpinaceae« → Fabaceae bei *Gleditsia*; dt. Familienname ergänzt –
+      Datenbestand unverändert, Prüfungswerkzeug zeigt ohne diese Anpassungen).
+      Tests: Zusammenfassung zu + nennt Quelle und KI, Volltext »unverändert«/Eingriffe/Link,
+      Listen-Quellzeile mit Profil, Info-Karten-Quelle, Druck-Fußzeile; Adjektiv-Endung je
+      Geschlecht und **über alle 2114 Arten: angezeigter Name (`deMain`) wird beim Tippen
+      anerkannt**; `tests/smoke.mjs` prüft den Hilfe-Abschnitt.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein
       Vollscan (2114 Arten) fand nur die inzwischen geschlossene Familien-Lücke zu
       *Chimonanthus praecox*; künftige Lücken über die `CORRECTIONS`-Tabelle in
-      `tools/fix_source_gaps.py` nachtragen (nicht direkt im Seed – siehe Erledigt).
+      `tools/fix_source_gaps.py` nachtragen (nicht direkt im Seed – siehe Erledigt; die CI
+      lehnt Hand-Edits in `seeds/` ab). Jeder neue Eingriff gehört zusätzlich in die
+      Offenlegung (`.learnnote`, Hilfe »Datenherkunft«, `recht.html#datenquellen`).
 - [ ] Bei künftigen Listen-Updates: Excel nach `data/<profil-id>.<ext>` legen,
       `tools/rebuild_seeds.sh` (oder Konverter je Datei) laufen lassen, bauen,
       Offline-Check + Smoke-Test.

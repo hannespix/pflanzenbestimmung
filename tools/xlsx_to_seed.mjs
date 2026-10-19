@@ -53,6 +53,15 @@ const split = (b) => {
 };
 // Titel-/Fuß-/Quellzeilen, die weder Datenzeile noch Kategorie sind
 const isNoise = (s) => /^(https?:|stand[:\s]|quelle|pflanzenliste)/i.test(norm(s));
+// Dieselbe Kategorie heißt in den Listen unterschiedlich – nur die BEZEICHNUNG wird
+// vereinheitlicht; welche Arten zur Kategorie gehören, bleibt wie in der Quellliste.
+// (Offengelegt in der Hilfe, im Lern-Tool-Hinweis und auf der Rechtliches-Seite.)
+const KAT_ALIAS = {
+  "Wildkräuter": "Wild- & Beikräuter",                 // Friedhofsgärtnerei · Fachwerker
+  "Bei-, Wild- oder Unkräuter": "Wild- & Beikräuter",  // Gemüsebau · Gärtner und Fachwerker
+  "Unkräuter, Wildkräuter": "Wild- & Beikräuter",      // Obstbau · Gärtner
+};
+const katName = (k) => KAT_ALIAS[k] || k;
 const H = {
   botanisch: /(botan|wissensch|lateinisch|bot\.?\s*name|artname)/i,
   deutsch: /(deutsch|trivial|dt\.?\s*name)/i,
@@ -136,7 +145,7 @@ function parseSheet(rows) {
     out.push([
       g, ar, fam,
       m.deutsch != null ? norm(cells[m.deutsch]) : "",
-      rowKat,
+      katName(rowKat),
       m.zp != null && /zp|x|ja|1|✓/i.test(norm(cells[m.zp])) ? 1 : 0,
       m.synonyme != null ? norm(cells[m.synonyme]) : "",
     ]);

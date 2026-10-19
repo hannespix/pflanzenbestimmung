@@ -32,6 +32,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+      # Die Pflanzendaten müssen sich byte-genau aus den amtlichen Excel-Listen in data/
+      # ergeben (Konverter + die offengelegten Ergänzungsskripte). Schlägt fehl, wenn ein
+      # Seed von Hand geändert wurde oder eine neue Excel nicht konvertiert ist – die
+      # Aussage »unverändert aus den amtlichen Prüfungslisten« in Hilfe/Hinweis/Rechtlichem
+      # bleibt so überprüfbar wahr.
+      - name: Pflanzendaten = amtliche Listen (Seeds aus data/ reproduzierbar)
+        run: bash tools/rebuild_seeds.sh && git diff --exit-code seeds/
       - name: Puppeteer (inkl. Chromium) installieren
         run: npm install --no-save puppeteer@23
       - name: Puppeteer-Smoke-Test Prüfungswerkzeug (gegen dist/)
