@@ -74,6 +74,13 @@ async function main() {
   await page.goto(FILE, { waitUntil: "load" });
   await page.waitForFunction("window.startSession!=null", { timeout: 10000 });
   assert(errs.length === 0, "Konsolenfehler beim Boot: " + errs.join(" | "));
+  // Ohne Netz testen: Wikipedia/Commons-Abrufe (z. B. der Bildnachweis nach einer Antwort)
+  // laufen über den austauschbaren jsonp und antworten hier »offline«. Sonst hinge der
+  // Test an der Verfügbarkeit und Ratenbegrenzung (HTTP 429) eines fremden Dienstes.
+  await page.evaluate(() => {
+    window.__offlineJsonp = () => Promise.reject(new Error("offline (Test)"));
+    __setJsonp(window.__offlineJsonp);
+  });
 
   // Lernstoff geladen, sauberer Zustand
   const setup = await page.evaluate(() => {
@@ -336,19 +343,67 @@ async function main() {
     document.querySelector('#modeTabs button[data-mode="cards"]').click();
     const n = document.querySelector("#learnNote");
     const t = n ? n.textContent.replace(/\s+/g, " ") : "";
+    const sum = n ? n.querySelector("summary").textContent.replace(/\s+/g, " ") : "";
     const r = n ? n.getBoundingClientRect() : { height: 0 };
     const vor = !document.querySelector("#startRow").hidden && !n.hidden && r.height > 0;
     document.querySelector('#modeTabs button[data-mode="list"]').click();
     const imListe = document.querySelector("#learnNote").hidden;
     document.querySelector('#modeTabs button[data-mode="cards"]').click();
-    return { vor, imListe, ki: /generativer KI/.test(t), bild: /Bildauswahl/.test(t),
-      gewaehr: /keine Gewähr/.test(t) && /Haftung/.test(t), amtlich: /offiziellen Prüfungslisten/.test(t), t };
+    return { vor, imListe, zu: !n.open, sum, ki: /generativer KI/.test(t), bild: /Bildauswahl/.test(t),
+      gewaehr: /keine Gewähr/.test(t) && /Haftung/.test(t), amtlich: /offiziellen Prüfungslisten/.test(t),
+      quelle: /unverändert/.test(t) && /amtlichen Prüfungsliste/.test(t),
+      lueckenDok: /Chimonanthus/.test(t) && /Wuchsform/.test(t),
+      mehr: !!(n && n.querySelector('a[href="rechtliches.html#datenquellen"]')), t };
   });
   assert(note.vor, "Der Hinweis muss vor dem Start der Lektion sichtbar sein: " + JSON.stringify(note));
   assert(note.ki && note.bild, "Hinweis muss KI-Erzeugung und Bildauswahl benennen: " + note.t);
   assert(note.gewaehr && note.amtlich,
     "Hinweis muss Gewähr/Haftung ausschließen und auf die offiziellen Listen verweisen: " + note.t);
   assert(note.imListe, "Im Listenmodus (keine Lektion) gehört der Hinweis ausgeblendet");
+  // Die Zusammenfassung ist im Normalfall das EINZIGE, was man liest – sie muss die Quelle
+  // der Pflanzennamen nennen, nicht nur die KI (sonst entsteht der Eindruck, auch die Namen
+  // seien erzeugt).
+  assert(note.zu, "Der Hinweis gehört standardmäßig zugeklappt (sonst füllt er die Startansicht)");
+  assert(/Pflanzennamen/.test(note.sum) && /amtlichen Prüfungslisten/.test(note.sum),
+    "Die zugeklappte Zeile muss die Herkunft der Pflanzennamen nennen: " + note.sum);
+  assert(/Lernhilfen/.test(note.sum) && /KI/.test(note.sum),
+    "Die zugeklappte Zeile muss die Lernhilfen als KI-gestützt ausweisen: " + note.sum);
+  assert(note.quelle, "Der Volltext muss »unverändert aus der amtlichen Prüfungsliste« sagen: " + note.t);
+  assert(note.lueckenDok,
+    "Der Volltext muss die zwei dokumentierten Ergänzungen offenlegen (Chimonanthus, Wuchsform): " + note.t);
+  assert(note.mehr, "Der Hinweis muss auf rechtliches.html#datenquellen verweisen");
+
+  // Kennzeichnung dort, wo Namen nachgeschlagen werden: Liste und Info-Karte
+  const quelle = await page.evaluate(() => {
+    document.querySelector('#modeTabs button[data-mode="list"]').click();
+    const ls = document.querySelector("#stage .listsrc");
+    const lsT = ls ? ls.textContent.replace(/\s+/g, " ") : "";
+    document.querySelector("#stage .sprow").click();                // Info-Karte der ersten Art
+    const ms = document.querySelector("#infoScrim .mh-src");
+    const msT = ms ? ms.textContent.replace(/\s+/g, " ") : "";
+    const msSvg = !!(ms && ms.querySelector("svg.ic"));
+    document.querySelector("#infoClose").click();
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    return { lsT, msT, msSvg };
+  });
+  assert(/Artnamen unverändert aus der amtlichen/.test(quelle.lsT) && /automatisch erzeugt/.test(quelle.lsT),
+    "Die Nachschlage-Liste muss Quelle und Erzeugtes trennen: " + quelle.lsT);
+  assert(/Gemüsebau/.test(quelle.lsT),
+    "Die Listen-Quellzeile muss das Profil benennen: " + quelle.lsT);
+  assert(/amtlichen Prüfungsliste/.test(quelle.msT) && quelle.msSvg,
+    "Die Info-Karte muss am Namen die Quelle ausweisen: " + JSON.stringify(quelle));
+
+  // Druckliste: Ausdrucke wandern weiter – die Quelle muss mitgedruckt werden
+  const pQuelle = await page.evaluate(() => {
+    document.querySelector('#modeTabs button[data-mode="list"]').click();
+    window.buildPrintList();
+    const f = document.querySelector("#printList .pfoot");
+    const t = f ? f.textContent.replace(/\s+/g, " ") : "";
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    return t;
+  });
+  assert(/Artnamen unverändert aus der amtlichen Prüfungsliste/.test(pQuelle),
+    "Die gedruckte Lernliste muss die Quelle der Artnamen nennen: " + pQuelle);
 
   // Karteikarten: Vorderseite NUR deutscher Name; Rückseite Gattung/Art/Familie; »Gewusst« bewerten
   const cards = await page.evaluate(() => {
@@ -720,7 +775,7 @@ async function main() {
     const nachgeladen = (document.querySelector(".lb-count") || {}).textContent || "";   // … dann Galerie
     closeLightbox();
     document.querySelector('#modeTabs button[data-mode="cards"]').click();
-    __setPhotoSource(null); __setJsonp(null); __clearPhotoCache();
+    __setPhotoSource(null); __setJsonp(window.__offlineJsonp); __clearPhotoCache();
     return { badge, label, start, nach, ohneDateiname, keinBadge, sofort, nachgeladen };
   });
   assert(/3 Bilder/.test(phGal.badge) && phGal.label === "Bilder ansehen",
@@ -1101,7 +1156,7 @@ async function main() {
       : wpAnswer("Salbei (Begriffsklärung)", "Ein Ortsteil der Gemeinde …", "Ortsschild.jpg")));
     const c = await wikiPhoto(salbei);
 
-    __setJsonp(null); __clearPhotoCache();
+    __setJsonp(window.__offlineJsonp); __clearPhotoCache();
     return { wege, kirscheFile: a && a.file, kirscheSrc: a && a.src, zwiebelFile: b && b.file, salbei: c,
       zwiebelGal: (b && b.gal) || [],
       illuKoehler: looksIllustration("Salvia_officinalis_-_Köhler–s_Medizinal-Pflanzen-126.jpg"),
@@ -1167,7 +1222,7 @@ async function main() {
     });
     const hit = await wikiPhoto(dill);
     const pdfDirekt = pickCommons(buecher, dill);
-    __setJsonp(null); __clearPhotoCache();
+    __setJsonp(window.__offlineJsonp); __clearPhotoCache();
     return { file: hit && hit.file, src: hit && hit.src, pdfDirekt,
       pdfRaus: !usablePhoto("Icones plantarum medicinalium (IA b30534732 0006).pdf"),
       djvuRaus: !usablePhoto("Flora Batava afbeelding.djvu"),
@@ -1714,6 +1769,17 @@ async function main() {
       dmGurke: dm("Gurke (Freiland / Treibh.)"), dmMelone: dm("Gew. Zucker-Melone"),
       dmJap: dm("jap. Lavendelheide"), dmAmerik: dm("[Amerik.] Rot-Eiche"),
       dmKriech: dm("Kriech. Günsel"), dmBuche: dm("Gew. Hain-, Weißbuche"),
+      // Adjektiv-Endung nach dem Geschlecht des Nomens (früher fest: »Gewöhnliche Trompetenbaum«)
+      dmBaum: dm("Gew. Trompetenbaum"), dmBuchs: dm("gew. Buchsbaum"), dmSalat: dm("Gew. Feldsalat"),
+      dmHartr: dm("[Amerik.] Blumen-Hartriegel"), dmBohnenkr: dm("Sommer- / Einj. Bohnenkraut"),
+      dmBluem: dm("Austr. Gänseblümchen"),
+      // Was angezeigt wird, muss beim Tippen gelten – und die Listenform weiterhin auch
+      tAusgeschr: t("Gew. Trompetenbaum", "Gewöhnlicher Trompetenbaum"),
+      tListe: t("Gew. Trompetenbaum", "Gew. Trompetenbaum"),
+      // … und das für JEDE Art aller 14 Listen: deMain(c) muss als Antwort durchgehen
+      anzeigeFalsch: Object.keys(SEEDS).flatMap((pid) => SEEDS[pid].map((r) =>
+        ({ g: r[0], a: r[1], fam: r[2], de: r[3], kat: r[4], zp: r[5], syn: r[6] })))
+        .filter((c) => c.de && !checkDeName(deMain(c), c)).map((c) => c.de + " → " + deMain(c)),
     };
   });
   assert(deChk.rhaHead && deChk.rhaA && deChk.rhaB,
@@ -1739,6 +1805,14 @@ async function main() {
     && deChk.dmJap === "Japanische Lavendelheide" && deChk.dmAmerik === "Amerikanische Rot-Eiche"
     && deChk.dmKriech === "Kriechender Günsel" && deChk.dmBuche === "Weißbuche",
     "deMain muss Klammer-Qualifier entfernen und Abkürzungen ausschreiben (Bilder-Quiz): " + JSON.stringify(deChk));
+  assert(deChk.dmBaum === "Gewöhnlicher Trompetenbaum" && deChk.dmBuchs === "Gewöhnlicher Buchsbaum"
+    && deChk.dmSalat === "Gewöhnlicher Feldsalat" && deChk.dmHartr === "Amerikanischer Blumen-Hartriegel"
+    && deChk.dmBohnenkr === "Einjähriges Bohnenkraut" && deChk.dmBluem === "Australisches Gänseblümchen",
+    "Ausgeschriebene Adjektive müssen zum Geschlecht des Nomens passen: " + JSON.stringify(deChk));
+  assert(deChk.tAusgeschr && deChk.tListe,
+    "Beim Tippen müssen die angezeigte Vollform UND die Listenform gelten: " + JSON.stringify(deChk));
+  assert(deChk.anzeigeFalsch.length === 0,
+    "Angezeigter deutscher Name (deMain) wird beim Tippen nicht anerkannt: " + deChk.anzeigeFalsch.join(" | "));
   assert(![deChk.dmGurke, deChk.dmMelone, deChk.dmJap, deChk.dmAmerik, deChk.dmKriech, deChk.dmBuche]
     .some((s) => /[-–]\s*$/.test(s) || /^[A-Za-zÄÖÜäöüß]{2,10}\.$/.test(s.trim())),
     "deMain darf nie eine blanke Abkürzung/einen hängenden Stamm zeigen: " + JSON.stringify(deChk));

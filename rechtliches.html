@@ -50,6 +50,8 @@ p,li{font-size:14.5px; color:var(--ink); line-height:1.6}
 address{font-style:normal; font-family:var(--serif); font-size:16px; line-height:1.5; color:var(--ink); margin:2px 0}
 ul{margin:6px 0; padding-left:20px} li{margin:5px 0}
 .hint{font-family:var(--mono); font-size:11px; color:var(--sepia); letter-spacing:.03em}
+code{font-family:var(--mono); font-size:.88em; color:var(--green-deep); background:var(--surface-2);
+  padding:1px 5px; border-radius:4px; white-space:nowrap}
 .divider{height:1px; background:var(--rule); border:0; margin:28px 0}
 .note{font-size:12.5px; color:var(--ink-faint); border-top:1px solid var(--rule); margin-top:26px; padding-top:14px}
 
@@ -231,6 +233,82 @@ input[type=checkbox],input[type=radio]{accent-color:var(--green)}
     <p class="lead">Dieses Werkzeug ist ein nicht-kommerzielles Hilfsmittel ohne Konto, ohne Bezahlfunktion
       und ohne redaktionelle Inhalte Dritter. Für extern verlinkte Seiten sind deren Betreiber
       verantwortlich; zum Zeitpunkt der Verlinkung waren keine Rechtsverstöße erkennbar.</p>
+  </section>
+
+  <section class="doc" id="datenquellen">
+    <h2>Datenquellen &amp; Inhalte</h2>
+    <p class="hint">Was stammt aus den amtlichen Listen – und was ist automatisch erzeugt?</p>
+
+    <h3>Die Pflanzennamen: unverändert aus den amtlichen Prüfungslisten</h3>
+    <p>Grundlage sind die <b>amtlichen Artenlisten zur Pflanzenkenntnis-Prüfung</b> der
+      Regierungspräsidien Baden-Württemberg – je eine Liste für jede der sieben Fachrichtungen
+      und beide Niveaus (Gärtner/in und Fachwerker/in), insgesamt 14 Listen mit 2114 Arten.
+      Daraus übernommen und <b>inhaltlich unverändert</b> sind:</p>
+    <ul>
+      <li>der <b>botanische Name</b> (Gattung und Art, einschließlich <i>var.</i>, <i>ssp.</i>
+        und Sortengruppen),</li>
+      <li>die <b>Pflanzenfamilie</b>,</li>
+      <li>der <b>deutsche Name</b> samt der in der Liste geführten <b>Synonyme</b>,</li>
+      <li>die <b>ZP-Kennzeichnung</b> (für die Zwischenprüfung relevant),</li>
+      <li>die <b>Kategorie</b>, soweit die Quellliste eine mitbringt (zu einer vereinheitlichten
+        Bezeichnung siehe unten).</li>
+    </ul>
+    <p>Angepasst wird allein die <b>Schreibweise</b>, nie der Inhalt: das Hybrid-Zeichen wird
+      vereinheitlicht (»x Hesperotropsis« → »×Hesperotropsis«), hinter <i>var.</i>/<i>ssp.</i>
+      steht ein Leerzeichen, Mehrfach-Leerzeichen entfallen, und der botanische Name wird in
+      Gattung (erstes Wort) und Art (Rest) aufgeteilt, damit beides in der Prüfung getrennt
+      bewertet und im Lern-Tool getrennt abgefragt werden kann. In seiner <b>Anzeige</b> schreibt
+      das Lern-Tool außerdem Abkürzungen deutscher Namen aus (»Gew. Trompetenbaum« → »Gewöhnlicher
+      Trompetenbaum«, 30 Einträge), berichtigt offensichtliche Tippfehler in Familiennamen
+      (»Malvacea« → »Malvaceae«, 17 Einträge; darunter die veraltete Schreibung »Caesalpinaceae«
+      bei <i>Gleditsia triacanthos</i>, die unter dem heute gültigen Namen Fabaceae erscheint) und
+      ergänzt den deutschen Familiennamen. Der Datenbestand selbst bleibt dabei unverändert, und beim
+      Tippen gilt die Form der Liste weiterhin als richtig. Das Prüfungswerkzeug zeigt die Namen
+      ohne diese Anzeige-Anpassungen. Die Umsetzung steht offen im
+      Quellcode (<code>tools/xlsx_to_seed.mjs</code>). Ein automatischer Test erzeugt die Daten
+      bei jeder Änderung neu aus den Original-Dateien und prüft, dass sie <b>Zeichen für Zeichen</b>
+      mit dem übereinstimmen, was hier ausgeliefert wird.</p>
+    <p><b>Drei Eingriffe sind offengelegt</b> und als nachvollziehbare Skripte hinterlegt, nicht
+      von Hand im Datenbestand:</p>
+    <ul>
+      <li>Bei <i>Chimonanthus praecox</i> (Garten- und Landschaftsbau, Gärtner/in) ist die
+        Familie in der Quellliste leer; ergänzt wurde <b>Calycanthaceae</b> – so steht sie in
+        der Baumschulliste derselben Art (<code>tools/fix_source_gaps.py</code>).</li>
+      <li>Zehn der 14 Quelllisten enthalten keine Kategorie. Für diese ist die <b>Wuchsform</b>
+        zugeordnet (Laubgehölz, Nadelgehölz, Staude, Gras …), ausschließlich zur Gliederung der
+        Lernansicht (<code>tools/categorize_seeds.py</code>). Die vier Listen mit eigener
+        Kategorie behalten deren Einteilung.</li>
+      <li>In vier dieser Listen heißt dieselbe Kategorie unterschiedlich – »Wildkräuter«,
+        »Bei-, Wild- oder Unkräuter« bzw. »Unkräuter, Wildkräuter«. Sie trägt einheitlich den
+        Namen <b>»Wild- &amp; Beikräuter«</b>; welche Arten dazugehören, bleibt wie in der
+        Quellliste (<code>tools/xlsx_to_seed.mjs</code>).</li>
+    </ul>
+
+    <h3>Die Lernhilfen: automatisch erzeugt, teils mithilfe generativer KI</h3>
+    <p>Rund um die amtlichen Daten erzeugt das Lern-Tool Hilfsmittel, die <b>nicht</b> aus den
+      Prüfungslisten stammen. Sie sind teils mithilfe generativer KI entstanden, fachlich
+      durchgesehen, aber <b>ohne Gewähr</b>:</p>
+    <ul>
+      <li>die <b>thematische Zuordnung</b> der Arten (z. B. »Große Laubbäume«, »Beerenobst«),</li>
+      <li>die <b>Bildauswahl</b> im Bilder-Quiz – die Bilder selbst stammen von Wikimedia Commons
+        (Fotos, selten historische Pflanzentafeln) und sind <b>nicht KI-erzeugt</b>; automatisch ist
+        nur, welches Bild gezeigt wird,</li>
+      <li>die <b>Namensherkunft</b> (Kurzherleitung Latein/Griechisch → Deutsch),</li>
+      <li>die <b>Familien-Steckbriefe</b>,</li>
+      <li>die <b>falschen Antworten</b> im Quiz – diese stammen ihrerseits aus derselben
+        amtlichen Liste, nur die Auswahl ist automatisch.</li>
+    </ul>
+    <p>Im <b>Prüfungswerkzeug</b> betrifft das allein die Namensherkunft im Fenster
+      »ℹ Mehr zur Pflanze«. <b>Prüfungsbogen, Musterlösung und Notenberechnung enthalten keine
+      automatisch erzeugten Inhalte</b> und rufen nichts aus dem Netz ab.</p>
+
+    <h3>Verbindlichkeit</h3>
+    <p>Dieses Werkzeug ist ein privates, nicht-kommerzielles Hilfsmittel und <b>kein amtliches
+      Angebot</b>. Für Richtigkeit und Vollständigkeit übernehme ich keine Gewähr und keine
+      Haftung. <b>Verbindlich sind allein die offiziellen Prüfungslisten und Formulare der
+      zuständigen Stelle.</b> Ändern sich die amtlichen Listen, werden die hinterlegten Daten
+      aus den neuen Quelldateien neu erzeugt; Hinweise auf Abweichungen nehme ich gern unter der
+      im Impressum genannten Adresse entgegen.</p>
   </section>
 
   <section class="doc" id="datenschutz">

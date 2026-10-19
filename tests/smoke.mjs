@@ -233,8 +233,14 @@ async function main() {
   // 1c) Hilfe-Modal öffnet mit Inhalt und markiert seinen Button; Tooltips vorhanden
   const help = await page.evaluate(() => {
     openHelp();
+    const ht = $("#helpPanel").textContent.replace(/\s+/g, " ");
     const open = { vis: $("#helpScrim").classList.contains("open"), active: $("#btnHelp").classList.contains("active"),
-      hasContent: /In fünf Schritten/.test($("#helpPanel").textContent) };
+      hasContent: /In fünf Schritten/.test(ht),
+      // Datenherkunft: amtliche Liste vs. automatisch erzeugt, und der Bogen bleibt davon frei
+      quelle: /unverändert aus den amtlichen\s*Prüfungslisten/.test(ht) && /Chimonanthus/.test(ht),
+      erzeugt: /generativer KI/.test(ht) && /Mehr zur Pflanze/.test(ht),
+      bogenFrei: /Notenberechnung enthalten davon nichts/.test(ht),
+      mehr: !!$('#helpPanel a[href="rechtliches.html#datenquellen"]') };
     closePanel("#helpScrim");
     const tips = ["#btnImport", "#btnDraw", "#btnPrint", "#btnHelp", "#btnSchema", "#btnSettings"]
       .every((s) => (document.querySelector(s).getAttribute("title") || "").length > 15);
@@ -243,6 +249,13 @@ async function main() {
     return { open, closedAfter: !$("#helpScrim").classList.contains("open"), tips, favicon };
   });
   assert(help.open.vis && help.open.active && help.open.hasContent, "Hilfe-Modal öffnet nicht korrekt");
+  assert(help.open.quelle,
+    "Hilfe muss die Herkunft der Listen benennen (amtlich, unverändert) und die Ergänzungen offenlegen: " +
+    JSON.stringify(help.open));
+  assert(help.open.erzeugt && help.open.bogenFrei,
+    "Hilfe muss das automatisch Erzeugte auf die Info-Karte eingrenzen und den Bogen davon freisprechen: " +
+    JSON.stringify(help.open));
+  assert(help.open.mehr, "Hilfe muss auf rechtliches.html#datenquellen verweisen");
   assert(help.closedAfter, "Hilfe-Modal schließt nicht");
   assert(help.tips, "Nicht alle wichtigen Buttons haben einen (aussagekräftigen) Tooltip");
   assert(help.favicon, "Inline-Favicon (data:image/svg+xml) fehlt");
