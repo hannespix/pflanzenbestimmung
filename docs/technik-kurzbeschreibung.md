@@ -49,7 +49,7 @@ Prüfungswerkzeug — der einzige interne Verweis führt auf Impressum/Datenschu
   2. Lernmodus „Bilder" — Pflanzenfotos von Wikipedia/Wikimedia Commons.
   Dabei wird die IP-Adresse an die Wikimedia Foundation übermittelt; die Datenschutzseite
   weist das aus. **Beide Funktionen sind abschaltbar**, falls das IT-Referat eine Fassung
-  ohne jede Außenverbindung wünscht — der Kern (Karteikarten, Quiz, Tippen, Listen,
+  ohne jede Außenverbindung wünscht — der Kern (Karteikarten, Quiz, Selbst eingeben, Listen,
   Prüfungsbogen, Notenberechnung) funktioniert vollständig ohne Netz.
 - **Impressum (§ 5 DDG) und Datenschutzerklärung** sind vorhanden und aus beiden
   Anwendungen verlinkt.

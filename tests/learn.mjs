@@ -159,10 +159,10 @@ async function main() {
   assert(guided.goLabel === "Weiter lernen",
     "Mit vorhandenem Fortschritt muss der Knopf »Weiter lernen« heißen: " + guided.goLabel);
   assert(guided.firstQuiz && guided.barThere && guided.thenType,
-    "Geführte Sitzung muss die Übungsform je Lernstand mischen (Box 2 → Quiz, Box 4 → Tippen): " + JSON.stringify(guided));
+    "Geführte Sitzung muss die Übungsform je Lernstand mischen (Box 2 → Quiz, Box 4 → Selbst eingeben): " + JSON.stringify(guided));
   assert(/bewerteten/.test(guided.summary),
     "Abschluss der geführten Sitzung nennt die Quote über die bewerteten Karten: " + guided.summary);
-  assert(/Stufe \d von 5|Neu/.test(guided.note) && /tippen/i.test(guided.note),
+  assert(/Stufe \d von 5|Neu/.test(guided.note) && /eingeben/i.test(guided.note) && !/tippen/i.test(guided.note),
     "Geführte Lektion: über der Aufgabe muss Lernstand + Übungsform stehen: " + JSON.stringify(guided.note));
   assert(guided.hatShare && guided.keinUmweg,
     "Geführte Lektion muss direkt teilbar sein – ohne Umweg über ein zweites Quiz: " + JSON.stringify(guided));
@@ -823,25 +823,26 @@ async function main() {
   assert(zaeh.leer === 1,
     "Bilder-Quiz: bleibt die Suche erfolglos, darf sie in derselben Sitzung nicht wiederholt werden: " + JSON.stringify(zaeh));
 
-  // Bilder-Quiz, Antwort »Namen tippen«: Eingabefeld direkt unter dem Bild
-  const phType = await page.evaluate(async (PX) => {
-    __clearPhotoCache();
-    __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g, file: "T.jpg", url: "https://x/y" }));
+  // Bilder-Quiz vereinfacht: Gefragt ist immer »Bild → voller Name« – die Richtung ist
+  // nicht wählbar (Feld ausgeblendet); die Antwort bietet genau zwei Wege: Auswahl oder
+  // Selbst eingeben (wie in der Prüfung). Nichts heißt mehr »tippen«.
+  const phEinfach = await page.evaluate(() => {
     document.querySelector('#modeTabs button[data-mode="photo"]').click();
     const set = (id, v) => { const e = document.querySelector(id); e.value = v; e.dispatchEvent(new Event("change")); };
-    set("#phAnswer", "type"); set("#dir", "img2bot");
-    startSession();
-    await new Promise((r) => setTimeout(r, 60));
-    const hasImg = !!document.querySelector("#phImg"), hasInput = !!document.querySelector("#typeIn");
-    const noOpts = document.querySelectorAll("#opts .opt").length === 0;
-    document.querySelector("#typeIn").value = (current.g + " " + current.a).trim();
-    document.querySelector("#chk").click();
-    const fb = document.querySelector("#fb").innerHTML;
-    return { hasImg, hasInput, noOpts, good: /Richtig!/.test(fb), credit: !!document.querySelector("#phSrc") };
-  }, PX);
-  assert(phType.hasImg && phType.hasInput && phType.noOpts,
-    "Bilder-Quiz »tippen«: Eingabefeld unter dem Bild statt Auswahl erwartet: " + JSON.stringify(phType));
-  assert(phType.good && phType.credit, "Bilder-Quiz »tippen«: Wertung/Bildnachweis fehlen: " + JSON.stringify(phType));
+    set("#phAnswer", "mc");
+    const antw = [...document.querySelectorAll("#phAnswer option")].map((o) => [o.value, o.textContent]);
+    const dirOpts = [...document.querySelectorAll("#dir option")].map((o) => o.value);
+    const tab = document.querySelector('#modeTabs button[data-mode="type"]').textContent.replace(/\s+/g, " ").trim();
+    return { antw, dirOpts, dirHidden: document.querySelector("#dirField").hidden, dir: curDir(), tab };
+  });
+  assert(phEinfach.antw.map((a) => a[0]).join() === "mc,exam",
+    "Bilder-Quiz: genau zwei Antwortarten (Auswahl · Selbst eingeben), war " + JSON.stringify(phEinfach.antw));
+  assert(/eingeben/i.test(phEinfach.antw[1][1]) && !/tippen/i.test(phEinfach.antw.map((a) => a[1]).join()),
+    "Die Eingabe-Antwort muss »eingeben« heißen, nicht »tippen«: " + JSON.stringify(phEinfach.antw));
+  assert(phEinfach.dirOpts.join() === "img2both" && phEinfach.dirHidden && phEinfach.dir === "img2both",
+    "Bilder-Quiz: einzige Richtung »voller Name«, Feld ausgeblendet: " + JSON.stringify(phEinfach));
+  assert(/^Selbst eingeben/.test(phEinfach.tab) && !/Tippen/.test(phEinfach.tab),
+    "Der Modus-Tab muss »Selbst eingeben« heißen (nicht »Tippen«): " + phEinfach.tab);
 
   // Bilder-Quiz, Antwort »wie in der Prüfung«: ein Feld je bewerteter Spalte, Punkte
   const phExam = await page.evaluate(async (PX) => {
@@ -977,15 +978,13 @@ async function main() {
   });
 
   // Bilder-Quiz, Abfrage »voller Name« (botanisch + deutsch): die vier Optionen zeigen
-  // BEIDE Namen (botanischer Teil kursiv); die Richtung ist nur beim Auswahl-Quiz wählbar.
+  // BEIDE Namen (botanischer Teil kursiv) – ohne dass man dafür eine Richtung wählen müsste.
   const phBoth = await page.evaluate(async (PX) => {
     __clearPhotoCache();
     __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g + " " + card.a, file: "T.jpg", url: "https://x/y" }));
     const set = (id, v) => { const e = document.querySelector(id); e.value = v; e.dispatchEvent(new Event("change")); };
     document.querySelector('#modeTabs button[data-mode="photo"]').click();
-    set("#phAnswer", "mc");
-    const dirOptsMc = [...document.querySelectorAll("#dir option")].map((o) => o.value);
-    set("#dir", "img2both");
+    set("#phAnswer", "mc");                                  // Richtung ist fest: Bild → voller Name
     startSession();
     await new Promise((r) => setTimeout(r, 60));
     const c = current, correctFull = answerText(c);          // "Gattung art · Deutscher Name"
@@ -996,13 +995,9 @@ async function main() {
     if (btn) btn.click();
     const good = /Richtig!/.test((document.querySelector("#fb") || {}).innerHTML || "");
     const scored = sess.correct === before + 1;
-    set("#phAnswer", "type");                                // bei »tippen« darf »voller Name« NICHT wählbar sein
-    const dirOptsType = [...document.querySelectorAll("#dir option")].map((o) => o.value);
-    set("#phAnswer", "mc"); set("#dir", "img2bot");          // Zustand für folgende Tests zurücksetzen
-    return { dirOptsMc, dirOptsType, correctFull, opts, italics, hasCorrect: !!btn, good, scored };
+    set("#phAnswer", "mc");                                  // Zustand für folgende Tests
+    return { correctFull, opts, italics, hasCorrect: !!btn, good, scored };
   }, PX);
-  assert(phBoth.dirOptsMc.includes("img2both") && !phBoth.dirOptsType.includes("img2both"),
-    "»voller Name« muss beim Auswahl-Quiz wählbar sein, bei »tippen« nicht: " + JSON.stringify({ mc: phBoth.dirOptsMc, type: phBoth.dirOptsType }));
   assert(/ · /.test(phBoth.correctFull) && phBoth.opts.length === 4 && phBoth.opts.every((o) => / · /.test(o)),
     "Bilder-Quiz »voller Name«: alle vier Optionen müssen botanisch · deutsch zeigen: " + JSON.stringify(phBoth.opts));
   assert(phBoth.italics === 4 && phBoth.hasCorrect && phBoth.good && phBoth.scored,
@@ -1817,28 +1812,26 @@ async function main() {
     .some((s) => /[-–]\s*$/.test(s) || /^[A-Za-zÄÖÜäöüß]{2,10}\.$/.test(s.trim())),
     "deMain darf nie eine blanke Abkürzung/einen hängenden Stamm zeigen: " + JSON.stringify(deChk));
 
-  // Abfragerichtung wählbar: Text-Modi de↔bot, Bilder-Modus Bild→bot/de
+  // Abfragerichtung: in den Text-Modi de↔bot wählbar, im Bilder-Modus fest auf »voller Name«
   const dirUI = await page.evaluate(() => {
     const set = (id, v) => { const e = document.querySelector(id); e.value = v; e.dispatchEvent(new Event("change")); };
     document.querySelector('#modeTabs button[data-mode="cards"]').click();
     const textOpts = [...document.querySelectorAll("#dir option")].map((o) => o.value);
     document.querySelector('#modeTabs button[data-mode="photo"]').click();
     set("#phAnswer", "mc");
-    const photoOptsMc = [...document.querySelectorAll("#dir option")].map((o) => o.value);
-    set("#phAnswer", "type");                                 // »voller Name« ist beim Tippen gegenstandslos
-    const photoOptsType = [...document.querySelectorAll("#dir option")].map((o) => o.value);
-    set("#phAnswer", "mc");
+    const photoOpts = [...document.querySelectorAll("#dir option")].map((o) => o.value);
+    const hiddenInPhoto = document.querySelector("#dirField").hidden;
     document.querySelector('#modeTabs button[data-mode="list"]').click();
     const hiddenInList = document.querySelector("#dirField").hidden;
     document.querySelector('#modeTabs button[data-mode="cards"]').click();
-    return { textOpts, photoOptsMc, photoOptsType, hiddenInList, back: document.querySelector("#dir").value };
+    return { textOpts, photoOpts, hiddenInPhoto, hiddenInList, back: document.querySelector("#dir").value,
+      shownInText: !document.querySelector("#dirField").hidden };
   });
   assert(dirUI.textOpts.join() === "de2bot,bot2de",
     "Text-Modi brauchen genau beide Richtungen: " + JSON.stringify(dirUI.textOpts));
-  assert(dirUI.photoOptsMc.join() === "img2bot,img2de,img2both",
-    "Bilder-Auswahl-Quiz braucht Bild→botanisch, →deutsch und →voller Name: " + JSON.stringify(dirUI.photoOptsMc));
-  assert(dirUI.photoOptsType.join() === "img2bot,img2de",
-    "»voller Name« darf nur beim Auswahl-Quiz erscheinen, nicht bei »tippen«: " + JSON.stringify(dirUI.photoOptsType));
+  assert(dirUI.photoOpts.join() === "img2both" && dirUI.hiddenInPhoto,
+    "Bilder-Quiz: nur »Bild → voller Name«, Richtungsfeld ausgeblendet: " + JSON.stringify(dirUI));
+  assert(dirUI.shownInText, "In den Text-Modi bleibt die Abfragerichtung wählbar");
   assert(dirUI.hiddenInList, "Im Listenmodus ist die Abfragerichtung gegenstandslos und gehört ausgeblendet");
   assert(dirUI.back === "de2bot", "Standard muss die prüfungsnahe Richtung bleiben, war " + dirUI.back);
 
@@ -1893,29 +1886,6 @@ async function main() {
   assert(revPlay.quizGood, "bot→de: richtige Quiz-Antwort nicht gewertet");
   assert(revPlay.typeGood,
     "bot→de: Tippen muss jede geführte Schreibweise akzeptieren (auch ohne Bindestrich): " + revPlay.alt);
-
-  // Bilder-Quiz mit Richtung Bild → deutscher Name
-  const photoDe = await page.evaluate(async (PX) => {
-    __clearPhotoCache();
-    __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g, file: "T.jpg", url: "https://x/y" }));
-    document.querySelector('#modeTabs button[data-mode="photo"]').click();
-    const d = document.querySelector("#dir"); d.value = "img2de"; d.dispatchEvent(new Event("change"));
-    startSession();
-    await new Promise((r) => setTimeout(r, 60));
-    const c = current;
-    const opts = [...document.querySelectorAll("#opts .opt")].map((b) => b.querySelector("span:last-child").textContent);
-    const want = (window.deMain ? deMain(c) : (c.de || "").split(/[,;/]/)[0].trim());  // App-Logik, nicht naiv splitten
-    const btn = [...document.querySelectorAll("#opts .opt")].find((b) => b.querySelector("span:last-child").textContent === want);
-    if (btn) btn.click();
-    const fb = document.querySelector("#fb").innerHTML;
-    __setPhotoSource(null);
-    return { hasImg: !!document.querySelector("#phImg"), optIsDe: opts.includes(want),
-      noBot: !opts.includes((c.g + " " + c.a).trim()), good: /Richtig!/.test(fb), solBoth: /<i>/.test(fb) };
-  }, PX);
-  assert(photoDe.hasImg && photoDe.optIsDe && photoDe.noBot,
-    "Bild→deutsch: Optionen müssen deutsche Namen sein: " + JSON.stringify(photoDe));
-  assert(photoDe.good && photoDe.solBoth,
-    "Bild→deutsch: Wertung bzw. Lösungszeile mit beiden Namen fehlt: " + JSON.stringify(photoDe));
 
   // zurück auf die prüfungsnahe Standardrichtung für die folgenden Prüfungen
   await page.evaluate(() => {
@@ -2678,6 +2648,61 @@ async function main() {
   assert(/voller Name/.test(vollIn.txt),
     "Lernduell-Banner soll die Aufgabenstellung nennen: " + vollIn.txt);
 
+  // Ältere Duell-Links (»Namen tippen« mit EINEM Feld, Bild → botanisch/deutsch) müssen
+  // weiterhin genau diese Aufgabe stellen, obwohl beides nicht mehr zur Wahl steht –
+  // und sobald eine eigene Sitzung startet, gelten wieder die eigenen Einstellungen.
+  const altTypFrag = await page.evaluate(() =>
+    chEncode({ p: "gemuesebau_gaertner", m: "photo", r: "img2bot", a: "type", i: [1, 2, 3], s: 1, t: 3, z: 20, n: "Kollege" }));
+  await page.goto("about:blank");
+  await page.goto(FILE + "#c=" + altTypFrag, { waitUntil: "load" });
+  await page.waitForFunction("window.startChallenge!=null", { timeout: 10000 });
+  const altTyp = await page.evaluate(async (PX) => {
+    window.__offlineJsonp = () => Promise.reject(new Error("offline (Test)"));
+    __setJsonp(window.__offlineJsonp); __clearPhotoCache();
+    __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g, file: "T.jpg", url: "https://x/y" }));
+    try { localStorage.setItem("pflanzenlernen.phanswer", "mc"); } catch (e) {}
+    const banner = (document.querySelector("#duelBanner") || {}).textContent || "";
+    const antwOpts = [...document.querySelectorAll("#phAnswer option")].map((o) => o.value);
+    document.querySelector("#btnAcceptDuel").click();
+    await new Promise((r) => setTimeout(r, 80));
+    const einFeld = !!document.querySelector("#typeIn"), keineAuswahl = !document.querySelector("#opts .opt");
+    const dirImSpiel = curDir(), antwImSpiel = photoAnswer;
+    document.querySelector("#btnStop").click();
+    startSession();                                            // eigene Sitzung → eigene Einstellungen
+    await new Promise((r) => setTimeout(r, 80));
+    const danach = { dir: curDir(), antw: photoAnswer, opts: document.querySelectorAll("#opts .opt").length,
+      antwOpts: [...document.querySelectorAll("#phAnswer option")].map((o) => o.value) };
+    document.querySelector("#btnStop").click();
+    return { banner, antwOpts, einFeld, keineAuswahl, dirImSpiel, antwImSpiel, danach };
+  }, PX);
+  assert(/botanischer Name/.test(altTyp.banner) && /Namen eingeben/.test(altTyp.banner),
+    "Banner eines älteren Links muss dessen Aufgabe nennen: " + altTyp.banner);
+  assert(altTyp.antwOpts.includes("type") && altTyp.einFeld && altTyp.keineAuswahl
+    && altTyp.dirImSpiel === "img2bot" && altTyp.antwImSpiel === "type",
+    "Älterer Duell-Link muss weiterhin EIN Eingabefeld (Bild → botanisch) stellen: " + JSON.stringify(altTyp));
+  assert(altTyp.danach.dir === "img2both" && altTyp.danach.antw === "mc" && altTyp.danach.opts === 4
+    && altTyp.danach.antwOpts.join() === "mc,exam",
+    "Nach dem Duell müssen wieder die eigenen Einstellungen gelten (voller Name · Auswahl): " + JSON.stringify(altTyp.danach));
+
+  const altDeFrag = await page.evaluate(() =>
+    chEncode({ p: "gemuesebau_gaertner", m: "photo", r: "img2de", a: "mc", i: [1, 2, 3], s: 2, t: 3, z: 15, n: "Kollegin" }));
+  await page.goto("about:blank");
+  await page.goto(FILE + "#c=" + altDeFrag, { waitUntil: "load" });
+  await page.waitForFunction("window.startChallenge!=null", { timeout: 10000 });
+  const altDe = await page.evaluate(async (PX) => {
+    window.__offlineJsonp = () => Promise.reject(new Error("offline (Test)"));
+    __setJsonp(window.__offlineJsonp); __clearPhotoCache();
+    __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g, file: "T.jpg", url: "https://x/y" }));
+    document.querySelector("#btnAcceptDuel").click();
+    await new Promise((r) => setTimeout(r, 80));
+    const c = current, want = deMain(c);
+    const opts = [...document.querySelectorAll("#opts .opt")].map((b) => b.querySelector("span:last-child").textContent);
+    document.querySelector("#btnStop").click();
+    return { dir: curDir(), optIsDe: opts.includes(want), noBot: !opts.includes((c.g + " " + c.a).trim()), n: opts.length };
+  }, PX);
+  assert(altDe.dir === "img2de" && altDe.n === 4 && altDe.optIsDe && altDe.noBot,
+    "Älterer Link »Bild → deutscher Name« muss weiterhin deutsche Optionen stellen: " + JSON.stringify(altDe));
+
   // Geführte Lektion als Herausforderung: der Empfänger spielt genau die kodierten
   // Übungsformen – nicht die, die sein eigener Leitner-Stand vorgeben würde.
   const gefFrag = await page.evaluate(() =>
@@ -2713,7 +2738,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand und sagt sie an, direkt teilbar, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON- und v2-Links lesbar, Richtung inkl. »voller Name«, Antwortart und die Übungsformen der geführten Lektion wandern mit, Banner übernimmt Profil/Modus/Aufgabenstellung, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (de↔bot, Bild→bot/de), Auswahl nach Thema/Familie, Quiz, Tippen, Bilder-Quiz (Bild + 4 Optionen, Tippen, »wie in der Prüfung« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, wartet bei schwacher Verbindung sichtbar und heilt sich selbst statt in Textfragen zu wechseln, Galerie mit mehreren Ansichten – Commons-Kandidaten sofort, Artikelbilder nachgeladen, Wischen, Vorladen der Galerie, stille Wiederholung bei Aussetzern, neuer Versuch je Sitzung), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast, Lernserie/Tagesziel, Herbarium, XP-Ränge + Combo, Stufe 5 (Rang-Popover, Container Queries).");
+  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand und sagt sie an, direkt teilbar, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON- und v2-Links lesbar, Richtung inkl. »voller Name«, Antwortart und die Übungsformen der geführten Lektion wandern mit, Banner übernimmt Profil/Modus/Aufgabenstellung, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (Text de↔bot; Bilder fest »voller Name«, ältere Duell-Links spielen ihre Aufgabe weiter), Auswahl nach Thema/Familie, Quiz, Selbst eingeben, Bilder-Quiz (Bild + 4 volle Namen, »Selbst eingeben (wie in der Prüfung)« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, wartet bei schwacher Verbindung sichtbar und heilt sich selbst statt in Textfragen zu wechseln, Galerie mit mehreren Ansichten – Commons-Kandidaten sofort, Artikelbilder nachgeladen, Wischen, Vorladen der Galerie, stille Wiederholung bei Aussetzern, neuer Versuch je Sitzung), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast, Lernserie/Tagesziel, Herbarium, XP-Ränge + Combo, Stufe 5 (Rang-Popover, Container Queries).");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
