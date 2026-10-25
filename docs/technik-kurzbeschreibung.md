@@ -111,8 +111,9 @@ Veröffentlichung ab. Eine Nachfolge beginnt also nicht bei null.
 
 **Pflanzennamen: unverändert aus den amtlichen Prüfungslisten.** Botanischer Name (Gattung, Art),
 Familie, deutscher Name, Synonyme, ZP-Kennzeichnung und – soweit vorhanden – Kategorie werden aus
-den Excel-Dateien übernommen. Angepasst wird nur die Form: das Hybrid-Zeichen, Abstände und die
-Aufteilung des botanischen Namens in Gattung und Art. Drei Eingriffe sind offengelegt und als
+den Excel-Dateien übernommen. Angepasst wird nur die Form: das Hybrid-Zeichen, Abstände, die
+Anführungszeichen um Sortennamen (einheitlich 'Nigra') und die Aufteilung des botanischen Namens in
+Gattung und Art. Drei Eingriffe sind offengelegt und als
 Skripte nachvollziehbar: eine in der Quellliste leere Familie wurde ergänzt (*Chimonanthus
 praecox*: Calycanthaceae), zehn Listen ohne eigene Kategorie erhalten eine Wuchsform-Zuordnung,
 und eine Kategorie, die in vier Listen unterschiedlich heißt, trägt einheitlich den Namen

@@ -849,7 +849,14 @@ function lev(a,b){ a=a||""; b=b||""; const m=a.length,n=b.length; if(!m)return n
   const d=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]); for(let j=0;j<=n;j++) d[0][j]=j;
   for(let i=1;i<=m;i++) for(let j=1;j<=n;j++){ const cost=a[i-1]===b[j-1]?0:1;
     d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+cost); } return d[m][n]; }
-const clean = s => norm(s).toLowerCase().replace(/[.,;’'`´()]/g," ").replace(/\s+/g," ").trim();
+/* Eingaben normalisieren: Groß/Klein, Satzzeichen, Klammern und ALLE Varianten von
+   Anführungszeichen (' ` ´ ‘ ’ „ “ ” ") sind egal – wer »Weigela x „Bristol Ruby“«
+   tippt, meint Weigela 'Bristol Ruby'. Ebenso das Hybrid-Zeichen (× bzw. ein
+   freistehendes x): ob jemand »Petunia × atkinsiana« oder »Petunia atkinsiana«
+   schreibt, ist keine Frage der Pflanzenkenntnis. (Realfall: »x „Bristol Ruby“« gab
+   Abzug, weil die Anführungszeichen und das x als Teil des Namens verglichen wurden.) */
+const clean = s => norm(s).toLowerCase().replace(/×/g," ").replace(/[.,;:’'`´‘‚“”„"«»()\[\]]/g," ")
+  .replace(/(^|\s)x(?=\s|$)/g," ").replace(/\s+/g," ").trim();
 /* Wie viel Tippfehler zählt noch als »richtig«?
    Früher waren zwei Zeichen erlaubt – damit ging »Bollensellerie« als
    *Knollensellerie* durch, und die Rechtschreibung war praktisch egal. Jetzt:
@@ -2160,8 +2167,31 @@ function applyMode(){
    OHNE Sorten-/Gruppen-/Rang-Zusatz. Wichtig, sonst finden die DBs nichts – z. B.
    NaturaDB liefert für »Beta vulgaris Conditiva-Grp.« 0 Treffer, für »Beta vulgaris«
    dagegen Dutzende. Also bewusst nicht zu feingranular. */
+/* Sortennamen stehen in den Listen in Anführungszeichen: 'Nigra', 'Bristol Ruby',
+   ('Nana'), 'Frieder's Evergreen'. Die Seeds führen seit dem Konverter-Schritt gerade
+   Apostrophe; zur Sicherheit werden hier trotzdem alle Varianten angenommen. */
+const CV_RE = /'([^']*(?:'s [^']*)?)'/;
+function cultivarName(a){
+  a = norm(a||"").replace(/[`´‘’‚“”„"]/g,"'");
+  const m = CV_RE.exec(a); if(m) return norm(m[1]);
+  // Ein einzelnes (vergessenes) Anführungszeichen in der Quellliste – sechs Zeilen: »abies 'Nidiformis«
+  // (Ende fehlt) bzw. »fortunei Emerald Gold'« (Anfang fehlt). Sortenname = Rest hinter dem ' bzw.
+  // die großgeschriebenen Wörter davor (Epitheta sind klein, Sortennamen groß).
+  const i = a.indexOf("'"); if(i < 0) return "";
+  const rest = norm(a.slice(i+1).replace(/[()]/g,""));
+  if(rest) return rest;
+  const vor = /((?:[A-ZÄÖÜ][\wäöüß-]*\s*)+)$/.exec(a.slice(0,i).trim());
+  return vor ? norm(vor[1]).replace(/^(cultivars?|sorten?)\s+/i,"") : "";
+}
+function stripCultivar(a){                            // botanischer Name ohne Sortenzusatz
+  a = norm(a||"").replace(/[`´‘’‚“”„"]/g,"'");
+  const cv = cultivarName(a); if(!cv) return a;
+  const re = new RegExp("\\(?'?"+cv.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"'?\\)?");
+  return norm(a.replace(re," "));
+}
 function binomEpithet(a){
-  return (norm(a).split(" ").filter(w=> w && !/^([×x]|var\.|subsp\.|ssp\.|f\.|cv\.|convar\.)$/i.test(w))[0]) || "";
+  const s = stripCultivar(a);                          // sonst wäre bei »Weigela 'Bristol Ruby'« »'Bristol« das Epitheton
+  return (s.split(" ").filter(w=> w && !/^([×x]|var\.|subsp\.|ssp\.|f\.|cv\.|convar\.)$/i.test(w))[0]) || "";
 }
 function searchName(c){ return norm(c.g+" "+binomEpithet(c.a)); }
 /* ---------- Botanische Namensherleitung (Merkhilfe, offline & kuratiert) ----------
@@ -3064,9 +3094,10 @@ function renderWiki(host, d){
 /* Bilder eines Artikels (für die Galerie in der Vollbild-Ansicht). Karten,
    Wappen, Logos und Schadbilder fliegen raus; botanische Tafeln bleiben – beim
    Nachschlagen sind sie hilfreich (anders als im Bilder-Quiz). */
-function wikiGallery(title){
+function wikiGallery(title, noArt){                     // noArt: für den Bilder-Quiz zusätzlich Zeichnungen/Tafeln raus (Dateiname + Metadaten)
   return jsonp("https://de.wikipedia.org/w/api.php?action=query&format=json&generator=images"+
-      "&gimlimit=20&redirects=1&prop=imageinfo&iiprop=url%7Cmime&iiurlwidth=1200&titles="+
+      "&gimlimit=20&redirects=1&prop=imageinfo&iiprop=url%7Cmime"+
+      (noArt ? "%7Cextmetadata&iiextmetadatafilter=Categories%7CArtist%7CCredit" : "")+"&iiurlwidth=1200&titles="+
       encodeURIComponent(title))
     .then(d=>{
       const pg = (d && d.query && d.query.pages) || {};
@@ -3076,6 +3107,7 @@ function wikiGallery(title){
           const ii = p.imageinfo && p.imageinfo[0];
           if(!ii || !(ii.thumburl||ii.url)) return false;
           if(ii.mime && !/^image\/(jpeg|png|webp)$/i.test(ii.mime)) return false;   // keine SVG-Icons/PDF
+          if(noArt && (looksIllustration(f) || looksArtwork(ii.extmetadata))) return false;
           return usablePhoto(f) && !looksDamage(f);
         })
         .map(p=>{ const ii=p.imageinfo[0];
@@ -3324,7 +3356,7 @@ async function loadWiki(card, host, btn){
    Bewusst ein EIGENER Modus: Er lädt nichts beim Seitenaufbau, und ohne Netz
    sagt er das klar – Karteikarten, Quiz, Tippen und Liste bleiben offline voll
    nutzbar. */
-const LS_PHOTOS = LS_PREFIX+"photos4";                // gemerkte Bild-URLs (spart API-Abrufe; »4« = neue Auswahl, alte Treffer verfallen)
+const LS_PHOTOS = LS_PREFIX+"photos5";                // gemerkte Bild-URLs (spart API-Abrufe; »5« = Sorten-Regel + Tafel-Filter, alte Treffer verfallen)
 let photoStore = null, photoMisses = 0;
 function photoStoreLoad(){
   if(photoStore) return photoStore;
@@ -3371,10 +3403,35 @@ function usablePhoto(file){
 const INFRA_RE = /\b(?:var|subsp|ssp|convar|f|cv)\.\s*([a-zäöüß][a-zäöüß-]{2,})/i;
 const GRP_RE   = /(cultivars?|hybriden?|in sorten|-?grp\.|gruppe|group)/i;
 function infraEpithet(a){ const m = INFRA_RE.exec(norm(a||"")); return m ? m[1].toLowerCase() : ""; }
-function isCultivarName(a){ a = norm(a||""); return INFRA_RE.test(a) || GRP_RE.test(a); }
-function looksIllustration(file){                     // alte Tafeln/Sammelbilder statt Foto
-  const f = deacc(String(file||"").toLowerCase());    // »Köhler–s Medizinal-Pflanzen« → koehler…
-  return /(illustration|kohler|koehler|koeh_|medizinal|sturm|thome|liebig|plate|drawing|zeichnung|botanical|tafel|gravure|lithograph|herbarium|herbarbeleg|specimen|exsiccat|woodcut|holzschnitt|engraving|abbildung)/.test(f);
+/* Was für ein Name ist das? "infra" = Varietät/Unterart (var. cerasiforme), "cv" = benannte
+   Sorte ('Nigra', 'Bristol Ruby'), "placeholder" = die Liste meint »irgendeine Sorte«
+   ('Sorte', »Hybriden«, »in Sorten«, »Grp.«) – dafür IST das Artbild das richtige Bild,
+   eine Sorten-Suche wäre sinnlos. "" = reine Art. */
+function cultivarKind(a){
+  a = norm(a||"");
+  if(INFRA_RE.test(a)) return "infra";
+  const cv = cultivarName(a);
+  if(cv) return /^sorten?$/i.test(cv) ? "placeholder" : "cv";
+  return GRP_RE.test(a) ? "placeholder" : "";
+}
+function isCultivarName(a){ return cultivarKind(a) !== ""; }
+/* Sortennamen, die eine SICHTBARE Abweichung von der Art benennen – Farbe (nigra,
+   purpurea, aurea, glauca, variegata …), Wuchs (nana, fastigiata, pendula, contorta,
+   repanda …) oder Blatt (crispa, dissecta …). Für solche Sorten ist ein Bild der ART
+   schlicht falsch (Realfälle: Blutpflaume 'Nigra' → weiß blühende Kirschpflaume,
+   Cornus sericea 'Flaviramea' → rotholziger Hartriegel). Phantasie- und Züchternamen
+   ('Bristol Ruby', 'Koster', 'Hancock') dürfen dagegen auf das Artbild zurückfallen,
+   wenn keine Geschwister in der Liste stehen – dort ist die Abweichung selten
+   bildentscheidend, und oft gibt es gar kein eigenes Sortenbild. Gegen alle
+   Sortennamen der 14 Listen durchgesehen (s. tests/learn.mjs). */
+const CV_DESC_RE = /(nigr|purpur|atro|rubr|rubens|\bros[ea]|\baure|\blute|\bflav|\balb[au]|variegat|marginat|argent|glauc|caerul|blue|gold|silver|silber|\bred\b|\brot\b|yellow|gelb|white|weiss|purple|pink|contort|tortuos|pendul|fastigiat|column|\bnan[au]s?\b|compact|globos|conic|pyramid|erect|repand|horizontal|prostrat|procumb|tristis|youngii|weeping|dwarf|zwerg|crisp|dissect|lacinia|squarros|echinif|teppich|carpet|gracil|smaragd|emerald|sunburst|\bsun ?spot|evergold|hibernic|hibernik|\bmops\b|danica|elegantissim|punice|nidiform|minim)/;
+function descriptiveCultivar(name){
+  const n = deacc(String(name||"").toLowerCase()).replace(/[_\-]+/g," ");
+  return !!n && CV_DESC_RE.test(n);
+}
+function looksIllustration(file){                     // alte Tafeln/Sammelbilder statt Foto – nach dem DATEINAMEN
+  const f = deacc(String(file||"").toLowerCase()).replace(/[_\-.]+/g," ");   // »Köhler–s Medizinal-Pflanzen« → kohler…; _-. werden Wortgrenzen
+  return /(illustration|kohler|koehler|\bkoeh\b|medizinal|\bsturm\b|\bthome\b|liebig|\bplates?\b|drawing|zeichnung|botanical (illustration|art|plate|drawing|print|magazine)|\btafel|gravure|lithograph|herbarium|herbarbeleg|specimen|exsiccat|woodcut|holzschnitt|engraving|abbildung)/.test(f);
 }
 /* Krankheits-/Schädlings-/Schadbilder: Fotos von Rost, Mehltau, Fraßschäden, Larven …
    nennen die WIRTSPFLANZE im Dateinamen und gewinnen sonst über commonsScore
@@ -3386,14 +3443,51 @@ function looksDamage(file){
   const f = deacc(String(file||"").toLowerCase()).replace(/[_\-.]+/g," ");
   return /(telia|teliospor|uredini|aecidi|\brusts?\b|\brost\b|mildew|mehltau|blight|leaf ?spot|blattfleck|disease|krankheit|infect|infest|\bdamaged?\b|\bschaden\b|befall|\bgalls?\b|gallmilbe|gallwespe|pflanzengalle|leaf ?miner|blattminier|\blarvae?\b|\blarven?\b|\braupen?\b|caterpillar|aphid|blattlaus|\bpests?\b|pathogen|\bfungus\b|\bfungi\b|pilzbefall|\bvirus\b|chlorosis|chlorose|necrosis|nekrose|deficiency|uromyces|puccinia|erysiphe|peronospora|phytophthora|fusarium|septoria|colletotrichum|alternaria|sclerotinia|monilinia|venturia)/.test(f);
 }
+/* ---------- Zeichnungen, Tafeln, Herbarbelege, Buchscans: raus ----------
+   Rückmeldung mit Screenshot: Im Bilder-Quiz erschien eine Tafel aus einem
+   digitalisierten Buch von 1841 (»Bulletin de la Société … de Moscou«) – der
+   Dateiname verrät so etwas oft nicht. Verlässlicher sind die METADATEN der Datei
+   auf Commons: ihre Kategorien (»Botanical illustrations«, »Files from the
+   Biodiversity Heritage Library«, »Herbarium specimens of …«), der Urheber
+   (»Internet Archive Book Images«) und die Quelle. Commons liefert sie in derselben
+   Antwort wie die Bild-URL (iiprop=extmetadata) – kostet also keinen zusätzlichen
+   Abruf; für das Artikelbild der Wikipedia fragen wir sie einmal VOR dem Anzeigen
+   ab (der Bildnachweis kam bisher ohnehin nach der Antwort – jetzt eben vorher, und
+   dafür entfällt der Abruf danach). Zeichnungen gelten im Quiz nicht mehr als
+   Notnagel: Lieber bleibt eine Art ohne Bild, als dass eine Buchtafel mit
+   aufgedrucktem Namen erscheint. (In der Info-Karte bleiben Tafeln erlaubt – beim
+   Nachschlagen sind sie hilfreich.) */
+const ART_CAT_RE = /(illustration|drawing|line art|engrav|lithograph|woodcut|etching|chromolith|painting|watercolo|aquarell|botanical art|\bplates?\b|\btafeln?\b|herbari|exsiccat|type specimen|\bscans?\b|scanned|book images|internet ?archive|biodiversity heritage|\bbhl\b|flora batava|flora danica|botanical magazine|medizinal|\bthom[eé]\b|\bsturm\b|\bprints?\b|manuscript|codex|postcard|\bstamps?\b|\bcoins?\b|artwork|\bpd-art\b|sketch|graphics?\b|diagram|\bmaps?\b|seed packet|catalog|advertis|\blabels?\b|\blogos?\b|pdf files|djvu)/i;
+const ART_BY_RE  = /(internet ?archive|biodiversity heritage|\bbhl\b|herbari|archive\.org|biodiversitylibrary)/i;
+function metaValue(m, k){ const v = m && m[k] && m[k].value; return v==null ? "" : String(v).replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim(); }
+function looksArtwork(meta){                           // meta = imageinfo[0].extmetadata; ohne Metadaten nicht prüfbar → gilt als Foto
+  if(!meta) return false;
+  return ART_CAT_RE.test(metaValue(meta,"Categories")) || ART_BY_RE.test(metaValue(meta,"Artist")+" "+metaValue(meta,"Credit"));
+}
+function metaCredit(meta){                             // Urheber + Lizenz für den Bildnachweis
+  const artist = metaValue(meta,"Artist"), license = metaValue(meta,"LicenseShortName");
+  return (artist || license) ? { artist, license } : null;
+}
+function fileMetaQuery(file){                          // Metadaten EINER Commons-Datei (Artikelbild der Wikipedia: Tafel? Urheber/Lizenz?)
+  return jsonp("https://commons.wikimedia.org/w/api.php?action=query&format=json&prop=imageinfo"+
+    "&iiprop=mime%7Cextmetadata&iiextmetadatafilter=Categories%7CArtist%7CCredit%7CLicenseShortName&titles=File:"+
+    encodeURIComponent(file));
+}
+async function fileMeta(file){                          // → {art, mime, credit} | null (nicht auf Commons → nicht prüfbar)
+  const p = wikiPage(await fileMetaQuery(file)), ii = p && p.imageinfo && p.imageinfo[0];
+  if(!ii) return null;
+  return { art: looksArtwork(ii.extmetadata), mime: ii.mime||"", credit: metaCredit(ii.extmetadata) };
+}
 function fileMentionsOther(file, card){               // Dateiname nennt eine andere Art derselben Gattung
   const gen = norm(card.g||"").toLowerCase(); if(!gen) return false;
   const epi = binomEpithet(card.a||"").toLowerCase(), inf = infraEpithet(card.a||"");
-  const w = String(file||"").replace(/[_\-.,()]/g," ").split(/\s+/).filter(Boolean);
+  if(!epi) return false;                              // gattungsreine Karte (»Weigela 'Bristol Ruby'«): jede Art der Gattung darf sie vertreten
+  const cv = cultivarName(card.a||"").toLowerCase().split(" ")[0];   // »Prunus cerasifera Nigra 01.jpg« nennt keine andere Art
+  const w = String(file||"").replace(/[_\-.,()']/g," ").split(/\s+/).filter(Boolean);
   for(let i=0;i<w.length-1;i++){
     const a = w[i].toLowerCase(), b = w[i+1].toLowerCase().replace(/\d+$/,"");
     if(a!==gen || !/^[a-zäöüß]{4,}$/.test(b)) continue;
-    if(b!==epi && b!==inf && b!=="var" && b!=="subsp" && b!=="ssp") return true;
+    if(b!==epi && b!==inf && b!==cv && b!=="var" && b!=="subsp" && b!=="ssp") return true;
   }
   return false;
 }
@@ -3407,21 +3501,26 @@ function buildBinomIndex(){
   allCards.forEach(c=>{ const b=searchName(c).toLowerCase(); binomCount.set(b,(binomCount.get(b)||0)+1); });
 }
 function artLevelOk(card){                            // darf ein Bild der ART gezeigt werden?
-  if(!infraEpithet(card.a)) return true;              // keine Varietät → Artbild ist das richtige Bild
+  const kind = cultivarKind(card.a);
+  if(kind==="cv" && descriptiveCultivar(cultivarName(card.a))) return false;   // 'Nigra' ≠ Kirschpflaume – nie das Artbild
+  if(kind!=="infra" && kind!=="cv") return true;      // reine Art oder Platzhalter ('Sorte', Hybriden) → Artbild ist das richtige Bild
   return (binomCount.get(searchName(card).toLowerCase())||0) <= 1;   // Geschwister in der Liste? dann nein
 }
 function photoSteps(card){                            // Suchwege, vom genauesten zum gröbsten
-  const full = norm(card.g+" "+card.a).replace(/\s+/g," ").trim();
   const binom = searchName(card), de = (card.de||"").split(/[,;/]/)[0].trim();
-  const inf = infraEpithet(card.a), steps = [];
-  if(isCultivarName(card.a)){
-    steps.push({k:"cm", q:`incategory:"${full}"`});                       // exakte Taxon-Kategorie
-    if(inf) steps.push({k:"cm", q:`incategory:"${binom}" ${inf}`});       // Sorte innerhalb der Art
+  const kind = cultivarKind(card.a), inf = infraEpithet(card.a), cv = cultivarName(card.a), steps = [];
+  if(kind==="infra" || kind==="cv"){
+    // fein: genau dieses Taxon bzw. diese Sorte (Commons-Kategorien heißen »Prunus cerasifera 'Nigra'«)
+    const full = kind==="cv" ? `${binom} '${cv}'` : norm(card.g+" "+card.a).replace(/\s+/g," ").trim();
+    const sub  = inf || cv, subQ = /\s/.test(sub) ? `"${sub}"` : sub;   // mehrteilige Sortennamen als Phrase
+    steps.push({k:"cm", q:`incategory:"${full}"`});                       // exakte Taxon-/Sorten-Kategorie
+    steps.push({k:"cm", q:`incategory:"${binom}" ${subQ}`});              // Sorte innerhalb der Art-Kategorie
     steps.push({k:"cm", q:`"${full}"`});
     if(de){ steps.push({k:"wp", q:de}); steps.push({k:"cm", q:`"${de}"`}); }
-    if(inf) steps.push({k:"cm", q:`${binom} ${inf}`});                   // Volltext, beide Wörter müssen vorkommen
+    steps.push({k:"cm", q:`${binom} ${subQ}`});                          // Volltext, alle Wörter müssen vorkommen
+    // grob (Artniveau) – nur wenn das für diese Karte zulässig ist (artLevelOk)
     if(artLevelOk(card)){ steps.push({k:"wp", q:binom}); steps.push({k:"cm", q:`incategory:"${binom}"`}); }
-  }else{
+  }else{                                              // reine Art oder Platzhalter-Sorte: direkt die Art
     steps.push({k:"wp", q:binom});
     steps.push({k:"cm", q:`incategory:"${binom}"`});
     if(de) steps.push({k:"wp", q:de});
@@ -3435,10 +3534,10 @@ function wikiArticleQuery(title){                     // Artikelbild + erster Sa
     "&exintro=1&explaintext=1&exsentences=1&piprop=thumbnail%7Cname&pithumbsize=640&redirects=1&titles="+
     encodeURIComponent(title));
 }
-function commonsQuery(q){                             // Dateien auf Commons suchen (Kategorie oder Phrase)
+function commonsQuery(q){                             // Dateien auf Commons suchen (Kategorie oder Phrase) – samt Metadaten (Tafel? Urheber/Lizenz)
   return jsonp("https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search"+
     "&gsrnamespace=6&gsrlimit=12&gsrsearch="+encodeURIComponent(q)+
-    "&prop=imageinfo&iiprop=url%7Cmime&iiurlwidth=640");
+    "&prop=imageinfo&iiprop=url%7Cmime%7Cextmetadata&iiextmetadatafilter=Categories%7CArtist%7CCredit%7CLicenseShortName&iiurlwidth=640");
 }
 /* Dateien, die die Pflanze im Namen führen, sind meist gezielte Aufnahmen –
    besser als ein beliebiges Bild aus derselben Kategorie (»Hortus Haren … 24.jpg«). */
@@ -3460,7 +3559,9 @@ function pickCommons(d, card){                        // bester Treffer der Comm
     const ii = p.imageinfo && p.imageinfo[0]; if(!ii || !(ii.thumburl||ii.url)) return;
     if(ii.mime && (!/^image\//i.test(ii.mime) || /djvu/i.test(ii.mime))) return;   // PDF/DjVu-Buchscans: Vorschau = Buchdeckel
     if(!usablePhoto(file) || looksIllustration(file) || looksDamage(file) || fileMentionsOther(file, card)) return;
-    ok.push({ thumb: ii.thumburl || ii.url, file, i, sc: commonsScore(file, card),
+    const meta = ii.extmetadata || null;
+    if(looksArtwork(meta)) return;                   // Tafel/Herbarbeleg/Buchscan laut Kategorien oder Urheber – auch bei harmlosem Dateinamen
+    ok.push({ thumb: ii.thumburl || ii.url, file, i, sc: commonsScore(file, card), credit: metaCredit(meta),
               url: ii.descriptionurl || ("https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(file)) });
   });
   if(!ok.length) return null;
@@ -3468,34 +3569,43 @@ function pickCommons(d, card){                        // bester Treffer der Comm
   const best = ok[0];
   // Die übrigen geprüften Treffer sind weitere Ansichten DERSELBEN Art – sie kosten
   // keinen zusätzlichen Abruf und werden zur Galerie in der Großansicht (max. 6).
-  return { thumb: best.thumb, file: best.file, title: norm(card.g+" "+card.a),
-           url: best.url, src:"cm", gal: ok.slice(0,6).map(o=>o.thumb) };
+  return Object.assign({ thumb: best.thumb, file: best.file, title: norm(card.g+" "+card.a),
+           url: best.url, src:"cm", gal: ok.slice(0,6).map(o=>o.thumb) }, best.credit||{});   // + artist/license → Bildnachweis ohne zweiten Abruf
 }
-async function wikiPhoto(card){                        // → {thumb,title,file,url,src} | null
-  let answered = false, weak = null, fehler = 0;       // weak: Zeichnung/Tafel nur als Notnagel
-  const inf = infraEpithet(card.a), strict = inf && !artLevelOk(card);
+async function wikiPhoto(card){                        // → {thumb,title,file,url,src,artist?,license?,tmp?} | null
+  let answered = false, fehler = 0;
+  const kind = cultivarKind(card.a), sub = (infraEpithet(card.a) || cultivarName(card.a)).toLowerCase();
+  const strict = (kind==="infra" || kind==="cv") && !artLevelOk(card);   // Artbild für diese Karte NICHT zulässig
+  // Kam ein FEINERER Suchweg nicht durch (Zeitüberschreitung, Ratenlimit) und ein gröberer
+  // trifft, gilt der Treffer nur für diese Sitzung (tmp) – sonst stünde das Artbild für
+  // immer im Speicher, obwohl es ein Sortenbild gäbe. Beim nächsten Start wird neu gesucht.
+  const mark = h => { if(fehler) h.tmp = true; return h; };
   for(const st of photoSteps(card)){
     try{
       if(st.k==="cm"){
         const hit = pickCommons(await commonsQuery(st.q), card);
         answered = true;
-        if(hit) return hit;
+        if(hit) return mark(hit);
       }else{
         const d = await wikiArticleQuery(st.q); answered = true;
         const p = wikiPage(d);
         if(!p || !p.thumbnail || !p.thumbnail.source) continue;
         if(!pageFitsCard(p, card)) continue;                       // anderer Artikel (Homonym)
-        // Sorte gesucht, aber auf dem Art-Artikel gelandet? Nur zulässig, wenn die Art nicht ebenfalls in der Liste steht.
-        if(strict && ((p.title||"")+" "+(p.extract||"")).toLowerCase().indexOf(inf) < 0) continue;
-        if(!usablePhoto(p.pageimage) || looksDamage(p.pageimage) || fileMentionsOther(p.pageimage, card)) continue;
-        const hit = { thumb:p.thumbnail.source, title:p.title, file:p.pageimage||"", src:"wp",
+        // Sorte gesucht, aber auf dem Art-Artikel gelandet? Nur zulässig, wenn das Artbild für diese Karte erlaubt ist.
+        if(strict && ((p.title||"")+" "+(p.extract||"")).toLowerCase().indexOf(sub) < 0) continue;
+        const file = p.pageimage || "";
+        if(!usablePhoto(file) || looksIllustration(file) || looksDamage(file) || fileMentionsOther(file, card)) continue;
+        // Metadaten der Datei: Tafel/Herbarbeleg/Buchscan laut Kategorien oder Urheber? → nächster Weg.
+        // (Kein Notnagel mehr für Zeichnungen – lieber kein Bild als eine Tafel mit aufgedrucktem Namen.)
+        const fm = file ? await fileMeta(file) : null;
+        if(fm && (fm.art || (fm.mime && !/^image\//i.test(fm.mime)))) continue;
+        const hit = { thumb:p.thumbnail.source, title:p.title, file, src:"wp",
                       url:"https://de.wikipedia.org/wiki/"+encodeURIComponent(String(p.title).replace(/ /g,"_")) };
-        if(!looksIllustration(p.pageimage)) return hit;
-        weak = weak || hit;                                        // Tafel merken, erst ganz am Ende nehmen
+        if(fm && fm.credit) Object.assign(hit, fm.credit);         // Bildnachweis liegt damit schon vor
+        return mark(hit);
       }
     }catch(e){ fehler++; continue; }                   // einzelner Fehlversuch – nächster Weg
   }
-  if(weak) return weak;
   // »Kein Bild« darf nur heißen: ALLE Suchwege sind sauber durchgelaufen und keiner
   // hatte einen Treffer. Kam auch nur ein Weg nicht durch (Zeitüberschreitung,
   // Funkloch), ist das ein Verbindungsproblem – sonst gilt die Art fälschlich als
@@ -3509,12 +3619,14 @@ let photoSource = wikiPhoto;                           // austauschbar (Tests la
    Leere) machte die Art damit für immer bildlos, und der Bilder-Quiz fiel bei ihr
    auf eine Quizfrage zurück. Jetzt bekommt jede solche Art bei jedem neuen Start
    einen frischen Versuch; gefundene Bilder bleiben wie bisher dauerhaft gemerkt. */
-const photoTried = new Set();
+const photoTried = new Set(), photoTmp = new Map();  // photoTmp: Treffer, bei denen ein feinerer Suchweg nicht durchkam – nur für diese Sitzung
 async function photoFor(card){
   const known = photoStoreLoad()[card.key];
   if(known) return known;                              // gemerktes Bild – sofort da
+  if(photoTmp.has(card.key)) return photoTmp.get(card.key);
   if(photoTried.has(card.key)) return null;            // in dieser Sitzung schon erfolglos gesucht
   const p = await photoSource(card);                   // wirft bei Netzfehler (dann KEIN Merken → später erneut)
+  if(p && p.tmp){ photoTmp.set(card.key, p); return p; }   // nicht dauerhaft merken: beim nächsten Start wird wieder fein gesucht
   photoRemember(card.key, p);
   if(!p) photoTried.add(card.key);
   return p;
@@ -3526,9 +3638,7 @@ async function photoCredit(file){
     "&prop=imageinfo&iiprop=extmetadata&iiextmetadatafilter=Artist%7CLicenseShortName&titles=File:"+
     encodeURIComponent(file));
   const p = wikiPage(d), m = p && p.imageinfo && p.imageinfo[0] && p.imageinfo[0].extmetadata;
-  if(!m) return null;
-  const plain = v => v ? String(v.value).replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim() : "";
-  return { artist:plain(m.Artist), license:plain(m.LicenseShortName) };
+  return m ? metaCredit(m) : null;
 }
 function photoSrcLine(p){                              // Quellenzeile unter dem Bild (nach der Antwort)
   const commons = p.file ? "https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(p.file) : p.url;
@@ -3550,7 +3660,7 @@ function photoGalList(p){
 }
 function photoGalLoader(p){
   if(!p || p.src!=="wp" || !p.title) return null;
-  return ()=>wikiGallery(p.title).then(l=>l.map(it=>({ src:it.src, label:"Weiteres Bild der gesuchten Pflanze" })));
+  return ()=>wikiGallery(p.title, true).then(l=>l.map(it=>({ src:it.src, label:"Weiteres Bild der gesuchten Pflanze" })));
 }
 /* ---------- Geduld statt Ersatzmodus ----------
    Der Bilder-Quiz bleibt der Bilder-Quiz. Eine schwache Leitung darf nicht dazu
@@ -3619,7 +3729,8 @@ async function renderPhoto(){
     // Eine ganze Runde ohne ein einziges Bild – jetzt ehrlich fragen statt still
     // den Modus zu wechseln. Der Wechsel passiert nur auf Knopfdruck.
     photoNotice(`<b>Zu diesen Arten finde ich gerade keine Fotos.</b> Das liegt meist an der Verbindung;
-      zu wenigen Arten gibt es auch schlicht kein brauchbares Bild.
+      zu wenigen Arten gibt es auch schlicht kein brauchbares Foto – Zeichnungen, Herbarbelege und
+      Buchscans zeige ich bewusst nicht.
       <div class="ph-actions"><button class="btn primary" id="phRetry">Nochmal versuchen</button>
       <button class="btn ghost" id="phQuiz">Ohne Bilder weiterlernen</button></div>`);
     $("#phRetry").onclick=()=>{ sess.photoDefer=0; renderPhoto(); };
@@ -3759,11 +3870,13 @@ function photoRevealCredit(p){                        // Bildnachweis erst jetzt
   const box=$("#stage").querySelector(".photobox");
   if(!box || !p || box.querySelector(".ph-src")) return;
   box.insertAdjacentHTML("beforeend", photoSrcLine(p));
-  if(p.file) photoCredit(p.file).then(cr=>{
+  const show = cr => {
     const el2=$("#phSrc");
     if(el2 && cr && (cr.artist||cr.license))
       el2.insertAdjacentHTML("beforeend", ` · ${esc([cr.artist,cr.license].filter(Boolean).join(", "))}`);
-  }).catch(()=>{});
+  };
+  if(p.artist || p.license) show(p);                   // kam mit den Suchmetadaten – kein weiterer Abruf
+  else if(p.file) photoCredit(p.file).then(show).catch(()=>{});   // ältere Cache-Einträge / eingehängte Quellen
 }
 function prefetchPhoto(){
   // Die nächsten ZWEI Karten vorab holen – auf einer langsamen Leitung ist der
@@ -4330,6 +4443,15 @@ window.rankOf=rankOf;
 window.comboBonus=comboBonus;
 window.RANKS=RANKS;
 window.isCultivarName=isCultivarName;
+window.cultivarName=cultivarName;       // für Tests: Sorten-Erkennung, Artbild-Regel, Tafel-Filter
+window.cultivarKind=cultivarKind;
+window.descriptiveCultivar=descriptiveCultivar;
+window.looksArtwork=looksArtwork;
+window.binomEpithet=binomEpithet;
+window.clean=clean;
+window.checkTyped=checkTyped;
+window.wikiGallery=wikiGallery;
+window.photoFor=photoFor;
 window.infraEpithet=infraEpithet;
 window.artLevelOk=artLevelOk;
 window.pickCommons=pickCommons;
@@ -4349,7 +4471,7 @@ window.wikiPhoto=wikiPhoto;
 window.__setPhotoSource=fn=>{ photoSource = fn || wikiPhoto; };
 window.__setPhotoWait=ms=>{ phWaitMs = ms || 6000; };   // für Tests: Takt des Wartebildschirms
 window.__setJsonp=fn=>{ jsonp = fn || ((...a)=>jsonpGet(...a)); };   // API-Antworten für Tests vorgeben
-window.__clearPhotoCache=()=>{ photoStore={}; try{ store.set(LS_PHOTOS,"{}"); }catch(e){} };
+window.__clearPhotoCache=()=>{ photoStore={}; photoTmp.clear(); try{ store.set(LS_PHOTOS,"{}"); }catch(e){} };
 window.__rememberPhoto=photoRemember;   // für Tests: »für diese Art gibt es kein Bild« (null) vormerken
 window.photoless=photoless;
 window.stepsLeft=stepsLeft;   // für Tests: Treffer bis »sitzt«

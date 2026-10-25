@@ -1866,6 +1866,90 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       `mc`+`img2de` → deutsche Optionen) spielen ihre Aufgabe, danach gelten wieder die
       eigenen Einstellungen (`mc,exam` · `img2both`).
 
+- [x] **Bilder-Quiz: Sorten-Regel, keine Zeichnungen/Tafeln/Herbarbelege mehr, Eingabe ohne
+      Anführungszeichen-Zwang** (drei kritische Rückmeldungen: »Weigela x „Bristol Ruby“ gab
+      Abzug«, Screenshot einer Buchtafel von 1841 im Bilder-Quiz, »Blutpflaume die weiß blüht,
+      gelber Hartriegel hat rotes Holz«). Vier Ursachen, vier Änderungen:
+      **(1) Anführungszeichen vereinheitlicht** – die Excel-Listen schreiben Sortennamen mal in
+      `Backticks`, mal in ´Akzenten´, ‘typografisch’ oder "doppelt" (»Prunus cerasifera
+      `Nigra´«). Der Konverter (`quotes()` in `tools/xlsx_to_seed.mjs`, angewandt auf Art,
+      Sorte, deutschen Namen, Synonyme) setzt überall gerade Apostrophe `'Nigra'` (ICNCP);
+      Seeds-Neubau = **23 Zeilen, ausschließlich Anführungszeichen** (zeilenweise verifiziert).
+      Als **Schreibweise-Anpassung offengelegt** (`.learnnote`, Prüfwerkzeug-Hilfe
+      »Datenherkunft«, `recht.html#datenquellen`, Technik-Doku) – kein neuer »Eingriff«.
+      **(2) Eingabe:** `clean()` in `learn.js` streicht jetzt **alle** Anführungszeichen-
+      Varianten (`' \` ´ ‘ ’ „ “ ” "`), Klammern und das **Hybrid-Zeichen** (× bzw. ein
+      freistehendes x) – »Weigela x „Bristol Ruby“« = `Weigela 'Bristol Ruby'`, »Petunia
+      atkinsiana« = »Petunia × atkinsiana«, »x Cupressocyparis« = `×Cupressocyparis`. Gilt für
+      Selbst eingeben, »wie in der Prüfung« (`fieldOk`) und die Fast-Stufe.
+      **(3) Sorten-Regel in der Bildsuche:** Anführungszeichen-Sorten wurden bisher **gar nicht
+      als Sorten erkannt** (`isCultivarName` kannte nur var./ssp./Gruppen) – die Kette begann
+      mit dem Art-Artikel der Wikipedia und zeigte für 'Nigra' die weiß blühende Kirschpflaume,
+      für 'Flaviramea' den rotholzigen *Cornus sericea*. Neu: `cultivarName()`/`stripCultivar()`
+      (neben `binomEpithet`, das für »Weigela 'Bristol Ruby'« sonst »'Bristol« als Epitheton
+      nahm → `searchName` jetzt »Weigela«), `cultivarKind()` = `infra | cv | placeholder |
+      ""` ('Sorte', »Hybriden«, »Grp.« sind Platzhalter – dafür IST das Artbild richtig, sie
+      gehen direkt in den Art-Zweig, spart 3–4 Abrufe je Karte). **Beschreibende Sortennamen**
+      (`CV_DESC_RE`, Farbe/Wuchs/Blatt: nigra, purpurea, glauca, variegata, nana, fastigiata,
+      contorta, pendula, repanda, crispa, Smaragd, Sunburst …) bekommen **nie** das Artbild
+      (`artLevelOk` → false); Phantasie-/Züchternamen ('Bristol Ruby', 'Koster', 'Hancock')
+      dürfen wie bisher aufs Artbild zurückfallen, wenn keine Geschwister in der Liste stehen.
+      Gegen **alle 61 Sortennamen** der 14 Listen durchgesehen: **38 beschreibend, 23
+      Phantasie/Platzhalter** (Testguard). Sechs Quellzeilen haben ein **vergessenes**
+      Anführungszeichen (»abies 'Nidiformis«, »fortunei Emerald Gold'«) – `cultivarName()`
+      nimmt dann den Rest hinter dem Zeichen bzw. die großgeschriebenen Wörter davor. `photoSteps` sucht für Sorten zuerst die
+      Commons-Kategorie `Genus species 'Name'`, dann innerhalb der Art-Kategorie, Phrase,
+      deutscher Name, Volltext; `fileMentionsOther` kennt den eigenen Sortennamen. Dazu
+      **`tmp`-Treffer:** bricht ein *feinerer* Suchweg ab (Zeitüberschreitung, HTTP 429 –
+      genau so entstand das falsche Blutpflaumen-Bild) und ein gröberer trifft, gilt der
+      Treffer nur für die Sitzung (`photoTmp`), wandert **nicht** in den Speicher und wird
+      beim nächsten Start fein nachgesucht. Bild-Cache auf `pflanzenlernen.photos5`.
+      **(4) Zeichnungen, Tafeln, Herbarbelege, Buchscans raus – über Commons-Metadaten:**
+      Der Dateiname verrät sie oft nicht (»Bulletin de la Société … de Moscou (1841)
+      (20228837329).jpg«). `commonsQuery` fragt `iiprop=extmetadata` (Categories, Artist,
+      Credit, LicenseShortName) **in derselben Antwort** mit ab; `looksArtwork(meta)` prüft
+      Kategorien (`ART_CAT_RE`: illustration, drawing, engraving, lithograph, botanical art,
+      plates, Tafeln, herbari…, exsiccat, scans, »Files from the Biodiversity Heritage
+      Library«, »Internet Archive Book Images«, Flora Batava/Danica, Botanical Magazine,
+      Medizinal-Pflanzen, prints, PD-Art, maps, labels, logos …) und Urheber/Quelle
+      (`ART_BY_RE`). Für das **Artikelbild der Wikipedia** holt `fileMeta()` die Metadaten
+      **einmal vor dem Anzeigen** (Commons-Abruf); der bisherige **Notnagel »Zeichnung, wenn
+      sonst nichts«** entfällt – lieber kein Bild als eine Tafel mit aufgedrucktem Namen.
+      Treffer tragen seither `artist`/`license` → `photoRevealCredit` braucht **keinen zweiten
+      Abruf** mehr (Fallback `photoCredit` nur für eingehängte Quellen/alte Einträge).
+      `looksIllustration` (Dateiname) präzisiert: »botanical« nur mit illustration/art/plate/
+      drawing/print/magazine (»Botanical Garden«-Fotos wurden bisher fälschlich verworfen),
+      `\bplates?\b`, `\bkoeh\b`, `\bsturm\b`, `\bthome\b`. Die **Quiz-Galerie** aus
+      Artikelbildern (`photoGalLoader` → `wikiGallery(title, noArt=true)`) filtert ebenso;
+      die **Info-Karte behält Tafeln** (beim Nachschlagen hilfreich). Hilfe-Text »Bilder«
+      erklärt beides (nur Fotos; beschreibende Sorten nie als Artbild); der Wartebildschirm
+      sagt, dass Zeichnungen bewusst fehlen. Außerdem einen seit #137 veralteten Hilfe-Satz
+      (Bild → botanischer/deutscher Name) auf »Bild → voller Name« korrigiert.
+      **Ehrlich:** Für beschreibende Sorten ohne Sortenbild auf Commons und für Arten, zu
+      denen es nur Zeichnungen gibt, bleibt die Karte jetzt **ohne Bild** (wird in der
+      Sitzung ans Ende geschoben, beim nächsten Start neu gesucht) – das ist die Gegenseite
+      von »kein falsches Bild«. Live-Verifikation gegen die echten APIs stand bei der
+      Umsetzung nicht zur Verfügung (Wikimedia lieferte der Build-IP nur noch HTTP 429);
+      die Metadaten-Feldnamen entsprechen der dokumentierten `extmetadata`-API, die Kette ist
+      offline über `__setJsonp`-Fixtures abgesichert.
+      **Nicht geändert – braucht eine Entscheidung:** Das Paar »Salvia abrotanoides ·
+      Bauernjasmin« (Screenshot) ist ein **Fehler in der amtlichen GaLaBau-Gärtner-Liste**
+      (Zeile 209: Familie Hydrangeaceae, deutscher Name Bauernjasmin/Pfeifenstrauch =
+      *Philadelphus coronarius*; *Salvia abrotanoides* ist in Zeile 208 bereits als Synonym
+      von *Perovskia abrotanoides* geführt). Wegen der veröffentlichten Zusage »Namen
+      unverändert« nicht still korrigiert; Weg wäre `CORRECTIONS` in `fix_source_gaps.py`
+      (füllt derzeit nur **leere** Felder) + Offenlegung als vierter Eingriff + Meldung ans RP.
+      `tests/learn.mjs`: Sorten-Erkennung (Kind/Name/Epitheton, Klammerform, »Frieder's
+      Evergreen«), 'Nigra' bekommt ohne Sortenbild **kein** Artbild (null, kein Fehler),
+      Sorten-Kategorie liefert Bild + Urheber/Lizenz, Phantasiename fällt auf Gattung zurück,
+      abgebrochener feiner Weg → `tmp` (nicht im Speicher, kein Zweitabruf), Platzhalter
+      'Sorte' direkt zur Art, 61/38-Guard (inkl. vergessener Anführungszeichen); `looksArtwork` (Internet Archive, Herbarbeleg,
+      Illustration vs. Foto/ohne Metadaten), `pickCommons` ohne Tafeln + Galerie ohne Tafeln,
+      Artikelbild laut Metadaten Tafel → Kette läuft weiter (genau eine Metadaten-Abfrage),
+      `wikiGallery(noArt)` vs. Info-Karte, Bildnachweis ohne Abruf (UI), Eingabe mit
+      „…“/×/x (`checkTyped`/`fieldOk`/`judgeTyped`/`clean`), Offenlegung im Hinweis;
+      `tests/smoke.mjs`: Hilfe nennt die Anführungszeichen.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein

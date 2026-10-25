@@ -353,6 +353,7 @@ async function main() {
       gewaehr: /keine Gewähr/.test(t) && /Haftung/.test(t), amtlich: /offiziellen Prüfungslisten/.test(t),
       quelle: /unverändert/.test(t) && /amtlichen Prüfungsliste/.test(t),
       lueckenDok: /Chimonanthus/.test(t) && /Wuchsform/.test(t),
+      anfz: /Anführungszeichen um/.test(t),
       mehr: !!(n && n.querySelector('a[href="rechtliches.html#datenquellen"]')), t };
   });
   assert(note.vor, "Der Hinweis muss vor dem Start der Lektion sichtbar sein: " + JSON.stringify(note));
@@ -371,6 +372,8 @@ async function main() {
   assert(note.quelle, "Der Volltext muss »unverändert aus der amtlichen Prüfungsliste« sagen: " + note.t);
   assert(note.lueckenDok,
     "Der Volltext muss die zwei dokumentierten Ergänzungen offenlegen (Chimonanthus, Wuchsform): " + note.t);
+  assert(note.anfz,
+    "Der Volltext muss die vereinheitlichten Anführungszeichen der Sortennamen als Schreibweise-Anpassung nennen: " + note.t);
   assert(note.mehr, "Der Hinweis muss auf rechtliches.html#datenquellen verweisen");
 
   // Kennzeichnung dort, wo Namen nachgeschlagen werden: Liste und Info-Karte
@@ -1268,6 +1271,197 @@ async function main() {
     "looksDamage darf Blumenkohl (var. botrytis), Rosa gallica, St.-Gallen- und normale Fotos NICHT sperren: " + JSON.stringify(damage));
   assert(damage.file === "Phaseolus coccineus in Jardin des Plantes de Toulouse 01.jpg",
     "Feuerbohne: das Rostpilz-Foto muss verworfen werden, das echte Pflanzenfoto gewinnt: " + JSON.stringify(damage));
+
+  // Sorten: Für Sortennamen, die eine sichtbare Abweichung benennen ('Nigra', 'Glauca',
+  // 'Flaviramea' …), ist ein Bild der ART falsch (Realfälle: Blutpflaume → weiß blühende
+  // Kirschpflaume, Gelber Hartriegel → rotholziger Hartriegel). Anführungszeichen-Sorten
+  // müssen als Sorten erkannt werden (früher griff nur var./ssp.), ihre Suchkette beginnt
+  // bei der Sorten-Kategorie und enthält KEINEN Art-Schritt; Platzhalter ('Sorte') und
+  // Phantasienamen ('Bristol Ruby') dürfen weiter aufs Artbild zurückfallen – aber ein
+  // gröberer Treffer nach einem abgebrochenen feineren Weg gilt nur für die Sitzung.
+  const sorten = await page.evaluate(async () => {
+    const prof = (fr, niv) => { $("#frSelect").value = fr; $("#nivSelect").value = niv; applyProfile(); };
+    const wege = (c) => photoSteps(c).map((s) => s.k + ":" + s.q);
+    const q = (url) => decodeURIComponent((url.match(/gsrsearch=([^&]+)/) || [])[1] || "");
+    const cmP = (i, file, meta) => ({ index: i, title: "File:" + file, imageinfo: [{ thumburl: "https://x/" + file, mime: "image/jpeg", descriptionurl: "https://commons/" + file, extmetadata: meta }] });
+    const cmA = (specs) => ({ query: { pages: Object.fromEntries(specs.map((s, i) => ["p" + i, cmP(i + 1, s[0], s[1])])) } });
+    const leer = { query: { pages: {} } };
+    prof("baumschule", "fachwerker");
+    const nigra = allCards.find((c) => c.g === "Prunus" && /'Nigra'/.test(c.a));
+    const r = { nigraKind: cultivarKind(nigra.a), nigraName: cultivarName(nigra.a), nigraEpi: binomEpithet(nigra.a),
+      nigraDesc: descriptiveCultivar("Nigra"), nigraArt: artLevelOk(nigra), nigraWege: wege(nigra),
+      nigraAndere: fileMentionsOther("Prunus cerasifera Nigra 01.jpg", nigra),      // Sortenname ist keine »andere Art«
+      spinosaAndere: fileMentionsOther("Prunus spinosa Blüte.jpg", nigra) };
+    const artikel = { query: { pages: { "1": { title: "Kirschpflaume", extract: "Die Kirschpflaume (Prunus cerasifera) ist eine Pflanzenart …",
+      pageimage: "Prunus_cerasifera_flowers.jpg", thumbnail: { source: "https://x/Prunus_cerasifera_flowers.jpg" } } } } };
+    const fotoMeta = { Categories: { value: "Prunus cerasifera 'Nigra'|Flowers in April" }, Artist: { value: "Hp" }, LicenseShortName: { value: "CC BY-SA 4.0" } };
+    // a) Commons kennt kein Sortenbild, Wikipedia bietet das Artbild an → KEIN Bild (und kein Fehler)
+    __clearPhotoCache();
+    __setJsonp((url) => Promise.resolve(/commons/.test(url) ? leer : artikel));
+    r.ohneSortenbild = await wikiPhoto(nigra);
+    // b) Sorten-Kategorie liefert ein Foto → genau das, samt Urheber/Lizenz aus den Metadaten
+    __clearPhotoCache();
+    __setJsonp((url) => Promise.resolve(/commons/.test(url)
+      ? (q(url) === `incategory:"Prunus cerasifera 'Nigra'"` ? cmA([["Prunus cerasifera 'Nigra' 2019.jpg", fotoMeta]]) : leer) : artikel));
+    const b = await wikiPhoto(nigra);
+    Object.assign(r, { sortenbild: b && b.file, sortenArtist: b && b.artist, sortenLic: b && b.license, sortenTmp: !!(b && b.tmp) });
+    prof("garten_und_landschaftsbau", "gaertner");
+    const flavi = allCards.find((c) => c.g === "Cornus" && /Flaviramea/.test(c.a));
+    const weig = allCards.find((c) => c.g === "Weigela" && /Bristol/.test(c.a));
+    Object.assign(r, { flaviArt: artLevelOk(flavi), weigKind: cultivarKind(weig.a), weigName: cultivarName(weig.a),
+      weigSearch: searchName(weig), weigDesc: descriptiveCultivar("Bristol Ruby"), weigArt: artLevelOk(weig), weigWege: wege(weig) });
+    // c) Weigela: feiner Weg bricht (Ratenlimit), gröberer trifft → Treffer nur für diese Sitzung (tmp), nicht dauerhaft
+    let abrufe = 0;
+    __clearPhotoCache(); photoTried.clear(); __setPhotoSource(null);
+    __setJsonp((url) => { abrufe++;
+      if (/commons/.test(url) && /gsrsearch/.test(url)) return Promise.reject(new Error("timeout"));
+      if (/commons/.test(url)) return Promise.resolve({ query: { pages: { "9": { title: "File:Weigela_florida_2019.jpg",
+        imageinfo: [{ mime: "image/jpeg", extmetadata: { Categories: { value: "Weigela florida|Flowers" }, Artist: { value: "Hp" }, LicenseShortName: { value: "CC BY-SA 4.0" } } }] } } } });
+      return Promise.resolve({ query: { pages: { "1": { title: "Weigelien", extract: "Die Weigelien (Weigela) sind eine Pflanzengattung …",
+        pageimage: "Weigela_florida_2019.jpg", thumbnail: { source: "https://x/Weigela_florida_2019.jpg" } } } } });
+    });
+    const w1 = await photoFor(weig); const n1 = abrufe;
+    const w2 = await photoFor(weig); const n2 = abrufe;
+    Object.assign(r, { weigTmp: !!(w1 && w1.tmp), weigFile: w1 && w1.file, weigCredit: w1 && w1.artist, weigSame: w1 === w2, weigNoRefetch: n2 === n1,
+      weigNichtGemerkt: !(localStorage.getItem("pflanzenlernen.photos5") || "").includes(weig.key) });
+    __setJsonp(window.__offlineJsonp); __clearPhotoCache(); photoTried.clear();
+    // d) Platzhalter 'Sorte': die Liste meint die Art → direkt der Art-Artikel
+    prof("garten_und_landschaftsbau", "fachwerker");
+    const platz = allCards.find((c) => /'Sorte'/.test(c.a));
+    Object.assign(r, { platzKind: cultivarKind(platz.a), platzArt: artLevelOk(platz), platzWege: wege(platz), platzBinom: searchName(platz) });
+    // e) alle Sortennamen der 14 Listen: erkannt, Einteilung in den Referenzfällen richtig
+    const alle = Object.values(SEEDS).flat().map((row) => row[1]).filter((a) => /'/.test(a));
+    const kinds = new Set(alle.map((a) => cultivarKind(a)));
+    const namen = new Set(alle.map((a) => cultivarName(a)));
+    Object.assign(r, { alleErkannt: [...kinds].every((k) => k === "cv" || k === "placeholder"), namenZahl: namen.size,
+      descZahl: [...namen].filter((n) => descriptiveCultivar(n)).length,
+      descJa: ["Nigra", "Glauca", "Flaviramea", "Contorta", "Atropunicea", "Nana Gracilis", "Youngii", "Roseum"].every((n) => descriptiveCultivar(n)),
+      descNein: ["Bristol Ruby", "Koster", "Hancock", "Sorte", "Herbstblüte", "Elegant", "Sibirica"].every((n) => !descriptiveCultivar(n)),
+      frieder: cultivarName("dammeri 'Frieder's Evergreen'"), klammer: cultivarName("procumbens ('Nana')"), klammerEpi: binomEpithet("procumbens ('Nana')"),
+      vergessenEnde: cultivarName("abies 'Nidiformis"), vergessenAnfang: cultivarName("fortunei Emerald Gold'"), vergessenEpi: binomEpithet("fortunei Emerald Gold'") });
+    prof("gemuesebau", "gaertner");
+    return r;
+  });
+  assert(sorten.nigraKind === "cv" && sorten.nigraName === "Nigra" && sorten.nigraEpi === "cerasifera",
+    "Anführungszeichen-Sorte muss als Sorte erkannt werden (Kind/Name/Epitheton): " + JSON.stringify(sorten));
+  assert(sorten.nigraDesc && sorten.nigraArt === false && sorten.flaviArt === false,
+    "Beschreibende Sorten ('Nigra', 'Flaviramea') dürfen NIE das Artbild bekommen: " + JSON.stringify(sorten));
+  assert(sorten.nigraWege[0] === `cm:incategory:"Prunus cerasifera 'Nigra'"` &&
+    !sorten.nigraWege.some((w) => w === "wp:Prunus cerasifera" || w === 'cm:incategory:"Prunus cerasifera"'),
+    "Sorten-Suchkette: zuerst die Sorten-Kategorie, kein Art-Schritt: " + JSON.stringify(sorten.nigraWege));
+  assert(sorten.ohneSortenbild === null,
+    "Ohne Sortenbild darf das Artbild der Wikipedia NICHT genommen werden (Blutpflaume ≠ Kirschpflaume): " + JSON.stringify(sorten.ohneSortenbild));
+  assert(sorten.sortenbild === "Prunus cerasifera 'Nigra' 2019.jpg" && sorten.sortenArtist === "Hp" && /CC BY-SA/.test(sorten.sortenLic) && !sorten.sortenTmp,
+    "Sorten-Kategorie muss das Sortenbild samt Urheber/Lizenz liefern: " + JSON.stringify(sorten));
+  assert(sorten.nigraAndere === false && sorten.spinosaAndere === true,
+    "fileMentionsOther: der eigene Sortenname ist keine andere Art, eine andere Art schon: " + JSON.stringify(sorten));
+  assert(sorten.weigKind === "cv" && sorten.weigName === "Bristol Ruby" && sorten.weigSearch === "Weigela" && !sorten.weigDesc && sorten.weigArt,
+    "Phantasiename 'Bristol Ruby': Sorte ohne Epitheton, Suchname nur die Gattung, Artbild erlaubt: " + JSON.stringify(sorten));
+  assert(sorten.weigWege[0] === `cm:incategory:"Weigela 'Bristol Ruby'"` && sorten.weigWege.includes("wp:Weigela"),
+    "Phantasiename: erst die Sorten-Kategorie, zuletzt die Gattung/Art: " + JSON.stringify(sorten.weigWege));
+  assert(sorten.weigTmp && sorten.weigFile === "Weigela_florida_2019.jpg" && sorten.weigCredit === "Hp" && sorten.weigSame && sorten.weigNoRefetch && sorten.weigNichtGemerkt,
+    "Bricht ein feinerer Suchweg ab, gilt der gröbere Treffer nur für diese Sitzung (tmp, nicht im Speicher, kein zweiter Abruf): " + JSON.stringify(sorten));
+  assert(sorten.platzKind === "placeholder" && sorten.platzArt && sorten.platzWege[0] === "wp:" + sorten.platzBinom,
+    "Platzhalter 'Sorte' meint die Art: direkt der Art-Artikel, keine Sorten-Suche: " + JSON.stringify(sorten));
+  assert(sorten.alleErkannt && sorten.namenZahl === 61 && sorten.descZahl === 38 && sorten.descJa && sorten.descNein &&
+    sorten.frieder === "Frieder's Evergreen" && sorten.klammer === "Nana" && sorten.klammerEpi === "procumbens" &&
+    sorten.vergessenEnde === "Nidiformis" && sorten.vergessenAnfang === "Emerald Gold" && sorten.vergessenEpi === "fortunei",
+    "Alle 61 Sortennamen der 14 Listen erkannt (6 Zeilen mit vergessenem Anführungszeichen), 38 davon beschreibend; Referenzfälle: " + JSON.stringify(sorten));
+
+  // Zeichnungen, Tafeln, Herbarbelege, Buchscans: Der Dateiname verrät sie oft nicht
+  // (Realfall Screenshot: »Bulletin de la Société … de Moscou (1841)« = Buchtafel mit
+  // aufgedrucktem Namen). Entscheidend sind die Commons-Metadaten (Kategorien, Urheber),
+  // die in derselben Antwort mitkommen – Treffer tragen seither auch Urheber + Lizenz.
+  const tafeln = await page.evaluate(async () => {
+    const perov = { key: "t-perov", g: "Perovskia", a: "abrotanoides", de: "Silberstrauch", fam: "Lamiaceae" };
+    const cmP = (i, file, meta) => ({ index: i, title: "File:" + file, imageinfo: [{ thumburl: "https://x/" + file, mime: "image/jpeg", descriptionurl: "https://commons/" + file, extmetadata: meta }] });
+    const cmA = (specs) => ({ query: { pages: Object.fromEntries(specs.map((s, i) => ["p" + i, cmP(i + 1, s[0], s[1])])) } });
+    const tafel = ["Bulletin de la Société Impériale des Naturalistes de Moscou (1841) (20228837329).jpg",
+      { Categories: { value: "Perovskia abrotanoides|Bulletin de la Société impériale des naturalistes de Moscou (1841)|Files from Internet Archive Book Images Flickr stream" },
+        Artist: { value: "Internet Archive Book Images" }, LicenseShortName: { value: "No restrictions" } }];
+    const herbar = ["Perovskia abrotanoides - MHNT.BOT.2004.0.726.jpg", { Categories: { value: "Perovskia abrotanoides|Herbarium specimens of Lamiaceae|Muséum de Toulouse" } }];
+    const zeichnung = ["Perovskia abrotanoides Karelin.jpg", { Categories: { value: "Perovskia abrotanoides|Botanical illustrations" }, Artist: { value: "Walter Hood Fitch" } }];
+    const foto = ["Perovskia abrotanoides 2015-07-01.jpg",
+      { Categories: { value: "Perovskia abrotanoides|Flowers in Baden-Württemberg" }, Artist: { value: "<a href=\"//commons.wikimedia.org/wiki/User:Hp\">Hp</a>" }, LicenseShortName: { value: "CC BY-SA 4.0" } }];
+    const nurTafeln = pickCommons(cmA([tafel, herbar, zeichnung]), perov);
+    const gemischt = pickCommons(cmA([tafel, herbar, zeichnung, foto]), perov);
+    // Artikelbild der Wikipedia mit harmlosem Dateinamen, Metadaten sagen »Buchtafel« → verworfen, Kette läuft weiter zur Kategorie
+    let metaAbfragen = 0;
+    __clearPhotoCache();
+    __setJsonp((url) => {
+      if (/commons/.test(url) && /titles=File/.test(url)) { metaAbfragen++;
+        return Promise.resolve({ query: { pages: { "7": { title: "File:Perovskia_abrotanoides_1841.jpg", imageinfo: [{ mime: "image/jpeg", extmetadata: tafel[1] }] } } } }); }
+      if (/commons/.test(url)) return Promise.resolve(cmA([foto]));
+      return Promise.resolve({ query: { pages: { "1": { title: "Perovskia abrotanoides", extract: "Perovskia abrotanoides ist eine Pflanzenart …",
+        pageimage: "Perovskia_abrotanoides_1841.jpg", thumbnail: { source: "https://x/Perovskia_abrotanoides_1841.jpg" } } } } });
+    });
+    const hit = await wikiPhoto(perov);
+    // Galerie des Bilder-Quiz (Artikelbilder): ohne Tafeln; die Info-Karte behält sie (Nachschlagen)
+    const gal = { query: { pages: { "1": cmP(1, "Perovskia_a_habit.jpg", foto[1]), "2": cmP(2, "Perovskia_a_1841.jpg", tafel[1]), "3": cmP(3, "Perovskia_Tafel_x.jpg", foto[1]) } } };
+    __setJsonp(() => Promise.resolve(gal));
+    const quizGal = (await wikiGallery("Perovskia abrotanoides", true)).map((g) => g.file);
+    const infoGal = (await wikiGallery("Perovskia abrotanoides")).map((g) => g.file);
+    __setJsonp(window.__offlineJsonp); __clearPhotoCache();
+    return { nurTafeln, gemischtFile: gemischt && gemischt.file, gemischtArtist: gemischt && gemischt.artist, gemischtLic: gemischt && gemischt.license,
+      gemischtGal: (gemischt && gemischt.gal) || [], hitFile: hit && hit.file, hitSrc: hit && hit.src, metaAbfragen, quizGal, infoGal,
+      tafelErkannt: looksArtwork(tafel[1]), herbarErkannt: looksArtwork(herbar[1]), zeichnungErkannt: looksArtwork(zeichnung[1]),
+      fotoBleibt: !looksArtwork(foto[1]), ohneMeta: !looksArtwork(undefined),
+      dateiname: looksIllustration("Perovskia_Tafel_x.jpg") && !looksIllustration("Rosa canina Botanical Garden Berlin.jpg") &&
+        looksIllustration("Curtis's Botanical Magazine Plate 123.jpg") && looksIllustration("Koeh-126.jpg") };
+  });
+  assert(tafeln.tafelErkannt && tafeln.herbarErkannt && tafeln.zeichnungErkannt && tafeln.fotoBleibt && tafeln.ohneMeta,
+    "looksArtwork: Buchtafel (Internet Archive), Herbarbeleg und Illustration erkennen – Foto und fehlende Metadaten nicht: " + JSON.stringify(tafeln));
+  assert(tafeln.nurTafeln === null, "pickCommons darf aus Tafel/Herbarbeleg/Zeichnung nichts wählen: " + JSON.stringify(tafeln.nurTafeln));
+  assert(tafeln.gemischtFile === "Perovskia abrotanoides 2015-07-01.jpg" && tafeln.gemischtArtist === "Hp" && tafeln.gemischtLic === "CC BY-SA 4.0" && tafeln.gemischtGal.length === 1,
+    "pickCommons: das Foto gewinnt, trägt Urheber + Lizenz, und die Galerie enthält keine Tafeln: " + JSON.stringify(tafeln));
+  assert(tafeln.hitFile === "Perovskia abrotanoides 2015-07-01.jpg" && tafeln.hitSrc === "cm" && tafeln.metaAbfragen === 1,
+    "Artikelbild mit harmlosem Namen, laut Metadaten eine Buchtafel → verworfen (eine Metadaten-Abfrage), Kette landet beim Foto: " + JSON.stringify(tafeln));
+  assert(JSON.stringify(tafeln.quizGal) === JSON.stringify(["Perovskia_a_habit.jpg"]) && tafeln.infoGal.length === 3,
+    "Galerie: Bilder-Quiz ohne Tafeln (Metadaten + Dateiname), Info-Karte behält sie: " + JSON.stringify(tafeln));
+  assert(tafeln.dateiname, "looksIllustration: »Botanical Garden« ist kein Tafel-Hinweis – »Botanical Magazine«, »Plate«, »Koeh-« schon");
+
+  // Bildnachweis ohne zweiten Abruf: Urheber + Lizenz kommen mit den Suchmetadaten; nach der
+  // Antwort wird nichts mehr nachgeladen (früher eine eigene Commons-Anfrage je Bild).
+  const nachweis = await page.evaluate(async (PX) => {
+    __clearPhotoCache(); photoTried.clear();
+    __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g + " " + card.a, file: "Test.jpg", url: "https://x/y", src: "cm",
+      artist: "Hanna Test", license: "CC BY-SA 4.0" }));
+    let abrufe = 0; __setJsonp(() => { abrufe++; return Promise.reject(new Error("offline (Test)")); });
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();
+    const pa = $("#phAnswer"); pa.value = "mc"; pa.dispatchEvent(new Event("change"));
+    $("#sessLen").value = "4"; startSession();
+    await new Promise((r) => setTimeout(r, 90));
+    const correct = answerText(current).toLowerCase();
+    const btn = [...document.querySelectorAll("#opts .opt")].find((b) => b.querySelector("span:last-child").textContent.toLowerCase() === correct);
+    if (btn) btn.click();
+    await new Promise((r) => setTimeout(r, 30));
+    const src = (document.querySelector("#phSrc") || {}).textContent || "";
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    __setPhotoSource(null); __setJsonp(window.__offlineJsonp); __clearPhotoCache(); photoTried.clear();
+    return { src, abrufe, geklickt: !!btn };
+  }, PX);
+  assert(nachweis.geklickt && /Hanna Test, CC BY-SA 4\.0/.test(nachweis.src) && nachweis.abrufe === 0,
+    "Bildnachweis muss aus den Suchmetadaten kommen – ohne weiteren Abruf: " + JSON.stringify(nachweis));
+
+  // Eingabe: Anführungszeichen (alle Varianten) und das Hybrid-Zeichen sind beim Vergleich
+  // egal – »Weigela x „Bristol Ruby“« ist Weigela 'Bristol Ruby' (Realfall: gab Abzug).
+  const anfz = await page.evaluate(() => {
+    const w = { g: "Weigela", a: "'Bristol Ruby'", de: "Weigelie" };
+    const pet = { g: "Petunia", a: "x atkinsiana 'Surfinia'", de: "Garten-Petunie" };
+    const cup = { g: "×Cupressocyparis", a: "leylandii", de: "Leyland-Zypresse" };
+    document.querySelector('#modeTabs button[data-mode="type"]').click();
+    const d = $("#dir"); if (d) { d.value = "de2bot"; d.dispatchEvent(new Event("change")); }
+    return { typo: checkTyped("Weigela x „Bristol Ruby“", w), gerade: checkTyped("Weigela 'Bristol Ruby'", w),
+      ohne: checkTyped("Weigela Bristol Ruby", w), feldA: fieldOk("a", "x „Bristol Ruby“", w), feldAFalsch: fieldOk("a", "'Bristol Rubin'", w),
+      urteil: judgeTyped("Weigela x „Bristol Ruby“", w).lvl, exakt: judgeTyped("Weigela x „Bristol Ruby“", w).exact,
+      hybridOhne: checkTyped("Petunia atkinsiana", pet), hybridKreuz: checkTyped("Petunia × atkinsiana 'Surfinia'", pet),
+      gattungX: fieldOk("g", "x Cupressocyparis", cup), gattungOhne: fieldOk("g", "Cupressocyparis", cup), gattungFalsch: fieldOk("g", "Cupressus", cup),
+      clean: clean("Weigela × „Bristol Ruby“") };
+  });
+  assert(anfz.typo && anfz.gerade && anfz.ohne && anfz.feldA && !anfz.feldAFalsch && anfz.urteil === "ok" && anfz.exakt,
+    "Anführungszeichen/Hybrid-x dürfen beim Eingeben nicht zählen: " + JSON.stringify(anfz));
+  assert(anfz.hybridOhne && anfz.hybridKreuz && anfz.gattungX && anfz.gattungOhne && !anfz.gattungFalsch && anfz.clean === "weigela bristol ruby",
+    "Hybrid-Zeichen (× / x) ist beim Vergleich egal, eine falsche Gattung bleibt falsch: " + JSON.stringify(anfz));
 
   // Bild-Lightbox: das Quiz-Foto ist klick- UND tastaturbedienbar (role=button) und
   // öffnet die Großansicht (größeres Commons-Derivat); Esc schließt, Fokus kehrt zurück.
@@ -2744,7 +2938,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand und sagt sie an, direkt teilbar, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON- und v2-Links lesbar, Richtung inkl. »voller Name«, Antwortart und die Übungsformen der geführten Lektion wandern mit, Banner übernimmt Profil/Modus/Aufgabenstellung, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art), Abfragerichtungen (Text de↔bot; Bilder fest »voller Name«, ältere Duell-Links spielen ihre Aufgabe weiter), Auswahl nach Thema/Familie, Quiz, Selbst eingeben, Bilder-Quiz (Bild + 4 volle Namen, »Selbst eingeben (wie in der Prüfung)« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, wartet bei schwacher Verbindung sichtbar und heilt sich selbst statt in Textfragen zu wechseln, Galerie mit mehreren Ansichten – Commons-Kandidaten sofort, Artikelbilder nachgeladen, Wischen, Vorladen der Galerie, stille Wiederholung bei Aussetzern, neuer Versuch je Sitzung), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast, Lernserie/Tagesziel, Herbarium, XP-Ränge + Combo, Stufe 5 (Rang-Popover, Container Queries).");
+  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand und sagt sie an, direkt teilbar, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON- und v2-Links lesbar, Richtung inkl. »voller Name«, Antwortart und die Übungsformen der geführten Lektion wandern mit, Banner übernimmt Profil/Modus/Aufgabenstellung, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art oder beschreibender Sorte, Tafeln/Herbarbelege/Buchscans über Commons-Metadaten raus, Bildnachweis ohne Zweitabruf, abgebrochener feiner Weg → Treffer nur je Sitzung), Eingabe ohne Anführungszeichen-/Hybrid-Zwang, Abfragerichtungen (Text de↔bot; Bilder fest »voller Name«, ältere Duell-Links spielen ihre Aufgabe weiter), Auswahl nach Thema/Familie, Quiz, Selbst eingeben, Bilder-Quiz (Bild + 4 volle Namen, »Selbst eingeben (wie in der Prüfung)« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, wartet bei schwacher Verbindung sichtbar und heilt sich selbst statt in Textfragen zu wechseln, Galerie mit mehreren Ansichten – Commons-Kandidaten sofort, Artikelbilder nachgeladen, Wischen, Vorladen der Galerie, stille Wiederholung bei Aussetzern, neuer Versuch je Sitzung), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast, Lernserie/Tagesziel, Herbarium, XP-Ränge + Combo, Stufe 5 (Rang-Popover, Container Queries).");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
