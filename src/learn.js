@@ -476,8 +476,8 @@ let listCats = new Set();     // aktive Filter-Tags der laufenden Dimension (lee
 let listSort = "thema";       // Ansicht: bot | de | thema | familie (Standard: nach Thema gruppiert)
 let pendingChallenge = null;  // aus der URL (#c=…) dekodierte, noch nicht angenommene Herausforderung
 let examOnly = false;         // opt-in: nur Prüfungsstoff (Fachwerker) – Familie/Synonyme ausblenden
-let dirText  = "de2bot";      // Abfragerichtung für Karteikarten/Quiz/Tippen
-let dirPhoto = "img2bot";     // Abfragerichtung für den Bilder-Quiz
+let dirText  = "de2bot";      // Abfragerichtung für Karteikarten/Quiz/Selbst eingeben
+let dirPhoto = "img2both";    // Bilder-Quiz: angeboten wird nur noch »Bild → voller Name«
 let photoAnswer = "mc";       // Antwortart im Bilder-Quiz: mc | type | exam
 let examFields = null;        // Felder im Modus »wie in der Prüfung« (je Profil merkbar)
 let printColsOff = null;      // beim Lernlisten-Druck abgewählte Spalten (Set von Schlüsseln: g/a/fam/de/zp/chk)
@@ -719,15 +719,21 @@ const DIRS = {
   img2de : { label:"Bild → deutscher Name",      prompt:"Bild",              answer:"Deutscher Name"   },
   img2both:{ label:"Bild → voller Name (botanisch + deutsch)", prompt:"Bild", answer:"Voller Name"      }
 };
-const DIRS_TEXT  = ["de2bot","bot2de"];               // Karteikarten · Quiz · Tippen
-const DIRS_PHOTO = ["img2bot","img2de","img2both"];   // Bilder-Quiz (img2both nur beim Auswahl-Quiz)
-function dirsFor(m){                                    // gültige Richtungen für Modus/Antwortart
-  if((m||mode)!=="photo") return DIRS_TEXT;
+const DIRS_TEXT  = ["de2bot","bot2de"];               // Karteikarten · Quiz · Selbst eingeben
+const DIRS_PHOTO = ["img2bot","img2de","img2both"];   // Bilder-Quiz – Reihenfolge fest (Duell-Links)
+/* Angeboten ≠ spielbar: Im Bilder-Quiz steht nur noch »Bild → voller Name« zur Wahl –
+   eine Entscheidung weniger, und die Auswahl zeigt immer botanischen + deutschen Namen.
+   Die älteren Richtungen bleiben SPIELBAR, damit bereits verschickte Duell-Links exakt
+   dieselbe Aufgabe stellen; wählen kann man sie nicht mehr. */
+function dirsFor(m){ return (m||mode)==="photo" ? ["img2both"] : DIRS_TEXT; }   // was das Auswahlfeld anbietet
+function playableDirs(){                                // was die Engine spielen kann
+  if(mode!=="photo") return DIRS_TEXT;
   return photoAnswer==="mc" ? DIRS_PHOTO : DIRS_PHOTO.filter(d=>d!=="img2both");  // »voller Name« braucht die 4 Auswahl-Optionen
 }
 function curDir(){                                 // gültige Richtung für den aktuellen Modus
-  const d = mode==="photo" ? dirPhoto : dirText;
-  return dirsFor().includes(d) ? d : dirsFor()[0];
+  const d = mode==="photo" ? dirPhoto : dirText, ok = playableDirs();
+  if(ok.includes(d)) return d;
+  return ok.includes(dirsFor()[0]) ? dirsFor()[0] : ok[0];
 }
 const wantsBoth = () => curDir()==="img2both";                     // gesucht ist der volle Name (botanisch + deutsch)
 const wantsDe = () => curDir()==="bot2de" || curDir()==="img2de";   // gesucht ist der deutsche Name
@@ -1097,7 +1103,7 @@ function renderProgress(){
            <span class="sflame${(st.s||0)>0?" on":""}">${ico("flame")}<b>${st.s||0}</b></span></span>
          <span class="chip goalchip" title="Heute bearbeitete Karten – ab dem Tagesziel (${goal}) zählt der Tag für die Serie. Einstellbar unter Optionen.">
            <span class="ring" style="--p:${Math.round(done/goal*100)}"></span><span class="sr-n">${done}/${goal} heute</span></span>
-         <button class="chip rankchip" id="rankName" title="Erfahrungspunkte: freies Tippen bringt am meisten, Ankreuzen weniger, die Karteikarte am wenigsten. ${xp} P.${r.next?` · noch ${r.need} bis ${esc(r.next)}`:""}">
+         <button class="chip rankchip" id="rankName" title="Erfahrungspunkte: freies Eingeben bringt am meisten, Ankreuzen weniger, die Karteikarte am wenigsten. ${xp} P.${r.next?` · noch ${r.need} bis ${esc(r.next)}`:""}">
            ${ico("sprout")}<span class="rk-name">${esc(r.name)}</span><i class="rk-mini"><b style="width:${r.pct}%"></b></i></button>
          <button class="chip" id="btnHerb" title="Deine Themen-Sammlung: Jedes gemeisterte Thema legt eine gepresste Pflanze ins Herbarium.">${ico("leaf")}Herbarium</button>
        </div>`; })()}`;
@@ -1105,7 +1111,7 @@ function renderProgress(){
   const hb=$("#btnHerb"); if(hb) hb.onclick=openHerbarium;
   const bh=$("#btnHow"); if(bh) bh.onclick=openHowModal;
   const due = p.filter(c=>{ const pr=pget(c.key); return !pr.box || !pr.due || pr.due<=todayISO(); }).length;
-  const wie = mode==="photo" ? (photoAnswer==="exam" ? "wie in der Prüfung" : DIRS[curDir()].label+" · "+PH_ANSWER[photoAnswer])
+  const wie = mode==="photo" ? (photoAnswer==="exam" ? "wie in der Prüfung" : DIRS[curDir()].label+" · "+phLabel(photoAnswer))
                             : DIRS[curDir()].label;
   $("#startHint").textContent = p.length ? `${due} Karten heute dran · ${wie}` : "Keine Arten in der aktuellen Auswahl.";
   $("#btnStart").disabled = !p.length;
@@ -1359,7 +1365,7 @@ function challengeURL(){                  // aktuelle Sitzung als Herausforderun
   return location.href.split("#")[0] + "#c=" + chEncode(payload);
 }
 function chModeLabel(m){
-  return m==="quiz" ? "Quiz" : m==="photo" ? "Bilder-Quiz" : m==="guided" ? "Geführte Lektion" : "Tippen";
+  return m==="quiz" ? "Quiz" : m==="photo" ? "Bilder-Quiz" : m==="guided" ? "Geführte Lektion" : "Selbst eingeben";
 }
 function duelMessage(url){
   const who = duelName().trim();
@@ -1420,7 +1426,7 @@ function showChallengeBanner(ch){
   // Aufgabenstellung mit ansagen – gefragt ist genau dasselbe wie beim Herausforderer
   const wie = ch.m==="guided" ? "gemischte Übungsformen"
             : ch.m==="photo" && ch.a==="exam" ? "wie in der Prüfung"
-            : (DIRS[ch.r] ? DIRS[ch.r].label : "");
+            : (DIRS[ch.r] ? DIRS[ch.r].label : "") + (ch.m==="photo" && ch.a==="type" ? " · Namen eingeben" : "");
   const n=(ch.i||[]).length;
   b.innerHTML = `<div class="duel-ic">${ico("trophy")}</div>
     <div class="duel-txt">
@@ -1438,6 +1444,7 @@ function showChallengeBanner(ch){
 function startChallenge(){                // genau die Karten der Herausforderung, in kodierter Reihenfolge
   const ch = pendingChallenge;
   if(!ch){ return startSession(); }
+  applyChallengePrefs(ch); syncDirUI();   // auch wenn zwischendurch eigene Sitzungen liefen
   const cards = (ch.i||[]).map(i=>allCards[i]).filter(Boolean);
   if(!cards.length){ toast("Karten dieser Herausforderung nicht gefunden",true); return; }
   const b=$("#duelBanner"); if(b) b.hidden=true;
@@ -1460,6 +1467,7 @@ function startChallenge(){                // genau die Karten der Herausforderun
    auf dem iPhone (die echte Fullscreen-API greift dort nur für Videos). */
 function stageFull(on){ try{ document.body.classList.toggle("stagefull", !!on); }catch(e){} }
 function startSession(){
+  endChallengeOverride();                 // eigene Sitzung: eigene Einstellungen
   queue = buildQueue(); qi = 0; photoMisses = 0; qStart = 0;
   sess = { total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, baseMode:mode, cards:queue.slice(), challenge:null };
   if(!queue.length){ toast("Keine Arten im aktuellen Filter",true); return; }
@@ -1485,6 +1493,7 @@ function guidedForm(box, online){
   return "type";
 }
 function startGuided(){
+  endChallengeOverride();
   const q = buildQueue();
   if(!q.length){ toast("Keine Arten im aktuellen Filter",true); return; }
   const online = navigator.onLine !== false;
@@ -1523,14 +1532,14 @@ function sessionBar(){
    einer angenommenen Herausforderung fehlt der fremde Lernstand, dann nennt sie
    nur die Übungsform. */
 const GUIDED_WIE = { photo:"am Bild erkennen", quiz:"jetzt ohne Bild",
-                     cards:"selbst abrufen", type:"prüfungsnah tippen" };
+                     cards:"selbst abrufen", type:"prüfungsnah eingeben" };
 function guidedNoteHTML(card){
   if(!sess.auto || !card) return "";
   const wie = GUIDED_WIE[mode]; if(!wie) return "";
   const box = sess.boxOf ? sess.boxOf.get(card) : undefined;
   const stufe = box===undefined ? "" : box ? `Stufe ${box} von 5` : "Neu";
   return `<div class="gnote" title="Die geführte Lektion wählt die Übungsform nach deinem Lernstand: `+
-    `neu → am Bild erkennen, dann ohne Bild, dann selbst abrufen, zuletzt tippen wie in der Prüfung.">`+
+    `neu → am Bild erkennen, dann ohne Bild, dann selbst abrufen, zuletzt selbst eingeben wie in der Prüfung.">`+
     `${stufe?esc(stufe)+" · ":""}${esc(wie)}</div>`;
 }
 function showGuidedNote(){
@@ -1789,7 +1798,7 @@ function startHintOnly(){
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22V8M12 8C12 8 7 3 4 4c-1 3 4 8 8 8zM12 8c0 0 5-5 8-4 1 3-4 8-8 8z"/></svg>
     <h2>Bereit zum Lernen</h2>
     <p><b>»Weiter lernen«</b> startet eine geführte Sitzung – die Übungsform (Bilder, Quiz,
-       Karteikarte, Tippen) richtet sich je Pflanze nach deinem Lernstand. Unter <b>»Selbst
+       Karteikarte, Selbst eingeben) richtet sich je Pflanze nach deinem Lernstand. Unter <b>»Selbst
        wählen«</b> gibt es jeden Modus einzeln; Details unter <b>Hilfe</b>.</p>
     ${photo ? `<p class="stage-note">Der Bilder-Modus braucht Internet (die Bilder kommen von
        Wikipedia); alles andere läuft auch ohne.</p>` : ``}
@@ -2109,12 +2118,13 @@ function syncOptsSummary(){
   const sub = $("#setOpts") && $("#setOpts").querySelector(".opts-sub"); if(!sub) return;
   const bits=[];
   const d=curDir();
-  if(mode!=="list" && d!=="de2bot" && d!=="img2bot") bits.push(DIRS[d].label);   // umgekehrte Abfragerichtung
+  if(mode!=="list" && d!=="de2bot" && d!=="img2both") bits.push(DIRS[d].label);   // abweichende Abfragerichtung
   if(mode!=="list"){ const sc=$("#cat"); if(sc && sc.value) bits.push(norm(sc.options[sc.selectedIndex].textContent).replace(/\s*\(\d+\)\s*$/,"")); }
   if($("#onlyzp") && $("#onlyzp").checked) bits.push("nur ZP");
   if($("#examOnly") && $("#examOnly").checked && $("#examOnlyWrap") && !$("#examOnlyWrap").hidden) bits.push("nur Prüfungsstoff");
   const sl=parseInt($("#sessLen") && $("#sessLen").value)||20; if(sl!==20) bits.push(sl+" Karten");
-  sub.textContent = bits.length ? bits.join(" · ") : "Abfrage · Lernstoff · ZP · Sitzungslänge";
+  sub.textContent = bits.length ? bits.join(" · ")
+    : (mode==="photo" ? "Antwort" : "Abfrage")+" · Lernstoff · ZP · Sitzungslänge";   // im Bilder-Quiz gibt es keine Richtung zu wählen
   sub.classList.toggle("active", bits.length>0);
 }
 function applyMode(){
@@ -3653,7 +3663,8 @@ function renderPhotoChoice(p){
     host.appendChild(b);
   });
 }
-/* Antwort 2: den Namen direkt unter dem Bild tippen */
+/* Antwort »Namen eingeben« (EIN Feld) – nur noch über ältere Duell-Links erreichbar;
+   zur Wahl stehen Auswahl und »Selbst eingeben (wie in der Prüfung)« */
 function renderPhotoType(p){
   $("#opts").innerHTML = `<div class="typebox">
       <input id="typeIn" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
@@ -4048,7 +4059,31 @@ function refreshKat(){   // Auswahl der Lernsitzung: alles · ein Thema · eine 
   const have=[...$("#cat").options].some(o=>o.value===cur);
   $("#cat").value = have ? cur : "";
 }
-const PH_ANSWER = { mc:"Auswahl (4 Namen)", type:"Namen tippen", exam:"wie in der Prüfung" };
+/* Antwortarten im Bilder-Quiz – ANGEBOTEN werden zwei: aus vier vollen Namen auswählen oder
+   die Namen selbst eingeben (wie in der Prüfung: ein Feld je bewerteter Spalte, mit Punkten).
+   Das frühere »Namen tippen« (EIN Feld, nur botanisch oder nur deutsch) steckt noch in älteren
+   Duell-Links und bleibt dafür spielbar – zur Wahl steht es nicht mehr. Die Reihenfolge von
+   CH_PHA (mc · type · exam) bleibt davon unberührt. */
+const PH_ANSWER = { mc:"Auswahl (4 Namen)", exam:"Selbst eingeben (wie in der Prüfung)" };
+const PH_ANSWER_LEGACY = { type:"Namen eingeben (älterer Duell-Link)" };
+function phLabel(k){ return PH_ANSWER[k] || PH_ANSWER_LEGACY[k] || k; }
+function loadPrefs(){                       // gespeicherte Abfrage-Einstellungen – nur noch angebotene Werte
+  dirText  = DIRS_TEXT.includes(store.get(LS_PREFIX+"dirtext")) ? store.get(LS_PREFIX+"dirtext") : "de2bot";
+  dirPhoto = dirsFor("photo").includes(store.get(LS_PREFIX+"dirphoto")) ? store.get(LS_PREFIX+"dirphoto") : "img2both";
+  const pa = store.get(LS_PREFIX+"phanswer");
+  photoAnswer = PH_ANSWER[pa] ? pa : (pa==="type" ? "exam" : "mc");   // früheres »Namen tippen« → Eingabe bleibt Eingabe
+}
+/* Ein Duell-Link gibt Richtung und Antwortart für GENAU diese Aufgabe vor – auch ältere,
+   nicht mehr angebotene. Sobald eine eigene Sitzung startet oder man selbst etwas
+   umstellt, gelten wieder die eigenen Einstellungen. */
+let chOverride = false;
+function applyChallengePrefs(ch){
+  if(ch.a && phLabel(ch.a)!==ch.a) photoAnswer = ch.a;
+  if(ch.r && DIRS[ch.r]){ if(DIRS_PHOTO.includes(ch.r)) dirPhoto=ch.r; else dirText=ch.r; }
+  if(ch.m==="guided" && ch.rp && DIRS_PHOTO.includes(ch.rp)) dirPhoto = ch.rp;   // Bild-Karten der geführten Lektion
+  chOverride = true;
+}
+function endChallengeOverride(){ if(!chOverride) return; chOverride=false; loadPrefs(); syncDirUI(); }
 /* Abfragerichtung + (im Bilder-Quiz) Antwortart und die selbst bestimmten
    Prüfungsfelder. Nur zeigen, was zum Modus passt. */
 function syncDirUI(){
@@ -4056,11 +4091,13 @@ function syncDirUI(){
   const isPhoto = mode==="photo", isList = mode==="list";
   const paw=$("#phAnswerField"); if(paw) paw.hidden = !isPhoto;
   const pas=$("#phAnswer"); if(pas){
-    pas.innerHTML = Object.keys(PH_ANSWER).map(k=>`<option value="${k}">${esc(PH_ANSWER[k])}</option>`).join("");
+    const keys = Object.keys(PH_ANSWER).concat(PH_ANSWER[photoAnswer] ? [] : [photoAnswer]);   // ältere Antwortart (Duell-Link) sichtbar halten
+    pas.innerHTML = keys.map(k=>`<option value="${k}">${esc(phLabel(k))}</option>`).join("");
     pas.value = photoAnswer;
   }
-  // Richtung ist gegenstandslos, wenn ohnehin alle Prüfungsfelder abgefragt werden
-  const dirOff = isList || (isPhoto && photoAnswer==="exam");
+  // Richtung ist gegenstandslos, wenn es nur eine gibt (Bilder-Quiz: voller Name) oder
+  // ohnehin alle Prüfungsfelder abgefragt werden
+  const dirOff = isList || dirsFor().length<2 || (isPhoto && photoAnswer==="exam");
   const wrap=$("#dirField"); if(wrap) wrap.hidden = dirOff;
   sel.innerHTML = dirsFor().map(k=>`<option value="${k}">${esc(DIRS[k].label)}</option>`).join("");
   sel.value = curDir();
@@ -4131,13 +4168,15 @@ function wire(){
   $("#nivSelect").onchange=applyProfile;
   $("#cat").onchange=refreshView;
   if($("#phAnswer")) $("#phAnswer").onchange=()=>{
-    photoAnswer=$("#phAnswer").value; store.set(LS_PREFIX+"phanswer",photoAnswer);
+    const v=$("#phAnswer").value; endChallengeOverride();     // Wert VOR dem Zurücksetzen lesen
+    photoAnswer=v; store.set(LS_PREFIX+"phanswer",photoAnswer);
     syncDirUI(); refreshView();
   };
   if($("#dir")) $("#dir").onchange=()=>{
-    if(mode==="photo"){ dirPhoto=$("#dir").value; store.set(LS_PREFIX+"dirphoto",dirPhoto); }
-    else { dirText=$("#dir").value; store.set(LS_PREFIX+"dirtext",dirText); }
-    refreshView();
+    const v=$("#dir").value; endChallengeOverride();
+    if(mode==="photo"){ dirPhoto=v; store.set(LS_PREFIX+"dirphoto",dirPhoto); }
+    else { dirText=v; store.set(LS_PREFIX+"dirtext",dirText); }
+    syncDirUI(); refreshView();
   };
   $("#onlyzp").onchange=refreshView;
   if($("#sessLen")) $("#sessLen").oninput=syncOptsSummary;
@@ -4197,7 +4236,7 @@ function openIntro(auto, onClose){
       <li>${ico("image","is-ic")}<div><b>Bilder</b><span class="is-tag">leicht</span><br>Pflanze am Foto erkennen und den richtigen Namen wählen.</div></li>
       <li>${ico("check","is-ic")}<div><b>Quiz</b><span class="is-tag">leicht</span><br>Zum deutschen Namen den richtigen botanischen aus vier Optionen wählen.</div></li>
       <li>${ico("cards","is-ic")}<div><b>Karteikarten</b><span class="is-tag">mittel</span><br>Selbst abrufen und ehrlich bewerten – Wiederholung nach Plan (Spaced Repetition).</div></li>
-      <li><span class="is-ic" aria-hidden="true">⌨️</span><div><b>Tippen</b><span class="is-tag">prüfungsnah</span><br>Jedes bewertete Feld frei schreiben (Gattung, Art, Familie) – mit Punkten, wie in der Prüfungstabelle.</div></li>
+      <li>${ico("keys","is-ic")}<div><b>Selbst eingeben</b><span class="is-tag">prüfungsnah</span><br>Die Namen per Tastatur selbst schreiben – ein Feld je bewerteter Spalte (Gattung, Art, Familie), mit Punkten wie in der Prüfungstabelle.</div></li>
     </ol>
     <p class="intro-tip">${ico("sliders")} Jede Stufe kannst du unter <b>»Optionen«</b> feiner einstellen: was gefragt wird – vom <b>deutschen Namen</b> allein bis zur prüfungsechten Abfrage von <b>Gattung, Art und Familie</b> (Felder einzeln wählbar) – dazu Lernstoff, ZP-Filter und Sitzungslänge.</p>
     <p class="intro-tip">${ico("sprout")} <b>Fortschritt:</b> Jede richtige Antwort bringt eine Pflanze eine Stufe weiter –
@@ -4226,9 +4265,7 @@ function openIntro(auto, onClose){
     if(listSort==="kategorie") listSort="thema";              // frühere Ansicht »Wuchsform/Kategorie«
     if(!SORT_LABEL[listSort]) listSort="thema";
     examOnly = store.get(LS_PREFIX+"examonly")==="1";
-    dirText  = DIRS_TEXT.includes(store.get(LS_PREFIX+"dirtext"))   ? store.get(LS_PREFIX+"dirtext")  : "de2bot";
-    dirPhoto = DIRS_PHOTO.includes(store.get(LS_PREFIX+"dirphoto")) ? store.get(LS_PREFIX+"dirphoto") : "img2bot";
-    photoAnswer = PH_ANSWER[store.get(LS_PREFIX+"phanswer")] ? store.get(LS_PREFIX+"phanswer") : "mc";
+    loadPrefs();
     mode = store.get(LS_PREFIX+"mode") || "photo";   // neue Nutzer starten beim leichtesten Modus (Bilder)
     let pid = store.get(LS_PREFIX+"profile");
     const hadProfile = !!pid;                          // vor loadProfile lesen – das setzt den Store
@@ -4239,10 +4276,7 @@ function openIntro(auto, onClose){
     if(ch && ch.p && Array.isArray(ch.i) && ch.i.length && (typeof SEEDS!=="undefined" && SEEDS[ch.p])){
       pendingChallenge = ch; pid = ch.p;
       if(ch.m==="quiz"||ch.m==="type"||ch.m==="photo") mode = ch.m;
-      // Antwortart VOR der Richtung übernehmen: »voller Name« gibt es nur zur Auswahl,
-      // dirsFor() würde ihn sonst wegfiltern (und man bekäme wieder nur botanisch)
-      if(ch.a && PH_ANSWER[ch.a]) photoAnswer = ch.a;
-      if(ch.r && DIRS[ch.r]){ if(DIRS_PHOTO.includes(ch.r)) dirPhoto=ch.r; else dirText=ch.r; }
+      applyChallengePrefs(ch);                     // Banner und Auswahlfelder zeigen gleich die Aufgabe des Links
     }
     $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.mode===mode));
     const parts = pid.match(/^(.*)_(gaertner|fachwerker)$/);

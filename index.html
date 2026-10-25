@@ -629,7 +629,9 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
   .hdl dt{margin-top:10px}
   /* Modus-Tabs: sauberes 2×2-Raster statt zufälligem Umbruch */
   .modes{display:grid; grid-template-columns:1fr 1fr; width:100%}
-  .modes button{border-right:none; border-bottom:1px solid var(--rule-strong); justify-content:center; padding:11px 8px}
+  .modes button{border-right:none; border-bottom:1px solid var(--rule-strong); justify-content:center; padding:11px 8px;
+    flex-direction:column; gap:3px}                       /* Symbol oben, Name darunter – so bricht kein langer Name (»Selbst eingeben«) ungleich um */
+  .modes button .mdiff{flex-basis:auto}
   .modes button:nth-child(odd){border-right:1px solid var(--rule-strong)}
   .modes button:last-child{grid-column:1/-1; border-right:none; border-bottom:none}
   /* Listen-Suche: Suchfeld nimmt die erste Zeile, Druck-Knopf + Zahnrad teilen sich die zweite */
@@ -1189,7 +1191,7 @@ body.stagefull #stage>.sessionbar{
          Karte nach Lernstand). Alles Weitere – Modi einzeln + Feineinstellungen – steckt
          dahinter in der zugeklappten »Selbst wählen«-Klappe. Keine Funktion entfällt. -->
     <div class="gorow" id="goRow">
-      <button class="btn primary big go" id="btnGo" title="Geführte Sitzung starten: die Übungsform (Bilder, Quiz, Karteikarte, Tippen) richtet sich je Pflanze automatisch nach deinem Lernstand – vom Erkennen zum sicheren Benennen.">Weiter lernen</button>
+      <button class="btn primary big go" id="btnGo" title="Geführte Sitzung starten: die Übungsform (Bilder, Quiz, Karteikarte, Selbst eingeben) richtet sich je Pflanze automatisch nach deinem Lernstand – vom Erkennen zum sicheren Benennen.">Weiter lernen</button>
       <button class="btn ghost" id="btnList" type="button" title="Alle Arten zum Nachschlagen: durchsuchbar, nach Thema/Familie/A–Z, mit Steckbriefen und Quellen">Liste zum Nachschlagen</button>
       <span class="hint" id="goHint"></span>
     </div>
@@ -1204,7 +1206,7 @@ body.stagefull #stage>.sessionbar{
       <button data-mode="photo" class="on" title="Bilder-Quiz: die Pflanze am Bild erkennen und den richtigen botanischen Namen wählen. Braucht Internet – die Bilder kommen von Wikipedia."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.6"/><path d="M4 17.5l4.5-4.5 3 3 3-3 5 5"/></svg>Bilder<small class="mdiff">leicht</small></button>
       <button data-mode="quiz" title="Multiple-Choice-Quiz: zum deutschen Namen den richtigen botanischen aus vier Optionen wählen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5M12 17h.01"/></svg>Quiz<small class="mdiff">leicht</small></button>
       <button data-mode="cards" title="Karteikarten mit Selbsteinschätzung und verteiltem Wiederholen (Leitner/Spaced Repetition)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="14" height="12" rx="2"/><path d="M7 9h6M7 13h4M21 8v9a2 2 0 01-2 2H8"/></svg>Karteikarten<small class="mdiff">mittel</small></button>
-      <button data-mode="type" title="Tippen: den botanischen Namen selbst eingeben (tippfehler-tolerant) – am nächsten an der Prüfung."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8"/></svg>Tippen<small class="mdiff">prüfungsnah</small></button>
+      <button data-mode="type" title="Selbst eingeben: die Namen per Tastatur selbst schreiben – ein Feld je bewerteter Spalte, tippfehler-tolerant, mit Punkten wie in der Prüfung."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8"/></svg>Selbst eingeben<small class="mdiff">prüfungsnah</small></button>
       <button data-mode="list" title="Liste zum Nachschlagen: alle Arten nach Thema, Familie oder A–Z sortiert, durchsuchbar; zum Öffnen von Quellen und Infos antippen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>Liste<small class="mdiff">nachschlagen</small></button>
     </div>
     <button class="introlink" id="btnIntro" type="button" title="Kurze Einführung: der Lernpfad von leicht bis prüfungsreif">So funktioniert der Lernpfad&nbsp;›</button>
@@ -1226,8 +1228,8 @@ body.stagefull #stage>.sessionbar{
         <div class="og">
           <div class="og-h">Wie üben?</div>
           <div class="setrow">
-            <div class="field" id="phAnswerField" hidden><label for="phAnswer">Antwort</label><select id="phAnswer" class="mini" title="Wie im Bilder-Quiz geantwortet wird: aus vier Namen auswählen, den Namen selbst tippen – oder »wie in der Prüfung« mit einem Feld je bewerteter Spalte (Gattung, Art, Familie, Deutscher Name) samt Punkten."></select></div>
-            <div class="field" id="dirField"><label for="dir">Abfrage</label><select id="dir" class="mini" title="Was gefragt wird: deutscher Name → botanischer Name (wie in der Prüfung) oder umgekehrt. Im Bilder-Quiz: Bild → botanischer bzw. deutscher Name."></select></div>
+            <div class="field" id="phAnswerField" hidden><label for="phAnswer">Antwort</label><select id="phAnswer" class="mini" title="Wie im Bilder-Quiz geantwortet wird: aus vier vollen Namen (botanisch + deutsch) auswählen – oder die Namen selbst eingeben, »wie in der Prüfung« mit einem Feld je bewerteter Spalte (Gattung, Art, Familie, Deutscher Name) samt Punkten."></select></div>
+            <div class="field" id="dirField"><label for="dir">Abfrage</label><select id="dir" class="mini" title="Was gefragt wird: deutscher Name → botanischer Name (wie in der Prüfung) oder umgekehrt. Im Bilder-Quiz ist die Aufgabe fest: Bild → voller Name."></select></div>
             <div class="field"><label for="sessLen">Karten/Sitzung</label><input id="sessLen" class="mini" type="number" min="5" max="100" value="20" title="Wie viele Karten (5–100) eine Sitzung umfasst. Neue und fällige Karten kommen zuerst."></div>
             <div class="field"><label for="dayGoal">Tagesziel</label><select id="dayGoal" class="mini" title="Ab so vielen bearbeiteten Karten zählt der Tag für deine Lernserie. Regelmäßig kleine Portionen wirken beim Karteikasten-Lernen mehr als seltene Marathons."><option>10</option><option selected>20</option><option>30</option><option>50</option></select></div>
             <button class="themetoggle" type="button" aria-label="Helles oder dunkles Design umschalten" title="Zwischen hellem und dunklem Design wechseln – die Wahl gilt für alle Seiten auf diesem Gerät"><svg class="ic moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.5 14.5A8.5 8.5 0 019.5 3.5a8.5 8.5 0 1011 11z"/></svg><svg class="ic sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span class="tt-dark">Dunkles Design</span><span class="tt-light">Helles Design</span></button>
@@ -1256,7 +1258,7 @@ body.stagefull #stage>.sessionbar{
           allein die <i>Schreibweise</i> – das Hybrid-Zeichen, Abstände und die Aufteilung des
           botanischen Namens in Gattung und Art. In der Anzeige schreibt das Lern-Tool zudem
           Abkürzungen aus (»Gew.« → »Gewöhnlicher«) und berichtigt offensichtliche Tippfehler in
-          Familiennamen (»Malvacea« → »Malvaceae«); beim Tippen gilt die Form der Liste weiterhin
+          Familiennamen (»Malvacea« → »Malvaceae«); beim Eingeben gilt die Form der Liste weiterhin
           als richtig.</div>
       </div>
       <div class="ln-row ln-gen">
@@ -1280,7 +1282,7 @@ body.stagefull #stage>.sessionbar{
 
   <section class="helppanel" id="helpPanel" hidden>
     <h2 class="hh">Hilfe · So lernst du mit dem Tool</h2>
-    <p class="hlead">Übe die Pflanzen deiner Fachrichtung – mit Karteikarten, Quiz, Tippen und einer
+    <p class="hlead">Übe die Pflanzen deiner Fachrichtung – mit Karteikarten, Quiz, Selbst eingeben und einer
       Nachschlage-Liste. Gerechnet wird <b>komplett in deinem Browser</b> – einmal geladen, funktioniert
       alles <b>auch ohne Internet</b> (nur der <b>Bilder-Quiz</b> und die Online-Infos im ℹ-Fenster brauchen
       Netz); dein Fortschritt wird je Profil auf dem Gerät gespeichert. Keine Prüfungslisten, keine Noten –
@@ -1290,7 +1292,7 @@ body.stagefull #stage>.sessionbar{
     <ol class="hsteps">
       <li><b>Fachrichtung &amp; Ausbildung</b> oben wählen – das bestimmt deinen Lernstoff.</li>
       <li>Am einfachsten: <b>»Weiter lernen«</b> – die Übungsform (Bilder, Quiz, Karteikarte,
-        Tippen) richtet sich je Pflanze automatisch nach deinem Lernstand.</li>
+        Selbst eingeben) richtet sich je Pflanze automatisch nach deinem Lernstand.</li>
       <li>Oder unter <b>»Selbst wählen«</b> einen <b>Modus</b> wählen und <b>»Sitzung starten«</b>. Feineinstellungen (<b>Abfrage</b>,
         <b>Lernstoff</b>, „nur ZP-relevant", Sitzungslänge) stecken unter <b>»Optionen«</b> –
         standardmäßig zugeklappt, damit die Startansicht ruhig bleibt.</li>
@@ -1315,7 +1317,7 @@ body.stagefull #stage>.sessionbar{
       <dt>Quiz</dt><dd>Zum deutschen Namen den richtigen <b>botanischen Namen</b> aus vier Möglichkeiten
         wählen. Die Ablenker stammen bevorzugt aus demselben Thema – das macht die Auswahl
         anspruchsvoller und schult den Blick fürs Unterscheiden.</dd>
-      <dt>Tippen</dt><dd><b>Wie in der Prüfung:</b> Für <b>jedes bewertete Feld deiner Fachrichtung</b>
+      <dt>Selbst eingeben</dt><dd><b>Die Namen per Tastatur selbst schreiben – wie in der Prüfung:</b> Für <b>jedes bewertete Feld deiner Fachrichtung</b>
         gibt es ein eigenes Eingabefeld – Gattung, Art, Familie (und je nach Bogen der deutsche Name) –,
         jeweils mit der <b>Punktzahl vom Prüfungsbogen</b>, genau wie in der Prüfungstabelle. Welche Felder
         gefragt werden, legst du unter <b>Optionen · Felder</b> fest (Standard = Bogen deiner Fachrichtung).
@@ -1339,15 +1341,16 @@ body.stagefull #stage>.sessionbar{
         Treffer, dafür siehst du sofort die richtige Form mit der <b>abweichenden Stelle markiert</b>, und die
         Karte kommt in derselben Sitzung noch einmal. <span class="hbad">Noch nicht</span> ist der Rest.
         Für ein »Fast« gibt es die <b>halbe Punktzahl</b> – so hält es auch der amtliche Bogen
-        (»Schreibfehler führen zur Halbierung der Punktezahl«; das gilt hier beim Tippen wie im
+        (»Schreibfehler führen zur Halbierung der Punktezahl«; das gilt hier beim Eingeben wie im
         Bilder-Modus). Die Art gilt damit <b>nicht als bestanden</b>: Sie kommt in derselben Sitzung
         wieder, und schreibst du sie dann <b>fehlerfrei</b>, bekommst du die <b>fehlende Hälfte
         nachträglich gutgeschrieben</b>. Doppelt zählt nichts – je Art zählt der beste Versuch.
         Dein Punktestand steht oben in der Leiste.</dd>
       <dt>Bilder</dt><dd><b>Pflanze am Bild erkennen:</b> Du siehst nur ein <b>Bild der Pflanze</b>, sonst
-        nichts – am nächsten an der Prüfung, wo die Pflanze vor dir steht. <b>Wie du antwortest, bestimmst du
-        unter »Optionen · Antwort«:</b> aus <b>vier Namen auswählen</b>, den Namen <b>selbst tippen</b> oder
-        <b>»wie in der Prüfung«</b> – dann erscheint unter dem Bild für jede bewertete Spalte ein eigenes Feld
+        nichts – am nächsten an der Prüfung, wo die Pflanze vor dir steht. Gefragt ist immer der <b>volle
+        Name</b> (botanisch + deutsch). <b>Wie du antwortest, bestimmst du unter »Optionen · Antwort«:</b>
+        aus <b>vier Namen auswählen</b> oder die Namen <b>selbst eingeben – »wie in der Prüfung«</b>:
+        dann erscheint unter dem Bild für jede bewertete Spalte ein eigenes Feld
         (Gattung, Art, Familie, Deutscher Name) mit den <b>Punkten deiner Fachrichtung</b>; du bekommst
         <b>Teilpunkte</b> und siehst feldweise, was gestimmt hat. Nach der Antwort erscheinen der deutsche
         Name und der <b>Bildnachweis</b>.
@@ -1380,11 +1383,10 @@ body.stagefull #stage>.sessionbar{
     <dl class="hdl">
       <dt>Abfrage</dt><dd>Was gefragt wird. <b>Deutscher Name → botanisch</b> ist die Prüfungsrichtung
         und der Standard; <b>botanisch → deutscher Name</b> übt den umgekehrten Weg. Im <b>Bilder</b>-Modus
-        stehen <b>Bild → botanischer Name</b>, <b>Bild → deutscher Name</b> und – beim Antworttyp
-        <b>Auswahl</b> – <b>Bild → voller Name</b> (botanischer + deutscher Name zusammen) zur Wahl.
-        Beim Tippen zählt jede in der Liste geführte Schreibweise (auch ohne Bindestrich).</dd>
-      <dt>Antwort</dt><dd>Nur im <b>Bilder</b>-Modus: <b>Auswahl (4 Namen)</b>, <b>Namen tippen</b> oder
-        <b>wie in der Prüfung</b>. Bei »wie in der Prüfung« wird pro bewerteter Spalte ein Feld abgefragt –
+        gibt es nichts zu wählen: Gefragt ist immer <b>Bild → voller Name</b> (botanischer + deutscher Name
+        zusammen). Beim Eingeben zählt jede in der Liste geführte Schreibweise (auch ohne Bindestrich).</dd>
+      <dt>Antwort</dt><dd>Nur im <b>Bilder</b>-Modus: <b>Auswahl (4 Namen)</b> oder <b>Selbst eingeben
+        (wie in der Prüfung)</b>. Beim Eingeben wird pro bewerteter Spalte ein Feld abgefragt –
         die Beschriftungen und Punkte sind die deiner Fachrichtung (Fachwerker: Deutscher Name 3 / Gattung 0,5
         / Art 0,5 · GaLaBau: Gattung 1 / Art 1 / Deutscher Name 2 · Produktion: Gattung 3 / Art 3 / Familie 1
         / Deutscher Name 3). Über die <b>Felder</b>-Schalter darunter bestimmst du selbst, was abgefragt wird;
@@ -1409,7 +1411,7 @@ body.stagefull #stage>.sessionbar{
     <ul class="hnotes">
       <li>Der Balken zeigt <b>neu · am Lernen · sitzt</b>. „sitzt" heißt sicher gemerkt (Stufe 4–5 von 5).</li>
       <li><b>Wie kommt eine Pflanze auf „sitzt"?</b> Jede richtige Antwort bringt sie eine Stufe weiter –
-        egal in welchem Modus (Karteikarte „Gewusst", richtige Quiz-/Bildantwort, beim Tippen alle Felder
+        egal in welchem Modus (Karteikarte „Gewusst", richtige Quiz-/Bildantwort, beim Eingeben alle Felder
         richtig). Von <i>neu</i> aus sind das <b>drei Treffer</b>: neu → Stufe 2 → 3 → <b>4 = sitzt</b>.
         Eine falsche Antwort setzt auf Stufe 1 zurück, „unsicher" bzw. teilweise richtig hält die Stufe.
         Nach jeder Antwort steht unter der Lösung, auf welcher Stufe die Pflanze jetzt ist und wie viele
@@ -1425,7 +1427,7 @@ body.stagefull #stage>.sessionbar{
       <li>Bei einem Treffer fliegen ein paar Blättchen – und am Ende einer Sitzung ab 80 % bzw. bei einem
         gewonnenen Duell etwas mehr. Wer im Betriebssystem »weniger Bewegung« eingestellt hat, sieht nichts
         davon.</li>
-      <li><b>Denkzeit ⏱:</b> In Quiz, Tippen und Bilder läuft oben eine Uhr. Sie zählt nur, solange eine
+      <li><b>Denkzeit ⏱:</b> In Quiz, Selbst eingeben und Bilder läuft oben eine Uhr. Sie zählt nur, solange eine
         Frage offen ist – Wartezeit auf ein Bild und das Lesen der Lösung zählen nicht mit. Karteikarten
         laufen ohne Uhr.</li>
       <li><b>Fokus-Modus (Smartphone):</b> Sobald eine Sitzung läuft, füllt die Karte bzw. Frage auf dem
@@ -1961,8 +1963,8 @@ let listCats = new Set();     // aktive Filter-Tags der laufenden Dimension (lee
 let listSort = "thema";       // Ansicht: bot | de | thema | familie (Standard: nach Thema gruppiert)
 let pendingChallenge = null;  // aus der URL (#c=…) dekodierte, noch nicht angenommene Herausforderung
 let examOnly = false;         // opt-in: nur Prüfungsstoff (Fachwerker) – Familie/Synonyme ausblenden
-let dirText  = "de2bot";      // Abfragerichtung für Karteikarten/Quiz/Tippen
-let dirPhoto = "img2bot";     // Abfragerichtung für den Bilder-Quiz
+let dirText  = "de2bot";      // Abfragerichtung für Karteikarten/Quiz/Selbst eingeben
+let dirPhoto = "img2both";    // Bilder-Quiz: angeboten wird nur noch »Bild → voller Name«
 let photoAnswer = "mc";       // Antwortart im Bilder-Quiz: mc | type | exam
 let examFields = null;        // Felder im Modus »wie in der Prüfung« (je Profil merkbar)
 let printColsOff = null;      // beim Lernlisten-Druck abgewählte Spalten (Set von Schlüsseln: g/a/fam/de/zp/chk)
@@ -2204,15 +2206,21 @@ const DIRS = {
   img2de : { label:"Bild → deutscher Name",      prompt:"Bild",              answer:"Deutscher Name"   },
   img2both:{ label:"Bild → voller Name (botanisch + deutsch)", prompt:"Bild", answer:"Voller Name"      }
 };
-const DIRS_TEXT  = ["de2bot","bot2de"];               // Karteikarten · Quiz · Tippen
-const DIRS_PHOTO = ["img2bot","img2de","img2both"];   // Bilder-Quiz (img2both nur beim Auswahl-Quiz)
-function dirsFor(m){                                    // gültige Richtungen für Modus/Antwortart
-  if((m||mode)!=="photo") return DIRS_TEXT;
+const DIRS_TEXT  = ["de2bot","bot2de"];               // Karteikarten · Quiz · Selbst eingeben
+const DIRS_PHOTO = ["img2bot","img2de","img2both"];   // Bilder-Quiz – Reihenfolge fest (Duell-Links)
+/* Angeboten ≠ spielbar: Im Bilder-Quiz steht nur noch »Bild → voller Name« zur Wahl –
+   eine Entscheidung weniger, und die Auswahl zeigt immer botanischen + deutschen Namen.
+   Die älteren Richtungen bleiben SPIELBAR, damit bereits verschickte Duell-Links exakt
+   dieselbe Aufgabe stellen; wählen kann man sie nicht mehr. */
+function dirsFor(m){ return (m||mode)==="photo" ? ["img2both"] : DIRS_TEXT; }   // was das Auswahlfeld anbietet
+function playableDirs(){                                // was die Engine spielen kann
+  if(mode!=="photo") return DIRS_TEXT;
   return photoAnswer==="mc" ? DIRS_PHOTO : DIRS_PHOTO.filter(d=>d!=="img2both");  // »voller Name« braucht die 4 Auswahl-Optionen
 }
 function curDir(){                                 // gültige Richtung für den aktuellen Modus
-  const d = mode==="photo" ? dirPhoto : dirText;
-  return dirsFor().includes(d) ? d : dirsFor()[0];
+  const d = mode==="photo" ? dirPhoto : dirText, ok = playableDirs();
+  if(ok.includes(d)) return d;
+  return ok.includes(dirsFor()[0]) ? dirsFor()[0] : ok[0];
 }
 const wantsBoth = () => curDir()==="img2both";                     // gesucht ist der volle Name (botanisch + deutsch)
 const wantsDe = () => curDir()==="bot2de" || curDir()==="img2de";   // gesucht ist der deutsche Name
@@ -2582,7 +2590,7 @@ function renderProgress(){
            <span class="sflame${(st.s||0)>0?" on":""}">${ico("flame")}<b>${st.s||0}</b></span></span>
          <span class="chip goalchip" title="Heute bearbeitete Karten – ab dem Tagesziel (${goal}) zählt der Tag für die Serie. Einstellbar unter Optionen.">
            <span class="ring" style="--p:${Math.round(done/goal*100)}"></span><span class="sr-n">${done}/${goal} heute</span></span>
-         <button class="chip rankchip" id="rankName" title="Erfahrungspunkte: freies Tippen bringt am meisten, Ankreuzen weniger, die Karteikarte am wenigsten. ${xp} P.${r.next?` · noch ${r.need} bis ${esc(r.next)}`:""}">
+         <button class="chip rankchip" id="rankName" title="Erfahrungspunkte: freies Eingeben bringt am meisten, Ankreuzen weniger, die Karteikarte am wenigsten. ${xp} P.${r.next?` · noch ${r.need} bis ${esc(r.next)}`:""}">
            ${ico("sprout")}<span class="rk-name">${esc(r.name)}</span><i class="rk-mini"><b style="width:${r.pct}%"></b></i></button>
          <button class="chip" id="btnHerb" title="Deine Themen-Sammlung: Jedes gemeisterte Thema legt eine gepresste Pflanze ins Herbarium.">${ico("leaf")}Herbarium</button>
        </div>`; })()}`;
@@ -2590,7 +2598,7 @@ function renderProgress(){
   const hb=$("#btnHerb"); if(hb) hb.onclick=openHerbarium;
   const bh=$("#btnHow"); if(bh) bh.onclick=openHowModal;
   const due = p.filter(c=>{ const pr=pget(c.key); return !pr.box || !pr.due || pr.due<=todayISO(); }).length;
-  const wie = mode==="photo" ? (photoAnswer==="exam" ? "wie in der Prüfung" : DIRS[curDir()].label+" · "+PH_ANSWER[photoAnswer])
+  const wie = mode==="photo" ? (photoAnswer==="exam" ? "wie in der Prüfung" : DIRS[curDir()].label+" · "+phLabel(photoAnswer))
                             : DIRS[curDir()].label;
   $("#startHint").textContent = p.length ? `${due} Karten heute dran · ${wie}` : "Keine Arten in der aktuellen Auswahl.";
   $("#btnStart").disabled = !p.length;
@@ -2844,7 +2852,7 @@ function challengeURL(){                  // aktuelle Sitzung als Herausforderun
   return location.href.split("#")[0] + "#c=" + chEncode(payload);
 }
 function chModeLabel(m){
-  return m==="quiz" ? "Quiz" : m==="photo" ? "Bilder-Quiz" : m==="guided" ? "Geführte Lektion" : "Tippen";
+  return m==="quiz" ? "Quiz" : m==="photo" ? "Bilder-Quiz" : m==="guided" ? "Geführte Lektion" : "Selbst eingeben";
 }
 function duelMessage(url){
   const who = duelName().trim();
@@ -2905,7 +2913,7 @@ function showChallengeBanner(ch){
   // Aufgabenstellung mit ansagen – gefragt ist genau dasselbe wie beim Herausforderer
   const wie = ch.m==="guided" ? "gemischte Übungsformen"
             : ch.m==="photo" && ch.a==="exam" ? "wie in der Prüfung"
-            : (DIRS[ch.r] ? DIRS[ch.r].label : "");
+            : (DIRS[ch.r] ? DIRS[ch.r].label : "") + (ch.m==="photo" && ch.a==="type" ? " · Namen eingeben" : "");
   const n=(ch.i||[]).length;
   b.innerHTML = `<div class="duel-ic">${ico("trophy")}</div>
     <div class="duel-txt">
@@ -2923,6 +2931,7 @@ function showChallengeBanner(ch){
 function startChallenge(){                // genau die Karten der Herausforderung, in kodierter Reihenfolge
   const ch = pendingChallenge;
   if(!ch){ return startSession(); }
+  applyChallengePrefs(ch); syncDirUI();   // auch wenn zwischendurch eigene Sitzungen liefen
   const cards = (ch.i||[]).map(i=>allCards[i]).filter(Boolean);
   if(!cards.length){ toast("Karten dieser Herausforderung nicht gefunden",true); return; }
   const b=$("#duelBanner"); if(b) b.hidden=true;
@@ -2945,6 +2954,7 @@ function startChallenge(){                // genau die Karten der Herausforderun
    auf dem iPhone (die echte Fullscreen-API greift dort nur für Videos). */
 function stageFull(on){ try{ document.body.classList.toggle("stagefull", !!on); }catch(e){} }
 function startSession(){
+  endChallengeOverride();                 // eigene Sitzung: eigene Einstellungen
   queue = buildQueue(); qi = 0; photoMisses = 0; qStart = 0;
   sess = { total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, baseMode:mode, cards:queue.slice(), challenge:null };
   if(!queue.length){ toast("Keine Arten im aktuellen Filter",true); return; }
@@ -2970,6 +2980,7 @@ function guidedForm(box, online){
   return "type";
 }
 function startGuided(){
+  endChallengeOverride();
   const q = buildQueue();
   if(!q.length){ toast("Keine Arten im aktuellen Filter",true); return; }
   const online = navigator.onLine !== false;
@@ -3008,14 +3019,14 @@ function sessionBar(){
    einer angenommenen Herausforderung fehlt der fremde Lernstand, dann nennt sie
    nur die Übungsform. */
 const GUIDED_WIE = { photo:"am Bild erkennen", quiz:"jetzt ohne Bild",
-                     cards:"selbst abrufen", type:"prüfungsnah tippen" };
+                     cards:"selbst abrufen", type:"prüfungsnah eingeben" };
 function guidedNoteHTML(card){
   if(!sess.auto || !card) return "";
   const wie = GUIDED_WIE[mode]; if(!wie) return "";
   const box = sess.boxOf ? sess.boxOf.get(card) : undefined;
   const stufe = box===undefined ? "" : box ? `Stufe ${box} von 5` : "Neu";
   return `<div class="gnote" title="Die geführte Lektion wählt die Übungsform nach deinem Lernstand: `+
-    `neu → am Bild erkennen, dann ohne Bild, dann selbst abrufen, zuletzt tippen wie in der Prüfung.">`+
+    `neu → am Bild erkennen, dann ohne Bild, dann selbst abrufen, zuletzt selbst eingeben wie in der Prüfung.">`+
     `${stufe?esc(stufe)+" · ":""}${esc(wie)}</div>`;
 }
 function showGuidedNote(){
@@ -3274,7 +3285,7 @@ function startHintOnly(){
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22V8M12 8C12 8 7 3 4 4c-1 3 4 8 8 8zM12 8c0 0 5-5 8-4 1 3-4 8-8 8z"/></svg>
     <h2>Bereit zum Lernen</h2>
     <p><b>»Weiter lernen«</b> startet eine geführte Sitzung – die Übungsform (Bilder, Quiz,
-       Karteikarte, Tippen) richtet sich je Pflanze nach deinem Lernstand. Unter <b>»Selbst
+       Karteikarte, Selbst eingeben) richtet sich je Pflanze nach deinem Lernstand. Unter <b>»Selbst
        wählen«</b> gibt es jeden Modus einzeln; Details unter <b>Hilfe</b>.</p>
     ${photo ? `<p class="stage-note">Der Bilder-Modus braucht Internet (die Bilder kommen von
        Wikipedia); alles andere läuft auch ohne.</p>` : ``}
@@ -3594,12 +3605,13 @@ function syncOptsSummary(){
   const sub = $("#setOpts") && $("#setOpts").querySelector(".opts-sub"); if(!sub) return;
   const bits=[];
   const d=curDir();
-  if(mode!=="list" && d!=="de2bot" && d!=="img2bot") bits.push(DIRS[d].label);   // umgekehrte Abfragerichtung
+  if(mode!=="list" && d!=="de2bot" && d!=="img2both") bits.push(DIRS[d].label);   // abweichende Abfragerichtung
   if(mode!=="list"){ const sc=$("#cat"); if(sc && sc.value) bits.push(norm(sc.options[sc.selectedIndex].textContent).replace(/\s*\(\d+\)\s*$/,"")); }
   if($("#onlyzp") && $("#onlyzp").checked) bits.push("nur ZP");
   if($("#examOnly") && $("#examOnly").checked && $("#examOnlyWrap") && !$("#examOnlyWrap").hidden) bits.push("nur Prüfungsstoff");
   const sl=parseInt($("#sessLen") && $("#sessLen").value)||20; if(sl!==20) bits.push(sl+" Karten");
-  sub.textContent = bits.length ? bits.join(" · ") : "Abfrage · Lernstoff · ZP · Sitzungslänge";
+  sub.textContent = bits.length ? bits.join(" · ")
+    : (mode==="photo" ? "Antwort" : "Abfrage")+" · Lernstoff · ZP · Sitzungslänge";   // im Bilder-Quiz gibt es keine Richtung zu wählen
   sub.classList.toggle("active", bits.length>0);
 }
 function applyMode(){
@@ -5138,7 +5150,8 @@ function renderPhotoChoice(p){
     host.appendChild(b);
   });
 }
-/* Antwort 2: den Namen direkt unter dem Bild tippen */
+/* Antwort »Namen eingeben« (EIN Feld) – nur noch über ältere Duell-Links erreichbar;
+   zur Wahl stehen Auswahl und »Selbst eingeben (wie in der Prüfung)« */
 function renderPhotoType(p){
   $("#opts").innerHTML = `<div class="typebox">
       <input id="typeIn" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
@@ -5533,7 +5546,31 @@ function refreshKat(){   // Auswahl der Lernsitzung: alles · ein Thema · eine 
   const have=[...$("#cat").options].some(o=>o.value===cur);
   $("#cat").value = have ? cur : "";
 }
-const PH_ANSWER = { mc:"Auswahl (4 Namen)", type:"Namen tippen", exam:"wie in der Prüfung" };
+/* Antwortarten im Bilder-Quiz – ANGEBOTEN werden zwei: aus vier vollen Namen auswählen oder
+   die Namen selbst eingeben (wie in der Prüfung: ein Feld je bewerteter Spalte, mit Punkten).
+   Das frühere »Namen tippen« (EIN Feld, nur botanisch oder nur deutsch) steckt noch in älteren
+   Duell-Links und bleibt dafür spielbar – zur Wahl steht es nicht mehr. Die Reihenfolge von
+   CH_PHA (mc · type · exam) bleibt davon unberührt. */
+const PH_ANSWER = { mc:"Auswahl (4 Namen)", exam:"Selbst eingeben (wie in der Prüfung)" };
+const PH_ANSWER_LEGACY = { type:"Namen eingeben (älterer Duell-Link)" };
+function phLabel(k){ return PH_ANSWER[k] || PH_ANSWER_LEGACY[k] || k; }
+function loadPrefs(){                       // gespeicherte Abfrage-Einstellungen – nur noch angebotene Werte
+  dirText  = DIRS_TEXT.includes(store.get(LS_PREFIX+"dirtext")) ? store.get(LS_PREFIX+"dirtext") : "de2bot";
+  dirPhoto = dirsFor("photo").includes(store.get(LS_PREFIX+"dirphoto")) ? store.get(LS_PREFIX+"dirphoto") : "img2both";
+  const pa = store.get(LS_PREFIX+"phanswer");
+  photoAnswer = PH_ANSWER[pa] ? pa : (pa==="type" ? "exam" : "mc");   // früheres »Namen tippen« → Eingabe bleibt Eingabe
+}
+/* Ein Duell-Link gibt Richtung und Antwortart für GENAU diese Aufgabe vor – auch ältere,
+   nicht mehr angebotene. Sobald eine eigene Sitzung startet oder man selbst etwas
+   umstellt, gelten wieder die eigenen Einstellungen. */
+let chOverride = false;
+function applyChallengePrefs(ch){
+  if(ch.a && phLabel(ch.a)!==ch.a) photoAnswer = ch.a;
+  if(ch.r && DIRS[ch.r]){ if(DIRS_PHOTO.includes(ch.r)) dirPhoto=ch.r; else dirText=ch.r; }
+  if(ch.m==="guided" && ch.rp && DIRS_PHOTO.includes(ch.rp)) dirPhoto = ch.rp;   // Bild-Karten der geführten Lektion
+  chOverride = true;
+}
+function endChallengeOverride(){ if(!chOverride) return; chOverride=false; loadPrefs(); syncDirUI(); }
 /* Abfragerichtung + (im Bilder-Quiz) Antwortart und die selbst bestimmten
    Prüfungsfelder. Nur zeigen, was zum Modus passt. */
 function syncDirUI(){
@@ -5541,11 +5578,13 @@ function syncDirUI(){
   const isPhoto = mode==="photo", isList = mode==="list";
   const paw=$("#phAnswerField"); if(paw) paw.hidden = !isPhoto;
   const pas=$("#phAnswer"); if(pas){
-    pas.innerHTML = Object.keys(PH_ANSWER).map(k=>`<option value="${k}">${esc(PH_ANSWER[k])}</option>`).join("");
+    const keys = Object.keys(PH_ANSWER).concat(PH_ANSWER[photoAnswer] ? [] : [photoAnswer]);   // ältere Antwortart (Duell-Link) sichtbar halten
+    pas.innerHTML = keys.map(k=>`<option value="${k}">${esc(phLabel(k))}</option>`).join("");
     pas.value = photoAnswer;
   }
-  // Richtung ist gegenstandslos, wenn ohnehin alle Prüfungsfelder abgefragt werden
-  const dirOff = isList || (isPhoto && photoAnswer==="exam");
+  // Richtung ist gegenstandslos, wenn es nur eine gibt (Bilder-Quiz: voller Name) oder
+  // ohnehin alle Prüfungsfelder abgefragt werden
+  const dirOff = isList || dirsFor().length<2 || (isPhoto && photoAnswer==="exam");
   const wrap=$("#dirField"); if(wrap) wrap.hidden = dirOff;
   sel.innerHTML = dirsFor().map(k=>`<option value="${k}">${esc(DIRS[k].label)}</option>`).join("");
   sel.value = curDir();
@@ -5616,13 +5655,15 @@ function wire(){
   $("#nivSelect").onchange=applyProfile;
   $("#cat").onchange=refreshView;
   if($("#phAnswer")) $("#phAnswer").onchange=()=>{
-    photoAnswer=$("#phAnswer").value; store.set(LS_PREFIX+"phanswer",photoAnswer);
+    const v=$("#phAnswer").value; endChallengeOverride();     // Wert VOR dem Zurücksetzen lesen
+    photoAnswer=v; store.set(LS_PREFIX+"phanswer",photoAnswer);
     syncDirUI(); refreshView();
   };
   if($("#dir")) $("#dir").onchange=()=>{
-    if(mode==="photo"){ dirPhoto=$("#dir").value; store.set(LS_PREFIX+"dirphoto",dirPhoto); }
-    else { dirText=$("#dir").value; store.set(LS_PREFIX+"dirtext",dirText); }
-    refreshView();
+    const v=$("#dir").value; endChallengeOverride();
+    if(mode==="photo"){ dirPhoto=v; store.set(LS_PREFIX+"dirphoto",dirPhoto); }
+    else { dirText=v; store.set(LS_PREFIX+"dirtext",dirText); }
+    syncDirUI(); refreshView();
   };
   $("#onlyzp").onchange=refreshView;
   if($("#sessLen")) $("#sessLen").oninput=syncOptsSummary;
@@ -5682,7 +5723,7 @@ function openIntro(auto, onClose){
       <li>${ico("image","is-ic")}<div><b>Bilder</b><span class="is-tag">leicht</span><br>Pflanze am Foto erkennen und den richtigen Namen wählen.</div></li>
       <li>${ico("check","is-ic")}<div><b>Quiz</b><span class="is-tag">leicht</span><br>Zum deutschen Namen den richtigen botanischen aus vier Optionen wählen.</div></li>
       <li>${ico("cards","is-ic")}<div><b>Karteikarten</b><span class="is-tag">mittel</span><br>Selbst abrufen und ehrlich bewerten – Wiederholung nach Plan (Spaced Repetition).</div></li>
-      <li><span class="is-ic" aria-hidden="true">⌨️</span><div><b>Tippen</b><span class="is-tag">prüfungsnah</span><br>Jedes bewertete Feld frei schreiben (Gattung, Art, Familie) – mit Punkten, wie in der Prüfungstabelle.</div></li>
+      <li>${ico("keys","is-ic")}<div><b>Selbst eingeben</b><span class="is-tag">prüfungsnah</span><br>Die Namen per Tastatur selbst schreiben – ein Feld je bewerteter Spalte (Gattung, Art, Familie), mit Punkten wie in der Prüfungstabelle.</div></li>
     </ol>
     <p class="intro-tip">${ico("sliders")} Jede Stufe kannst du unter <b>»Optionen«</b> feiner einstellen: was gefragt wird – vom <b>deutschen Namen</b> allein bis zur prüfungsechten Abfrage von <b>Gattung, Art und Familie</b> (Felder einzeln wählbar) – dazu Lernstoff, ZP-Filter und Sitzungslänge.</p>
     <p class="intro-tip">${ico("sprout")} <b>Fortschritt:</b> Jede richtige Antwort bringt eine Pflanze eine Stufe weiter –
@@ -5711,9 +5752,7 @@ function openIntro(auto, onClose){
     if(listSort==="kategorie") listSort="thema";              // frühere Ansicht »Wuchsform/Kategorie«
     if(!SORT_LABEL[listSort]) listSort="thema";
     examOnly = store.get(LS_PREFIX+"examonly")==="1";
-    dirText  = DIRS_TEXT.includes(store.get(LS_PREFIX+"dirtext"))   ? store.get(LS_PREFIX+"dirtext")  : "de2bot";
-    dirPhoto = DIRS_PHOTO.includes(store.get(LS_PREFIX+"dirphoto")) ? store.get(LS_PREFIX+"dirphoto") : "img2bot";
-    photoAnswer = PH_ANSWER[store.get(LS_PREFIX+"phanswer")] ? store.get(LS_PREFIX+"phanswer") : "mc";
+    loadPrefs();
     mode = store.get(LS_PREFIX+"mode") || "photo";   // neue Nutzer starten beim leichtesten Modus (Bilder)
     let pid = store.get(LS_PREFIX+"profile");
     const hadProfile = !!pid;                          // vor loadProfile lesen – das setzt den Store
@@ -5724,10 +5763,7 @@ function openIntro(auto, onClose){
     if(ch && ch.p && Array.isArray(ch.i) && ch.i.length && (typeof SEEDS!=="undefined" && SEEDS[ch.p])){
       pendingChallenge = ch; pid = ch.p;
       if(ch.m==="quiz"||ch.m==="type"||ch.m==="photo") mode = ch.m;
-      // Antwortart VOR der Richtung übernehmen: »voller Name« gibt es nur zur Auswahl,
-      // dirsFor() würde ihn sonst wegfiltern (und man bekäme wieder nur botanisch)
-      if(ch.a && PH_ANSWER[ch.a]) photoAnswer = ch.a;
-      if(ch.r && DIRS[ch.r]){ if(DIRS_PHOTO.includes(ch.r)) dirPhoto=ch.r; else dirText=ch.r; }
+      applyChallengePrefs(ch);                     // Banner und Auswahlfelder zeigen gleich die Aufgabe des Links
     }
     $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.mode===mode));
     const parts = pid.match(/^(.*)_(gaertner|fachwerker)$/);

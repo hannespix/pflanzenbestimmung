@@ -28,7 +28,7 @@ Bitte alle Antworten und Commit-/PR-Texte **auf Deutsch**.
   gestartet wird (**nur im Lern-Tool**).
   Beide laden **nichts beim Seitenaufbau** und nutzen **JSONP** (zur Laufzeit
   erzeugtes `<script>`) statt `fetch`/`XHR` – dadurch bleibt `check_offline.py` grün.
-  Der Kern (**Karteikarten/Quiz/Tippen/Liste** bzw. Ziehen/Bogen/Musterlösung/Noten)
+  Der Kern (**Karteikarten/Quiz/Selbst eingeben/Liste** bzw. Ziehen/Bogen/Musterlösung/Noten)
   funktioniert **ohne Netz** vollständig weiter; ohne Verbindung sagt es der Bilder-
   Modus bzw. der Wikipedia-Knopf klar an. Die Deep-Link-Buttons öffnen bloß einen
   neuen Tab. **Der Prüfungsbogen selbst bleibt strikt offline** – der Druck (Leerbogen
@@ -1835,6 +1835,36 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Listen-Quellzeile mit Profil, Info-Karten-Quelle, Druck-Fußzeile; Adjektiv-Endung je
       Geschlecht und **über alle 2114 Arten: angezeigter Name (`deMain`) wird beim Tippen
       anerkannt**; `tests/smoke.mjs` prüft den Hilfe-Abschnitt.
+
+- [x] **Bilder-Quiz vereinfacht + »Tippen« heißt »Selbst eingeben«** (Rückmeldung: »zu viele
+      verwirrende Optionen« und »Tippen könnte auch Glücksspiel-Tippen heißen – gemeint ist:
+      man gibt den Namen selbst per Tastatur ein«). **(1) Eine Aufgabe im Bilder-Quiz:** Gefragt
+      ist immer **Bild → voller Name (botanisch + deutsch)**; das Abfrage-Feld ist dort
+      ausgeblendet (`dirsFor("photo")` liefert nur noch `["img2both"]`, `syncDirUI` blendet
+      bei <2 Richtungen aus, Standard `dirPhoto="img2both"`). **Antwort** bietet genau zwei Wege:
+      **Auswahl (4 Namen)** oder **Selbst eingeben (wie in der Prüfung)** – `PH_ANSWER` ohne
+      `type`. Das frühere Ein-Feld-»Namen tippen« ist damit aus der Oberfläche verschwunden
+      (sein Nutzen steckt in »wie in der Prüfung« mit abwählbaren Feldern). **Angeboten ≠
+      spielbar:** `playableDirs()` kennt weiterhin alle drei Bild-Richtungen und `PH_ANSWER_LEGACY`
+      das `type` – **ältere Duell-Links** stellen exakt ihre Aufgabe (Banner nennt sie, z. B.
+      »Bild → botanischer Name · Namen eingeben«, das Auswahlfeld zeigt die alte Antwortart
+      solange sichtbar). `applyChallengePrefs(ch)` setzt Richtung/Antwortart beim Öffnen **und**
+      beim Annehmen (übernimmt nebenbei erstmals `ch.rp`, die Bild-Richtung geführter
+      Lektionen, die bisher kodiert, aber nie angewendet wurde); `endChallengeOverride()`
+      stellt beim Start einer **eigenen** Sitzung oder bei manueller Umstellung die
+      gespeicherten Einstellungen wieder her (`loadPrefs()`, aus dem Boot herausgezogen –
+      migriert gespeichertes `type` → `exam`, alte Bild-Richtungen → `img2both`). Die
+      Teilen-/Revanche-Links werden erst auf dem Abschluss-Screen gebaut und tragen deshalb
+      noch die gespielte Aufgabe. **(2) Umbenennung** überall sichtbar: Modus-Tab, Antwort-
+      Option, Hilfe, Intro (dort auch das letzte Emoji ⌨️ durch `ico("keys")` ersetzt),
+      geführte Pille (»prüfungsnah eingeben«), Duell-Modusname, Rang-Tooltip, Rechtliches,
+      Manifest, Prüfwerkzeug-Link, Technik-Doku; die internen IDs (`type`, `CH_MODES`,
+      `CH_PHA`, `DIRS_PHOTO`) bleiben – **Reihenfolge weiterhin nicht ändern**.
+      `tests/learn.mjs`: genau zwei Antwortarten (keine »tippen«-Beschriftung), einzige
+      Richtung + Feld ausgeblendet, Tab heißt »Selbst eingeben«, Text-Modi behalten die
+      Richtungswahl; **zwei ältere Links** (`type`+`img2bot` → ein Eingabefeld;
+      `mc`+`img2de` → deutsche Optionen) spielen ihre Aufgabe, danach gelten wieder die
+      eigenen Einstellungen (`mc,exam` · `img2both`).
 
 ## Offene Aufgaben (TODO)
 

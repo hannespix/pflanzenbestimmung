@@ -1,7 +1,7 @@
 {
   "name": "Pflanze-BW – Pflanzen lernen",
   "short_name": "Pflanze-BW",
-  "description": "Pflanzenkenntnis der Gärtnerberufe (Baden-Württemberg): lernen mit Karteikarten, Quiz, Tippen und Bildern – läuft im Browser, auch ohne Internet.",
+  "description": "Pflanzenkenntnis der Gärtnerberufe (Baden-Württemberg): lernen mit Karteikarten, Quiz, Selbst eingeben und Bildern – läuft im Browser, auch ohne Internet.",
   "lang": "de",
   "dir": "ltr",
   "start_url": "index.html",
@@ -38,7 +38,7 @@
     {
       "name": "Lernen (Azubis)",
       "short_name": "Lernen",
-      "description": "Karteikarten, Quiz und Tippen",
+      "description": "Karteikarten, Quiz und Selbst eingeben",
       "url": "pflanzen-lernen.html",
       "icons": [
         {
