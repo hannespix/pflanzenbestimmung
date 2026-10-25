@@ -38,8 +38,14 @@ const XLSX = (new Function("exports", "module", "define", "window",
 ))(undefined, undefined, undefined, undefined);
 
 const norm = (s) => (s == null ? "" : String(s)).replace(/\s+/g, " ").trim();
+// Anführungszeichen vereinheitlichen: Sortennamen stehen in den Listen mal in `Backticks`,
+// mal in ´Akzenten´, mal in ‘typografischen’ oder "doppelten" Zeichen – Tippvarianten
+// desselben Zeichens (»Prunus cerasifera `Nigra´«). Botanisch korrekt (ICNCP) ist 'Nigra'
+// mit geraden Apostrophen; die bekommen alle. Nur die Schreibweise, nie der Name –
+// offengelegt in der Hilfe, im Lern-Tool-Hinweis und auf der Rechtliches-Seite.
+const quotes = (s) => norm(s).replace(/[`´‘’‚“”„"]/g, "'");
 const tidy = (s) => {
-  s = norm(s);
+  s = quotes(s);
   s = s.replace(/\b(var|subsp|ssp|f|cv|convar)\.(?=\S)/g, "$1. ");
   return norm(s);
 };
@@ -144,10 +150,10 @@ function parseSheet(rows) {
     if (m.kategorie != null) { const kv = norm(cells[m.kategorie]); if (kv) rowKat = kv; }
     out.push([
       g, ar, fam,
-      m.deutsch != null ? norm(cells[m.deutsch]) : "",
+      m.deutsch != null ? quotes(cells[m.deutsch]) : "",
       katName(rowKat),
       m.zp != null && /zp|x|ja|1|✓/i.test(norm(cells[m.zp])) ? 1 : 0,
-      m.synonyme != null ? norm(cells[m.synonyme]) : "",
+      m.synonyme != null ? quotes(cells[m.synonyme]) : "",
     ]);
   }
   return out;
