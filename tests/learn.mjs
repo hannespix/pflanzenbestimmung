@@ -833,8 +833,14 @@ async function main() {
     const antw = [...document.querySelectorAll("#phAnswer option")].map((o) => [o.value, o.textContent]);
     const dirOpts = [...document.querySelectorAll("#dir option")].map((o) => o.value);
     const tab = document.querySelector('#modeTabs button[data-mode="type"]').textContent.replace(/\s+/g, " ").trim();
-    return { antw, dirOpts, dirHidden: document.querySelector("#dirField").hidden, dir: curDir(), tab };
+    const subMc = document.querySelector("#setOpts .opts-sub").textContent;
+    set("#phAnswer", "exam");                                 // Prüfungs-Eingabe: keine Richtung – und keine in der Kopfzeile
+    const subExam = document.querySelector("#setOpts .opts-sub").textContent;
+    set("#phAnswer", "mc");
+    return { antw, dirOpts, dirHidden: document.querySelector("#dirField").hidden, dir: curDir(), tab, subMc, subExam };
   });
+  assert(!/→/.test(phEinfach.subMc) && !/→/.test(phEinfach.subExam),
+    "Im Bilder-Quiz darf die Optionen-Kopfzeile keine Richtung nennen (auch nicht bei »wie in der Prüfung«): " + JSON.stringify([phEinfach.subMc, phEinfach.subExam]));
   assert(phEinfach.antw.map((a) => a[0]).join() === "mc,exam",
     "Bilder-Quiz: genau zwei Antwortarten (Auswahl · Selbst eingeben), war " + JSON.stringify(phEinfach.antw));
   assert(/eingeben/i.test(phEinfach.antw[1][1]) && !/tippen/i.test(phEinfach.antw.map((a) => a[1]).join()),

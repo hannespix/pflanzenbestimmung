@@ -3605,7 +3605,9 @@ function syncOptsSummary(){
   const sub = $("#setOpts") && $("#setOpts").querySelector(".opts-sub"); if(!sub) return;
   const bits=[];
   const d=curDir();
-  if(mode!=="list" && d!=="de2bot" && d!=="img2both") bits.push(DIRS[d].label);   // abweichende Abfragerichtung
+  // Abweichende Abfragerichtung – nur wenn eine wählbar ist (im Bilder-Quiz gibt es keine;
+  // bei »wie in der Prüfung« fällt die Richtung intern nur auf einen spielbaren Wert zurück)
+  if(mode!=="list" && dirsFor().length>1 && d!==dirsFor()[0]) bits.push(DIRS[d].label);
   if(mode!=="list"){ const sc=$("#cat"); if(sc && sc.value) bits.push(norm(sc.options[sc.selectedIndex].textContent).replace(/\s*\(\d+\)\s*$/,"")); }
   if($("#onlyzp") && $("#onlyzp").checked) bits.push("nur ZP");
   if($("#examOnly") && $("#examOnly").checked && $("#examOnlyWrap") && !$("#examOnlyWrap").hidden) bits.push("nur Prüfungsstoff");
