@@ -528,7 +528,7 @@ function grade(card, g){ // g: 'again' | 'hard' | 'good'
   progress[card.key]=p; saveProgress();
   lastStep = { vor, nach:nb, neuFest: vor<4 && nb>=4 };               // für die Stufen-Anzeige der Rückmeldung
   if(lastStep.neuFest){                                              // DER Moment: die Art sitzt jetzt
-    toast(`»${deMain(card)||norm(card.g+" "+card.a)}« sitzt jetzt – Stufe 4 von 5.`);
+    toast(`»${deMain(card)||botName(card)}« sitzt jetzt – Stufe 4 von 5.`);
     celebrate($("#fb")||$("#stage")||document.body, 2);
   }
   streakBump();                                // jede bearbeitete Karte zählt fürs Tagesziel
@@ -742,7 +742,14 @@ function famName(f){                              // "Fabaceae · Schmetterlings
   const de=famGerman(f) || (FAM_INFO[lat] && FAM_INFO[lat].de) || "";
   return de ? lat+" · "+de : lat;
 }
-const botName = c => norm(c.g+" "+c.a);
+/* Platzhalter »'Sorte'« der GaLaBau-Listen (»Salvia nemorosa 'Sorte'« = die Art in
+   irgendeiner Gartensorte; 25 Einträge) wird als »in Sorten« gezeigt – so schreibt die
+   Fachwerker-Liste denselben Gedanken ohnehin (»Weigelie in Sorten«). Reine ANZEIGE
+   (offengelegt): beim Eingeben gilt die Listenform weiter, das Prüfungswerkzeug zeigt
+   sie unverändert. clean() streicht den Platzhalter beidseitig, deshalb zählt
+   »Salvia nemorosa« exakt. */
+function artShown(a){ return norm(String(a||"").replace(/\(?'Sorten?'\)?/i, "in Sorten")); }
+const botName = c => norm(c.g+" "+artShown(c.a));
 const fullName = c => botName(c)+" · "+deMain(c);   // voller Name: botanisch · deutsch (Bilder-Quiz »voller Name«)
 // Abkürzungen, wie sie in den Quelllisten vorkommen → ausgeschriebene Anzeigeform
 // (nur fürs Lern-Tool; das Prüfungswerkzeug zeigt den amtlichen Namen unverändert).
@@ -817,7 +824,7 @@ function answerMeta(c){
     if(weitere.length) bits.push(row("Auch", weitere.join(", "), false));
   } else {
     if(c.g) bits.push(row("Gattung", c.g, true));
-    if(c.a) bits.push(row("Art", c.a, true));
+    if(c.a) bits.push(row("Art", artShown(c.a), true));
     if(mode==="photo" && deMain(c)) bits.push(row("Deutsch", c.de, false));
   }
   if(!examOnlyActive()){                          // im Prüfungsstoff-Modus (Fachwerker) Familie/Synonyme weglassen
@@ -856,7 +863,9 @@ function lev(a,b){ a=a||""; b=b||""; const m=a.length,n=b.length; if(!m)return n
    schreibt, ist keine Frage der Pflanzenkenntnis. (Realfall: »x „Bristol Ruby“« gab
    Abzug, weil die Anführungszeichen und das x als Teil des Namens verglichen wurden.) */
 const clean = s => norm(s).toLowerCase().replace(/×/g," ").replace(/[.,;:’'`´‘‚“”„"«»()\[\]]/g," ")
-  .replace(/(^|\s)x(?=\s|$)/g," ").replace(/\s+/g," ").trim();
+  .replace(/(^|\s)x(?=\s|$)/g," ")
+  .replace(/\bin sorten\b|\bsorten?\b/g," ")                     // Platzhalter »'Sorte'« / »in Sorten« zählt nicht (Salvia nemorosa 'Sorte' = Salvia nemorosa)
+  .replace(/\s+/g," ").trim();
 /* Wie viel Tippfehler zählt noch als »richtig«?
    Früher waren zwei Zeichen erlaubt – damit ging »Bollensellerie« als
    *Knollensellerie* durch, und die Rechtschreibung war praktisch egal. Jetzt:
@@ -906,6 +915,7 @@ function examFieldList(){                                             // Bogen-R
 function fieldSolution(k,c){                                          // richtige Antwort zum Anzeigen
   if(k==="fam") return famName(c.fam);
   if(k==="de")  return c.de||"";
+  if(k==="a")   return artShown(c.a);                                 // »'Sorte'« → »in Sorten«
   return c[k]||"";
 }
 /* ---------- Deutsche Namen: gültige Schreibweisen ----------
@@ -1397,7 +1407,7 @@ function whatsappChallenge(url, msg){
 }
 function copyChallengeLink(){
   const url = challengeURL();
-  const done = ()=>toast("Link kopiert – jetzt an Kollegen schicken");
+  const done = ()=>toast("Link kopiert – jetzt verschicken");
   if(navigator.clipboard && navigator.clipboard.writeText)
     navigator.clipboard.writeText(url).then(done, ()=>fallbackCopy(url,done));
   else fallbackCopy(url,done);
@@ -1410,7 +1420,7 @@ function fallbackCopy(text, done){
 function shareBlockHTML(primaryLabel){
   const name = esc(duelName());
   return `<div class="shareblock" id="shareBlock">
-    <p class="share-h">Fordere Azubi-Kollegen heraus</p>
+    <p class="share-h">Fordere jemanden heraus oder gib einfach mit deinem Wissen an</p>
     <p class="share-sub">Verschick genau diese Lektion – gleiche Karten, gleiche Fragen. Wer den Link öffnet, versucht deine Trefferquote zu schlagen (bei Gleichstand zählt die Denkzeit) und kann dir sein Ergebnis zurückschicken.</p>
     <input id="duelName" class="duel-name" type="text" maxlength="40" placeholder="Dein Name (optional)" value="${name}" aria-label="Dein Name für die Herausforderung">
     <div class="share-btns">
@@ -1932,8 +1942,8 @@ function renderList(){
     const sub = showFam
       ? `${c.de?esc(c.de):""}${c.de&&c.fam?" · ":""}${c.fam?`<span class="sp-fam">${esc(c.fam)}</span>`:""}`
       : (c.de?esc(c.de):"");
-    return `<li class="sprow" data-idx="${idx}" tabindex="0" role="button" aria-label="${esc(norm(c.g+" "+c.a))} – Infos öffnen">
-      <div class="sp-main"><span class="sp-bot">${esc(norm(c.g+" "+c.a))}</span>${c.zp?'<span class="sp-zp" title="prüfungsrelevant (ZP)">ZP</span>':""}<span class="sp-go">ℹ</span></div>
+    return `<li class="sprow" data-idx="${idx}" tabindex="0" role="button" aria-label="${esc(botName(c))} – Infos öffnen">
+      <div class="sp-main"><span class="sp-bot">${esc(botName(c))}</span>${c.zp?'<span class="sp-zp" title="prüfungsrelevant (ZP)">ZP</span>':""}<span class="sp-go">ℹ</span></div>
       ${sub?`<div class="sp-sub">${sub}</div>`:""}
     </li>`; };
   let html=`<div class="listtop">${p.length} ${p.length===1?"Art":"Arten"}${term?(" · Treffer für »"+esc(raw)+"«"):""} · sortiert nach ${SORT_LABEL[listSort]} · zum Nachschlagen antippen</div>`;
@@ -2055,7 +2065,7 @@ function buildPrintList(){
   const rowFor = c => { n++;
     const cls = wantEty ? ` class="pmain${n%2===0?" pz":""}"` : "";
     let tr = `<tr${cls}><td class="pnum">${n}</td>`+
-      cols.map(k=>`<td class="${k[0]==="g"||k[0]==="a"?"bot":""}">${esc(c[k[0]]||"")}</td>`).join("")+
+      cols.map(k=>`<td class="${k[0]==="g"||k[0]==="a"?"bot":""}">${esc(k[0]==="a" ? artShown(c.a) : (c[k[0]]||""))}</td>`).join("")+
       (showZP?`<td class="pzp">${c.zp?'<span class="zpdot"></span>':""}</td>`:"")+
       (showChk?`<td class="pchk"><span class="box"></span></td>`:"")+`</tr>`;
     if(wantEty){                                                  // Merkzeile aus der Namensherleitung (offline, kuratiert)
@@ -3569,8 +3579,12 @@ function pickCommons(d, card){                        // bester Treffer der Comm
   const best = ok[0];
   // Die übrigen geprüften Treffer sind weitere Ansichten DERSELBEN Art – sie kosten
   // keinen zusätzlichen Abruf und werden zur Galerie in der Großansicht (max. 6).
+  const take = ok.slice(0,6);
   return Object.assign({ thumb: best.thumb, file: best.file, title: norm(card.g+" "+card.a),
-           url: best.url, src:"cm", gal: ok.slice(0,6).map(o=>o.thumb) }, best.credit||{});   // + artist/license → Bildnachweis ohne zweiten Abruf
+           url: best.url, src:"cm", gal: take.map(o=>o.thumb),
+           top: take.filter(o=>o.sc===best.sc).length,                 // so viele Ansichten sind gleich gut (Platzhalter-Arten wechseln darunter)
+           galInfo: take.map(o=>Object.assign({ file:o.file, url:o.url }, o.credit||{})) },   // Datei + Nachweis je Ansicht
+         best.credit||{});   // + artist/license → Bildnachweis ohne zweiten Abruf
 }
 async function wikiPhoto(card){                        // → {thumb,title,file,url,src,artist?,license?,tmp?} | null
   let answered = false, fehler = 0;
@@ -3658,6 +3672,18 @@ function photoGalList(p){
   const urls = (p && p.gal && p.gal.length) ? p.gal : (p && p.thumb ? [p.thumb] : []);
   return urls.map((u,i)=>({ src:u, label:`Bild ${i+1} der gesuchten Pflanze` }));
 }
+/* Platzhalter-Arten (»'Sorte'«, »Hybriden«): nicht immer dasselbe Foto, sondern eine der
+   gleich gut bewerteten Ansichten – so sieht man die Art in verschiedenen Gartensorten
+   (Blütenfarbe, Wuchs) und lernt, sie trotzdem zu erkennen. Die Galerie beginnt mit der
+   gezeigten Ansicht, Datei und Bildnachweis gehören zu ihr. */
+function photoVariant(p){
+  const n = Math.min(p.top||1, (p.gal||[]).length), i = n>1 ? Math.floor(Math.random()*n) : 0;
+  if(!i) return p;
+  const rot = a => a.slice(i).concat(a.slice(0,i));
+  const info = (p.galInfo && p.galInfo[i]) || {};
+  return Object.assign({}, p, { thumb: p.gal[i], gal: rot(p.gal), galInfo: p.galInfo ? rot(p.galInfo) : p.galInfo,
+    file: info.file || p.file, url: info.url || p.url, artist: info.artist || "", license: info.license || "" });
+}
 function photoGalLoader(p){
   if(!p || p.src!=="wp" || !p.title) return null;
   return ()=>wikiGallery(p.title, true).then(l=>l.map(it=>({ src:it.src, label:"Weiteres Bild der gesuchten Pflanze" })));
@@ -3738,6 +3764,7 @@ async function renderPhoto(){
     return;
   }
   photoMisses = 0; sess.photoDefer = 0;
+  if(cultivarKind(c.a)==="placeholder" && p.gal && p.gal.length>1 && (p.top||0)>1) p = photoVariant(p);
   const gal = photoGalList(p), viele = gal.length>1;
   $("#stage").querySelector(".photobox").innerHTML =
     `<div class="ph-wrap"><img class="ph-img" id="phImg" src="${esc(p.thumb)}" alt="Bild der gesuchten Pflanze">`+
@@ -3936,6 +3963,52 @@ function learnStateHTML(card){
       ${bilanz?`<span class="ls-b">${esc(bilanz)}</span>`:""}
     </div>`;
 }
+/* ---------- Platzhalter »'Sorte'« / »Hybriden« in der Info-Karte ----------
+   Die GaLaBau-Listen schreiben bei 25 Arten »'Sorte'« (die Fachwerker-Liste »Weigela
+   Cultivars«, Zierpflanzenbau »Fuchsia Hybriden«): gemeint ist die Art in irgendeiner
+   Gartensorte – in der Prüfung steht eine beliebige Sorte vor dir, bewertet wird die Art.
+   Die Karte erklärt das und nennt typische Handelssorten zum Wiedererkennen. Die
+   Beispiele sind kuratiert/erzeugt und ohne Gewähr – Sortennamen fragt die Prüfung nicht. */
+const SORTEN_BEISPIELE = {
+  "Achillea filipendulina":      ["Cloth of Gold", "Parker's Variety", "Altgold", "Coronation Gold"],
+  "Aster dumosus":               ["Kristina", "Prof. Anton Kippenberg", "Herbstgruß vom Bresserhof", "Lady in Blue"],
+  "Astilbe arendsii":            ["Fanal", "Brautschleier", "Amethyst", "Weiße Gloria", "Cattleya"],
+  "Chrysanthemum grandiflorum":  ["Anastasia", "Hebe", "Mei-kyo", "Nebelrose", "Kleiner Bernstein"],
+  "Coreopsis verticillata":      ["Moonbeam", "Zagreb", "Grandiflora"],
+  "Gypsophila repens":           ["Rosea", "Alba", "Rosa Schönheit", "Letchworth Rose"],
+  "Heliopsis helianthoides":     ["Sommersonne", "Spitzentänzerin", "Goldgefieder", "Venus"],
+  "Heuchera brizoides":          ["Pluie de Feu", "Schneewittchen", "Leuchtkäfer", "Weserlachs"],
+  "Juniperus pfitzeriana":       ["Pfitzeriana Aurea", "Mint Julep", "Old Gold", "Pfitzeriana Compacta"],
+  "Leucanthemum superbum":       ["Alaska", "Becky", "Wirral Supreme", "Gruppenstolz", "Snow Lady"],
+  "Malus":                       ["Evereste", "Red Sentinel", "Golden Hornet", "Rudolph", "John Downie", "Professor Sprenger"],
+  "Paeonia lactiflora":          ["Sarah Bernhardt", "Duchesse de Nemours", "Festiva Maxima", "Bowl of Beauty", "Karl Rosenfield"],
+  "Paeonia officinalis":         ["Rubra Plena", "Rosea Plena", "Alba Plena"],
+  "Papaver orientale":           ["Beauty of Livermere", "Perry's White", "Patty's Plum", "Türkenlouis", "Princess Victoria Louise"],
+  "Phlox paniculata":            ["Bright Eyes", "Orange Perfection", "Düsterlohe", "Pax", "Starfire", "Blue Paradise"],
+  "Phlox subulata":              ["Emerald Cushion Blue", "Candy Stripe", "McDaniel's Cushion", "Scarlet Flame", "White Delight"],
+  "Primula denticulata":         ["Alba", "Rubin", "Lilac", "Cashmeriana"],
+  "Prunus":                      ["Kanzan", "Accolade", "Amanogawa", "Shirotae", "Autumnalis", "Royal Burgundy"],
+  "Rhododendron forrestii":      ["Scarlet Wonder", "Baden-Baden", "Elisabeth Hobbie", "Bad Eilsen"],
+  "Salvia nemorosa":             ["Caradonna", "Ostfriesland", "Mainacht", "Schneehügel", "Blauhügel"],
+  "Saxifraga arendsii":          ["Peter Pan", "Purpurteppich", "Schneeteppich", "Blütenteppich", "Pixie"],
+  "Spiraea japonica":            ["Little Princess", "Goldflame", "Anthony Waterer", "Albiflora", "Shirobana"],
+  "Weigela":                     ["Bristol Ruby", "Eva Rathke", "Red Prince", "Nana Variegata", "Candida"],
+};
+function sortenInfoHTML(card){
+  if(cultivarKind(card.a)!=="placeholder") return "";
+  const epi = binomEpithet(card.a);
+  const taxon = (epi && !GRP_RE.test(epi)) ? norm(card.g+" "+epi) : card.g;   // »Fuchsia Hybriden« → Gattung
+  const was = /sorte/i.test(card.a) ? "'Sorte'" : /cultivar/i.test(card.a) ? "Cultivars" : /hybrid/i.test(card.a) ? "Hybriden" : "diese Gruppenangabe";
+  const bsp = SORTEN_BEISPIELE[taxon] || [];
+  return `<div class="sorten">
+    <h4>${ico("info","sorten-ic")} Was heißt »${esc(was)}«?</h4>
+    <p>Die Prüfungsliste nennt hier <b>keine bestimmte Sorte</b>: In der Prüfung steht eine beliebige
+      Gartensorte vor dir – bewertet wird <i>${esc(taxon)}</i>. Das Lern-Tool zeigt den Platzhalter
+      deshalb als »in Sorten«; beim Eingeben zählt <i>${esc(taxon)}</i> als vollständig richtig.</p>
+    ${bsp.length ? `<p class="sorten-bsp"><b>Typische Gartensorten</b> zum Wiedererkennen: ${bsp.map(s=>"'"+esc(s)+"'").join(", ")}</p>` : ""}
+    <div class="sorten-note">Sortenbeispiele automatisch zusammengestellt – ohne Gewähr; Sortennamen fragt die Prüfung nicht ab.</div>
+  </div>`;
+}
 function openInfo(card){
   if(!card) return;
   closeInfo();
@@ -3955,12 +4028,13 @@ function openInfo(card){
   scrim.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Pflanzen-Info">
      <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
      <div class="modal-head">
-       <div class="mh-bot">${esc(norm(card.g+" "+card.a))}</div>
+       <div class="mh-bot">${esc(botName(card))}</div>
        ${card.de?`<div class="mh-de">${esc(card.de)}</div>`:""}
        ${fam?`<div class="mh-fam">${esc(fam)}</div>`:""}
        <div class="mh-src" title="Gattung, Art, Familie, deutscher Name und Synonyme stehen unverändert so in der amtlichen Prüfungsliste. Namensherkunft und Thema sind automatisch erzeugt (teils mit KI), die Online-Infos stammen von Wikipedia.">${ico("check")}Name aus der amtlichen Prüfungsliste</div>
      </div>
      ${etyHTML}
+     ${sortenInfoHTML(card)}
      <div class="srcblock">
        <div class="srclabel">Nachschlagen · öffnet neuen Tab</div>
        <div class="srcgrid">${links}</div>
@@ -4073,7 +4147,7 @@ function openHerbarium(){
     const liste = zeigOffen ? e.offen.slice(0,6).map(c=>{
       const kein=photoless(c.key);
       return `<li${kein?` class="no-photo" title="Für diese Art gibt es kein brauchbares Foto – im Bilder-Modus kommt sie als Quizfrage"`:""}>`+
-        `${esc(deMain(c)||norm(c.g+" "+c.a))}${kein?` <span class="np-tag">ohne Foto</span>`:""}</li>`;
+        `${esc(deMain(c)||botName(c))}${kein?` <span class="np-tag">ohne Foto</span>`:""}</li>`;
     }).join("") : "";
     return `<div class="herbcard${fertig?" done":""}">
        <div class="hc-art">${HERB_ART[i%HERB_ART.length]}</div>
@@ -4452,6 +4526,9 @@ window.clean=clean;
 window.checkTyped=checkTyped;
 window.wikiGallery=wikiGallery;
 window.photoFor=photoFor;
+window.artShown=artShown;             // für Tests: Platzhalter »'Sorte'« → »in Sorten«, Bildvielfalt, Info-Karte
+window.photoVariant=photoVariant;
+window.sortenInfoHTML=sortenInfoHTML;
 window.infraEpithet=infraEpithet;
 window.artLevelOk=artLevelOk;
 window.pickCommons=pickCommons;

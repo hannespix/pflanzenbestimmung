@@ -603,6 +603,13 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .etym-list li{font-family:var(--serif); font-size:14.5px; color:var(--ink); line-height:1.35}
 .etym-list li i{color:var(--green-deep)}
 .etym-note{padding:2px 15px 11px; font-size:11px; color:var(--ink-soft); font-style:italic}
+/* Platzhalter »'Sorte'« in der Info-Karte: Erklärung + Beispiel-Sorten */
+.sorten{margin:0 0 14px; padding:9px 13px 8px; border:1px solid var(--rule); border-left:3px solid var(--gold); border-radius:10px; background:var(--surface-2); font-size:13px; line-height:1.5; color:var(--ink)}
+.sorten h4{margin:0 0 4px; font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); display:flex; align-items:center; gap:5px}
+.sorten .sorten-ic{width:14px; height:14px; flex:none}
+.sorten p{margin:4px 0}
+.sorten-bsp{font-family:var(--serif); font-size:14px}
+.sorten-note{margin-top:4px; font-size:11px; color:var(--ink-soft); font-style:italic}
 .srclabel{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); margin-bottom:8px}
 .srcgrid{display:flex; flex-wrap:wrap; gap:8px}
 .srcgrid a{display:inline-flex; align-items:center; gap:6px; text-decoration:none; border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); border-radius:5px; padding:7px 11px; font-size:13px; font-weight:500}
@@ -1258,8 +1265,9 @@ body.stagefull #stage>.sessionbar{
           allein die <i>Schreibweise</i> – das Hybrid-Zeichen, Abstände, die Anführungszeichen um
           Sortennamen (einheitlich 'Nigra') und die Aufteilung des botanischen Namens in Gattung und Art. In der Anzeige schreibt das Lern-Tool zudem
           Abkürzungen aus (»Gew.« → »Gewöhnlicher«) und berichtigt offensichtliche Tippfehler in
-          Familiennamen (»Malvacea« → »Malvaceae«); beim Eingeben gilt die Form der Liste weiterhin
-          als richtig.</div>
+          Familiennamen (»Malvacea« → »Malvaceae«) und zeigt den Platzhalter »'Sorte'« der GaLaBau-Listen
+          als »in Sorten« (die Info-Karte erklärt ihn und nennt Beispiel-Sorten – erzeugt, ohne Gewähr);
+          beim Eingeben gilt die Form der Liste weiterhin als richtig.</div>
       </div>
       <div class="ln-row ln-gen">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg>
@@ -1438,7 +1446,7 @@ body.stagefull #stage>.sessionbar{
         Oben bleibt die Fortschrittsleiste mit dem Knopf <b>beenden</b>; darüber (oder am Ende der Sitzung)
         geht es zurück zur Übersicht.</li>
       <li><b>Lernduell:</b> Nach einer Quiz-, Tipp- oder Bilder-Sitzung kannst du dein Ergebnis <b>teilen</b>
-        und Kollegen <b>herausfordern</b> – per WhatsApp/Teilen-Knopf oder Link. Der Link enthält genau
+        und jemanden <b>herausfordern</b> – per WhatsApp/Teilen-Knopf oder Link. Der Link enthält genau
         dieselben Karten und Fragen sowie deine Trefferquote und deine Denkzeit; wer ihn öffnet, versucht
         beides zu schlagen und kann dir sein Ergebnis zurückschicken. Bei <b>gleicher Trefferquote
         entscheidet die Zeit</b>. Ergebnis und Zeit stehen verschlüsselt im Link – mal eben eine bessere
