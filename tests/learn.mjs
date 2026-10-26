@@ -1560,6 +1560,69 @@ async function main() {
   assert(vielfalt.quizC && /UC/.test(vielfalt.credit),
     "Bilder-Quiz: Platzhalter-Art zeigt die gedrehte Ansicht, der Bildnachweis gehört zu ihr: " + JSON.stringify(vielfalt));
 
+  // Info-Karte: Für eine Sorte findet die Wikipedia-Kette nur den Artikel der Art
+  // (»Seidiger Hartriegel« für 'Flaviramea'). Der Text passt, das Artikelbild zeigte
+  // bisher unkommentiert die rotholzige Art. Jetzt: Kennzeichnung, bei beschreibenden
+  // Sorten das Sortenfoto aus der Quiz-Suche (oder bewusst kein Bild), bei
+  // Phantasienamen das Artbild mit Hinweis; Art, Platzhalter und passende Unterart ohne Hinweis.
+  const sortenInfo = await page.evaluate(async () => {
+    const px = (t) => "data:image/svg+xml," + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><title>" + t + "</title></svg>");
+    const ART = px("art"), SORTE = px("sorte"), SORTE2 = px("sorte2");
+    const wp = (title, extract, thumb) => ({ query: { pages: { "1": { title, extract, thumbnail: { source: thumb } } } } });
+    const missing = { query: { pages: { "-1": { title: "x", missing: "" } } } };
+    let galerieAbrufe = 0;
+    __setJsonp((url) => {
+      if (/generator=images/.test(url)) { galerieAbrufe++; return Promise.resolve({ query: { pages: {} } }); }
+      const t = decodeURIComponent((url.match(/titles=([^&]+)/) || [])[1] || "");
+      if (t === "Cornus sericea") return Promise.resolve(wp("Seidiger Hartriegel", "Der Seidige Hartriegel (Cornus sericea), auch Weißer Hartriegel genannt, ist eine Pflanzenart.", ART));
+      if (t === "Weigela" || t === "Weigelie") return Promise.resolve(wp("Weigelien", "Die Weigelien (Weigela) sind eine Pflanzengattung.", ART));
+      if (t === "Abies koreana") return Promise.resolve(wp("Korea-Tanne", "Die Korea-Tanne (Abies koreana) ist eine Pflanzenart.", ART));
+      if (t === "Salvia nemorosa") return Promise.resolve(wp("Steppen-Salbei", "Der Steppen-Salbei (Salvia nemorosa) ist eine Pflanzenart.", ART));
+      if (/^Steckr/.test(t)) return Promise.resolve(wp("Steckrübe", "Die Steckrübe (Brassica napus subsp. rapifera) ist eine Unterart.", ART));
+      return Promise.resolve(missing);
+    });
+    const laden = async (c) => {
+      wikiCache.delete(c.key); openInfo(c); document.querySelector("#wpLoad").click();
+      for (let i = 0; i < 60 && !document.querySelector("#wpHost .wp-text, #wpHost .wp-note"); i++) await new Promise((r) => setTimeout(r, 25));
+      const h = document.querySelector("#wpHost"), img = h.querySelector("img");
+      const r = { note: (h.querySelector(".wp-taxon") || {}).textContent || "", img: img ? img.getAttribute("src") : null,
+        lb: img ? img.getAttribute("aria-label") : null, src: (h.querySelector(".wp-src") || {}).textContent || "",
+        text: (h.querySelector(".wp-text") || {}).textContent || "" };
+      closeInfo(); return r;
+    };
+    $("#frSelect").value = "garten_und_landschaftsbau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    const flavi = allCards.find((c) => c.g === "Cornus" && /Flaviramea/.test(c.a));
+    const weig = allCards.find((c) => c.g === "Weigela");
+    const abies = allCards.find((c) => c.g === "Abies" && /koreana/.test(c.a));
+    const salvia = allCards.find((c) => c.g === "Salvia" && /nemorosa/.test(c.a));
+    __clearPhotoCache(); photoTried.clear();
+    __setPhotoSource(() => Promise.resolve({ thumb: SORTE, gal: [SORTE, SORTE2], top: 2, src: "cm", file: "Cornus sericea Flaviramea 0zz.jpg",
+      url: "https://commons.wikimedia.org/wiki/File:Cornus_sericea_Flaviramea_0zz.jpg", artist: "David J. Stang", license: "CC BY-SA 4.0", title: "T" }));
+    const mitFoto = await laden(flavi); const galerieNachFoto = galerieAbrufe;
+    __clearPhotoCache(); photoTried.clear(); __setPhotoSource(() => Promise.resolve(null));
+    const ohneFoto = await laden(flavi);
+    __setPhotoSource(null);
+    const phantasie = await laden(weig);
+    const art = await laden(abies);
+    const platz = await laden(salvia);
+    $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    const steck = allCards.find((c) => /rapifera/.test(c.a));
+    const unterart = steck ? await laden(steck) : { note: "", img: ART };
+    __setJsonp(window.__offlineJsonp); __clearPhotoCache(); photoTried.clear();
+    return { mitFoto, galerieNachFoto, ohneFoto, phantasie, art, platz, unterart, ART, SORTE };
+  });
+  assert(/Artikel zur Art Cornus sericea/.test(sortenInfo.mitFoto.note) && /Sorte 'Flaviramea'/.test(sortenInfo.mitFoto.note) &&
+    sortenInfo.mitFoto.img === sortenInfo.SORTE && sortenInfo.mitFoto.lb === "Bilder ansehen" &&
+    /Wikimedia Commons/.test(sortenInfo.mitFoto.src) && /David J\. Stang/.test(sortenInfo.mitFoto.src) &&
+    /Seidige Hartriegel/.test(sortenInfo.mitFoto.text) && sortenInfo.galerieNachFoto === 0,
+    "Info-Karte: beschreibende Sorte → Hinweis »Artikel zur Art«, Sortenfoto statt Artbild (mit Nachweis, Sorten-Galerie, keine Artikel-Galerie): " + JSON.stringify(sortenInfo.mitFoto) + " Galerieabrufe=" + sortenInfo.galerieNachFoto);
+  assert(sortenInfo.ohneFoto.img === null && /weggelassen/.test(sortenInfo.ohneFoto.note) && /Sorte 'Flaviramea'/.test(sortenInfo.ohneFoto.note),
+    "Info-Karte: ohne Sortenfoto bleibt das Artbild weg, der Hinweis sagt es: " + JSON.stringify(sortenInfo.ohneFoto));
+  assert(sortenInfo.phantasie.img === sortenInfo.ART && /Artikel zur Gattung Weigela/.test(sortenInfo.phantasie.note) && /nicht die Sorte 'Bristol Ruby'/.test(sortenInfo.phantasie.note),
+    "Info-Karte: Phantasiename behält das Artikelbild, aber mit Hinweis: " + JSON.stringify(sortenInfo.phantasie));
+  assert(sortenInfo.art.note === "" && sortenInfo.art.img === sortenInfo.ART && sortenInfo.platz.note === "" && sortenInfo.unterart.note === "",
+    "Info-Karte: reine Art, Platzhalter 'Sorte' und passende Unterart bekommen keinen Hinweis: " + JSON.stringify({ art: sortenInfo.art, platz: sortenInfo.platz, unterart: sortenInfo.unterart }));
+
   // Bild-Lightbox: das Quiz-Foto ist klick- UND tastaturbedienbar (role=button) und
   // öffnet die Großansicht (größeres Commons-Derivat); Esc schließt, Fokus kehrt zurück.
   const lightbox = await page.evaluate(async () => {

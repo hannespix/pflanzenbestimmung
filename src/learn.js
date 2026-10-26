@@ -3081,7 +3081,7 @@ function jsonpGet(url){
   });
 }
 function wikiJSONP(title){
-  return jsonpGet("https://de.wikipedia.org/w/api.php?action=query&format=json&prop=extracts%7Cpageimages"+
+  return jsonp("https://de.wikipedia.org/w/api.php?action=query&format=json&prop=extracts%7Cpageimages"+
     "&exintro=1&explaintext=1&piprop=thumbnail&pithumbsize=320&redirects=1&titles="+encodeURIComponent(title));
 }
 function wikiFirstPage(d){
@@ -3095,11 +3095,15 @@ function shortenExtract(t){
   return (dot>300 ? cut.slice(0,dot+1) : cut)+" …";
 }
 function renderWiki(host, d){
+  const credit = d.photo ? [d.photo.artist, d.photo.license].filter(Boolean).join(", ") : "";
   host.innerHTML =
-    (d.thumb ? `<img src="${esc(d.thumb)}" alt="${esc(d.title)}" loading="lazy">` : "")+
+    (d.note ? `<div class="wp-taxon">${d.note}</div>` : "")+                       // Sorte/Varietät: Artikel nur zur Art (gekennzeichnet)
+    (d.thumb ? `<img src="${esc(d.thumb)}" alt="${esc(d.photo ? "Bild der Sorte" : d.title)}" loading="lazy">` : "")+
     `<div class="wp-text">${esc(d.extract)}</div>`+
-    `<div class="wp-src">Quelle: <a href="${esc(d.url)}" target="_blank" rel="noopener">Wikipedia – ${esc(d.title)}</a> · Text unter CC BY-SA</div>`;
-  lbWire(host.querySelector("img"), "Vorschaubild vergrößern");
+    `<div class="wp-src">Quelle: <a href="${esc(d.url)}" target="_blank" rel="noopener">Wikipedia – ${esc(d.title)}</a> · Text unter CC BY-SA`+
+    (d.photo ? ` · Bild: <a href="${esc(d.photo.url||"https://commons.wikimedia.org/")}" target="_blank" rel="noopener">Wikimedia Commons</a>${credit ? " ("+esc(credit)+")" : ""}` : "")+
+    `</div>`;
+  lbWire(host.querySelector("img"), d.gallery && d.gallery.length>1 ? "Bilder ansehen" : "Vorschaubild vergrößern", d.gallery && d.gallery.length>1 ? d.gallery : undefined);
 }
 /* Bilder eines Artikels (für die Galerie in der Vollbild-Ansicht). Karten,
    Wappen, Logos und Schadbilder fliegen raus; botanische Tafeln bleiben – beim
@@ -3324,6 +3328,39 @@ function wikiCandidates(card){
   }
   return cands;
 }
+/* ---------- Sorte/Varietät, aber nur der Artikel der Art? ----------
+   Für Sorten gibt es keinen eigenen Wikipedia-Artikel – die Kandidatenkette landet
+   beim Artikel der Art (»Seidiger Hartriegel« für 'Flaviramea'). Der Text passt
+   (dieselbe Art), das Artikelbild zeigt aber die Art in ihrer typischen Form – für
+   eine Sorte mit beschreibendem Namen (gelbes statt rotes Holz) irreführend.
+   Deshalb: deutlich kennzeichnen, und wo das Artbild für diese Karte nicht zulässig
+   ist (artLevelOk – beschreibende Sorte, Varietät mit Geschwistern in der Liste),
+   das Sortenfoto aus derselben Bildsuche wie im Bilder-Quiz zeigen; gibt es keins,
+   lieber gar kein Bild. Phantasienamen ohne Geschwister behalten das Artbild, aber
+   mit Hinweis. Placeholder ('Sorte') und Autonyme sind die Art selbst → nichts. */
+async function taxonNote(card, pg, data){
+  const kind = cultivarKind(card.a); if(kind!=="cv" && kind!=="infra") return;
+  const inf = infraEpithet(card.a), cv = cultivarName(card.a), epi = binomEpithet(card.a);
+  if(kind==="infra" && inf===epi.toLowerCase()) return;                         // Autonym (subsp. kousa) = die Art selbst
+  const sub = (inf || cv).toLowerCase();
+  if(!sub || ((pg.title||"")+" "+(pg.extract||"")).toLowerCase().indexOf(sub) >= 0) return;   // Artikel meint die Sorte/Varietät
+  const rang = epi ? "Art" : "Gattung", taxon = epi ? norm(card.g+" "+epi) : card.g;
+  const m = /\b(?:var|subsp|ssp|convar|f|cv)\.\s*[a-zäöüß-]+/i.exec(norm(card.a));
+  const was = kind==="cv" ? `die Sorte '${esc(cv)}'` : `die ${/subsp|ssp/i.test(m?m[0]:"") ? "Unterart" : "Varietät"} »${esc(m ? m[0].replace(/\s+/g," ") : inf)}«`;
+  const lab = `Artikel zur ${rang} <i>${esc(taxon)}</i>`;
+  if(artLevelOk(card)){ data.note = `${lab} – das Bild zeigt die ${rang}, nicht ${was}.`; return; }
+  let hit = null; try{ hit = await photoFor(card); }catch(e){ hit = null; }     // Sortenfoto aus der Quiz-Suche (Cache oder Netz)
+  if(hit && hit.thumb){
+    data.thumb = hit.thumb;
+    data.photo = { file:hit.file||"", url:hit.url||"", artist:hit.artist||"", license:hit.license||"" };
+    const urls = (hit.gal && hit.gal.length>1) ? hit.gal : [hit.thumb];
+    data.gallery = urls.map((u,i)=>({ src:u, label:`Bild ${i+1} – ${was.replace(/^die /,"")}` }));
+    data.note = `${lab} – der Text gilt der ${rang}; das Bild zeigt ${was}.`;
+  }else{
+    data.thumb = null;
+    data.note = `${lab} – das Artikelbild zeigt die ${rang} und ist hier weggelassen; ein Bild von ${was.replace(/^die /,"der ")} liegt nicht vor.`;
+  }
+}
 async function loadWiki(card, host, btn){
   if(navigator.onLine===false){
     host.innerHTML='<div class="wp-note">Offline – für Online-Infos ist Internet nötig. Die Links oben funktionieren, sobald du online bist.</div>'; return;
@@ -3348,9 +3385,13 @@ async function loadWiki(card, host, btn){
   const data = { title:pg.title, extract:shortenExtract(pg.extract),
     thumb: pg.thumbnail && pg.thumbnail.source,
     url: "https://de.wikipedia.org/wiki/"+encodeURIComponent(pg.title.replace(/ /g,"_")) };
+  await taxonNote(card, pg, data);                      // Sorte/Varietät, aber nur Artikel der Art? → kennzeichnen, ggf. Sortenfoto
   wikiCache.set(card.key, data); renderWiki(host, data); if(btn.parentNode) btn.remove();
   // Weitere Bilder des Artikels nachladen – sie machen die Vollbild-Ansicht zur
-  // kleinen Galerie. Schlägt es fehl, bleibt es beim einen Vorschaubild.
+  // kleinen Galerie. Schlägt es fehl, bleibt es beim einen Vorschaubild. Zeigt die
+  // Karte das Sortenfoto (oder bewusst kein Bild), entfällt die Artikel-Galerie –
+  // sie zeigte die Art.
+  if(data.photo || !data.thumb) return;
   wikiGallery(pg.title).then(list=>{
     if(!list.length) return;
     data.gallery = list; wikiCache.set(card.key, data);

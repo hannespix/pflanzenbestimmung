@@ -678,6 +678,42 @@ async function main() {
     "Info-Modal muss die neutralen Deep-Links (Wikipedia/NaturaDB/iNaturalist) zeigen: " + JSON.stringify(info.links));
   assert(info.hasWpBtn, "Info-Modal muss den opt-in »Online-Infos laden«-Knopf (Wikipedia) haben: " + JSON.stringify(info));
   assert(info.etyPresent, "Info-Modal muss die Namensherleitung (Merkhilfe) enthalten: " + JSON.stringify(info));
+
+  // Online-Infos einer Varietät (Kirschtomate): die Kette findet nur den Artikel der Art
+  // (»Tomate«) – das Bild bleibt (keine Bildsuche im Prüfungswerkzeug), aber die Karte
+  // sagt klar, dass Text und Bild die Art zeigen, nicht die Varietät.
+  const prevProfile = await page.evaluate(() => [document.querySelector("#frSelect").value, document.querySelector("#nivSelect").value]);
+  await page.select("#frSelect", "gemuesebau"); await page.select("#nivSelect", "gaertner");
+  await page.$eval("#nivSelect", (e) => e.dispatchEvent(new Event("change")));
+  await page.evaluate(() => { const q = document.querySelector("#q"); if (q && q.value) { q.value = ""; q.dispatchEvent(new Event("input")); } });
+  await page.waitForFunction("[...document.querySelectorAll('#list .row')].some((r) => /cerasiforme/.test(r.textContent))", { timeout: 10000 });
+  const taxon = await page.evaluate(async () => {
+    const PX = "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==";
+    const wp = (title, extract) => ({ query: { pages: { "1": { title, extract, thumbnail: { source: PX } } } } });
+    window.__setJsonp((url) => {
+      if (/generator=images/.test(url)) return Promise.resolve({ query: { pages: {} } });
+      const t = decodeURIComponent((url.match(/titles=([^&]+)/) || [])[1] || "");
+      if (t === "Solanum lycopersicum" || t === "Tomate") return Promise.resolve(wp("Tomate", "Die Tomate (Solanum lycopersicum) ist eine Pflanzenart."));
+      return Promise.resolve({ query: { pages: { "-1": { title: t, missing: "" } } } });
+    });
+    const row = [...document.querySelectorAll("#list .row")].find((r) => /cerasiforme/.test(r.textContent));
+    const btn = row && [...row.querySelectorAll(".rowacts .iconbtn")].find((b) => /Mehr zur Pflanze/.test(b.title));
+    if (!btn) return { ok: false };
+    btn.click();
+    document.querySelector(".infoscrim #wpLoad").click();
+    for (let i = 0; i < 60 && !document.querySelector(".infoscrim .wphost .wp-text"); i++) await new Promise((r) => setTimeout(r, 25));
+    const h = document.querySelector(".infoscrim .wphost");
+    const res = { ok: true, note: (h.querySelector(".wp-taxon") || {}).textContent || "", img: !!h.querySelector("img"),
+      text: (h.querySelector(".wp-text") || {}).textContent || "" };
+    const x = document.querySelector(".infoscrim .infobox-x"); if (x) x.click();
+    window.__setJsonp(null);
+    return res;
+  });
+  assert(taxon.ok && /Artikel zur Art Solanum lycopersicum/.test(taxon.note) && /Varietät »var\. cerasiforme«/.test(taxon.note) && taxon.img && /Tomate/.test(taxon.text),
+    "Prüfungswerkzeug-Info-Karte: Varietät mit Art-Artikel muss den Hinweis tragen (Bild bleibt): " + JSON.stringify(taxon));
+  await page.select("#frSelect", prevProfile[0]); await page.select("#nivSelect", prevProfile[1]);
+  await page.$eval("#nivSelect", (e) => e.dispatchEvent(new Event("change")));
+  await page.waitForFunction("document.querySelectorAll('#list .row').length>0", { timeout: 10000 });
   assert(info.leakedScrimOpen === 0, "Info-Modal darf kein .scrim-Panel öffnen (Namensraum-Trennung): " + JSON.stringify(info));
   assert(info.closedByX, "Info-Modal schließt nicht über ×: " + JSON.stringify(info));
   assert(info.fromCurrent, "ℹ in der »Aktuellen Prüfung« öffnet die Info-Karte nicht: " + JSON.stringify(info));

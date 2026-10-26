@@ -1028,8 +1028,26 @@ function infoCard(p){
 }
 
 // ---- Namensherleitung (Latein/Griechisch → Deutsch) ----
+/* Sortennamen stehen in Anführungszeichen ('Nigra', 'Bristol Ruby', ('Nana')); alle
+   Zeichen-Varianten werden angenommen (wie im Lern-Tool). */
+const CV_RE = /'([^']*(?:'s [^']*)?)'/;
+function cultivarName(a){
+  a = norm(a||"").replace(/[`´‘’‚“”„"]/g,"'");
+  const m = CV_RE.exec(a); if(m) return norm(m[1]);
+  const i = a.indexOf("'"); if(i < 0) return "";                                 // vergessenes Anführungszeichen (Quellliste)
+  const rest = norm(a.slice(i+1).replace(/[()]/g,"")); if(rest) return rest;
+  const vor = /((?:[A-ZÄÖÜ][\wäöüß-]*\s*)+)$/.exec(a.slice(0,i).trim());
+  return vor ? norm(vor[1]).replace(/^(cultivars?|sorten?)\s+/i,"") : "";
+}
+function stripCultivar(a){                            // botanischer Name ohne Sortenzusatz
+  a = norm(a||"").replace(/[`´‘’‚“”„"]/g,"'");
+  const cv = cultivarName(a); if(!cv) return a;
+  const re = new RegExp("\\(?'?"+cv.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"'?\\)?");
+  return norm(a.replace(re," "));
+}
 function binomEpithet(a){
-  return (norm(a).split(" ").filter(w=> w && !/^([×x]|var\.|subsp\.|ssp\.|f\.|cv\.|convar\.)$/i.test(w))[0]) || "";
+  const s = stripCultivar(a);                          // sonst wäre bei »Weigela 'Bristol Ruby'« »'Bristol« das Epitheton
+  return (s.split(" ").filter(w=> w && !/^([×x]|var\.|subsp\.|ssp\.|f\.|cv\.|convar\.)$/i.test(w))[0]) || "";
 }
 function searchName(c){ return norm(c.g+" "+binomEpithet(c.a)); }
 /* ---------- Botanische Namensherleitung (Merkhilfe, offline & kuratiert) ----------
@@ -1910,8 +1928,9 @@ function jsonpGet(url){
     document.head.appendChild(sc);
   });
 }
+let jsonp = (...a) => jsonpGet(...a);                 // austauschbar: der Smoke-Test gibt Antworten ohne Netz vor
 function wikiJSONP(title){
-  return jsonpGet("https://de.wikipedia.org/w/api.php?action=query&format=json&prop=extracts%7Cpageimages"+
+  return jsonp("https://de.wikipedia.org/w/api.php?action=query&format=json&prop=extracts%7Cpageimages"+
     "&exintro=1&explaintext=1&piprop=thumbnail&pithumbsize=320&redirects=1&titles="+encodeURIComponent(title));
 }
 function wikiFirstPage(d){
@@ -1926,16 +1945,32 @@ function shortenExtract(t){
 }
 function renderWiki(host, d){
   host.innerHTML =
+    (d.note ? `<div class="wp-taxon">${d.note}</div>` : "")+                       // Sorte/Varietät: Artikel nur zur Art (gekennzeichnet)
     (d.thumb ? `<img src="${esc(d.thumb)}" alt="${esc(d.title)}" loading="lazy">` : "")+
     `<div class="wp-text">${esc(d.extract)}</div>`+
     `<div class="wp-src">Quelle: <a href="${esc(d.url)}" target="_blank" rel="noopener">Wikipedia – ${esc(d.title)}</a> · Text unter CC BY-SA</div>`;
   lbWire(host.querySelector("img"), "Vorschaubild vergrößern");
 }
+/* Sorte/Varietät, aber nur der Artikel der Art gefunden (»Seidiger Hartriegel« für
+   'Flaviramea')? Der Text passt, das Artikelbild zeigt die Art in ihrer typischen
+   Form – das sagt die Karte jetzt klar. (Das Lern-Tool zeigt zusätzlich das
+   Sortenfoto; das Prüfungswerkzeug hat keine Bildsuche.) */
+function taxonNote(card, pg, data){
+  const inf = infraEpithet(card.a), cv = cultivarName(card.a), epi = binomEpithet(card.a);
+  if(!inf && (!cv || /^sorten?$/i.test(cv))) return;                            // Art oder Platzhalter 'Sorte'
+  if(inf && inf===epi.toLowerCase()) return;                                     // Autonym = die Art selbst
+  const sub = (inf || cv).toLowerCase();
+  if(!sub || ((pg.title||"")+" "+(pg.extract||"")).toLowerCase().indexOf(sub) >= 0) return;
+  const rang = epi ? "Art" : "Gattung", taxon = epi ? norm(card.g+" "+epi) : card.g;
+  const m = /\b(?:var|subsp|ssp|convar|f|cv)\.\s*[a-zäöüß-]+/i.exec(norm(card.a));
+  const was = !inf ? `die Sorte '${esc(cv)}'` : `die ${/subsp|ssp/i.test(m?m[0]:"") ? "Unterart" : "Varietät"} »${esc(m ? m[0].replace(/\s+/g," ") : inf)}«`;
+  data.note = `Artikel zur ${rang} <i>${esc(taxon)}</i> – das Bild zeigt die ${rang}, nicht ${was}.`;
+}
 /* Bilder eines Artikels für die Galerie in der Vollbild-Ansicht (JSONP, kein fetch).
    Karten/Wappen/Logos fliegen raus; botanische Tafeln bleiben – beim Nachschlagen
    sind sie hilfreich. */
 function wikiGallery(title){
-  return jsonpGet("https://de.wikipedia.org/w/api.php?action=query&format=json&generator=images"+
+  return jsonp("https://de.wikipedia.org/w/api.php?action=query&format=json&generator=images"+
       "&gimlimit=20&redirects=1&prop=imageinfo&iiprop=url%7Cmime&iiurlwidth=1200&titles="+
       encodeURIComponent(title))
     .then(d=>{
@@ -2172,6 +2207,7 @@ async function loadWiki(card, host, btn){
   const data = { title:pg.title, extract:shortenExtract(pg.extract),
     thumb: pg.thumbnail && pg.thumbnail.source,
     url: "https://de.wikipedia.org/wiki/"+encodeURIComponent(pg.title.replace(/ /g,"_")) };
+  taxonNote(card, pg, data);                            // Sorte/Varietät, aber nur Artikel der Art? → kennzeichnen
   wikiCache.set(card.key, data); renderWiki(host, data); if(btn.parentNode) btn.remove();
   wikiGallery(pg.title).then(list=>{                    // weitere Artikelbilder für die Vollbild-Galerie
     if(!list.length) return;
@@ -2646,3 +2682,5 @@ function updateSchema(){
 window.pickExcel=pickExcel;
 window.resetToDefault=resetToDefault;
 window.importJsonData=importJsonData; // für Datei-Import und Smoke-Test
+window.__setJsonp=fn=>{ jsonp = fn || ((...a)=>jsonpGet(...a)); };   // Smoke-Test: Wikipedia-Antworten ohne Netz vorgeben
+window.wikiCache=wikiCache;
