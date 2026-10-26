@@ -1985,6 +1985,35 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       `pickCommons.top/galInfo`, `photoVariant` (Drehung, Datei, Nachweis, 0 = unverändert),
       Quiz zeigt die gedrehte Ansicht samt passendem Nachweis.
 
+- [x] **Info-Karte: Sorte, aber nur der Artikel der Art – gekennzeichnet, mit Sortenfoto**
+      (Screenshot: »Cornus sericea 'Flaviramea' · Gelber Hartriegel« zeigte nach »Online-Infos
+      laden« den Artikel **Seidiger Hartriegel** mit rotholzigem Artbild). Das war nicht das
+      Bilder-Quiz (dort seit #139 korrekt), sondern die **Wikipedia-Vorschau der Info-Karte**:
+      Für Sorten gibt es keinen eigenen Artikel, `wikiCandidates` landet beim Artikel der Art –
+      der Text passt, das Artikelbild zeigt die Art in ihrer typischen Form, ohne Hinweis.
+      **Lern-Tool** (`taxonNote(card, pg, data)` in `loadWiki`, vor dem Cachen): greift bei
+      `cultivarKind()` `cv`/`infra` (kein Autonym, kein Platzhalter), wenn Titel + Extract
+      den Sorten-/Varietätsnamen **nicht** nennen. (1) `artLevelOk(card)` true (Phantasiename
+      ohne Geschwister, Varietät ohne Geschwister): Artikelbild bleibt, Hinweis »Artikel zur
+      Art/Gattung X – das Bild zeigt die Art, nicht die Sorte 'Y'«. (2) sonst: **Sortenfoto
+      aus derselben Bildsuche wie im Quiz** (`photoFor`, Cache oder Netz) ersetzt das
+      Artikelbild; `data.photo` (Datei, URL, Urheber, Lizenz) ergänzt die Quellenzeile
+      (»Bild: Wikimedia Commons (…)«), `data.gallery` = die Sorten-Ansichten (`hit.gal`), die
+      **Artikel-Galerie entfällt** (sie zeigte die Art). Kein Sortenfoto → **kein Bild**,
+      Hinweis sagt es. `renderWiki` rendert `data.note` als `.wp-taxon` (goldener Streifen,
+      CSS in `learn.html`/`template.html`). `wikiJSONP` läuft jetzt über den austauschbaren
+      `jsonp` (Info-Karte testbar ohne Netz). **Prüfungswerkzeug** (`app.js`): gleiche
+      Kennzeichnung (`taxonNote` light, Bild bleibt – keine Bildsuche dort), dazu
+      `cultivarName`/`stripCultivar` portiert (`binomEpithet` nahm bei »Weigela 'Bristol
+      Ruby'« »'Bristol« als Epitheton → Deep-Links suchten »Weigela 'Bristol«) und
+      `window.__setJsonp` + `window.wikiCache` für den Smoke-Test.
+      `tests/learn.mjs`: 'Flaviramea' mit Sortenfoto (Hinweis, Bild = Sortenfoto, Nachweis
+      David J. Stang, Sorten-Galerie »Bilder ansehen«, keine Artikel-Galerie), ohne Sortenfoto
+      (kein Bild, »weggelassen«), 'Bristol Ruby' (Artikelbild + Hinweis »Gattung«), reine Art /
+      Platzhalter 'Sorte' / passende Unterart (Steckrübe) ohne Hinweis. `tests/smoke.mjs`:
+      Kirschtomate → Hinweis »Artikel zur Art Solanum lycopersicum … Varietät »var.
+      cerasiforme««, Bild bleibt.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein
