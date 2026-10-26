@@ -30,6 +30,10 @@ done
 # nachtragen – reproduzierbar, botanisch kuratiert (siehe Skript-Kopf).
 python3 tools/categorize_seeds.py
 
-# Bekannte Lücken der Quelllisten (leere Einzelfelder) reproduzierbar füllen,
-# z. B. die in der Excel fehlende Familie zu Chimonanthus praecox.
+# Bekannte Lücken und Fehler der Quelllisten reproduzierbar berichtigen: leere
+# Einzelfelder füllen (z. B. die in der Excel fehlende Familie zu Chimonanthus
+# praecox) und dokumentierte Übertragungsfehler ersetzen (z. B. »Salvia
+# abrotanoides« in der Zeile des Bauernjasmins -> Philadelphus coronarius).
+# Läuft nach categorize_seeds.py; die Wuchsform einer ersetzten Zeile bestimmt
+# das Skript mit denselben Regeln selbst neu.
 python3 tools/fix_source_gaps.py

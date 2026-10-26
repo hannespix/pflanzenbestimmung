@@ -1,19 +1,28 @@
 #!/usr/bin/env python3
 """
-Bekannte Lücken der Excel-Quelllisten reproduzierbar nachtragen.
+Bekannte Fehler und Lücken der Excel-Quelllisten reproduzierbar berichtigen.
 
 Einige offizielle Prüfungslisten lassen Einzelangaben leer (z. B. fehlt die
 Familie zu *Chimonanthus praecox* im Profil garten_und_landschaftsbau_gaertner
-– so steht es in der Quell-Excel). Solche Korrekturen werden hier zentral
-gepflegt, damit sie einen Neubau der Seeds aus den Original-Excels
+– so steht es in der Quell-Excel) oder enthalten einen offensichtlichen
+Übertragungsfehler (z. B. trägt im selben Profil die Zeile des Bauernjasmins
+den botanischen Namen »Salvia abrotanoides«). Solche Korrekturen werden hier
+zentral gepflegt, damit sie einen Neubau der Seeds aus den Original-Excels
 (tools/rebuild_seeds.sh) überleben – statt sie von Hand in seeds/*.json zu
 setzen, wo der nächste Rebuild sie wieder verwerfen würde.
 
-Grundsätze:
-  * Es werden ausschließlich LEERE Felder gefüllt, nie vorhandene Angaben
-    überschrieben.
-  * Eine Korrektur greift nur, wenn Gattung UND Art der Zielzeile exakt passen.
-  * Der Schritt ist idempotent (ein zweiter Lauf ändert nichts mehr).
+Zwei Arten von Korrekturen:
+
+  CORRECTIONS  – füllt ausschließlich LEERE Felder, nie vorhandene Angaben;
+                 greift nur, wenn Gattung UND Art der Zielzeile exakt passen.
+  REPLACEMENTS – ersetzt Felder einer Zeile, die als Ganzes (alle vier
+                 Textfelder) exakt dem dokumentierten Fehler entspricht; die
+                 Zeile bleibt erhalten (Nummer, ZP-Kennzeichnung, Synonyme),
+                 nur die genannten Felder ändern sich. Die Wuchsform-Kategorie
+                 wird danach wie in tools/categorize_seeds.py neu bestimmt.
+
+Beide Schritte sind idempotent (ein zweiter Lauf ändert nichts mehr) und
+werden auf rechtliches.html#datenquellen offengelegt.
 
 Aufruf:  python3 tools/fix_source_gaps.py            (schreibt seeds/*.json)
          python3 tools/fix_source_gaps.py --check    (nur Report, kein Schreiben)
@@ -25,9 +34,11 @@ import json, pathlib, sys
 
 ROOT = pathlib.Path(__file__).parent.parent
 SEEDS = ROOT / "seeds"
+sys.path.insert(0, str(pathlib.Path(__file__).parent))
+from categorize_seeds import categorize, KEEP  # noqa: E402  (Kategorie der ersetzten Zeile)
 
 # Feld-Indizes der Seed-Zeile: [gattung, art, familie, dt_name, kategorie, zp, syn]
-GATTUNG, ART, FAMILIE, DTNAME = 0, 1, 2, 3
+GATTUNG, ART, FAMILIE, DTNAME, KATEGORIE = 0, 1, 2, 3, 4
 
 # Korrekturen je Profil-ID: Liste von (gattung, art, feld-index, wert).
 # Nur leere Zielfelder werden gefüllt; Quelle/Begründung jeweils als Kommentar.
@@ -39,15 +50,47 @@ CORRECTIONS = {
     ],
 }
 
+# Ersetzungen je Profil-ID: Liste von (fehlerhafte Zeile, neue Werte).
+# Die fehlerhafte Zeile ist das Tupel (gattung, art, familie, dt_name) – es muss
+# als Ganzes passen, damit die Ersetzung niemals eine andere (oder eine künftig
+# berichtigte) Zeile trifft. Die neuen Werte sind ein Dict {feld-index: wert}.
+REPLACEMENTS = {
+    "garten_und_landschaftsbau_gaertner": [
+        # Excel »Pflanzenliste Gärtner/in Garten- und Landschaftsbau«, Zeile 209
+        # (Nr. 207, ZP): »Salvia abrotanoides | Hydrangeaceae/Hortensiengewächse |
+        # Bauernjasmin, Gewöhnlicher Pfeifenstrauch, Falscher Jasmin«.
+        # Familie und deutsche Namen gehören zum Pfeifenstrauch Philadelphus
+        # coronarius – so führt ihn die Fachwerker-Liste derselben Fachrichtung
+        # Wort für Wort (Nr. 50). »Salvia abrotanoides« ist das Synonym der
+        # Blauraute (Perovskia abrotanoides), die eine Zeile darüber (Nr. 206)
+        # steht und dieses Synonym dort bereits trägt – ein Übertragungsfehler.
+        (("Salvia", "abrotanoides", "Hydrangeaceae/Hortensiengewächse",
+          "Bauernjasmin, Gewöhnlicher Pfeifenstrauch, Falscher Jasmin"),
+         {GATTUNG: "Philadelphus", ART: "coronarius"}),
+    ],
+}
 
-def apply(check=False):
+
+def _load(pid):
+    path = SEEDS / f"{pid}.json"
+    if not path.exists():
+        print(f"WARN: {path.name} fehlt – überspringe", file=sys.stderr)
+        return path, None
+    return path, json.loads(path.read_text(encoding="utf-8"))
+
+
+def _save(path, rows):
+    path.write_text(
+        json.dumps(rows, ensure_ascii=False, separators=(",", ":")) + "\n",
+        encoding="utf-8")
+
+
+def apply_corrections(check=False):
     changed = 0
     for pid, corr in CORRECTIONS.items():
-        path = SEEDS / f"{pid}.json"
-        if not path.exists():
-            print(f"WARN: {path.name} fehlt – überspringe", file=sys.stderr)
+        path, rows = _load(pid)
+        if rows is None:
             continue
-        rows = json.loads(path.read_text(encoding="utf-8"))
         touched = 0
         for gattung, art, idx, val in corr:
             for r in rows:
@@ -63,11 +106,48 @@ def apply(check=False):
             else:
                 print(f"WARN: {pid}: {gattung} {art} nicht gefunden", file=sys.stderr)
         if touched and not check:
-            path.write_text(
-                json.dumps(rows, ensure_ascii=False, separators=(",", ":")) + "\n",
-                encoding="utf-8")
+            _save(path, rows)
         changed += touched
-    print(f"{'Offen' if check else 'Nachgetragen'}: {changed}")
+    return changed
+
+
+def apply_replacements(check=False):
+    changed = 0
+    for pid, repl in REPLACEMENTS.items():
+        path, rows = _load(pid)
+        if rows is None:
+            continue
+        touched = 0
+        for wrong, new in repl:
+            key = lambda r: (r[GATTUNG], r[ART], r[FAMILIE], r[DTNAME])
+            fixed = list(wrong)
+            for idx, val in new.items():
+                fixed[idx] = val
+            hits = [r for r in rows if key(r) == wrong]
+            if not hits:
+                if not any(key(r) == tuple(fixed) for r in rows):
+                    print(f"WARN: {pid}: {' '.join(wrong[:2])} weder fehlerhaft noch "
+                          f"berichtigt gefunden", file=sys.stderr)
+                continue  # schon berichtigt – nichts tun
+            for r in hits:
+                was = f"{r[GATTUNG]} {r[ART]}"
+                if not check:
+                    for idx, val in new.items():
+                        r[idx] = val
+                    if pid not in KEEP:  # Wuchsform folgt dem berichtigten Namen
+                        r[KATEGORIE] = categorize(r[GATTUNG], r[ART], r[FAMILIE]) or ""
+                touched += 1
+                tag = "[--check] " if check else ""
+                print(f"{tag}{pid}: {was} -> {fixed[GATTUNG]} {fixed[ART]} ({r[DTNAME]})")
+        if touched and not check:
+            _save(path, rows)
+        changed += touched
+    return changed
+
+
+def apply(check=False):
+    changed = apply_corrections(check) + apply_replacements(check)
+    print(f"{'Offen' if check else 'Berichtigt'}: {changed}")
     return changed
 
 

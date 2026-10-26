@@ -352,7 +352,7 @@ async function main() {
     return { vor, imListe, zu: !n.open, sum, ki: /generativer KI/.test(t), bild: /Bildauswahl/.test(t),
       gewaehr: /keine Gewähr/.test(t) && /Haftung/.test(t), amtlich: /offiziellen Prüfungslisten/.test(t),
       quelle: /unverändert/.test(t) && /amtlichen Prüfungsliste/.test(t),
-      lueckenDok: /Chimonanthus/.test(t) && /Wuchsform/.test(t),
+      lueckenDok: /Chimonanthus/.test(t) && /Philadelphus coronarius/.test(t) && /Wuchsform/.test(t),
       anfz: /Anführungszeichen um/.test(t),
       mehr: !!(n && n.querySelector('a[href="rechtliches.html#datenquellen"]')), t };
   });
@@ -371,10 +371,27 @@ async function main() {
     "Die zugeklappte Zeile muss die Lernhilfen als KI-gestützt ausweisen: " + note.sum);
   assert(note.quelle, "Der Volltext muss »unverändert aus der amtlichen Prüfungsliste« sagen: " + note.t);
   assert(note.lueckenDok,
-    "Der Volltext muss die zwei dokumentierten Ergänzungen offenlegen (Chimonanthus, Wuchsform): " + note.t);
+    "Der Volltext muss die dokumentierten Eingriffe offenlegen (Chimonanthus, Philadelphus, Wuchsform): " + note.t);
   assert(note.anfz,
     "Der Volltext muss die vereinheitlichten Anführungszeichen der Sortennamen als Schreibweise-Anpassung nennen: " + note.t);
   assert(note.mehr, "Der Hinweis muss auf rechtliches.html#datenquellen verweisen");
+
+  // Berichtigte Quellzeile (GaLaBau-Gärtner Nr. 207): »Salvia abrotanoides · Bauernjasmin« muss
+  // als Philadelphus coronarius ausgeliefert werden – reproduzierbar über tools/fix_source_gaps.py
+  // (REPLACEMENTS), nicht von Hand im Seed; die CI baut die Seeds neu und vergleicht byte-genau.
+  const fix = await page.evaluate(() => {
+    const rows = SEEDS.garten_und_landschaftsbau_gaertner;
+    const falsch = rows.filter((r) => r[0] === "Salvia" && r[1] === "abrotanoides");
+    const richtig = rows.filter((r) => r[0] === "Philadelphus" && r[1] === "coronarius");
+    const blauraute = rows.find((r) => r[0] === "Perovskia" && r[1] === "abrotanoides");
+    return { falsch: falsch.length, richtig: richtig.length, zeile: richtig[0] || null, syn: blauraute ? blauraute[6] : "" };
+  });
+  assert(fix.falsch === 0 && fix.richtig === 1,
+    "GaLaBau-Gärtner: »Salvia abrotanoides« (Bauernjasmin) muss als Philadelphus coronarius berichtigt sein: " + JSON.stringify(fix));
+  assert(/Bauernjasmin/.test(fix.zeile[3]) && /^Hydrangeaceae/.test(fix.zeile[2]) && fix.zeile[4] === "Laubgehölze" && fix.zeile[5] === 1,
+    "Die berichtigte Zeile muss deutsche Namen, Familie und ZP behalten und als Laubgehölz gelten: " + JSON.stringify(fix.zeile));
+  assert(/Salvia abrotanoides/.test(fix.syn),
+    "Die Blauraute (Perovskia abrotanoides) muss ihr Synonym Salvia abrotanoides behalten: " + JSON.stringify(fix));
 
   // Kennzeichnung dort, wo Namen nachgeschlagen werden: Liste und Info-Karte
   const quelle = await page.evaluate(() => {

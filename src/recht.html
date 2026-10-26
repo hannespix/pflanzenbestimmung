@@ -273,12 +273,23 @@ input[type=checkbox],input[type=radio]{accent-color:var(--green)}
       Quellcode (<code>tools/xlsx_to_seed.mjs</code>). Ein automatischer Test erzeugt die Daten
       bei jeder Änderung neu aus den Original-Dateien und prüft, dass sie <b>Zeichen für Zeichen</b>
       mit dem übereinstimmen, was hier ausgeliefert wird.</p>
-    <p><b>Drei Eingriffe sind offengelegt</b> und als nachvollziehbare Skripte hinterlegt, nicht
+    <p><b>Vier Eingriffe sind offengelegt</b> und als nachvollziehbare Skripte hinterlegt, nicht
       von Hand im Datenbestand:</p>
     <ul>
       <li>Bei <i>Chimonanthus praecox</i> (Garten- und Landschaftsbau, Gärtner/in) ist die
         Familie in der Quellliste leer; ergänzt wurde <b>Calycanthaceae</b> – so steht sie in
         der Baumschulliste derselben Art (<code>tools/fix_source_gaps.py</code>).</li>
+      <li>In derselben Liste (Garten- und Landschaftsbau, Gärtner/in) trägt die Zeile Nr. 207
+        den botanischen Namen <i>Salvia abrotanoides</i>, dazu die Familie Hydrangeaceae und
+        die deutschen Namen »Bauernjasmin, Gewöhnlicher Pfeifenstrauch, Falscher Jasmin«.
+        Familie und deutsche Namen gehören zum Pfeifenstrauch <b><i>Philadelphus
+        coronarius</i></b> – so führt ihn die Fachwerker-Liste derselben Fachrichtung Wort für
+        Wort; <i>Salvia abrotanoides</i> ist das Synonym der Blauraute (<i>Perovskia
+        abrotanoides</i>), die eine Zeile darüber steht und dieses Synonym dort bereits trägt –
+        ein offensichtlicher Übertragungsfehler. Der botanische Name ist auf <i>Philadelphus
+        coronarius</i> berichtigt; Nummer, ZP-Kennzeichnung und alle übrigen Angaben der Zeile
+        bleiben erhalten (<code>tools/fix_source_gaps.py</code>). Das gilt in beiden
+        Werkzeugen, auch auf Prüfungsbogen und Musterlösung.</li>
       <li>Zehn der 14 Quelllisten enthalten keine Kategorie. Für diese ist die <b>Wuchsform</b>
         zugeordnet (Laubgehölz, Nadelgehölz, Staude, Gras …), ausschließlich zur Gliederung der
         Lernansicht (<code>tools/categorize_seeds.py</code>). Die vier Listen mit eigener

@@ -2014,14 +2014,46 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Kirschtomate → Hinweis »Artikel zur Art Solanum lycopersicum … Varietät »var.
       cerasiforme««, Bild bleibt.
 
+- [x] **Quellfehler berichtigt: »Salvia abrotanoides · Bauernjasmin« → *Philadelphus
+      coronarius*** (GaLaBau-Gärtner, Nr. 207; Rückmeldung mit Screenshot aus dem Bilder-Quiz).
+      Befund in der Quell-Excel (Zeile 209): botanischer Name »Salvia abrotanoides«, Familie
+      »Hydrangeaceae/Hortensiengewächse«, deutsche Namen »Bauernjasmin, Gewöhnlicher
+      Pfeifenstrauch, Falscher Jasmin«, ZP. Familie und deutsche Namen gehören zum
+      Pfeifenstrauch *Philadelphus coronarius* – die GaLaBau-**Fachwerker**-Liste führt genau
+      diese Zeile (Nr. 50) mit dem richtigen Namen; »Salvia abrotanoides« ist das Synonym der
+      Blauraute (*Perovskia abrotanoides*), die eine Zeile darüber steht und es dort schon
+      trägt → Übertragungsfehler. **Umsetzung reproduzierbar**, nicht im Seed:
+      `tools/fix_source_gaps.py` hat neben `CORRECTIONS` (füllt nur leere Felder) jetzt eine
+      `REPLACEMENTS`-Tabelle `{profil: [((gattung, art, familie, dt_name), {feld: wert}), …]}` –
+      die fehlerhafte Zeile muss mit **allen vier Textfeldern** passen (trifft nie eine andere
+      oder eine künftig amtlich berichtigte Zeile), nur die genannten Felder ändern sich
+      (Gattung/Art), Nummer/ZP/Synonyme bleiben, und die **Wuchsform wird mit den Regeln von
+      `categorize_seeds.py` neu bestimmt** (Import `categorize`/`KEEP`; Stauden → Laubgehölze),
+      unabhängig von der Reihenfolge in `rebuild_seeds.sh`. Idempotent (`--check` meldet
+      »Offen«, zweiter Lauf 0; ist weder die falsche noch die berichtigte Zeile da → WARN).
+      Verifiziert: Seeds-Neubau aus `data/` byte-identisch, Diff zu vorher genau **eine
+      Zeile**. **Offenlegung als vierter Eingriff** (»Vier Eingriffe sind offengelegt«) in
+      `.learnnote` (Lern-Tool), Hilfe »Datenherkunft« (Prüfwerkzeug – Bogen und Musterlösung
+      zeigen den berichtigten Namen), `recht.html#datenquellen` (eigener Listenpunkt mit
+      Begründung) und `docs/technik-kurzbeschreibung.md`. Tests: `tests/learn.mjs` prüft den
+      Hinweistext **und die Daten** (kein `Salvia abrotanoides` mehr, genau eine
+      *Philadelphus coronarius*-Zeile mit Bauernjasmin/Hydrangeaceae/ZP/Laubgehölze, Blauraute
+      behält ihr Synonym); `tests/smoke.mjs` die Hilfe. **Nicht geändert:** Die
+      Baumschul-Gärtner-Liste nennt die Art *Prunus cerasifera* »Blutpflaume, Gewöhnliche
+      Kirschpflaume« (Blutpflaume ist die Sorte 'Nigra') – Ungenauigkeit, kein eindeutiger
+      Fehler. Eine Meldung der Fehler an die zuständige Stelle ist Sache des Betreibers.
+
 ## Offene Aufgaben (TODO)
 
-- [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein
-      Vollscan (2114 Arten) fand nur die inzwischen geschlossene Familien-Lücke zu
-      *Chimonanthus praecox*; künftige Lücken über die `CORRECTIONS`-Tabelle in
-      `tools/fix_source_gaps.py` nachtragen (nicht direkt im Seed – siehe Erledigt; die CI
+- [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.
+      **Stand:** ein Vollscan (2114 Arten) fand nur die inzwischen geschlossene
+      Familien-Lücke zu *Chimonanthus praecox*; dazu kam der aus einer Rückmeldung bekannte
+      Übertragungsfehler »Salvia abrotanoides · Bauernjasmin« (berichtigt, siehe Erledigt).
+      Künftige Lücken über die `CORRECTIONS`-Tabelle, nachweislich falsche Felder über die
+      `REPLACEMENTS`-Tabelle in `tools/fix_source_gaps.py` (nicht direkt im Seed – die CI
       lehnt Hand-Edits in `seeds/` ab). Jeder neue Eingriff gehört zusätzlich in die
-      Offenlegung (`.learnnote`, Hilfe »Datenherkunft«, `recht.html#datenquellen`).
+      Offenlegung (`.learnnote`, Hilfe »Datenherkunft«, `recht.html#datenquellen`,
+      `docs/technik-kurzbeschreibung.md`) und in die Tests (`tests/learn.mjs`, `tests/smoke.mjs`).
 - [ ] Bei künftigen Listen-Updates: Excel nach `data/<profil-id>.<ext>` legen,
       `tools/rebuild_seeds.sh` (oder Konverter je Datei) laufen lassen, bauen,
       Offline-Check + Smoke-Test.
