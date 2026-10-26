@@ -1950,6 +1950,41 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       „…“/×/x (`checkTyped`/`fieldOk`/`judgeTyped`/`clean`), Offenlegung im Hinweis;
       `tests/smoke.mjs`: Hilfe nennt die Anführungszeichen.
 
+- [x] **Platzhalter »'Sorte'« verständlich gemacht + Duell-Wortlaut** (Rückfrage mit
+      Screenshot »Salvia nemorosa 'Sorte' – ist das nicht Blödsinn?«). Befund: Es steht
+      wörtlich so in der amtlichen GaLaBau-Gärtner-Liste (Z. 253, ZP) – 25 Einträge in den
+      beiden GaLaBau-Listen, die Fachwerker-Liste schreibt »Weigela Cultivars · Weigelie in
+      Sorten«. Gemeint ist **die Art in irgendeiner Gartensorte**: In der Prüfung steht eine
+      beliebige Sorte vor dem Prüfling, bewertet wird die Art, Sortennamen werden nicht
+      abgefragt. **Einzelne Sorten als eigene Zeilen einzufügen wäre falsch** (Willkür, bricht
+      »Namen unverändert«, Quiz am Foto unentscheidbar) – stattdessen:
+      **(1) Anzeige** (nur Lern-Tool): `artShown(a)` zeigt `'Sorte'` als **»in Sorten«**
+      (»Salvia nemorosa in Sorten«, »Malus in Sorten«); `botName` nutzt es, dazu Rückseite
+      (`answerMeta`), Prüfungsfeld-Lösung (`fieldSolution`), Liste, Druckliste, Info-Karte,
+      Herbarium-Fehlliste und Toast. Das **Prüfungswerkzeug zeigt weiter die Listenform**
+      (Musterlösung = amtlich). Offengelegt als Anzeige-Anpassung (`.learnnote`,
+      `recht.html#datenquellen`).
+      **(2) Eingabe:** `clean()` streicht den Platzhalter (`'sorte'`, `in sorten`) beidseitig –
+      »Salvia nemorosa« zählt jetzt **exakt** (vorher richtig, aber mit »saubere Schreibweise«-
+      Hinweis), »Weigelie« gilt für »Weigelie in Sorten«.
+      **(3) Info-Karte:** Block `.sorten` (`sortenInfoHTML`, nur bei `cultivarKind()==="placeholder"`)
+      erklärt den Platzhalter (für 'Sorte', Cultivars, Hybriden) und nennt **typische
+      Gartensorten** zum Wiedererkennen (`SORTEN_BEISPIELE`, 23 Taxa, kuratiert; »automatisch
+      zusammengestellt – ohne Gewähr; Sortennamen fragt die Prüfung nicht ab«).
+      **(4) Bildvielfalt:** `pickCommons` liefert `top` (Zahl der gleich gut bewerteten
+      Ansichten) und `galInfo` (Datei + Nachweis je Ansicht); für Platzhalter-Arten dreht
+      `photoVariant(p)` in `renderPhoto` zufällig eine der besten Ansichten nach vorn – man sieht
+      die Art in verschiedenen Sorten (Blütenfarbe, Wuchs). Galerie beginnt mit der gezeigten
+      Ansicht, `file`/`artist`/`license` gehören zu ihr (Bildnachweis stimmt).
+      **(5) Wortlaut** (Nutzerwunsch): Teilen-Block »Fordere jemanden heraus oder gib einfach mit
+      deinem Wissen an« statt »Fordere Azubi-Kollegen heraus«; Toast »Link kopiert – jetzt
+      verschicken«; Hilfe »jemanden herausfordern«.
+      `tests/learn.mjs`: Anzeige in Name/Art-Feld/Rückseite/Liste/Druckliste/Info-Kopf,
+      Eingabe exakt mit und ohne Platzhalter, Info-Block mit Erklärung + 'Caradonna' nur bei
+      Platzhaltern, »Weigela Cultivars« (placeholder, »Weigelie« gilt, Block), Duell-Wortlaut;
+      `pickCommons.top/galInfo`, `photoVariant` (Drehung, Datei, Nachweis, 0 = unverändert),
+      Quiz zeigt die gedrehte Ansicht samt passendem Nachweis.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende Einzelangaben aus den Quelllisten prüfen/ergänzen. **Stand:** ein

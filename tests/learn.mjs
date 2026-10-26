@@ -1463,6 +1463,103 @@ async function main() {
   assert(anfz.hybridOhne && anfz.hybridKreuz && anfz.gattungX && anfz.gattungOhne && !anfz.gattungFalsch && anfz.clean === "weigela bristol ruby",
     "Hybrid-Zeichen (× / x) ist beim Vergleich egal, eine falsche Gattung bleibt falsch: " + JSON.stringify(anfz));
 
+  // Platzhalter »'Sorte'« (GaLaBau-Listen: »Salvia nemorosa 'Sorte'« = die Art in irgendeiner
+  // Gartensorte): Anzeige »in Sorten« statt des kryptischen Platzhalters (nur Lern-Tool),
+  // Eingabe ohne den Platzhalter zählt exakt, die Info-Karte erklärt ihn und nennt
+  // Beispiel-Sorten – andere Karten bekommen den Block nicht.
+  const sorte = await page.evaluate(async () => {
+    $("#frSelect").value = "garten_und_landschaftsbau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    document.querySelector('#modeTabs button[data-mode="type"]').click();
+    const d = $("#dir"); if (d) { d.value = "de2bot"; d.dispatchEvent(new Event("change")); }
+    const salvia = allCards.find((c) => c.g === "Salvia" && /nemorosa/.test(c.a));
+    const malus = allCards.find((c) => c.g === "Malus" && /'Sorte'/.test(c.a));
+    const abies = allCards.find((c) => c.g === "Abies");
+    const r = { roh: salvia.a, anzeige: botName(salvia), genus: botName(malus), art: fieldSolution("a", salvia),
+      meta: /in Sorten/.test(answerMeta(salvia)) && !/'Sorte'/.test(answerMeta(salvia)),
+      ohne: judgeTyped("Salvia nemorosa", salvia), inSorten: judgeTyped("Salvia nemorosa in Sorten", salvia),
+      liste: judgeTyped("Salvia nemorosa 'Sorte'", salvia), feld: fieldOk("a", "nemorosa", salvia),
+      falsch: judgeTyped("Salvia pratensis", salvia).lvl };
+    document.querySelector('#modeTabs button[data-mode="list"]').click();
+    const ls = $("#listSearch"); ls.value = "nemorosa"; ls.dispatchEvent(new Event("input"));
+    await new Promise((res) => setTimeout(res, 60));
+    r.listRow = (document.querySelector(".sprow .sp-bot") || {}).textContent || "";
+    buildPrintList(); const pl = document.querySelector("#printList").innerHTML;
+    r.druck = /nemorosa in Sorten/.test(pl) && !/nemorosa 'Sorte'/.test(pl);
+    ls.value = ""; ls.dispatchEvent(new Event("input"));
+    openInfo(salvia);
+    const sb = document.querySelector("#infoScrim .sorten"); r.info = sb ? sb.textContent.replace(/\s+/g, " ") : "";
+    r.infoKopf = (document.querySelector("#infoScrim .mh-bot") || {}).textContent || ""; closeInfo();
+    openInfo(abies); r.infoAbies = !!document.querySelector("#infoScrim .sorten"); closeInfo();
+    // Fachwerker-Liste schreibt »Weigela Cultivars · Weigelie in Sorten«: Erklärung auch dort, deutscher Name ohne Zusatz gilt
+    $("#frSelect").value = "garten_und_landschaftsbau"; $("#nivSelect").value = "fachwerker"; applyProfile();
+    const weig = allCards.find((c) => c.g === "Weigela");
+    r.weigKind = cultivarKind(weig.a); r.weigDe = checkDeName("Weigelie", weig);
+    openInfo(weig); r.weigInfo = (document.querySelector("#infoScrim .sorten") || {}).textContent || ""; closeInfo();
+    r.duell = /Fordere jemanden heraus oder gib einfach mit deinem Wissen an/.test(shareBlockHTML("Teilen")) &&
+      !/Azubi-Kollegen/.test(document.documentElement.innerHTML);
+    $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    return r;
+  });
+  assert(sorte.roh === "nemorosa 'Sorte'" && sorte.anzeige === "Salvia nemorosa in Sorten" && sorte.genus === "Malus in Sorten" &&
+    sorte.art === "nemorosa in Sorten" && sorte.meta,
+    "Platzhalter »'Sorte'« muss als »in Sorten« angezeigt werden (Name, Art-Feld, Rückseite): " + JSON.stringify(sorte));
+  assert(sorte.ohne.lvl === "ok" && sorte.ohne.exact && sorte.inSorten.lvl === "ok" && sorte.inSorten.exact &&
+    sorte.liste.lvl === "ok" && sorte.feld && sorte.falsch !== "ok",
+    "Eingabe ohne/mit Platzhalter muss exakt zählen, eine andere Art nicht: " + JSON.stringify(sorte));
+  assert(/in Sorten/.test(sorte.listRow) && !/'Sorte'/.test(sorte.listRow) && sorte.druck,
+    "Liste und Druckliste müssen »in Sorten« zeigen: " + JSON.stringify(sorte));
+  assert(/keine bestimmte Sorte/.test(sorte.info) && /'Caradonna'/.test(sorte.info) && /ohne Gewähr/.test(sorte.info) &&
+    /in Sorten/.test(sorte.infoKopf) && !sorte.infoAbies,
+    "Info-Karte muss den Platzhalter erklären und Beispiel-Sorten nennen – nur bei Platzhalter-Arten: " + JSON.stringify(sorte));
+  assert(sorte.weigKind === "placeholder" && sorte.weigDe && /Cultivars/.test(sorte.weigInfo) && /'Bristol Ruby'/.test(sorte.weigInfo),
+    "»Weigela Cultivars«: Platzhalter erkannt, »Weigelie« gilt, Info-Karte erklärt: " + JSON.stringify(sorte));
+  assert(sorte.duell, "Duell-Wortlaut: »Fordere jemanden heraus oder gib einfach mit deinem Wissen an«, kein »Azubi-Kollegen«");
+
+  // Bildvielfalt: Platzhalter-Arten zeigen nicht immer dasselbe Foto, sondern eine der gleich
+  // gut bewerteten Ansichten; Galerie beginnt mit der gezeigten, Datei + Nachweis gehören dazu.
+  const vielfalt = await page.evaluate(async () => {
+    $("#frSelect").value = "garten_und_landschaftsbau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    const salvia = allCards.find((c) => c.g === "Salvia" && /nemorosa/.test(c.a));
+    const cmP = (i, file) => ({ index: i, title: "File:" + file, imageinfo: [{ thumburl: "https://x/" + file, mime: "image/jpeg",
+      descriptionurl: "https://commons/" + file, extmetadata: { Artist: { value: "U" + i }, LicenseShortName: { value: "CC0" } } }] });
+    const ans = { query: { pages: { p1: cmP(1, "Salvia nemorosa Caradonna 1.jpg"), p2: cmP(2, "Salvia nemorosa Ostfriesland 2.jpg"),
+      p3: cmP(3, "Salvia nemorosa Mainacht 3.jpg"), p4: cmP(4, "Hortus 4.jpg") } } };
+    const p = pickCommons(ans, salvia);
+    const r0 = Math.random;
+    Math.random = () => 0.7; const v = photoVariant(p);           // dritte der drei gleich guten Ansichten
+    Math.random = () => 0;   const v0 = photoVariant(p); Math.random = r0;
+    const r = { top: p.top, galInfo: (p.galInfo || []).map((g) => g.file), vThumb: v.thumb, vFile: v.file, vArtist: v.artist,
+      vGal0: v.gal[0], vLen: v.gal.length, same: v0 === p, pUnveraendert: p.thumb === "https://x/Salvia nemorosa Caradonna 1.jpg" };
+    const px = (t) => "data:image/svg+xml," + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><title>" + t + "</title></svg>");
+    const A = px("A"), B = px("B"), C = px("C");
+    __clearPhotoCache(); photoTried.clear();
+    __setPhotoSource(() => Promise.resolve({ thumb: A, gal: [A, B, C], top: 3, src: "cm", file: "A.jpg", artist: "UA", title: "T", url: "https://x/y",
+      galInfo: [{ file: "A.jpg", artist: "UA" }, { file: "B.jpg", artist: "UB" }, { file: "C.jpg", artist: "UC" }] }));
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();
+    const pa = $("#phAnswer"); pa.value = "mc"; pa.dispatchEvent(new Event("change"));
+    $("#sessLen").value = "4"; startSession();
+    await new Promise((res) => setTimeout(res, 90));
+    current = salvia; queue[qi] = salvia;                             // Platzhalter-Art erzwingen
+    Math.random = () => 0.7; await renderPhoto(); Math.random = r0;
+    const img = document.querySelector("#phImg");
+    r.quizC = !!img && img.getAttribute("src") === C;
+    const correct = answerText(current).toLowerCase();
+    const btn = [...document.querySelectorAll("#opts .opt")].find((b) => b.querySelector("span:last-child").textContent.toLowerCase() === correct);
+    if (btn) btn.click(); await new Promise((res) => setTimeout(res, 30));
+    r.credit = (document.querySelector("#phSrc") || {}).textContent || "";
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    __setPhotoSource(null); __clearPhotoCache(); photoTried.clear();
+    $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    return r;
+  });
+  assert(vielfalt.top === 3 && vielfalt.galInfo.length === 4 && vielfalt.galInfo[0] === "Salvia nemorosa Caradonna 1.jpg" && vielfalt.pUnveraendert,
+    "pickCommons muss die Zahl der gleich guten Ansichten (top) und Datei/Nachweis je Ansicht liefern: " + JSON.stringify(vielfalt));
+  assert(vielfalt.vThumb === "https://x/Salvia nemorosa Mainacht 3.jpg" && vielfalt.vFile === "Salvia nemorosa Mainacht 3.jpg" &&
+    vielfalt.vArtist === "U3" && vielfalt.vGal0 === vielfalt.vThumb && vielfalt.vLen === 4 && vielfalt.same,
+    "photoVariant muss eine der besten Ansichten nach vorn drehen (Galerie, Datei, Nachweis) und bei 0 unverändert lassen: " + JSON.stringify(vielfalt));
+  assert(vielfalt.quizC && /UC/.test(vielfalt.credit),
+    "Bilder-Quiz: Platzhalter-Art zeigt die gedrehte Ansicht, der Bildnachweis gehört zu ihr: " + JSON.stringify(vielfalt));
+
   // Bild-Lightbox: das Quiz-Foto ist klick- UND tastaturbedienbar (role=button) und
   // öffnet die Großansicht (größeres Commons-Derivat); Esc schließt, Fokus kehrt zurück.
   const lightbox = await page.evaluate(async () => {
