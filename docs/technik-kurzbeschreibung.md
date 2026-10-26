@@ -113,9 +113,12 @@ Veröffentlichung ab. Eine Nachfolge beginnt also nicht bei null.
 Familie, deutscher Name, Synonyme, ZP-Kennzeichnung und – soweit vorhanden – Kategorie werden aus
 den Excel-Dateien übernommen. Angepasst wird nur die Form: das Hybrid-Zeichen, Abstände, die
 Anführungszeichen um Sortennamen (einheitlich 'Nigra') und die Aufteilung des botanischen Namens in
-Gattung und Art. Drei Eingriffe sind offengelegt und als
+Gattung und Art. Vier Eingriffe sind offengelegt und als
 Skripte nachvollziehbar: eine in der Quellliste leere Familie wurde ergänzt (*Chimonanthus
-praecox*: Calycanthaceae), zehn Listen ohne eigene Kategorie erhalten eine Wuchsform-Zuordnung,
+praecox*: Calycanthaceae), ein offensichtlicher Übertragungsfehler im botanischen Namen wurde
+berichtigt (GaLaBau-Gärtner Nr. 207: »Salvia abrotanoides« mit Familie Hydrangeaceae und
+deutschem Namen Bauernjasmin → *Philadelphus coronarius*, wie ihn die Fachwerker-Liste derselben
+Fachrichtung führt), zehn Listen ohne eigene Kategorie erhalten eine Wuchsform-Zuordnung,
 und eine Kategorie, die in vier Listen unterschiedlich heißt, trägt einheitlich den Namen
 »Wild- & Beikräuter« (welche Arten dazugehören, bleibt unverändert).
 
