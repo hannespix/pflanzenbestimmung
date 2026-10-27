@@ -3213,9 +3213,17 @@ function lbBig(src, w){                                  // w: Originalbreite, f
   if(!want || want<=cur) return s;                       // nichts Größeres verfügbar → wie geliefert
   return s.replace(/\/(\d{2,4})px-/, "/"+want+"px-");
 }
-function lbChain(it){                                    // Ausweich-Kette: große Stufe → gelieferte Vorschau
-  const out = [];
-  [lbBig(it.src, it.w), it.src].forEach(u => { if(u && out.indexOf(u)<0) out.push(u); });
+/* Wikimedia zieht die Vorschaubilder von upload.wikimedia.org nach thumb.wikimedia.org um
+   (Tech News 2026/36); die alten Adressen werden laut Wikimedia weiter bedient. Dieselbe
+   Datei gibt es also unter zwei Hosts – antwortet der eine gerade nicht (Zeitüberschreitung,
+   HTTP 429 am Thumbnail-Cluster, Mobilfunk teilt sich eine IP), hilft oft der andere. */
+function hostAlt(u){                                     // thumb. ↔ upload. – derselbe Pfad, ohne utm-Anhang
+  const m = String(u||"").match(/^https:\/\/(thumb|upload)\.wikimedia\.org(\/[^?#]*)/);
+  return m ? "https://"+(m[1]==="thumb" ? "upload" : "thumb")+".wikimedia.org"+m[2] : null;
+}
+function lbChain(it){                                    // Ausweich-Kette: große Stufe → gelieferte Vorschau, je mit Ausweich-Host
+  const out = [], big = lbBig(it.src, it.w);
+  [big, hostAlt(big), it.src, hostAlt(it.src)].forEach(u => { if(u && out.indexOf(u)<0) out.push(u); });
   return out;
 }
 function lbKey(it){ return String(it.id || it.file || it.src || "").replace(/_/g," "); }   // dieselbe Datei in anderer Größe ist kein neues Bild
@@ -3897,6 +3905,37 @@ function photoGalLoader(p){
   if(!p || p.src!=="wp" || !p.title) return null;
   return ()=>wikiGallery(p.title, true, 640).then(l=>l.map(it=>({ src:it.src, label:"Weiteres Bild der gesuchten Pflanze", w:it.w, id:it.file })));
 }
+/* ---------- Bild lädt nicht: nicht aufgeben ----------
+   Alle Ansichten einer Art, jede über beide Wikimedia-Hosts (siehe hostAlt); die zweite
+   Runde umgeht den Browser-Zwischenspeicher mit einem harmlosen Anhang (Query-Strings
+   kennen die Thumbnail-Server ohnehin – die API liefert sie selbst mit utm_…). */
+let phImgRetryMs = 1500;                                 // Pause vor der zweiten Runde
+function imgChain(gal){
+  const out = [];
+  (gal||[]).forEach(it => { [it.src, hostAlt(it.src)].forEach(u => { if(u && out.indexOf(u)<0) out.push(u); }); });
+  return out;
+}
+function imgBust(u){ return /^data:|^blob:/.test(u) ? u : u + (u.indexOf("?")>=0 ? "&" : "?") + "pbw=" + Date.now().toString(36); }   // je Versuch neu – sonst liefert der Browser-Cache die alte Antwort
+function photoForget(key){                               // Treffer verwerfen: beim nächsten Mal frisch suchen (Datei umbenannt/gelöscht?)
+  const s = photoStoreLoad();
+  if(key in s){ delete s[key]; clearTimeout(photoSaveT); photoSaveT = setTimeout(photoStoreFlush, 250); }
+  photoTmp.delete(key);
+}
+/* Auch die zweite Runde ohne Bild: Treffer verwerfen (eine umbenannte oder gelöschte Datei
+   darf nicht ewig im Speicher stehen), Karte ans Ende der Runde – dort wird sie neu
+   gesucht. Geht das nicht mehr (letzte Karten), bleibt eine Meldung MIT Knöpfen. */
+function photoImgFailed(card, p){
+  photoForget(card.key);
+  if(deferPhotoCard("imgDefer")){ toast("Bild gerade nicht ladbar – die Art kommt später noch einmal."); return nextCard(); }
+  const b = $("#stage").querySelector(".photobox"); if(!b) return;
+  b.innerHTML = `<div class="ph-load">Bild konnte gerade nicht geladen werden.
+    <div class="ph-actions"><button class="btn primary" id="phImgRetry">Nochmal versuchen</button>
+    <button class="btn ghost" id="phImgOther">Andere Art zeigen</button>
+    <button class="btn ghost" id="phImgQuiz" title="Nur diese eine Art ohne Bild als Auswahlfrage">Ohne Bild weiter</button></div></div>`;
+  $("#phImgRetry").onclick=()=>renderPhoto();
+  $("#phImgOther").onclick=()=>{ sess.imgDefer = 0; if(deferPhotoCard("imgDefer")) nextCard(); else renderPhoto(); };
+  $("#phImgQuiz").onclick=()=>{ mode="quiz"; renderQuiz(); showGuidedNote(); };   // nur diese Karte; nextCard stellt den Bilder-Modus wieder her
+}
 /* ---------- Geduld statt Ersatzmodus ----------
    Der Bilder-Quiz bleibt der Bilder-Quiz. Eine schwache Leitung darf nicht dazu
    führen, dass plötzlich Textfragen kommen – das fühlt sich an, als wäre das
@@ -3907,12 +3946,13 @@ function photoGalLoader(p){
        und versucht es von selbst weiter, bis das Netz zurück ist.
    Erst wenn eine ganze Runde ohne ein einziges Bild vergangen ist, fragen wir –
    und wechseln auch dann nur, wenn der Lernende es ausdrücklich will. */
-function deferPhotoCard(){
+function deferPhotoCard(ctr){                         // ctr: Zähler – "photoDefer" (Suche erfolglos) oder "imgDefer" (Datei lädt nicht)
+  ctr = ctr || "photoDefer";
   const rest = queue.length - qi;                      // noch offene Karten (inkl. dieser)
   if(rest < 2) return false;                           // nichts zum Tauschen
-  if((sess.photoDefer||0) >= rest) return false;       // schon einmal im Kreis – nicht endlos
+  if((sess[ctr]||0) >= rest) return false;             // schon einmal im Kreis – nicht endlos
   queue.push(queue.splice(qi,1)[0]);
-  sess.photoDefer = (sess.photoDefer||0)+1;
+  sess[ctr] = (sess[ctr]||0)+1;
   return true;
 }
 let phWaitTimer = null, phWaitMs = 6000;             // Takt des selbsttätigen neuen Versuchs
@@ -3982,14 +4022,22 @@ async function renderPhoto(){
     `<div class="ph-wrap"><img class="ph-img" id="phImg" src="${esc(p.thumb)}" alt="Bild der gesuchten Pflanze">`+
     (viele ? `<span class="ph-more">${gal.length} Bilder</span>` : "")+`</div>`;
   const img=$("#phImg");
-  // Lädt die Datei selbst nicht (kaputt, gesperrt, gerade nicht erreichbar), nehmen
-  // wir der Reihe nach die übrigen Ansichten derselben Art – erst wenn keine geht,
-  // steht da eine Meldung.
+  // Lädt die Datei selbst nicht (Funkloch, Zeitüberschreitung, HTTP 429 am Thumbnail-
+  // Cluster), nehmen wir der Reihe nach die übrigen Ansichten derselben Art – jede
+  // zusätzlich über den Ausweich-Host – und nach einer kurzen Pause alle noch einmal.
+  // Ein Artikelbild hat nur EINE Ansicht; früher hieß ein einziger Aussetzer dort sofort
+  // »Bild konnte nicht geladen werden« (Rückmeldung Vinca minor). Scheitert auch die
+  // zweite Runde, wandert die Karte ans Ende der Runde statt tot stehen zu bleiben.
   if(img){
-    let weiter = 1;
+    const chain = imgChain(gal); let k = 0, runde = 1;
+    img.onload=()=>{ if(!stale()) sess.imgDefer = 0; };   // ein geladenes Bild schließt die Fehlerrunde ab
     img.onerror=()=>{
-      if(weiter < gal.length){ img.src = gal[weiter++].src; return; }
-      const b=box(); if(b) b.innerHTML=`<div class="ph-load">Bild konnte nicht geladen werden.</div>`;
+      if(stale()) return;
+      k++;
+      if(k < chain.length){ img.src = runde===2 ? imgBust(chain[k]) : chain[k]; return; }
+      if(runde===1){ runde = 2; k = 0;
+        setTimeout(()=>{ if(!stale()) img.src = imgBust(chain[0]); }, phImgRetryMs); return; }
+      photoImgFailed(c, p);
     };
   }
   // antippen/Enter → Großansicht; mehrere Ansichten derselben Art als Galerie
@@ -4812,6 +4860,8 @@ window.wikiPhoto=wikiPhoto;
 /* Bild-Quelle austauschbar + Bild-Cache leerbar: Die Tests laufen ohne Netz. */
 window.__setPhotoSource=fn=>{ photoSource = fn || wikiPhoto; };
 window.__setPhotoWait=ms=>{ phWaitMs = ms || 6000; };   // für Tests: Takt des Wartebildschirms
+window.__setImgRetryWait=ms=>{ phImgRetryMs = ms || 1500; };   // für Tests: Pause vor der zweiten Bild-Runde
+window.__imgChain=imgChain; window.__hostAlt=hostAlt;
 window.__setJsonp=fn=>{ jsonp = fn || ((...a)=>jsonpGet(...a)); };   // API-Antworten für Tests vorgeben
 window.__clearPhotoCache=()=>{ photoStore={}; photoTmp.clear(); photoSeenStore={}; photoMoreTried.clear(); try{ store.set(LS_PHOTOS,"{}"); store.set(LS_SEEN,"{}"); }catch(e){} };
 window.__getPhotoSeen=photoSeenGet; window.__setPhotoSeen=photoSeenSet;   // für Tests: zuletzt gezeigte Ansicht je Art
