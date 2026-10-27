@@ -2064,9 +2064,17 @@ function lbBig(src, w){                                  // w: Originalbreite, f
   if(!want || want<=cur) return s;                       // nichts Größeres verfügbar → wie geliefert
   return s.replace(/\/(\d{2,4})px-/, "/"+want+"px-");
 }
-function lbChain(it){                                    // Ausweich-Kette: große Stufe → gelieferte Vorschau
-  const out = [];
-  [lbBig(it.src, it.w), it.src].forEach(u => { if(u && out.indexOf(u)<0) out.push(u); });
+/* Wikimedia zieht die Vorschaubilder von upload.wikimedia.org nach thumb.wikimedia.org um
+   (Tech News 2026/36); die alten Adressen werden laut Wikimedia weiter bedient. Dieselbe
+   Datei gibt es also unter zwei Hosts – antwortet der eine gerade nicht (Zeitüberschreitung,
+   HTTP 429 am Thumbnail-Cluster, Mobilfunk teilt sich eine IP), hilft oft der andere. */
+function hostAlt(u){                                     // thumb. ↔ upload. – derselbe Pfad, ohne utm-Anhang
+  const m = String(u||"").match(/^https:\/\/(thumb|upload)\.wikimedia\.org(\/[^?#]*)/);
+  return m ? "https://"+(m[1]==="thumb" ? "upload" : "thumb")+".wikimedia.org"+m[2] : null;
+}
+function lbChain(it){                                    // Ausweich-Kette: große Stufe → gelieferte Vorschau, je mit Ausweich-Host
+  const out = [], big = lbBig(it.src, it.w);
+  [big, hostAlt(big), it.src, hostAlt(it.src)].forEach(u => { if(u && out.indexOf(u)<0) out.push(u); });
   return out;
 }
 function lbKey(it){ return String(it.id || it.file || it.src || "").replace(/_/g," "); }   // dieselbe Datei in anderer Größe ist kein neues Bild

@@ -1869,14 +1869,112 @@ async function main() {
     Object.defineProperty(HTMLImageElement.prototype, "src", desc);
     return { u640, chain, klein, winzig, data, meldung, ausgeblendet, weg, geladen, reihenfolge, Z960, Z1920 };
   });
-  assert(kette.chain.length === 2 && /\/1920px-Foo\.jpg\?utm_source=x$/.test(kette.chain[0]) && kette.chain[1] === kette.u640,
-    "Kette: Standardstufe 1920 (Query-String bleibt) → gelieferte Vorschau: " + JSON.stringify(kette.chain));
-  assert(kette.klein.length === 2 && /\/1280px-/.test(kette.klein[0]) && kette.winzig.length === 1 && kette.winzig[0] === kette.u640 && kette.data.length === 1,
-    "Kette: nie über die Originalbreite hinaus (1500 → 1280, 900 → nur Vorschau), Data-URI unverändert: " + JSON.stringify({ klein: kette.klein, winzig: kette.winzig, data: kette.data }));
+  assert(kette.chain.length === 4 && /^https:\/\/upload\.wikimedia\.org\/.*\/1920px-Foo\.jpg\?utm_source=x$/.test(kette.chain[0])
+    && kette.chain[1] === "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/b/Foo.jpg/1920px-Foo.jpg" && kette.chain[2] === kette.u640
+    && kette.chain[3] === "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/b/Foo.jpg/640px-Foo.jpg",
+    "Kette: Standardstufe 1920 (Query-String bleibt) → Ausweich-Host → gelieferte Vorschau → Ausweich-Host: " + JSON.stringify(kette.chain));
+  assert(kette.klein.length === 4 && /\/1280px-/.test(kette.klein[0]) && kette.winzig.length === 2 && kette.winzig[0] === kette.u640 && /^https:\/\/thumb\./.test(kette.winzig[1]) && kette.data.length === 1,
+    "Kette: nie über die Originalbreite hinaus (1500 → 1280, 900 → nur Vorschau + Ausweich-Host), Data-URI unverändert: " + JSON.stringify({ klein: kette.klein, winzig: kette.winzig, data: kette.data }));
   assert(/Bild nicht verfügbar/.test(kette.meldung) && kette.ausgeblendet,
     "Großansicht: scheitert die ganze Kette, steht eine Meldung statt eines leeren Rahmens: " + JSON.stringify({ m: kette.meldung, a: kette.ausgeblendet }));
   assert(kette.weg && kette.geladen && kette.reihenfolge[0] === kette.Z1920 && kette.reihenfolge.indexOf(kette.Z960) > 0,
     "Großansicht: nächstes Bild – 1920 probiert, scheitert, die gelieferte Vorschau lädt, Meldung weg: " + JSON.stringify({ weg: kette.weg, geladen: kette.geladen, r: kette.reihenfolge }));
+
+  // Bild lädt nicht (Rückmeldung »Vinca minor«): Das Artikelbild hat nur EINE Ansicht –
+  // bisher hieß ein einziger Aussetzer dort sofort »Bild konnte nicht geladen werden«,
+  // ohne zweiten Versuch. Jetzt: Ausweich-Host (thumb. ↔ upload.), nach kurzer Pause eine
+  // zweite Runde mit Cache-Umgehung, erst dann Karte ans Ende der Runde + Treffer verwerfen;
+  // geht auch das nicht mehr, eine Meldung MIT Knöpfen. Die Bildabrufe beantwortet der Test
+  // selbst (Request-Interception: kaputtes bzw. echtes GIF, immer HTTP 200 → keine Konsolenfehler).
+  const GIF = Buffer.from("R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==", "base64");
+  let heil = false; const angefragt = [];
+  const onReq = (r) => {
+    if (!/wikimedia\.org/.test(r.url())) return r.continue();
+    angefragt.push(r.url());
+    r.respond({ status: 200, contentType: "image/gif", body: heil ? GIF : Buffer.from("AAAA") });
+  };
+  await page.setRequestInterception(true); page.on("request", onReq);
+  const nodeWait = async (test, ms) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (test()) return true; await new Promise((r) => setTimeout(r, 30)); } return false; };
+  const T = "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fa/V.jpg/960px-V.jpg?utm_source=de.wikipedia.org&utm_campaign=pageimages";
+  const bf1 = await page.evaluate(async (T) => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    window.__bisZu = async (test, ms) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (test()) return true; await wait(40); } return false; };
+    __clearPhotoCache(); photoTried.clear(); __setImgRetryWait(150); __setPhotoWait(300);
+    window.__suchen = {};
+    __setPhotoSource((card) => { window.__suchen[card.key] = (window.__suchen[card.key] || 0) + 1;
+      return Promise.resolve({ thumb: T, title: "Kleines Immergrün", file: "V.jpg", url: "https://x/y", src: "wp" }); });
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();
+    document.querySelector("#sessLen").value = "2"; startSession();
+    await window.__bisZu(() => !!document.querySelector("#phImg"), 3000);
+    window.__erste = current;
+    return { chain: __imgChain([{ src: T }]), alt: __hostAlt(T),
+      back: __hostAlt("https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/V.jpg/960px-V.jpg"), none: __hostAlt("https://example.org/x.jpg") };
+  }, T);
+  assert(bf1.chain.length === 2 && bf1.chain[0] === T && bf1.chain[1] === "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/V.jpg/960px-V.jpg"
+    && bf1.alt === bf1.chain[1] && /^https:\/\/thumb\.wikimedia\.org\/wikipedia\/commons\/thumb\/f\/fa\/V\.jpg\/960px-V\.jpg$/.test(bf1.back) && bf1.none === null,
+    "Bild-Kette: jede Ansicht über beide Wikimedia-Hosts (ohne utm-Anhang), fremde Hosts ohne Ersatz: " + JSON.stringify(bf1));
+  // Fall 1: Runde 1 scheitert (beide Hosts) – die zweite Runde lädt → Bild da, keine Meldung, Karte bleibt
+  await nodeWait(() => angefragt.length >= 2, 3000);
+  heil = true;
+  const bf1b = await page.evaluate(async () => {
+    const geladen = await window.__bisZu(() => { const i = document.querySelector("#phImg"); return !!i && i.complete && i.naturalWidth > 0; }, 4000);
+    return { geladen, gleicheKarte: current === window.__erste, opts: document.querySelectorAll("#opts .opt").length,
+      meldung: /nicht geladen/.test(document.querySelector("#stage").textContent) };
+  });
+  assert(bf1b.geladen && bf1b.gleicheKarte && bf1b.opts === 4 && !bf1b.meldung && angefragt.length >= 3
+    && angefragt[0] === T && /^https:\/\/upload\.wikimedia\.org\//.test(angefragt[1]) && /[?&]pbw=[0-9a-z]+$/.test(angefragt[2]),
+    "Bild scheitert einmal → Ausweich-Host, dann zweite Runde mit Cache-Umgehung lädt, Karte bleibt: " + JSON.stringify({ bf1b, angefragt }));
+  // Fall 2: alles scheitert, auch die zweite Runde → Karte ans Ende der Runde, Treffer verworfen, Toast
+  heil = false; angefragt.length = 0;
+  const bf2 = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    document.querySelector("#btnStop").click(); await wait(60);
+    const ov = document.querySelector("#btnOverview"); if (ov) ov.click(); else exitSession();
+    __clearPhotoCache(); photoTried.clear();
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();
+    document.querySelector("#sessLen").value = "2"; startSession();
+    await window.__bisZu(() => !!document.querySelector("#phImg"), 3000);
+    const c1 = current, k1 = c1.key, imSpeicher = k1 in photoStoreLoad(), suchenVorher = window.__suchen[k1] || 0;
+    const verschoben = await window.__bisZu(() => current !== c1, 5000);
+    const sofort = { toast: document.querySelector("#toast").textContent, defer: sess.imgDefer, hinten: queue[queue.length - 1] === c1 };
+    // Fall 3: eine ganze Runde ohne ladbares Bild → Meldung MIT Knöpfen statt totem Ende (Such-Zähler bleibt davon unberührt)
+    const meldung = await window.__bisZu(() => !!document.querySelector("#phImgRetry"), 10000);
+    const neuGesucht = (window.__suchen[k1] || 0) > suchenVorher;   // Treffer verworfen → beim Wiederkommen frisch gesucht
+    const out = { imSpeicher, verschoben, sofort, meldung, neuGesucht, text: (document.querySelector(".ph-load") || {}).textContent || "",
+      andere: !!document.querySelector("#phImgOther"), ohneBild: !!document.querySelector("#phImgQuiz"), keinStillerQuiz: !document.querySelector(".ph-fallback") && mode === "photo" };
+    // »Ohne Bild weiter«: nur DIESE Karte als Auswahlfrage, der Modus bleibt Bilder-Quiz
+    document.querySelector("#phImgQuiz").click(); await wait(80);
+    out.quiz = { opts: document.querySelectorAll("#opts .opt").length, bild: !!document.querySelector("#phImg"), basis: sess.baseMode };
+    document.querySelector("#btnStop").click(); await wait(60);
+    const ov2 = document.querySelector("#btnOverview"); if (ov2) ov2.click(); else exitSession();
+    return out;
+  });
+  assert(bf2.imSpeicher && bf2.verschoben && /kommt später/.test(bf2.sofort.toast) && bf2.sofort.defer >= 1 && bf2.sofort.hinten && bf2.neuGesucht,
+    "Bild scheitert auch in Runde 2 → Karte ans Ende der Runde, Treffer verworfen (neu gesucht), Hinweis-Toast: " + JSON.stringify(bf2));
+  assert(bf2.meldung && /nicht geladen/.test(bf2.text) && bf2.andere && bf2.ohneBild && bf2.keinStillerQuiz,
+    "Ganze Runde ohne ladbares Bild → Meldung mit »Nochmal versuchen«/»Andere Art zeigen«/»Ohne Bild weiter«, kein stiller Moduswechsel: " + JSON.stringify(bf2));
+  assert(bf2.quiz.opts === 4 && !bf2.quiz.bild && bf2.quiz.basis === "photo",
+    "»Ohne Bild weiter« stellt nur diese Karte als Auswahlfrage: " + JSON.stringify(bf2.quiz));
+  // »Nochmal versuchen« lädt das Bild, sobald es wieder geht
+  heil = false;
+  const bf3 = await page.evaluate(async () => {
+    __clearPhotoCache(); photoTried.clear();
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();
+    document.querySelector("#sessLen").value = "2"; startSession();
+    return await window.__bisZu(() => !!document.querySelector("#phImgRetry"), 10000);
+  });
+  assert(bf3, "zweite Sitzung ohne ladbare Bilder läuft wieder in die Meldung: " + JSON.stringify(bf3));
+  heil = true;
+  const bf3b = await page.evaluate(async () => {
+    document.querySelector("#phImgRetry").click();
+    const geladen = await window.__bisZu(() => { const i = document.querySelector("#phImg"); return !!i && i.complete && i.naturalWidth > 0; }, 4000);
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    __setPhotoSource(null); __setImgRetryWait(); __setPhotoWait(); __clearPhotoCache(); photoTried.clear();
+    delete window.__bisZu; delete window.__erste; delete window.__suchen;
+    return { geladen };
+  });
+  page.off("request", onReq); await page.setRequestInterception(false);
+  assert(bf3b.geladen, "»Nochmal versuchen« lädt das Bild, sobald es wieder geht: " + JSON.stringify(bf3b));
 
   // Lernstand in der Info-Karte: Stufe, Fälligkeit und Bilanz beim Nachschlagen
   const lstate = await page.evaluate(() => {

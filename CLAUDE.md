@@ -2321,6 +2321,36 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       die Domain pauschal freigeben; und beim Prüfen eines Verdachts die Adresse nehmen, die die
       API **heute** liefert, nicht die aus dem Code.
 
+- [x] **Bilder-Quiz: ein Aussetzer beim Laden tötet die Karte nicht mehr** (Rückmeldung mit
+      Screenshot nach dem CSP-Hotfix: *Vinca minor* zeigte »Bild konnte nicht geladen werden«,
+      obwohl die Info-Karte dasselbe Foto lud; »die meisten anderen haben funktioniert«).
+      **Befund:** Datei und Adresse sind in Ordnung (beide Wikimedia-Hosts antworten 200) – der
+      Fehler war vorübergehend (Funkloch, Zeitüberschreitung, HTTP 429 am Thumbnail-Cluster;
+      Mobilfunk teilt sich eine IP). Die Schwachstelle lag im Werkzeug: Das **Artikelbild**
+      (`src:"wp"`) hat bei der ersten Begegnung nur **eine** Ansicht, und `img.onerror` lief ohne
+      zweiten Versuch direkt in die Meldung – ein einziger Aussetzer = tote Karte (Commons-Treffer
+      hatten bis zu sechs Ausweich-Ansichten, das Artikelbild keine). **Fix (`renderPhoto`):**
+      (1) **Ausweich-Host** `hostAlt()` – jede Adresse zusätzlich über den anderen Wikimedia-Host
+      (`thumb.` ↔ `upload.`, derselbe Pfad ohne `utm_`-Anhang; die alten Adressen bedient Wikimedia
+      weiter), in `imgChain()` für alle Ansichten und in `lbChain()` der Großansicht (beide
+      Werkzeuge). (2) **Zweite Runde** nach `phImgRetryMs` (1,5 s) mit Cache-Umgehung (`imgBust`,
+      je Versuch eindeutig – ein fester Anhang lieferte im Test die alte Antwort aus dem
+      Browser-Cache). (3) Scheitert auch die: `photoImgFailed()` **verwirft den gemerkten Treffer**
+      (`photoForget` – eine umbenannte/gelöschte Datei darf nicht ewig im Speicher stehen) und
+      schiebt die Karte **ans Ende der Runde** (`deferPhotoCard("imgDefer")`, eigener Zähler – der
+      Such-Zähler `photoDefer` wird bei jeder erfolgreichen Suche genullt, mit ihm lief die
+      Verschiebung endlos im Kreis; `img.onload` nullt `imgDefer`), dort wird sie frisch gesucht.
+      (4) Geht das nicht mehr (letzte Karten): Meldung **mit Knöpfen** »Nochmal versuchen« ·
+      »Andere Art zeigen« · »Ohne Bild weiter« (nur diese Karte als Auswahlfrage, `nextCard` stellt
+      den Bilder-Modus wieder her) statt eines toten Endes. Test-Haken `__setImgRetryWait`,
+      `__imgChain`, `__hostAlt`. `tests/learn.mjs` beantwortet die Bildabrufe selbst
+      (Puppeteer-Request-Interception, kaputtes bzw. echtes GIF, immer HTTP 200 → keine
+      Konsolenfehler) und prüft: Kette je Ansicht über beide Hosts, Runde 1 scheitert → Runde 2
+      lädt (Reihenfolge thumb → upload → thumb+Umgehung, Karte bleibt), alles scheitert → ans
+      Ende + neu gesucht + Toast, ganze Runde ohne Bild → Meldung mit drei Knöpfen, »Ohne Bild
+      weiter« = eine Auswahlfrage im Bilder-Modus, »Nochmal versuchen« lädt. Die Lightbox-
+      Ketten-Assertions auf vier Adressen (mit Ausweich-Host) gehoben.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.
