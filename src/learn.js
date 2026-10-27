@@ -3138,10 +3138,11 @@ function renderWiki(host, d){
 /* Bilder eines Artikels (für die Galerie in der Vollbild-Ansicht). Karten,
    Wappen, Logos und Schadbilder fliegen raus; botanische Tafeln bleiben – beim
    Nachschlagen sind sie hilfreich (anders als im Bilder-Quiz). */
-function wikiGallery(title, noArt){                     // noArt: für den Bilder-Quiz zusätzlich Zeichnungen/Tafeln raus (Dateiname + Metadaten)
+function wikiGallery(title, noArt, width){              // noArt: für den Bilder-Quiz zusätzlich Zeichnungen/Tafeln raus (Dateiname + Metadaten)
+  // width: gewünschte Vorschaubreite – der Server rundet auf seine Standardstufen auf (1200 → 1280, 640 → 960 px)
   return jsonp("https://de.wikipedia.org/w/api.php?action=query&format=json&generator=images"+
-      "&gimlimit=20&redirects=1&prop=imageinfo&iiprop=url%7Cmime"+
-      (noArt ? "%7Cextmetadata&iiextmetadatafilter=Categories%7CArtist%7CCredit" : "")+"&iiurlwidth=1200&titles="+
+      "&gimlimit=20&redirects=1&prop=imageinfo&iiprop=url%7Cmime%7Csize"+
+      (noArt ? "%7Cextmetadata&iiextmetadatafilter=Categories%7CArtist%7CCredit" : "")+"&iiurlwidth="+(width||1200)+"&titles="+
       encodeURIComponent(title))
     .then(d=>{
       const pg = (d && d.query && d.query.pages) || {};
@@ -3155,21 +3156,66 @@ function wikiGallery(title, noArt){                     // noArt: für den Bilde
           return usablePhoto(f) && !looksDamage(f);
         })
         .map(p=>{ const ii=p.imageinfo[0];
-          return { src: ii.thumburl||ii.url, file: String(p.title||"").replace(/^(File|Datei):/i,"") }; })
+          return { src: ii.thumburl||ii.url, file: String(p.title||"").replace(/^(File|Datei):/i,""), w: ii.width||0 }; })   // w: Originalbreite (Großansicht nie darüber hinaus)
         .slice(0,12);
     })
     .catch(()=>[]);
 }
 /* ---------- Bild-Lightbox (Bild anklicken → groß ansehen) ----------
-   Für die Quiz-Fotos und die Wikipedia-Vorschau der Info-Karte. Holt per
-   URL-Ableitung ein größeres Commons-Derivat (»…/640px-…« → »…/1600px-…«);
-   schlägt das fehl, bleibt das bekannte Bild stehen. Eigener Namensraum
+   Für die Quiz-Fotos und die Wikipedia-Vorschau der Info-Karte. Eigener Namensraum
    .lbscrim (kollidiert nicht mit .scrim-Panels); Esc/Klick daneben/× schließen,
-   der Fokus kehrt zum Auslöser zurück. */
-function lbBig(src){ return String(src||"").replace(/\/(\d{2,4})px-/, "/1600px-"); }
-let lbReturnFocus=null;
+   der Fokus kehrt zum Auslöser zurück.
+   Große Ansicht: Wikimedia Commons liefert Vorschaubilder bei Direktabruf nur noch in
+   festen Stufen (20 … 500 · 960 · 1280 · 1920 · 3840 px; mediawiki.org/wiki/
+   Common_thumbnail_sizes, T414805). Jede andere Breite beantwortet der Server mit einer
+   HTML-Fehlerseite (HTTP 400), die der Browser als Bild verwirft (»blocked by CORB«) –
+   so entstanden leere Großansichten. Deshalb: nur auf eine Standardstufe ableiten, nie
+   über die Originalbreite hinaus, und je Bild eine Ausweich-Kette (abgeleitete Stufe →
+   die vom API gelieferte Vorschau); scheitert alles, steht eine Meldung da statt eines
+   leeren Rahmens. Die API-Abfragen (iiurlwidth/pithumbsize) rundet der Server selbst auf. */
+function lbThrifty(){                                    // Datensparmodus oder 2G → kleinere Stufe, weniger vorladen
+  try{ const c = navigator.connection;
+    return !!c && (c.saveData === true || /(^|-)2g$/.test(c.effectiveType||"")); }catch(e){ return false; }
+}
+const LB_STEPS = [960, 1280, 1920];                      // Standardstufen, die für die Großansicht taugen
+function lbBig(src, w){                                  // w: Originalbreite, falls bekannt – nie größer anfragen als das Original
+  const s = String(src||""), m = s.match(/\/(\d{2,4})px-/);
+  if(!m) return s;
+  const cur = +m[1], max = lbThrifty() ? 1280 : 1920;
+  const want = LB_STEPS.filter(x => x<=max && (!w || x<w)).pop() || 0;
+  if(!want || want<=cur) return s;                       // nichts Größeres verfügbar → wie geliefert
+  return s.replace(/\/(\d{2,4})px-/, "/"+want+"px-");
+}
+function lbChain(it){                                    // Ausweich-Kette: große Stufe → gelieferte Vorschau
+  const out = [];
+  [lbBig(it.src, it.w), it.src].forEach(u => { if(u && out.indexOf(u)<0) out.push(u); });
+  return out;
+}
+function lbKey(it){ return String(it.id || it.file || it.src || "").replace(/_/g," "); }   // dieselbe Datei in anderer Größe ist kein neues Bild
+const lbState = new WeakMap();                           // Eintrag → {ok: URL, die lädt | busy | dead}; wird nirgends gespeichert
+function lbSt(it){ let s = lbState.get(it); if(!s){ s = {}; lbState.set(it, s); } return s; }
+/* Eine URL nach der anderen probieren – auf dem sichtbaren <img> oder im Hintergrund.
+   Die erste, die lädt, wird gemerkt (ok); scheitert die ganze Kette, gilt der Eintrag
+   als tot (dead) und onFail zeigt die Meldung. Rückgabe: Abbruch-Funktion. */
+function lbTry(img, it, onFail){
+  const st = lbSt(it), chain = st.ok ? [st.ok] : lbChain(it);
+  let k = 0, off = false;
+  st.busy = true;
+  const next = ()=>{
+    if(off) return;
+    if(k>=chain.length){ st.busy=false; st.dead=true; st.ok=null; img.onerror=img.onload=null; if(onFail) onFail(); return; }
+    const u = chain[k++];
+    img.onerror = next;
+    img.onload = ()=>{ if(off) return; st.ok=u; st.dead=false; st.busy=false; img.onerror=img.onload=null; };
+    img.src = u;
+  };
+  next();
+  return ()=>{ off = true; };                            // Wechsel zum nächsten Bild: alte Rückmeldungen verfallen (busy bleibt – kein Doppelabruf)
+}
+let lbReturnFocus=null, lbCancel=null;
 function closeLightbox(){
   const sc=document.querySelector(".lbscrim"); if(!sc) return;
+  if(lbCancel){ lbCancel(); lbCancel=null; }
   sc.remove();
   if(lbReturnFocus && lbReturnFocus.focus){ try{ lbReturnFocus.focus(); }catch(e){} }
   lbReturnFocus=null;
@@ -3191,14 +3237,9 @@ function lbSync(){
 /* Vorladen: Sobald die Großansicht offen ist, holen wir die übrigen Bilder der
    Galerie schon im Hintergrund – dann steht das nächste beim Wischen/Blättern
    sofort da. Reihenfolge von innen nach außen (die Nachbarn kommen als Erstes
-   dran). Im Datensparmodus oder auf 2G nur die direkten Nachbarn: 12 Bilder in
-   1600 px sind unterwegs schnell einige Megabyte. Geladen wird dieselbe URL, die
-   auch angezeigt wird (lbBig), sonst nützt der Browser-Cache nichts. */
-const lbPre = new Map();                                 // URL → Image; verhindert Doppel-Anfragen
-function lbThrifty(){
-  try{ const c = navigator.connection;
-    return !!c && (c.saveData === true || /(^|-)2g$/.test(c.effectiveType||"")); }catch(e){ return false; }
-}
+   dran). Im Datensparmodus oder auf 2G nur die direkten Nachbarn. Geladen wird
+   dieselbe Kette wie bei der Anzeige; die funktionierende URL wird je Eintrag
+   gemerkt, nichts wird doppelt angefragt. */
 function lbPreload(){
   const n = lbList.length; if(n<2) return;
   const order = [];
@@ -3208,21 +3249,27 @@ function lbPreload(){
     if(order.indexOf(b)<0) order.push(b);
   }
   for(const i of order.slice(0, lbThrifty() ? 2 : order.length)){
-    const u = lbBig(lbList[i].src);
-    if(lbPre.has(u)) continue;
+    const it = lbList[i], st = lbSt(it);
+    if(st.ok || st.busy || st.dead) continue;            // schon da, unterwegs oder aussichtslos
     const im = new Image(); im.decoding = "async";
-    lbPre.set(u, im); im.src = u;
-    if(lbPre.size > 80) lbPre.delete(lbPre.keys().next().value);   // Deckel; der Browser-Cache trägt weiter
+    lbTry(im, it);
   }
 }
 function lbShow(i){
   const sc=document.querySelector(".lbscrim"); if(!sc || !lbList.length) return;
   lbIdx = (i%lbList.length + lbList.length) % lbList.length;
   const it = lbList[lbIdx], img = sc.querySelector(".lb-img");
-  const big = lbBig(it.src);
-  img.onerror = big!==it.src ? (()=>{ img.onerror=null; img.src=it.src; }) : null;
-  img.src = big; img.alt = it.label || it.file || "Bild";
-  if(!lbPre.has(big)) lbPre.set(big, img);               // das gezeigte Bild gilt als geholt
+  if(lbCancel) lbCancel();
+  const note = sc.querySelector(".lb-fail"); if(note) note.remove();
+  sc.classList.remove("lb-failed");
+  img.alt = it.label || it.file || "Bild";
+  lbCancel = lbTry(img, it, ()=>{                        // ganze Kette gescheitert → Meldung statt leerem Rahmen
+    img.removeAttribute("src"); sc.classList.add("lb-failed");
+    const d = el("div","lb-fail"); d.setAttribute("role","status");
+    d.innerHTML = `<b>Bild nicht verfügbar</b><br>Der Bildserver (Wikimedia Commons) liefert diese Datei gerade nicht aus.`+
+      (it.file ? `<br><a href="https://commons.wikimedia.org/wiki/File:${esc(encodeURIComponent(it.file))}" target="_blank" rel="noopener">Datei auf Commons öffnen</a>` : "");
+    img.insertAdjacentElement("afterend", d);
+  });
   lbSync();
   lbPreload();                                           // Nachbarn im Hintergrund holen
 }
@@ -3232,8 +3279,8 @@ function lbLoad(loader){                                 // Galerie nachladen, w
   Promise.resolve().then(loader).then(list=>{
     if(token!==lbToken || !document.querySelector(".lbscrim")) return;   // inzwischen geschlossen/neu geöffnet
     if(!Array.isArray(list) || !list.length) return;
-    const seen = new Set(lbList.map(i=>i.src));
-    const add = list.filter(i=>i && i.src && !seen.has(i.src));
+    const seen = new Set(lbList.map(lbKey));
+    const add = list.filter(i=>i && i.src && !seen.has(lbKey(i)));
     if(!add.length) return;
     lbList = lbList.concat(add);
     lbSync();
@@ -3384,7 +3431,7 @@ async function taxonNote(card, pg, data){
     data.thumb = hit.thumb;
     data.photo = { file:hit.file||"", url:hit.url||"", artist:hit.artist||"", license:hit.license||"" };
     const urls = (hit.gal && hit.gal.length>1) ? hit.gal : [hit.thumb];
-    data.gallery = urls.map((u,i)=>({ src:u, label:`Bild ${i+1} – ${was.replace(/^die /,"")}` }));
+    data.gallery = urls.map((u,i)=>({ src:u, label:`Bild ${i+1} – ${was.replace(/^die /,"")}`, w:(hit.galInfo && hit.galInfo[i] && hit.galInfo[i].w)||0 }));
     data.note = `${lab} – der Text gilt der ${rang}; das Bild zeigt ${was}.`;
   }else{
     data.thumb = null;
@@ -3437,7 +3484,7 @@ async function loadWiki(card, host, btn){
    Bewusst ein EIGENER Modus: Er lädt nichts beim Seitenaufbau, und ohne Netz
    sagt er das klar – Karteikarten, Quiz, Tippen und Liste bleiben offline voll
    nutzbar. */
-const LS_PHOTOS = LS_PREFIX+"photos5";                // gemerkte Bild-URLs (spart API-Abrufe; »5« = Sorten-Regel + Tafel-Filter, alte Treffer verfallen)
+const LS_PHOTOS = LS_PREFIX+"photos6";                // gemerkte Bild-URLs (spart API-Abrufe; »6« = Commons-Standardgrößen – selbst abgeleitete 640-px-URLs taugen nicht mehr, alte Treffer verfallen)
 let photoStore = null, photoMisses = 0;
 function photoStoreLoad(){
   if(photoStore) return photoStore;
@@ -3618,7 +3665,7 @@ function wikiArticleQuery(title){                     // Artikelbild + erster Sa
 function commonsQuery(q){                             // Dateien auf Commons suchen (Kategorie oder Phrase) – samt Metadaten (Tafel? Urheber/Lizenz)
   return jsonp("https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search"+
     "&gsrnamespace=6&gsrlimit=12&gsrsearch="+encodeURIComponent(q)+
-    "&prop=imageinfo&iiprop=url%7Cmime%7Cextmetadata&iiextmetadatafilter=Categories%7CArtist%7CCredit%7CLicenseShortName&iiurlwidth=640");
+    "&prop=imageinfo&iiprop=url%7Cmime%7Csize%7Cextmetadata&iiextmetadatafilter=Categories%7CArtist%7CCredit%7CLicenseShortName&iiurlwidth=640");   // 640 → Server rundet auf 960 px (Standardstufe)
 }
 /* Dateien, die die Pflanze im Namen führen, sind meist gezielte Aufnahmen –
    besser als ein beliebiges Bild aus derselben Kategorie (»Hortus Haren … 24.jpg«). */
@@ -3642,7 +3689,7 @@ function pickCommons(d, card){                        // bester Treffer der Comm
     if(!usablePhoto(file) || looksIllustration(file) || looksDamage(file) || fileMentionsOther(file, card)) return;
     const meta = ii.extmetadata || null;
     if(looksArtwork(meta)) return;                   // Tafel/Herbarbeleg/Buchscan laut Kategorien oder Urheber – auch bei harmlosem Dateinamen
-    ok.push({ thumb: ii.thumburl || ii.url, file, i, sc: commonsScore(file, card), credit: metaCredit(meta),
+    ok.push({ thumb: ii.thumburl || ii.url, file, i, w: ii.width||0, sc: commonsScore(file, card), credit: metaCredit(meta),
               url: ii.descriptionurl || ("https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(file)) });
   });
   if(!ok.length) return null;
@@ -3654,7 +3701,7 @@ function pickCommons(d, card){                        // bester Treffer der Comm
   return Object.assign({ thumb: best.thumb, file: best.file, title: norm(card.g+" "+card.a),
            url: best.url, src:"cm", gal: take.map(o=>o.thumb),
            top: take.filter(o=>o.sc===best.sc).length,                 // so viele Ansichten sind gleich gut (Platzhalter-Arten wechseln darunter)
-           galInfo: take.map(o=>Object.assign({ file:o.file, url:o.url }, o.credit||{})) },   // Datei + Nachweis je Ansicht
+           galInfo: take.map(o=>Object.assign({ file:o.file, url:o.url, w:o.w }, o.credit||{})) },   // Datei + Nachweis + Originalbreite je Ansicht
          best.credit||{});   // + artist/license → Bildnachweis ohne zweiten Abruf
 }
 async function wikiPhoto(card){                        // → {thumb,title,file,url,src,artist?,license?,tmp?} | null
@@ -3741,7 +3788,10 @@ function photoSrcLine(p){                              // Quellenzeile unter dem
    Bewusst OHNE Dateinamen: die stehen sonst im alt-Text und verraten die Lösung. */
 function photoGalList(p){
   const urls = (p && p.gal && p.gal.length) ? p.gal : (p && p.thumb ? [p.thumb] : []);
-  return urls.map((u,i)=>({ src:u, label:`Bild ${i+1} der gesuchten Pflanze` }));
+  const inf = (p && p.galInfo) || [];
+  return urls.map((u,i)=>({ src:u, label:`Bild ${i+1} der gesuchten Pflanze`,
+    w: (inf[i] && inf[i].w) || 0,                        // Originalbreite → Großansicht nie darüber hinaus
+    id: (inf[i] && inf[i].file) || (i===0 && p.file) || u }));   // nur zum Dedupen mit der Artikel-Galerie (steht nirgends im DOM)
 }
 /* ---------- Nicht immer dasselbe Bild zuerst ----------
    Wer eine Art immer am selben Foto sieht, lernt das Foto auswendig – nicht die
@@ -3784,25 +3834,24 @@ function photoVariant(p, card){
    andere Art derselben Gattung – sie werden zu weiteren Ansichten (gemerkt, kein
    zweiter Abruf). Netzfehler schluckt wikiGallery ([]) – dann nächste Sitzung erneut. */
 const photoMoreTried = new Set();
-function phThumb(src){ return String(src||"").replace(/\/(\d{2,4})px-/, "/640px-"); }   // Quiz-Breite statt 1200 px
 async function photoMoreViews(p, card){
   if(!p || p.src!=="wp" || !p.title || (p.gal && p.gal.length>1)) return p;
   if(photoSeenGet(card.key)==null || photoMoreTried.has(card.key)) return p;   // erste Begegnung: Artikelbild reicht
   photoMoreTried.add(card.key);
   let list = [];
-  try{ list = await wikiGallery(p.title, true); }catch(e){ return p; }
+  try{ list = await wikiGallery(p.title, true, 640); }catch(e){ return p; }   // 640 → Server liefert die 960-px-Stufe (Quiz-Breite); nie selbst umrechnen
   const extra = list.filter(it => it.src!==p.thumb && it.file!==p.file && commonsScore(it.file, card)>0 && !fileMentionsOther(it.file, card)).slice(0,5);
   if(!extra.length) return p;
   const q = Object.assign({}, p, {
-    gal: [p.thumb].concat(extra.map(it=>phThumb(it.src))), top: 1,
+    gal: [p.thumb].concat(extra.map(it=>it.src)), top: 1,
     galInfo: [{ file:p.file, url:p.url, artist:p.artist||"", license:p.license||"" }].concat(
-      extra.map(it=>({ file:it.file, url:"https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(it.file) }))) });
+      extra.map(it=>({ file:it.file, w:it.w, url:"https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(it.file) }))) });
   if(photoTmp.has(card.key)) photoTmp.set(card.key, q); else photoRemember(card.key, q);
   return q;
 }
 function photoGalLoader(p){
   if(!p || p.src!=="wp" || !p.title) return null;
-  return ()=>wikiGallery(p.title, true).then(l=>l.map(it=>({ src:it.src, label:"Weiteres Bild der gesuchten Pflanze" })));
+  return ()=>wikiGallery(p.title, true, 640).then(l=>l.map(it=>({ src:it.src, label:"Weiteres Bild der gesuchten Pflanze", w:it.w, id:it.file })));
 }
 /* ---------- Geduld statt Ersatzmodus ----------
    Der Bilder-Quiz bleibt der Bilder-Quiz. Eine schwache Leitung darf nicht dazu
@@ -4613,6 +4662,23 @@ window.guidedForm=guidedForm;
 window.openIntro=openIntro;
 window.openInfo=openInfo;
 window.closeInfo=closeInfo;
+/* ---------- Neue Version sofort aktiv ----------
+   Der Service Worker liefert die Seite cache-first: Beim ersten Aufruf nach einer
+   Aktualisierung steht noch die alte Seite, während die neue im Hintergrund installiert
+   wird. Sobald sie übernimmt (controllerchange, Snippet im <head>), laden wir neu – aber
+   nur, wenn gerade nichts läuft (keine Sitzung, kein Dialog); sonst ein Hinweis mit Knopf.
+   Sonst heißt es »ich sehe die Änderung nicht«, obwohl sie längst online ist. */
+let swReload = ()=>{ try{ location.reload(); }catch(e){} };
+function swIdle(){ return !sess.active && !document.querySelector(".scrim:not([hidden]), .lbscrim") && document.visibilityState!=="hidden"; }
+function swUpdate(){
+  if(swIdle()) return swReload();
+  if($("#swNote")) return;
+  const n = el("div"); n.id="swNote"; n.className="swnote"; n.setAttribute("role","status");
+  n.innerHTML = `Neue Version geladen – wird beim nächsten Aufruf aktiv. <button class="btn small" id="swGo" type="button">Jetzt neu laden</button>`;
+  document.body.appendChild(n);
+  $("#swGo").onclick = ()=>swReload();
+}
+window.__swUpdate=swUpdate; window.__swReloadHook=fn=>{ swReload = fn || (()=>{ try{ location.reload(); }catch(e){} }); };
 window.wikiCandidates=wikiCandidates;
 window.searchName=searchName;
 window.buildPrintList=buildPrintList;
@@ -4626,7 +4692,7 @@ window.pageFitsCard=pageFitsCard;
 window.looksIllustration=looksIllustration;
 window.looksDamage=looksDamage;
 window.openLightbox=openLightbox;
-window.lbBig=lbBig;
+window.lbBig=lbBig; window.__lbChain=lbChain;
 window.streakState=streakState;   // für Tests: Lernserie/Tagesziel
 window.streakBump=streakBump;
 window.streakGoal=streakGoal;

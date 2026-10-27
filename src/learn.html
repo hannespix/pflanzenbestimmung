@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Pflanze-BW">
 <meta name="mobile-web-app-capable" content="yes">
-<script>if("serviceWorker" in navigator)addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});</script>
+<script>if("serviceWorker" in navigator)addEventListener("load",function(){var had=!!navigator.serviceWorker.controller,done=false;navigator.serviceWorker.register("sw.js").catch(function(){});navigator.serviceWorker.addEventListener("controllerchange",function(){if(!had||done)return;done=true;if(window.__swUpdate)window.__swUpdate();else location.reload()})});</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232b4f38'/%3E%3Cpath d='M9 23 C 9 12 16 7 23 9 C 23 20 16 25 9 23 Z' fill='%23a8c9ac'/%3E%3Cpath d='M11 21 C 15 16 19 12 22 10' stroke='%232b4f38' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
 :root{
@@ -1161,6 +1161,19 @@ body.stagefull #stage>.sessionbar{
   font-family:var(--mono); font-size:12px; background:rgba(0,0,0,.45); border-radius:99px; padding:4px 12px}
 @media (max-width:640px){ .lbscrim .lb-nav{min-width:44px; min-height:56px; font-size:26px}
   .lbscrim .lb-nav.prev{left:6px} .lbscrim .lb-nav.next{right:6px} }
+/* Ganze Ausweich-Kette gescheitert → Meldung statt leerem Rahmen */
+.lbscrim .lb-fail{max-width:min(520px,86vw); padding:18px 22px; border-radius:14px; text-align:center; color:#fff;
+  background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.22); font-size:14px; line-height:1.5}
+.lbscrim .lb-fail a{color:#cfe3d2; text-decoration:underline}
+.lbscrim.lb-failed .lb-img{display:none}
+
+/* Hinweis »Neue Version geladen« (unten, über Toast-Ebene, unter Dialogen) + Versionsstempel in der Fußzeile */
+.swnote{position:fixed; left:50%; bottom:max(14px, env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:70;
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center; max-width:min(92vw,520px);
+  padding:10px 14px; border-radius:14px; border:1px solid var(--rule-strong); background:var(--surface);
+  color:var(--ink); font-size:13px; box-shadow:0 8px 28px rgba(0,0,0,.18)}
+.build{font-family:var(--mono); font-size:10.5px; letter-spacing:.04em; color:var(--ink-soft); white-space:nowrap}
+@media print{.swnote{display:none}}
 </style>
 </head>
 <body>
@@ -1501,7 +1514,7 @@ body.stagefull #stage>.sessionbar{
   </p>
 
   <footer class="foot">
-    <span>Pflanzenkenntnis · Lernen · läuft im Browser, auch ohne Internet</span>
+    <span>Pflanzenkenntnis · Lernen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">/*__BUILD__*/</span></span>
     <a class="legal" href="rechtliches.html">Impressum &amp; Datenschutz</a>
   </footer>
 </div>

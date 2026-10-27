@@ -752,14 +752,31 @@ async function main() {
     const offenNachWisch = !!document.querySelector(".lbscrim");
     closeLightbox();
     return { open, xFocused, noPanel, closed, focusBack, galStart, nachWisch, offenNachWisch,
-      derive: lbBig("https://u/commons/thumb/x/Foo.jpg/640px-Foo.jpg") };
+      derive: lbBig("https://u/commons/thumb/x/Foo.jpg/640px-Foo.jpg"),
+      klein: lbBig("https://u/commons/thumb/x/Foo.jpg/640px-Foo.jpg", 1500) };   // Original 1500 px → 1280, nie darüber
   });
   assert(lb.open && lb.xFocused && lb.noPanel,
     "Lightbox muss als eigener Dialog öffnen (Fokus auf ×, kein .scrim-Panel): " + JSON.stringify(lb));
   assert(lb.closed && lb.focusBack, "Esc muss die Lightbox schließen und den Fokus zurückgeben: " + JSON.stringify(lb));
-  assert(/\/1600px-Foo\.jpg$/.test(lb.derive), "lbBig muss das größere Commons-Derivat ableiten: " + lb.derive);
+  assert(/\/1920px-Foo\.jpg$/.test(lb.derive) && /\/1280px-Foo\.jpg$/.test(lb.klein),
+    "lbBig muss auf eine Commons-Standardstufe ableiten (1920; bei 1500 px Original 1280): " + JSON.stringify({ d: lb.derive, k: lb.klein }));
   assert(lb.galStart === "1 / 2" && lb.nachWisch === "2 / 2" && lb.offenNachWisch,
     "Galerie: Zähler und Wischen müssen auch hier greifen, ohne beim Wisch zu schließen: " + JSON.stringify(lb));
+
+  // Versionskennung + »Neue Version« (Prüfwerkzeug): im Leerlauf neu laden, bei gezogener Prüfung Hinweis mit Knopf
+  const swu = await page.evaluate(() => {
+    const stamp = (document.querySelector("#buildStamp") || {}).textContent || "";
+    let reloads = 0; __swReloadHook(() => { reloads++; });
+    clearSel(); __swUpdate(); const sofort = reloads;
+    drawRandom(); __swUpdate();
+    const note = document.querySelector("#swNote"); const hinweis = note ? note.textContent : "";
+    document.querySelector("#swGo").click(); const perKnopf = reloads;
+    note.remove(); clearSel(); __swReloadHook(null);
+    return { stamp, sofort, hinweis, perKnopf };
+  });
+  assert(/Version [0-9a-f]{7}/.test(swu.stamp), "Fußzeile muss die Versionskennung nennen: " + swu.stamp);
+  assert(swu.sofort === 1 && /Neue Version/.test(swu.hinweis) && swu.perKnopf === 2,
+    "Neue Version: Leerlauf → neu laden, gezogene Prüfung → Hinweis mit Knopf: " + JSON.stringify(swu));
 
   // 8y) Verwaltungs-Menü als Popover (wo die Plattform es kann): Top-Layer, am Knopf
   //     verankert, Light-Dismiss/Esc schließen – der »hidden«-Zustand bleibt in beiden

@@ -2089,6 +2089,49 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       und namenlose Datei verworfen –, Nachweis per Datei-Abruf, danach reihum ohne weiteren
       Abruf).
 
+- [x] **Bilder: Commons-Standardgrößen, Ausweich-Kette und sichtbare Meldung statt leerer
+      Großansicht** (Rückmeldung mit Screenshot: »teilweise werden Bilder geblockt, aber trotzdem
+      als leeres Bild geladen« – DevTools: `1600px-…`/`640px-…Bark_of_Parrotia.JPG?utm_source=…`
+      »blocked by CORB«). Ursache: Wikimedia liefert Vorschaubilder bei **Direktabruf nur noch in
+      festen Stufen** (20 · 40 · 60 · 120 · 250 · 330 · 500 · 960 · 1280 · 1920 · 3840 px –
+      mediawiki.org/wiki/Common_thumbnail_sizes, T414805); jede andere Breite beantwortet der
+      Server mit einer HTML-Fehlerseite (HTTP 400 »Use thumbnail sizes listed on …«), die der
+      Browser als Bild verwirft – der `<img>` blieb leer. Betroffen waren genau **unsere selbst
+      abgeleiteten Größen**: `lbBig` (»…/1600px-…« für die Großansicht) und `phThumb`
+      (»…/640px-…« für weitere Quiz-Ansichten) plus ältere Cache-Einträge; die API-Abfragen
+      (`iiurlwidth`/`pithumbsize`) rundet der Server selbst auf. »Teilweise«, weil früher erzeugte
+      Derivate noch im Wikimedia-Cache lagen. Fix (beide Werkzeuge, Lightbox 1:1):
+      (1) `lbBig(src, w)` leitet nur noch auf eine **Standardstufe** ab (1920; im Datensparmodus/
+      2G 1280) und **nie über die Originalbreite** hinaus (`w` aus `iiprop=size`, mitgeführt in
+      `wikiGallery`/`pickCommons`/`galInfo`/Galerie-Einträgen). (2) **Ausweich-Kette** je Bild
+      (`lbChain`: abgeleitete Stufe → vom API gelieferte Vorschau); `lbTry` probiert sie auf dem
+      sichtbaren `<img>` und beim Vorladen, die funktionierende URL wird je Eintrag gemerkt
+      (`lbState`, WeakMap – nichts wird gespeichert), nichts doppelt angefragt. (3) Scheitert
+      alles: **»Bild nicht verfügbar«** (`.lb-fail`; bei bekannter Datei mit Link auf Commons, im
+      Quiz ohne Dateinamen) statt eines leeren Rahmens. (4) `phThumb` entfällt – `photoMoreViews`/
+      `photoGalLoader` fragen `wikiGallery(title, noArt, 640)` an, der Server liefert die
+      960-px-Stufe; `lbLoad` dedupliziert über die Datei (`lbKey`), nicht nur über die URL.
+      Bild-Cache auf `pflanzenlernen.photos6` (alte 640-px-Einträge verfallen). Per curl
+      verifiziert: 960/1920 px → Bild, 4096 px → 400 (die Build-IP wurde sonst mit 429 gebremst).
+      `tests/learn.mjs`: Kette (1920 mit Query-String, Original 1500 → 1280, 900 → nur Vorschau,
+      Data-URI unverändert), Meldung bei gescheiterter Kette, nächstes Bild lädt über die
+      Vorschau (`src`-Setter des `<img>` im Test umgeleitet); `tests/smoke.mjs`: `lbBig` 1920/1280.
+
+- [x] **Neue Version sofort aktiv + Versionskennung in der Fußzeile** (Rückmeldung »es wird
+      weiterhin dasselbe Bild angezeigt«: die Änderung war online, der Service Worker lieferte aber
+      cache-first noch die alte Seite – die neue stand erst beim übernächsten Aufruf). Jetzt
+      lauscht das Head-Snippet aller drei Seiten auf `controllerchange` (nur wenn vorher schon ein
+      Service Worker aktiv war): `swUpdate()` (`learn.js`/`app.js`) lädt **sofort neu, wenn nichts
+      läuft** (keine Sitzung bzw. keine gezogene Prüfung, kein offener Dialog, Tab sichtbar),
+      sonst erscheint ein Hinweis `#swNote` »Neue Version geladen – wird beim nächsten Aufruf
+      aktiv« mit Knopf **»Jetzt neu laden«** (`.swnote`, im Druck ausgeblendet). `build.py`
+      schreibt einen **Versionsstempel** (`/*__BUILD__*/` → »Stand TT.MM.JJJJ · Version abcdef1«:
+      Datum des letzten Commits + 7-stelliger Hash über Quellen und Seeds, deterministisch) in die
+      Fußzeile beider Werkzeuge (`#buildStamp`) – so lässt sich auf jedem Gerät ablesen, ob die
+      neue Ausgabe aktiv ist. Test-Haken `__swUpdate`/`__swReloadHook`; `tests/learn.mjs` und
+      `tests/smoke.mjs` prüfen Stempel, Leerlauf → Neuladen, laufende Sitzung/gezogene Prüfung →
+      genau ein Hinweis mit Knopf.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.
