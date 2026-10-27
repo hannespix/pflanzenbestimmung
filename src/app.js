@@ -1969,9 +1969,9 @@ function taxonNote(card, pg, data){
 /* Bilder eines Artikels für die Galerie in der Vollbild-Ansicht (JSONP, kein fetch).
    Karten/Wappen/Logos fliegen raus; botanische Tafeln bleiben – beim Nachschlagen
    sind sie hilfreich. */
-function wikiGallery(title){
+function wikiGallery(title){                           // iiurlwidth rundet der Server auf seine Standardstufe auf (1200 → 1280 px)
   return jsonp("https://de.wikipedia.org/w/api.php?action=query&format=json&generator=images"+
-      "&gimlimit=20&redirects=1&prop=imageinfo&iiprop=url%7Cmime&iiurlwidth=1200&titles="+
+      "&gimlimit=20&redirects=1&prop=imageinfo&iiprop=url%7Cmime%7Csize&iiurlwidth=1200&titles="+
       encodeURIComponent(title))
     .then(d=>{
       const pg = (d && d.query && d.query.pages) || {};
@@ -1984,7 +1984,7 @@ function wikiGallery(title){
           return !/(\.svg$|map|karte|wappen|logo|icon|commons-logo|disambig)/i.test(f);
         })
         .map(p=>{ const ii=p.imageinfo[0];
-          return { src: ii.thumburl||ii.url, file: String(p.title||"").replace(/^(File|Datei):/i,"") }; })
+          return { src: ii.thumburl||ii.url, file: String(p.title||"").replace(/^(File|Datei):/i,""), w: ii.width||0 }; })   // w: Originalbreite (Großansicht nie darüber hinaus)
         .slice(0,12);
     })
     .catch(()=>[]);
@@ -1992,11 +1992,58 @@ function wikiGallery(title){
 /* ---------- Bild-Lightbox (Vorschaubild anklicken → groß ansehen) ----------
    1:1 aus learn.js übernommen (die Info-Karte ist in beiden Werkzeugen gleich).
    Eigener Namensraum .lbscrim; Esc läuft in der Capture-Phase, damit die
-   .scrim-Panels und das Info-Modal dahinter nicht mitschließen. */
-function lbBig(src){ return String(src||"").replace(/\/(\d{2,4})px-/, "/1600px-"); }
-let lbReturnFocus=null;
+   .scrim-Panels und das Info-Modal dahinter nicht mitschließen.
+   Große Ansicht: Wikimedia Commons liefert Vorschaubilder bei Direktabruf nur noch in
+   festen Stufen (20 … 500 · 960 · 1280 · 1920 · 3840 px; mediawiki.org/wiki/
+   Common_thumbnail_sizes, T414805). Jede andere Breite beantwortet der Server mit einer
+   HTML-Fehlerseite (HTTP 400), die der Browser als Bild verwirft (»blocked by CORB«) –
+   so entstanden leere Großansichten. Deshalb: nur auf eine Standardstufe ableiten, nie
+   über die Originalbreite hinaus, und je Bild eine Ausweich-Kette (abgeleitete Stufe →
+   die vom API gelieferte Vorschau); scheitert alles, steht eine Meldung da statt eines
+   leeren Rahmens. Die API-Abfragen (iiurlwidth/pithumbsize) rundet der Server selbst auf. */
+function lbThrifty(){                                    // Datensparmodus oder 2G → kleinere Stufe, weniger vorladen
+  try{ const c = navigator.connection;
+    return !!c && (c.saveData === true || /(^|-)2g$/.test(c.effectiveType||"")); }catch(e){ return false; }
+}
+const LB_STEPS = [960, 1280, 1920];                      // Standardstufen, die für die Großansicht taugen
+function lbBig(src, w){                                  // w: Originalbreite, falls bekannt – nie größer anfragen als das Original
+  const s = String(src||""), m = s.match(/\/(\d{2,4})px-/);
+  if(!m) return s;
+  const cur = +m[1], max = lbThrifty() ? 1280 : 1920;
+  const want = LB_STEPS.filter(x => x<=max && (!w || x<w)).pop() || 0;
+  if(!want || want<=cur) return s;                       // nichts Größeres verfügbar → wie geliefert
+  return s.replace(/\/(\d{2,4})px-/, "/"+want+"px-");
+}
+function lbChain(it){                                    // Ausweich-Kette: große Stufe → gelieferte Vorschau
+  const out = [];
+  [lbBig(it.src, it.w), it.src].forEach(u => { if(u && out.indexOf(u)<0) out.push(u); });
+  return out;
+}
+function lbKey(it){ return String(it.id || it.file || it.src || "").replace(/_/g," "); }   // dieselbe Datei in anderer Größe ist kein neues Bild
+const lbState = new WeakMap();                           // Eintrag → {ok: URL, die lädt | busy | dead}; wird nirgends gespeichert
+function lbSt(it){ let s = lbState.get(it); if(!s){ s = {}; lbState.set(it, s); } return s; }
+/* Eine URL nach der anderen probieren – auf dem sichtbaren <img> oder im Hintergrund.
+   Die erste, die lädt, wird gemerkt (ok); scheitert die ganze Kette, gilt der Eintrag
+   als tot (dead) und onFail zeigt die Meldung. Rückgabe: Abbruch-Funktion. */
+function lbTry(img, it, onFail){
+  const st = lbSt(it), chain = st.ok ? [st.ok] : lbChain(it);
+  let k = 0, off = false;
+  st.busy = true;
+  const next = ()=>{
+    if(off) return;
+    if(k>=chain.length){ st.busy=false; st.dead=true; st.ok=null; img.onerror=img.onload=null; if(onFail) onFail(); return; }
+    const u = chain[k++];
+    img.onerror = next;
+    img.onload = ()=>{ if(off) return; st.ok=u; st.dead=false; st.busy=false; img.onerror=img.onload=null; };
+    img.src = u;
+  };
+  next();
+  return ()=>{ off = true; };                            // Wechsel zum nächsten Bild: alte Rückmeldungen verfallen (busy bleibt – kein Doppelabruf)
+}
+let lbReturnFocus=null, lbCancel=null;
 function closeLightbox(){
   const sc=document.querySelector(".lbscrim"); if(!sc) return;
+  if(lbCancel){ lbCancel(); lbCancel=null; }
   sc.remove();
   if(lbReturnFocus && lbReturnFocus.focus){ try{ lbReturnFocus.focus(); }catch(e){} }
   lbReturnFocus=null;
@@ -2016,38 +2063,40 @@ function lbSync(){
 }
 /* Vorladen: Sobald die Großansicht offen ist, holen wir die übrigen Bilder der
    Galerie schon im Hintergrund – dann steht das nächste beim Wischen/Blättern
-   sofort da. Reihenfolge von innen nach außen (Nachbarn zuerst). Im Datenspar-
-   modus oder auf 2G nur die direkten Nachbarn. Geladen wird dieselbe URL, die
-   auch angezeigt wird (lbBig), sonst nützt der Browser-Cache nichts. */
-const lbPre = new Map();                                 // URL → Image; verhindert Doppel-Anfragen
-function lbThrifty(){
-  try{ const c = navigator.connection;
-    return !!c && (c.saveData === true || /(^|-)2g$/.test(c.effectiveType||"")); }catch(e){ return false; }
-}
+   sofort da. Reihenfolge von innen nach außen (die Nachbarn kommen als Erstes
+   dran). Im Datensparmodus oder auf 2G nur die direkten Nachbarn. Geladen wird
+   dieselbe Kette wie bei der Anzeige; die funktionierende URL wird je Eintrag
+   gemerkt, nichts wird doppelt angefragt. */
 function lbPreload(){
   const n = lbList.length; if(n<2) return;
   const order = [];
-  for(let d=1; d<n; d++){
+  for(let d=1; d<n; d++){                                // 1 vor, 1 zurück, 2 vor, 2 zurück …
     const a=(lbIdx+d)%n, b=(lbIdx-d+n)%n;
     if(order.indexOf(a)<0) order.push(a);
     if(order.indexOf(b)<0) order.push(b);
   }
   for(const i of order.slice(0, lbThrifty() ? 2 : order.length)){
-    const u = lbBig(lbList[i].src);
-    if(lbPre.has(u)) continue;
+    const it = lbList[i], st = lbSt(it);
+    if(st.ok || st.busy || st.dead) continue;            // schon da, unterwegs oder aussichtslos
     const im = new Image(); im.decoding = "async";
-    lbPre.set(u, im); im.src = u;
-    if(lbPre.size > 80) lbPre.delete(lbPre.keys().next().value);
+    lbTry(im, it);
   }
 }
 function lbShow(i){
   const sc=document.querySelector(".lbscrim"); if(!sc || !lbList.length) return;
   lbIdx = (i%lbList.length + lbList.length) % lbList.length;
   const it = lbList[lbIdx], img = sc.querySelector(".lb-img");
-  const big = lbBig(it.src);
-  img.onerror = big!==it.src ? (()=>{ img.onerror=null; img.src=it.src; }) : null;
-  img.src = big; img.alt = it.label || it.file || "Bild";
-  if(!lbPre.has(big)) lbPre.set(big, img);               // das gezeigte Bild gilt als geholt
+  if(lbCancel) lbCancel();
+  const note = sc.querySelector(".lb-fail"); if(note) note.remove();
+  sc.classList.remove("lb-failed");
+  img.alt = it.label || it.file || "Bild";
+  lbCancel = lbTry(img, it, ()=>{                        // ganze Kette gescheitert → Meldung statt leerem Rahmen
+    img.removeAttribute("src"); sc.classList.add("lb-failed");
+    const d = el("div","lb-fail"); d.setAttribute("role","status");
+    d.innerHTML = `<b>Bild nicht verfügbar</b><br>Der Bildserver (Wikimedia Commons) liefert diese Datei gerade nicht aus.`+
+      (it.file ? `<br><a href="https://commons.wikimedia.org/wiki/File:${esc(encodeURIComponent(it.file))}" target="_blank" rel="noopener">Datei auf Commons öffnen</a>` : "");
+    img.insertAdjacentElement("afterend", d);
+  });
   lbSync();
   lbPreload();                                           // Nachbarn im Hintergrund holen
 }
@@ -2055,15 +2104,15 @@ function lbLoad(loader){                                 // Galerie nachladen, w
   if(typeof loader!=="function") return;
   const token = lbToken;
   Promise.resolve().then(loader).then(list=>{
-    if(token!==lbToken || !document.querySelector(".lbscrim")) return;
+    if(token!==lbToken || !document.querySelector(".lbscrim")) return;   // inzwischen geschlossen/neu geöffnet
     if(!Array.isArray(list) || !list.length) return;
-    const seen = new Set(lbList.map(i=>i.src));
-    const add = list.filter(i=>i && i.src && !seen.has(i.src));
+    const seen = new Set(lbList.map(lbKey));
+    const add = list.filter(i=>i && i.src && !seen.has(lbKey(i)));
     if(!add.length) return;
     lbList = lbList.concat(add);
     lbSync();
     lbPreload();                                         // die neuen Bilder gleich mit vorladen
-  }).catch(()=>{});
+  }).catch(()=>{});                                      // ohne Netz bleibt es beim einen Bild
 }
 /* Wischen (Handy/Tablet): einen Finger nach links = nächstes Bild, nach rechts =
    vorheriges. Bewusst OHNE touch-action:none – so bleibt Zwei-Finger-Zoom im Bild
@@ -2682,5 +2731,18 @@ function updateSchema(){
 window.pickExcel=pickExcel;
 window.resetToDefault=resetToDefault;
 window.importJsonData=importJsonData; // für Datei-Import und Smoke-Test
+/* Neue Version sofort aktiv (siehe Service-Worker-Snippet im <head>): neu laden, wenn
+   gerade nichts läuft – keine gezogene Prüfung, kein offener Dialog; sonst Hinweis mit Knopf. */
+let swReload = ()=>{ try{ location.reload(); }catch(e){} };
+function swIdle(){ return selection.length===0 && !document.querySelector(".scrim.open, .infoscrim, .lbscrim") && document.visibilityState!=="hidden"; }
+function swUpdate(){
+  if(swIdle()) return swReload();
+  if($("#swNote")) return;
+  const n = el("div"); n.id="swNote"; n.className="swnote"; n.setAttribute("role","status");
+  n.innerHTML = `Neue Version geladen – wird beim nächsten Aufruf aktiv. <button class="btn small" id="swGo" type="button">Jetzt neu laden</button>`;
+  document.body.appendChild(n);
+  $("#swGo").onclick = ()=>swReload();
+}
+window.__swUpdate=swUpdate; window.__swReloadHook=fn=>{ swReload = fn || (()=>{ try{ location.reload(); }catch(e){} }); };
 window.__setJsonp=fn=>{ jsonp = fn || ((...a)=>jsonpGet(...a)); };   // Smoke-Test: Wikipedia-Antworten ohne Netz vorgeben
 window.wikiCache=wikiCache;

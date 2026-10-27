@@ -12,7 +12,7 @@ Ergebnisse:
   dist/rechtliches.html        Impressum & Datenschutz (statisch)
   + versionierte Verteilkopien aller Dateien im Repo-Root
 """
-import pathlib, json, sys, hashlib, shutil
+import pathlib, json, sys, hashlib, shutil, subprocess, datetime
 
 ROOT = pathlib.Path(__file__).parent
 
@@ -32,13 +32,35 @@ def load_seeds():
         seeds[f.stem] = data
     return seeds
 
-def render(tpl, app, seeds_json, xlsx=None):
+def build_stamp(seeds_json):
+    """Versionskennung für die Fußzeile: Datum des letzten Commits (git, falls vorhanden)
+    + kurzer Inhalts-Hash der Quellen. Deterministisch je Stand – ein Neubau ohne
+    Änderung ergibt denselben Stempel, eine Aktualisierung eine andere Kennung.
+    So lässt sich auf jedem Gerät ablesen, ob die neue Ausgabe schon aktiv ist."""
+    h = hashlib.sha256()
+    for f in ["src/learn.html", "src/learn.js", "src/template.html", "src/app.js", "src/recht.html"]:
+        if (ROOT / f).exists():
+            h.update(read(f).encode("utf-8"))
+    h.update(seeds_json.encode("utf-8"))
+    kennung = h.hexdigest()[:7]
+    datum = ""
+    try:
+        iso = subprocess.run(["git", "log", "-1", "--format=%cs"], cwd=ROOT, capture_output=True,
+                             text=True, timeout=10).stdout.strip()
+        if iso:
+            datum = datetime.date.fromisoformat(iso).strftime("%d.%m.%Y")
+    except Exception:
+        datum = ""
+    return (f"Stand {datum} · " if datum else "") + f"Version {kennung}"
+
+def render(tpl, app, seeds_json, xlsx=None, stamp=""):
     out = tpl
     if xlsx is not None:
         out = out.replace("/*__XLSX_JS__*/", xlsx)
     out = out.replace("/*__APP_JS__*/", app)
     out = out.replace("/*__SEEDS__*/{}", seeds_json)
-    for ph in ["__XLSX_JS__", "__APP_JS__", "__SEEDS__", "__SEED__", "__WASM_B64__", "__SQL_WASM_JS__"]:
+    out = out.replace("/*__BUILD__*/", stamp)
+    for ph in ["__XLSX_JS__", "__APP_JS__", "__SEEDS__", "__SEED__", "__WASM_B64__", "__SQL_WASM_JS__", "__BUILD__"]:
         if ph in out:
             print(f"FEHLER: Platzhalter {ph} nicht ersetzt", file=sys.stderr); sys.exit(1)
     return out
@@ -110,10 +132,12 @@ def main():
     seeds = load_seeds()
     seeds_json = json.dumps(seeds, ensure_ascii=False, separators=(",", ":"))
     outputs = []
+    stamp = build_stamp(seeds_json)
+    print(f"Versionsstempel: {stamp}")
 
     # Prüfungswerkzeug (inkl. SheetJS für den Excel-Import)
     exam = render(read("src/template.html"), read("src/app.js"), seeds_json,
-                  xlsx=read("lib/xlsx.full.min.js"))
+                  xlsx=read("lib/xlsx.full.min.js"), stamp=stamp)
     write_out(exam, "pflanzenkenntnis.html"); outputs.append(exam)
 
     # Hübsche Adresse pflanze-bw.de/pruefung → leitet auf das Prüfungswerkzeug weiter
@@ -127,7 +151,7 @@ def main():
     # gar nicht erst zu sehen bekommen. Beide Namen tragen dieselbe Datei, damit
     # bestehende Links, Lesezeichen und die PWA-Verknüpfung weiter funktionieren.
     if (ROOT / "src/learn.html").exists() and (ROOT / "src/learn.js").exists():
-        learn = render(read("src/learn.html"), read("src/learn.js"), seeds_json)
+        learn = render(read("src/learn.html"), read("src/learn.js"), seeds_json, stamp=stamp)
         write_out(learn, "pflanzen-lernen.html"); outputs.append(learn)
         write_out(learn, "index.html")          # Wurzel = Lern-Tool (gleiche Datei)
 

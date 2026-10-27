@@ -1340,7 +1340,7 @@ async function main() {
     const w1 = await photoFor(weig); const n1 = abrufe;
     const w2 = await photoFor(weig); const n2 = abrufe;
     Object.assign(r, { weigTmp: !!(w1 && w1.tmp), weigFile: w1 && w1.file, weigCredit: w1 && w1.artist, weigSame: w1 === w2, weigNoRefetch: n2 === n1,
-      weigNichtGemerkt: !(localStorage.getItem("pflanzenlernen.photos5") || "").includes(weig.key) });
+      weigNichtGemerkt: !(localStorage.getItem("pflanzenlernen.photos6") || "").includes(weig.key) });
     __setJsonp(window.__offlineJsonp); __clearPhotoCache(); photoTried.clear();
     // d) Platzhalter 'Sorte': die Liste meint die Art → direkt der Art-Artikel
     prof("garten_und_landschaftsbau", "fachwerker");
@@ -1718,8 +1718,8 @@ async function main() {
     __setPhotoSource(null); __clearPhotoCache();
     return { derive, wired, open, xFocused, closed, focusBack };
   });
-  assert(/\/1600px-Foo\.jpg$/.test(lightbox.derive),
-    "lbBig muss das größere Commons-Derivat ableiten (…/1600px-…): " + lightbox.derive);
+  assert(/\/1920px-Foo\.jpg$/.test(lightbox.derive),
+    "lbBig muss auf die Commons-Standardstufe ableiten (…/1920px-…, 1600 gibt es nicht mehr): " + lightbox.derive);
   assert(lightbox.wired, "Quiz-Foto muss als Button verkabelt sein (role/tabindex/lb-zoom): " + JSON.stringify(lightbox));
   assert(lightbox.open && lightbox.xFocused,
     "Klick aufs Foto muss die Lightbox öffnen (role=dialog, Fokus auf ×): " + JSON.stringify(lightbox));
@@ -1771,7 +1771,7 @@ async function main() {
     return { start, gross, nachKlick, nachTaste, umlauf, zu, einzeln,
       wischLinks, wischRechts, wischKurz, offenNachWisch };
   });
-  assert(galerie.start === "1 / 3" && /1600px/.test(galerie.gross),
+  assert(galerie.start === "1 / 3" && /1920px/.test(galerie.gross),
     "Galerie: Start bei 1/3 und in großer Auflösung: " + JSON.stringify(galerie));
   assert(galerie.nachKlick === "2 / 3" && galerie.nachTaste === "3 / 3" && galerie.umlauf === "1 / 3",
     "Galerie: Pfeil-Klick und ← → müssen blättern (mit Umlauf): " + JSON.stringify(galerie));
@@ -1816,6 +1816,50 @@ async function main() {
     "Vorladen: der Nachbar zuerst, das gezeigte Bild nicht noch einmal: " + JSON.stringify(vorlad));
   assert(vorlad.beimBlaettern === 0 && vorlad.einzeln === 0,
     "Vorladen: nichts doppelt anfragen, bei einem Einzelbild gar nichts: " + JSON.stringify(vorlad));
+
+  // Ausweich-Kette: Commons liefert Vorschaubilder bei Direktabruf nur noch in festen Stufen
+  // (… 960 · 1280 · 1920 px) – eine selbst abgeleitete »1600px-«/»640px-«-URL kommt als
+  // HTML-Fehlerseite (HTTP 400) zurück und blieb als leerer Rahmen stehen. Jetzt: Standard-
+  // stufe (nie über die Originalbreite hinaus) → gelieferte Vorschau → sichtbare Meldung.
+  const kette = await page.evaluate(async () => {
+    const u640 = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/b/Foo.jpg/640px-Foo.jpg?utm_source=x";
+    const chain = __lbChain({ src: u640 });
+    const klein = __lbChain({ src: u640, w: 1500 });                  // Original nur 1500 px breit → 1280, nicht 1920
+    const winzig = __lbChain({ src: u640, w: 900 });                   // nichts Größeres verfügbar → nur die Vorschau
+    const data = __lbChain({ src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>" });
+    // Sichtbarer Fallback ohne Netz: das src-Setzen des <img> wird auf Data-URIs umgeleitet
+    const px = (f) => "data:image/svg+xml," + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><title>" + f + "</title></svg>");
+    const kaputt = "data:image/png;base64,AAAA";                       // lädt nie
+    const Z960 = "https://fake/thumb/x/Z.jpg/960px-Z.jpg", Z1920 = "https://fake/thumb/x/Z.jpg/1920px-Z.jpg";
+    const map = {}; map[Z1920] = kaputt; map[Z960] = px("Z");
+    const desc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "src");
+    const gesetzt = [];
+    Object.defineProperty(HTMLImageElement.prototype, "src", { configurable: true,
+      get() { return desc.get.call(this); }, set(v) { gesetzt.push(v); desc.set.call(this, map[v] || v); } });
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const sc = () => document.querySelector(".lbscrim");
+    openLightbox(kaputt, "k", [{ src: kaputt }, { src: Z960 }], 0);
+    await wait(120);
+    const meldung = (sc().querySelector(".lb-fail") || {}).textContent || "";
+    const ausgeblendet = sc().classList.contains("lb-failed") && getComputedStyle(sc().querySelector(".lb-img")).display === "none";
+    sc().querySelector(".lb-nav.next").click();
+    await wait(120);
+    const img = sc().querySelector(".lb-img");
+    const weg = !sc().querySelector(".lb-fail") && !sc().classList.contains("lb-failed");
+    const geladen = img.complete && img.naturalWidth > 0;
+    const reihenfolge = gesetzt.filter((v) => /fake/.test(v));         // 1920 zuerst (scheitert), dann die 960-Vorschau
+    closeLightbox();
+    Object.defineProperty(HTMLImageElement.prototype, "src", desc);
+    return { u640, chain, klein, winzig, data, meldung, ausgeblendet, weg, geladen, reihenfolge, Z960, Z1920 };
+  });
+  assert(kette.chain.length === 2 && /\/1920px-Foo\.jpg\?utm_source=x$/.test(kette.chain[0]) && kette.chain[1] === kette.u640,
+    "Kette: Standardstufe 1920 (Query-String bleibt) → gelieferte Vorschau: " + JSON.stringify(kette.chain));
+  assert(kette.klein.length === 2 && /\/1280px-/.test(kette.klein[0]) && kette.winzig.length === 1 && kette.winzig[0] === kette.u640 && kette.data.length === 1,
+    "Kette: nie über die Originalbreite hinaus (1500 → 1280, 900 → nur Vorschau), Data-URI unverändert: " + JSON.stringify({ klein: kette.klein, winzig: kette.winzig, data: kette.data }));
+  assert(/Bild nicht verfügbar/.test(kette.meldung) && kette.ausgeblendet,
+    "Großansicht: scheitert die ganze Kette, steht eine Meldung statt eines leeren Rahmens: " + JSON.stringify({ m: kette.meldung, a: kette.ausgeblendet }));
+  assert(kette.weg && kette.geladen && kette.reihenfolge[0] === kette.Z1920 && kette.reihenfolge.indexOf(kette.Z960) > 0,
+    "Großansicht: nächstes Bild – 1920 probiert, scheitert, die gelieferte Vorschau lädt, Meldung weg: " + JSON.stringify({ weg: kette.weg, geladen: kette.geladen, r: kette.reihenfolge }));
 
   // Lernstand in der Info-Karte: Stufe, Fälligkeit und Bilanz beim Nachschlagen
   const lstate = await page.evaluate(() => {
@@ -3183,6 +3227,37 @@ async function main() {
   assert(gefIn.auto && gefIn.erste && gefIn.zweite && gefIn.dritte,
     "Geführte Herausforderung muss genau die kodierten Übungsformen spielen (Quiz · Karte · Tippen): " + JSON.stringify(gefIn));
 
+  // Neue Version sofort aktiv + Versionskennung: Der Service Worker liefert cache-first, beim
+  // ersten Aufruf nach einer Aktualisierung stand also noch die alte Seite. Jetzt lädt die
+  // Seite bei Übernahme der neuen Version von selbst neu – aber nur, wenn gerade nichts
+  // läuft; sonst erscheint ein Hinweis mit Knopf. Die Fußzeile nennt die Versionskennung,
+  // damit sich auf jedem Gerät ablesen lässt, welche Ausgabe gerade aktiv ist.
+  const swu = await page.evaluate(async () => {
+    const stamp = (document.querySelector("#buildStamp") || {}).textContent || "";
+    let reloads = 0; __swReloadHook(() => { reloads++; });
+    __swUpdate();                                        // nichts läuft → sofort neu laden
+    const sofort = reloads;
+    document.querySelector('#modeTabs button[data-mode="quiz"]').click();
+    $("#sessLen").value = "4"; startSession();
+    await new Promise((r) => setTimeout(r, 60));
+    __swUpdate();                                        // Sitzung läuft → Hinweis statt Neuladen
+    const note = document.querySelector("#swNote");
+    const hinweis = note ? note.textContent : "";
+    const nichtNeu = reloads === sofort;
+    __swUpdate();                                        // kein zweiter Hinweis
+    const einmal = document.querySelectorAll("#swNote").length;
+    document.querySelector("#swGo").click();
+    const perKnopf = reloads;
+    note.remove();
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();   // Sitzung abbrechen
+    __swReloadHook(null);
+    return { stamp, sofort, hinweis, nichtNeu, einmal, perKnopf };
+  });
+  assert(/Version [0-9a-f]{7}/.test(swu.stamp), "Fußzeile muss die Versionskennung nennen: " + swu.stamp);
+  assert(swu.sofort === 1, "Neue Version im Leerlauf → sofort neu laden: " + JSON.stringify(swu));
+  assert(/Neue Version/.test(swu.hinweis) && swu.nichtNeu && swu.einmal === 1 && swu.perKnopf === 2,
+    "Neue Version während einer Sitzung → ein Hinweis mit Knopf »Jetzt neu laden« statt Neuladen: " + JSON.stringify(swu));
+
   // Zurück auf sauberen Zustand für die Aufräum-Schritte
   await page.goto("about:blank");
   await page.goto(FILE, { waitUntil: "load" });
@@ -3193,7 +3268,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand und sagt sie an, direkt teilbar, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON- und v2-Links lesbar, Richtung inkl. »voller Name«, Antwortart und die Übungsformen der geführten Lektion wandern mit, Banner übernimmt Profil/Modus/Aufgabenstellung, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art oder beschreibender Sorte, Tafeln/Herbarbelege/Buchscans über Commons-Metadaten raus, Bildnachweis ohne Zweitabruf, abgebrochener feiner Weg → Treffer nur je Sitzung), Eingabe ohne Anführungszeichen-/Hybrid-Zwang, Abfragerichtungen (Text de↔bot; Bilder fest »voller Name«, ältere Duell-Links spielen ihre Aufgabe weiter), Auswahl nach Thema/Familie, Quiz, Selbst eingeben, Bilder-Quiz (Bild + 4 volle Namen, »Selbst eingeben (wie in der Prüfung)« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, wartet bei schwacher Verbindung sichtbar und heilt sich selbst statt in Textfragen zu wechseln, Galerie mit mehreren Ansichten – Commons-Kandidaten sofort, Artikelbilder nachgeladen, Wischen, Vorladen der Galerie, stille Wiederholung bei Aussetzern, neuer Versuch je Sitzung), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast, Lernserie/Tagesziel, Herbarium, XP-Ränge + Combo, Stufe 5 (Rang-Popover, Container Queries).");
+  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand und sagt sie an, direkt teilbar, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON- und v2-Links lesbar, Richtung inkl. »voller Name«, Antwortart und die Übungsformen der geführten Lektion wandern mit, Banner übernimmt Profil/Modus/Aufgabenstellung, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art oder beschreibender Sorte, Tafeln/Herbarbelege/Buchscans über Commons-Metadaten raus, Bildnachweis ohne Zweitabruf, abgebrochener feiner Weg → Treffer nur je Sitzung), Eingabe ohne Anführungszeichen-/Hybrid-Zwang, Abfragerichtungen (Text de↔bot; Bilder fest »voller Name«, ältere Duell-Links spielen ihre Aufgabe weiter), Auswahl nach Thema/Familie, Quiz, Selbst eingeben, Bilder-Quiz (Bild + 4 volle Namen, »Selbst eingeben (wie in der Prüfung)« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, wartet bei schwacher Verbindung sichtbar und heilt sich selbst statt in Textfragen zu wechseln, Galerie mit mehreren Ansichten – Commons-Kandidaten sofort, Artikelbilder nachgeladen, Wischen, Vorladen der Galerie, Commons-Standardgrößen mit Ausweich-Kette und sichtbarer Meldung, stille Wiederholung bei Aussetzern, neuer Versuch je Sitzung), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast, Lernserie/Tagesziel, Herbarium, XP-Ränge + Combo, Stufe 5 (Rang-Popover, Container Queries), Versionskennung + »Neue Version« (Leerlauf: neu laden, Sitzung: Hinweis).");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
