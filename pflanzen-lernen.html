@@ -1121,10 +1121,18 @@ body.stagefull #stage>.sessionbar{
   #rankPop{position-anchor:--rankchip; position-area:block-end span-inline-end; position-try-fallbacks:flip-block; margin-top:6px}
 }
 .rkp-h{font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--sepia); margin-bottom:8px}
-.rkp-row{display:flex; align-items:baseline; gap:8px; font-size:13px; padding:3px 0; color:var(--ink-soft)}
+.rkp-row{display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 8px; font-size:13px; padding:4px 0; color:var(--ink-soft)}
 .rkp-row.on{color:var(--green-deep); font-weight:700}
 .rkp-row .r-n{font-family:var(--serif); font-style:italic; flex:1}
 .rkp-row .r-x{font-family:var(--mono); font-size:11px}
+.rkp-row .r-d{flex:0 0 100%; font-size:11.5px; font-weight:400; line-height:1.3; color:var(--ink-soft)}
+.rkp-row.on .r-d{color:var(--green-deep)}
+.rkp-f{margin-top:10px; padding-top:8px; border-top:1px solid var(--rule); font-size:11.5px; line-height:1.4; color:var(--ink-soft)}
+/* Laufbahn als Dialog (Fallback ohne Popover/Anchor, z. B. ältere Handys) */
+.rankmodal{max-width:460px}
+.rkp-list{margin:12px 0 4px}
+.rkp-list .rkp-row{padding:7px 10px; margin-bottom:6px; border:1px solid var(--rule); border-radius:10px; background:var(--surface-2)}
+.rkp-list .rkp-row.on{border-color:var(--green); background:var(--green-tint)}
 .rk-name{cursor:pointer; text-decoration:underline dotted var(--rule-strong); text-underline-offset:3px}
 /* Lernstand in der Info-Karte: Stufe, Fälligkeit, Bilanz auf einen Blick.
    Sitzt am Fuß der Karte – oben steht die Pflanze, unten der eigene Stand. */
@@ -1445,6 +1453,10 @@ body.stagefull #stage>.sessionbar{
       <li><b>Denkzeit ⏱:</b> In Quiz, Selbst eingeben und Bilder läuft oben eine Uhr. Sie zählt nur, solange eine
         Frage offen ist – Wartezeit auf ein Bild und das Lesen der Lösung zählen nicht mit. Karteikarten
         laufen ohne Uhr.</li>
+      <li><b>Punkte &amp; Ränge:</b> Jede richtige Antwort bringt Erfahrungspunkte – Selbst eingeben 10, Auswahl 5,
+        Karteikarte 3, dazu Bonus ab drei Treffern in Folge. Mit den Punkten steigst du eine Gärtner-Laufbahn hinauf:
+        Keimling → Sämling → Steckling → Jungpflanze → Prachtexemplar → Meistergärtner/in. Ein Tipp auf den Rang im
+        Fortschritt zeigt alle Stufen und was sie bedeuten.</li>
       <li><b>Fokus-Modus (Smartphone):</b> Sobald eine Sitzung läuft, füllt die Karte bzw. Frage auf dem
         Handy den ganzen Bildschirm – Kopf und Menüs verschwinden, du siehst nur noch die aktuelle Aufgabe.
         Oben bleibt die Fortschrittsleiste mit dem Knopf <b>beenden</b>; darüber (oder am Ende der Sitzung)
@@ -2095,14 +2107,15 @@ function streakBump(){
    der Karteikarte am wenigsten. Teilweise richtig gibt anteilig. Global über
    alle Profile (Key pflanzenlernen.xp = {x:Punkte, r:zuletzt gefeierter Rang}). */
 const LS_XP = LS_PREFIX+"xp";
-const RANKS = [                                  // Gärtner-Laufbahn statt Level-Zahlen
-  {n:"Keimling",          x:0},
-  {n:"Sämling",           x:150},
-  {n:"Steckling",         x:500},
-  {n:"Jungpflanze",       x:1200},
-  {n:"Stockmutter",       x:2500},
-  {n:"Meistergärtner/in", x:5000}
+const RANKS = [                                  // Gärtner-Laufbahn statt Level-Zahlen – jede Stufe erklärt sich selbst
+  {n:"Keimling",          x:0,    d:"gerade aufgegangen – die ersten Punkte"},
+  {n:"Sämling",           x:150,  d:"erste Blätter – du bist dabei"},
+  {n:"Steckling",         x:500,  d:"schlägt Wurzeln – regelmäßig am Üben"},
+  {n:"Jungpflanze",       x:1200, d:"wächst kräftig – viele Namen sitzen"},
+  {n:"Prachtexemplar",    x:2500, d:"voll entwickelt – kaum noch Lücken"},
+  {n:"Meistergärtner/in", x:5000, d:"kennt sie alle – die höchste Stufe"}
 ];
+const RANK_HOW = "Punkte gibt es für richtige Antworten: Selbst eingeben 10 · Auswahl 5 · Karteikarte 3 – plus Bonus ab drei Treffern in Folge.";
 const XP_BASE = { cards:3, quiz:5, type:10 };    // Karteikarte < Auswahl < freies Tippen
 function xpLoad(){ try{ const o=JSON.parse(store.get(LS_XP)||"{}"); return (o&&typeof o==="object")?o:{}; }catch(e){ return {}; } }
 function xpSave(o){ try{ store.set(LS_XP, JSON.stringify(o)); }catch(e){} }
@@ -2123,7 +2136,7 @@ function xpAdd(n, anchor){                       // Punkte gutschreiben, Rangauf
     const nach=rankOf(o.x).i;
     if(nach>vor && o.r!==nach){                  // neuer Rang: einmalig feiern
       o.r=nach; xpSave(o);
-      toast(`Neuer Rang: ${RANKS[nach].n}`);
+      toast(`Neuer Rang: ${RANKS[nach].n} – ${RANKS[nach].d}`);
       celebrate(anchor||$("#stage")||document.body, 2);
     } else xpSave(o);
     if(sess.active) sess.xp=(sess.xp||0)+n;      // in der Sitzungsleiste mitzählen
@@ -2137,18 +2150,47 @@ function canPopover(){
   try{ return ("popover" in HTMLElement.prototype) && window.CSS && CSS.supports("anchor-name: --a"); }
   catch(e){ return false; }
 }
+function rankRowsHTML(jetzt){                     // eine Zeile je Rang: Name · ab wie vielen Punkten · was er bedeutet
+  return RANKS.map((r,i)=>`<div class="rkp-row${i===jetzt?" on":""}"><span class="r-n">${esc(r.n)}</span><span class="r-x">ab ${r.x} P.</span><span class="r-d">${esc(r.d||"")}</span></div>`).join("");
+}
+/* Dieselbe Laufbahn als Dialog – für Browser ohne Popover/Anchor-Positioning (der
+   Rang-Knopf bleibt so nie tot; ein Tooltip ist am Handy unsichtbar). */
+function openRankModal(){
+  closeInfo();
+  const jetzt=rankOf(xpTotal()).i, xp=xpTotal();
+  const scrim = el("div","scrim"); scrim.id="infoScrim";
+  scrim.innerHTML = `<div class="modal rankmodal" role="dialog" aria-modal="true" aria-label="Deine Laufbahn">
+     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <div class="modal-head">
+       <div class="mh-bot fam">Deine Laufbahn</div>
+       <div class="mh-fam">${xp} Punkte · Rang: ${esc(RANKS[jetzt].n)}</div>
+     </div>
+     <div class="rkp-list">${rankRowsHTML(jetzt)}</div>
+     <div class="famfoot">${esc(RANK_HOW)}</div>
+   </div>`;
+  document.body.appendChild(scrim); infoEl=scrim;
+  scrim.addEventListener("click", e=>{ if(e.target===scrim) closeInfo(); });
+  scrim.querySelector("#infoClose").onclick = closeInfo;
+  document.addEventListener("keydown", infoKey);
+  infoReturnFocus = document.activeElement;
+  try{ scrim.querySelector("#infoClose").focus(); }catch(e){}
+}
 function wireRankPopover(){
-  const chip=$("#rankName"); if(!chip || !canPopover()) return;
+  const chip=$("#rankName"); if(!chip) return;
+  if(chip.tagName!=="BUTTON"){ chip.setAttribute("role","button"); chip.tabIndex=0; }
+  chip.setAttribute("aria-label","Laufbahn ansehen: alle Ränge, was sie bedeuten und ihre Punktzahlen");
+  if(!canPopover()){                             // kein Popover/Anchor: Übersicht als Dialog
+    chip.onclick=openRankModal;
+    chip.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openRankModal(); } };
+    return;
+  }
   let pop=$("#rankPop");
   if(!pop){
     pop=el("div"); pop.id="rankPop"; pop.setAttribute("popover","auto");
     document.body.appendChild(pop);
   }
   const jetzt=rankOf(xpTotal()).i;
-  pop.innerHTML = `<div class="rkp-h">Laufbahn</div>`+
-    RANKS.map((r,i)=>`<div class="rkp-row${i===jetzt?" on":""}"><span class="r-n">${esc(r.n)}</span><span class="r-x">ab ${r.x} P.</span></div>`).join("");
-  if(chip.tagName!=="BUTTON"){ chip.setAttribute("role","button"); chip.tabIndex=0; }
-  chip.setAttribute("aria-label","Laufbahn ansehen: alle Ränge und ihre Punktzahlen");
+  pop.innerHTML = `<div class="rkp-h">Deine Laufbahn</div>`+rankRowsHTML(jetzt)+`<div class="rkp-f">${esc(RANK_HOW)}</div>`;
   const zeig=()=>{ try{ pop.togglePopover(); }catch(e){} };
   chip.onclick=zeig;
   chip.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); zeig(); } };

@@ -1121,10 +1121,18 @@ body.stagefull #stage>.sessionbar{
   #rankPop{position-anchor:--rankchip; position-area:block-end span-inline-end; position-try-fallbacks:flip-block; margin-top:6px}
 }
 .rkp-h{font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--sepia); margin-bottom:8px}
-.rkp-row{display:flex; align-items:baseline; gap:8px; font-size:13px; padding:3px 0; color:var(--ink-soft)}
+.rkp-row{display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 8px; font-size:13px; padding:4px 0; color:var(--ink-soft)}
 .rkp-row.on{color:var(--green-deep); font-weight:700}
 .rkp-row .r-n{font-family:var(--serif); font-style:italic; flex:1}
 .rkp-row .r-x{font-family:var(--mono); font-size:11px}
+.rkp-row .r-d{flex:0 0 100%; font-size:11.5px; font-weight:400; line-height:1.3; color:var(--ink-soft)}
+.rkp-row.on .r-d{color:var(--green-deep)}
+.rkp-f{margin-top:10px; padding-top:8px; border-top:1px solid var(--rule); font-size:11.5px; line-height:1.4; color:var(--ink-soft)}
+/* Laufbahn als Dialog (Fallback ohne Popover/Anchor, z. B. ältere Handys) */
+.rankmodal{max-width:460px}
+.rkp-list{margin:12px 0 4px}
+.rkp-list .rkp-row{padding:7px 10px; margin-bottom:6px; border:1px solid var(--rule); border-radius:10px; background:var(--surface-2)}
+.rkp-list .rkp-row.on{border-color:var(--green); background:var(--green-tint)}
 .rk-name{cursor:pointer; text-decoration:underline dotted var(--rule-strong); text-underline-offset:3px}
 /* Lernstand in der Info-Karte: Stufe, Fälligkeit, Bilanz auf einen Blick.
    Sitzt am Fuß der Karte – oben steht die Pflanze, unten der eigene Stand. */
@@ -1445,6 +1453,10 @@ body.stagefull #stage>.sessionbar{
       <li><b>Denkzeit ⏱:</b> In Quiz, Selbst eingeben und Bilder läuft oben eine Uhr. Sie zählt nur, solange eine
         Frage offen ist – Wartezeit auf ein Bild und das Lesen der Lösung zählen nicht mit. Karteikarten
         laufen ohne Uhr.</li>
+      <li><b>Punkte &amp; Ränge:</b> Jede richtige Antwort bringt Erfahrungspunkte – Selbst eingeben 10, Auswahl 5,
+        Karteikarte 3, dazu Bonus ab drei Treffern in Folge. Mit den Punkten steigst du eine Gärtner-Laufbahn hinauf:
+        Keimling → Sämling → Steckling → Jungpflanze → Prachtexemplar → Meistergärtner/in. Ein Tipp auf den Rang im
+        Fortschritt zeigt alle Stufen und was sie bedeuten.</li>
       <li><b>Fokus-Modus (Smartphone):</b> Sobald eine Sitzung läuft, füllt die Karte bzw. Frage auf dem
         Handy den ganzen Bildschirm – Kopf und Menüs verschwinden, du siehst nur noch die aktuelle Aufgabe.
         Oben bleibt die Fortschrittsleiste mit dem Knopf <b>beenden</b>; darüber (oder am Ende der Sitzung)
