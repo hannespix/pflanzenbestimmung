@@ -13,6 +13,9 @@ online aufgerufen, als App installiert oder als Datei per `file://` geöffnet:
 - **`pflanzen-lernen.html` — Lern-Tool (für Azubis).** Dieselben Pflanzenlisten
   zum Üben: Karteikarten mit Spaced-Repetition (Leitner), Multiple-Choice-Quiz, Bilder-Quiz
   und Selbst eingeben — **keine** Prüfungslisten-Erstellung, **kein** Notenschlüssel.
+  Bewusst nur eine **Lernhilfe für die botanischen Namen**: Pflanzen lernt man draußen an
+  der echten Pflanze; das Werkzeug unterstützt beim Wiederholen und Nachschlagen und ersetzt
+  die praktische Pflanzenkunde nicht (steht so auch in Einführung und Hilfe).
 
 Die **Wurzel** (`index.html`) ist das Lern-Tool (dieselbe Datei wie
 `pflanzen-lernen.html`); Prüfende erreichen ihr Werkzeug über `/pruefung` bzw.

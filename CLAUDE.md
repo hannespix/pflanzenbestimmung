@@ -2383,6 +2383,18 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       geführte Lektion nur mit dem Thema, Kopfzeile nennt es. XP-Test auf die Bedingungen gehoben
       (zehn angefangene Arten in einem Zweitprofil).
 
+- [x] **»Ehrlich gesagt« – das Werkzeug ist eine Lernhilfe, kein Ersatz für die echte Pflanze** (Nutzerwunsch:
+      beim Onboarding und in der Hilfe kurz, nett und verständlich sagen, dass man Pflanzen praktisch
+      draußen an der echten Pflanze lernt und das Tool nur beim Wiederholen der botanischen Namen und
+      beim einfachen Zugang zu ihnen unterstützt). Umgesetzt an drei Stellen: **Einführung** (`openIntro`,
+      Kasten `.intro-real` mit Blatt-Icon direkt vor »Los geht's«: »Pflanzen lernt man draußen – mit
+      Erde unter den Fingernägeln, nicht mit dem Daumen auf dem Display. Das ersetzt diese App nicht,
+      und das will sie auch nicht …«), **Hilfe** (`.hreal` als erster Absatz unter »In vier Schritten«:
+      »Was dieses Werkzeug ist – und was nicht … hier üben, draußen anschauen, wieder üben«), dazu
+      **README** (Lern-Tool-Absatz) und ein Satz in `recht.html` (Datenquellen & Inhalte, vor dem
+      Lernhilfen-Abschnitt). Kein Emoji, Strich-Icon wie überall. `tests/learn.mjs` prüft
+      beide Stellen (Wortlaut »draußen«, »ersetzt … nicht«, »botanischen Namen«, Icon).
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.

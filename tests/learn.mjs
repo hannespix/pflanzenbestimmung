@@ -212,10 +212,15 @@ async function main() {
     const steps = document.querySelectorAll("#introScrim .intro-steps li").length;
     const tipTxt = (document.querySelector("#introScrim .intro-tip") || {}).textContent || "";
     const optTip = /Optionen/.test(tipTxt) && /deutschen Namen/.test(tipTxt) && /Gattung, Art und Familie/.test(tipTxt);
+    // »Ehrlich gesagt«: Lernhilfe, kein Ersatz für die echte Pflanze – im Onboarding UND in der Hilfe
+    const realTxt = (document.querySelector("#introScrim .intro-real") || {}).textContent || "";
+    const real = /draußen/.test(realTxt) && /ersetzt diese App nicht/.test(realTxt) && /botanischen Namen/.test(realTxt) && !!document.querySelector("#introScrim .intro-real svg.ic");
+    const helpTxt = document.querySelector("#helpPanel").textContent.replace(/\s+/g, " ");
+    const helpReal = /Lernhilfe für die botanischen Namen/.test(helpTxt) && /draußen/.test(helpTxt) && /ersetzt keine App/.test(helpTxt);
     document.querySelector("#introGo").click();
     const introClosed = !document.querySelector("#introScrim");
     const seen = localStorage.getItem("pflanzenlernen.introSeen");
-    return { order, tags, introOpen, steps, optTip, introClosed, seen };
+    return { order, tags, introOpen, steps, optTip, introClosed, seen, real, helpReal };
   });
   assert(lp.order.join(",") === "photo,quiz,cards,type,list",
     "Modi müssen nach Schwierigkeit sortiert sein (Bilder→Quiz→Karteikarten→Tippen→Liste): " + lp.order.join(","));
@@ -227,6 +232,8 @@ async function main() {
     "Die Einführung muss auf die Feineinstellung unter »Optionen« hinweisen (deutscher Name … Gattung/Art/Familie): " + JSON.stringify(lp));
   assert(lp.introClosed && lp.seen === "1",
     "»Los geht's« muss die Einführung schließen und als gesehen merken: " + JSON.stringify(lp));
+  assert(lp.real && lp.helpReal,
+    "Einführung und Hilfe müssen sagen: Lernhilfe für die botanischen Namen, kein Ersatz für die echte Pflanze draußen: " + JSON.stringify({ real: lp.real, help: lp.helpReal }));
 
   // Listen-Suche klebt beim Scrollen oben (sticky, auf Seitenebene – Konsistenz zum Prüfwerkzeug)
   const listSticky = await page.evaluate(() => {

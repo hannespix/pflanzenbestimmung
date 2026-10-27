@@ -4800,6 +4800,9 @@ function openIntro(auto, onClose){
     <p class="intro-tip">${ico("sprout")} <b>Fortschritt:</b> Jede richtige Antwort bringt eine Pflanze eine Stufe weiter –
       ab Stufe 4 »sitzt« sie. <button class="linklike" id="introHow">Die fünf Stufen ansehen</button></p>
     <p class="intro-foot"><b>Ziel:</b> Du benennst Gattung, Art und Familie sicher. Diese Einführung findest du jederzeit über <b>»So funktioniert der Lernpfad«</b> wieder.</p>
+    <div class="intro-real">${ico("leaf")}<div><b>Ehrlich gesagt:</b> Pflanzen lernt man draußen – mit Erde unter den Fingernägeln,
+      nicht mit dem Daumen auf dem Display. Das ersetzt diese App nicht, und das will sie auch nicht. Sie hilft dir, die
+      <b>botanischen Namen</b> zu wiederholen und schnell nachzuschlagen – damit sie sitzen, wenn du vor der echten Pflanze stehst.</div></div>
     <div class="intro-cta"><button class="btn primary" id="introGo">Los geht's</button></div>
   </div>`;
   document.body.appendChild(scrim);
