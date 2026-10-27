@@ -466,18 +466,28 @@ async function main() {
   assert(sched.good.box >= 2 && sched.good.due > sched.t, "good (neu): Box ≥2, künftig fällig");
   assert(sched.again.due !== sched.good.due, "again und good dürfen eine neue Karte nicht gleich einplanen");
 
-  // Hilfe: Panel öffnet/schließt, Button zeigt aktiven Zustand
+  // Hilfe als Dialog (Audit): öffnet im Scrim mit ×, Fokus geht hinein und per Esc zurück zum
+  // Hilfe-Knopf, die Themen sind Klappen (erste offen), »In vier Schritten« (es sind vier).
   const help = await page.evaluate(() => {
-    const b = document.querySelector("#btnHelp"), h = document.querySelector("#helpPanel");
-    b.click();
-    const opened = !h.hidden && b.classList.contains("active") && b.getAttribute("aria-pressed") === "true";
+    const b = document.querySelector("#btnHelp"), s = document.querySelector("#helpScrim"), h = document.querySelector("#helpPanel");
+    b.focus(); b.click();
+    const opened = !s.hidden && b.classList.contains("active") && b.getAttribute("aria-pressed") === "true";
     const hasContent = h.querySelectorAll(".hdl dt").length >= 4;
-    b.click();
-    const closed = h.hidden && !b.classList.contains("active");
-    return { opened, hasContent, closed };
+    const dialog = h.getAttribute("role") === "dialog" && !!h.querySelector("#helpClose");
+    const secs = [...h.querySelectorAll("details.hsec")];
+    const accordion = secs.length >= 4 && secs[0].open && secs.slice(1).every((d) => !d.open);
+    const txt = h.textContent;
+    const vier = /In vier Schritten/.test(txt) && !/In drei Schritten/.test(txt) && h.querySelectorAll(".hsteps li").length === 4;
+    const focusIn = document.activeElement && document.activeElement.id === "helpClose";
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    const closedEsc = s.hidden && !b.classList.contains("active") && document.activeElement === b;
+    b.click(); document.querySelector("#helpClose").click();
+    const closedX = s.hidden;
+    return { opened, hasContent, dialog, accordion, vier, focusIn, closedEsc, closedX };
   });
-  assert(help.opened && help.hasContent, "Hilfe-Panel öffnet nicht bzw. Inhalt fehlt");
-  assert(help.closed, "Hilfe-Panel schließt nicht");
+  assert(help.opened && help.hasContent && help.dialog, "Hilfe-Dialog öffnet nicht bzw. Inhalt/×-Knopf fehlt: " + JSON.stringify(help));
+  assert(help.accordion && help.vier, "Hilfe: Themen als Klappen (erste offen) + »In vier Schritten«: " + JSON.stringify(help));
+  assert(help.focusIn && help.closedEsc && help.closedX, "Hilfe: Fokus hinein, Esc und × müssen funktionieren: " + JSON.stringify(help));
 
   // Info-Modal: Deep-Links (offline) + Online-Laden-Knopf vorhanden, schließt sauber.
   // Der Wikipedia-Abruf (JSONP) wird NICHT ausgelöst – der Test bleibt offline.
@@ -2929,6 +2939,44 @@ async function main() {
   });
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   assert(overflow <= 1, "Listenmodus läuft mobil horizontal über (Überhang " + overflow + "px)");
+
+  // Audit: im Listenmodus sind die Sitzungs-Klappen (»Selbst wählen«, »Optionen«) weg –
+  // es bleiben Rückweg, Suche und das Listen-Akkordeon.
+  const listClean = await page.evaluate(() => ({
+    choose: document.querySelector("#chooseWrap").hidden, opts: document.querySelector("#setOpts").hidden,
+    back: /Zurück zum Lernen/.test(document.querySelector("#btnList").textContent),
+    lc: !document.querySelector("#listControls").hidden }));
+  assert(listClean.choose && listClean.opts && listClean.back && listClean.lc,
+    "Listenmodus: Sitzungs-Klappen müssen ausgeblendet sein: " + JSON.stringify(listClean));
+
+  // Audit (Lesbarkeit): Sekundärtexte ≥ 4,5:1 und ≥ 10 px – Schwierigkeits-Tags, Klappen-
+  // Untertitel, ZP-Legende; im Dunkelmodus auch der aktive Modus-Tab samt Tag.
+  const lesbar = await page.evaluate(async () => {
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    document.querySelector("#chooseWrap").open = true;
+    const lum = c => { const m = (c.match(/\d+(\.\d+)?/g) || [255, 255, 255]).map(Number);
+      const f = v => { v /= 255; return v <= .04045 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+      return .2126 * f(m[0]) + .7152 * f(m[1]) + .0722 * f(m[2]); };
+    const bgOf = el => { for (let p = el; p; p = p.parentElement) { const c = getComputedStyle(p).backgroundColor;
+      if (c && !/rgba?\(0, 0, 0, 0\)/.test(c) && c !== "transparent") return c; } return "rgb(255,255,255)"; };
+    const ratio = el => { if (!el) return -1; const a = lum(getComputedStyle(el).color), b = lum(bgOf(el));
+      return Math.round((Math.max(a, b) + .05) / (Math.min(a, b) + .05) * 100) / 100; };
+    const q = s => document.querySelector(s);
+    const out = { mdiffPx: parseFloat(getComputedStyle(q(".mdiff")).fontSize), mdiff: ratio(q(".mdiff")),
+      sub: ratio(q(".setopts .opts-sub")), note: ratio(q(".zpnote")) };
+    const prev = document.documentElement.dataset.theme;
+    document.documentElement.dataset.theme = "dark";
+    await new Promise((r) => setTimeout(r, 400));          // Farb-Transition der Tabs (.15 s) abwarten
+    out.onDark = ratio(q(".modes button.on")); out.mdiffDark = ratio(q(".modes button.on .mdiff"));
+    if (prev) document.documentElement.dataset.theme = prev; else delete document.documentElement.dataset.theme;
+    document.querySelector("#chooseWrap").open = false;
+    document.querySelector('#modeTabs button[data-mode="list"]').click();
+    return out;
+  });
+  assert(lesbar.mdiffPx >= 10 && lesbar.mdiff >= 4.5 && lesbar.sub >= 4.5 && (lesbar.note < 0 || lesbar.note >= 4.5),
+    "Lesbarkeit (hell): Tags ≥10 px und Sekundärtexte ≥4,5:1 erwartet: " + JSON.stringify(lesbar));
+  assert(lesbar.onDark >= 4.5 && lesbar.mdiffDark >= 4.5,
+    "Lesbarkeit (dunkel): aktiver Modus-Tab + Tag ≥4,5:1 erwartet: " + JSON.stringify(lesbar));
 
   // Barrierefreie Touch-Bedienung (schmale/Touch-Viewports): ≥44-px-Ziele für
   // Hilfe-Link, Profil-Chip, Ansicht-/Filter-Knöpfe, Suchfeld und Fußzeilen-Link;

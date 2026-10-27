@@ -68,6 +68,19 @@ input,select{font-family:inherit; color:inherit}
 .helppanel{background:var(--surface); border:1px solid var(--rule-strong); border-radius:6px; padding:20px 22px; margin-top:16px; box-shadow:0 1px 0 var(--shadow)}
 .helppanel .hh{font-family:var(--serif); font-weight:600; font-size:20px; color:var(--green-deep); margin:0 0 8px}
 .helppanel h4{font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); margin:18px 0 8px}
+/* Hilfe als Dialog (wie im Prüfungswerkzeug) statt 7 500 px langer Einblendung in der Seite:
+   × / Esc / Klick daneben schließen; der Inhalt scrollt im Dialog, die Themen sind Klappen
+   (erste offen) – so bleibt die lange Hilfe überschaubar (Audit-Fund). */
+.modal.helppanel{max-width:820px; margin-top:0; padding:18px 12px 8px 22px}
+.helppanel .hscroll{max-height:min(84vh,900px); overflow:auto; padding-right:10px; overscroll-behavior:contain}
+.helppanel .hsec{border-top:1px solid var(--rule)}
+.helppanel .hlead + .hsec{margin-top:14px}
+.helppanel .hsec>summary{list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px; min-height:44px; padding:8px 2px; font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); user-select:none}
+.helppanel .hsec>summary::-webkit-details-marker{display:none}
+.helppanel .hsec>summary::after{content:"▾"; margin-left:auto; font-family:var(--sans); font-size:13px; color:var(--ink-soft); transition:transform .15s}
+.helppanel .hsec[open]>summary::after{transform:rotate(180deg)}
+.helppanel .hsec>summary:hover{color:var(--green-deep)}
+.helppanel .hbody{padding:0 2px 16px}
 .hlead{font-size:14.5px; color:var(--ink-soft); line-height:1.55; margin:0}
 .hsteps{margin:0; padding-left:20px; font-size:14px; line-height:1.6} .hsteps li{margin:4px 0}
 .hdl{margin:0; display:grid; grid-template-columns:minmax(110px,150px) 1fr; gap:7px 14px; font-size:14px; line-height:1.5}
@@ -89,7 +102,7 @@ input,select{font-family:inherit; color:inherit}
 .gnote{margin:10px auto 0; width:max-content; max-width:100%; align-self:center; text-align:center;
   padding:3px 11px; border-radius:999px;
   border:1px solid var(--rule); background:var(--surface-2);
-  font-family:var(--mono); font-size:10.5px; letter-spacing:.04em; color:var(--ink-faint)}
+  font-family:var(--mono); font-size:12px; letter-spacing:.04em; color:var(--ink-soft)}
 /* Wartebildschirm des Bilder-Quiz: drei ruhige Punkte statt eines toten Kastens –
    das Werkzeug arbeitet ja weiter (neuer Versuch im Takt von phWaitMs). */
 .ph-dots{display:flex; gap:6px; justify-content:center; margin:12px 0 2px}
@@ -129,7 +142,7 @@ input,select{font-family:inherit; color:inherit}
 .exf.on{background:var(--green-tint); border-color:var(--green); color:var(--green-deep)}
 .exf input{margin:0; accent-color:var(--green)}
 .exf-p{font-family:var(--mono); font-size:10px; color:var(--sepia)}
-.exf-hint{font-size:11px; color:var(--ink-faint)}
+.exf-hint{font-size:11.5px; color:var(--ink-soft)}
 @media (max-width:640px){ .exrow{grid-template-columns:1fr; gap:4px} .exlab{gap:8px} }
 
 /* Lernduell: eingehende Herausforderung, Teilen-Block, Vergleich */
@@ -197,8 +210,14 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .modes .ic{width:15px; height:15px}
 /* Lernpfad: Modi nach Schwierigkeit, mit dezentem Schwierigkeits-Tag unter dem Namen */
 .modes button{flex-wrap:wrap; justify-content:center; row-gap:1px}
-.mdiff{flex-basis:100%; text-align:center; font-family:var(--mono); font-size:9px; letter-spacing:.06em; text-transform:uppercase; color:var(--sepia); line-height:1.2; margin-top:1px}
+.mdiff{flex-basis:100%; text-align:center; font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); line-height:1.2; margin-top:1px}   /* Audit: 9 px Sepia war zu klein/zu schwach */
 .modes button.on .mdiff{color:#e2efdd}
+/* Dunkelmodus: der gefüllt-grüne Tab kam nur auf 3,6:1 (Audit) – dort tonig statt gefüllt */
+:root[data-theme="dark"] .modes button.on{background:var(--green-tint); color:var(--green-deep); box-shadow:inset 0 0 0 1px var(--green-deep)}
+:root[data-theme="dark"] .modes button.on .mdiff{color:var(--green-deep)}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .modes button.on{background:var(--green-tint); color:var(--green-deep); box-shadow:inset 0 0 0 1px var(--green-deep)}
+  :root:not([data-theme="light"]) .modes button.on .mdiff{color:var(--green-deep)}}
 .introlink{display:inline-block; margin:8px 0 0; padding:2px 0; border:none; background:none; cursor:pointer; font-size:12.5px; color:var(--green-deep); text-decoration:underline; text-underline-offset:2px; font-family:inherit}
 .introlink:hover{color:var(--green)}
 /* Erst-Einweisung (einmalig, danach über den Link erreichbar) */
@@ -238,7 +257,7 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .setopts>summary::-webkit-details-marker{display:none}
 .setopts>summary .ic{width:15px; height:15px; flex:none; color:var(--sepia)}
 .setopts .opts-title{font-weight:600; color:var(--ink)}
-.setopts .opts-sub{color:var(--ink-faint); font-size:12px}
+.setopts .opts-sub{color:var(--ink-soft); font-size:12px}
 .setopts .opts-sub.active{color:var(--green-deep); font-weight:600}
 .setopts .opts-caret{margin-left:auto; color:var(--ink-faint); transition:transform .15s}
 .setopts>summary:hover{background:var(--surface)}
@@ -269,7 +288,7 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .profmodal .profilerow{margin:10px 0 2px 0}
 .profmodal .profsub{display:block; padding:0; margin:10px 0 0}
 .pm-lead{font-size:13.5px; color:var(--ink-soft); margin:2px 0 4px}
-.stage-empty .stage-note{font-size:12px; color:var(--ink-faint); margin-top:6px}
+.stage-empty .stage-note{font-size:12px; color:var(--ink-soft); margin-top:6px}
 .setopts[open]>summary .opts-caret{transform:rotate(180deg)}
 .setopts .setrow{padding:13px}
 
@@ -533,8 +552,8 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .lc-body[hidden]{display:none}
 .lc-sec{padding:12px 0 2px}
 .lc-sec + .lc-sec{border-top:1px solid var(--rule)}
-.lc-h{font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); margin:0 0 8px}
-.lc-h.lc-h2{margin-top:12px; color:var(--ink-faint)}
+.lc-h{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); margin:0 0 8px}
+.lc-h.lc-h2{margin-top:12px; color:var(--ink-soft)}
 .lc-checks{display:flex; flex-wrap:wrap; gap:8px 18px}
 .lc-sec .po-ety{margin-top:2px}
 .po-cols + .po-ety{margin-top:10px}
@@ -562,7 +581,7 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .fam-sec h4{font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); margin:0 0 5px}
 .fam-sec p{font-size:14.5px; line-height:1.6; color:var(--ink); margin:0}
 .fam-sec .fam-none{font-style:italic; color:var(--ink-soft)}
-.famfoot{margin-top:14px; padding-top:12px; border-top:1px solid var(--rule); font-size:12.5px; line-height:1.5; color:var(--ink-faint)}
+.famfoot{margin-top:14px; padding-top:12px; border-top:1px solid var(--rule); font-size:12.5px; line-height:1.5; color:var(--ink-soft)}
 .catn{font-family:var(--mono); font-size:11px; font-weight:400; color:var(--sepia); background:var(--surface-2); border:1px solid var(--rule); border-radius:10px; padding:1px 8px}
 .splist{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr 1fr; gap:8px}
 .sprow{min-width:0; overflow:hidden; border:1px solid var(--rule-strong); background:var(--surface); border-radius:6px; padding:10px 12px; cursor:pointer; transition:background .12s,border-color .12s,transform .04s}
@@ -572,7 +591,7 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .sp-main{display:flex; align-items:center; gap:8px; min-width:0}
 .sp-bot{font-family:var(--serif); font-size:15.5px; color:var(--ink); font-style:italic; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .sp-zp{font-family:var(--mono); font-size:9.5px; letter-spacing:.05em; color:var(--sepia); border:1px solid var(--sepia); border-radius:3px; padding:0 4px; flex:none}
-.zpnote{display:flex; align-items:center; gap:6px; margin:-6px 2px 14px; font-size:12px; color:var(--ink-faint)}
+.zpnote{display:flex; align-items:center; gap:6px; margin:-6px 2px 14px; font-size:12px; color:var(--ink-soft)}
 .zpnote .sp-zp{font-size:9px}
 .sp-go{font-size:14px; color:var(--green); flex:none}
 .sp-sub{font-size:12.5px; color:var(--ink-soft); margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
@@ -1313,15 +1332,17 @@ body.stagefull #stage>.sessionbar{
     </details>
   </div>
 
-  <section class="helppanel" id="helpPanel" hidden>
-    <h2 class="hh">Hilfe · So lernst du mit dem Tool</h2>
+  <div class="scrim helpscrim" id="helpScrim" hidden>
+  <section class="modal helppanel" id="helpPanel" role="dialog" aria-modal="true" aria-labelledby="helpTtl">
+    <button class="modal-x" id="helpClose" aria-label="Schließen" title="Schließen (auch Esc oder Klick daneben)">×</button>
+    <div class="hscroll">
+    <h2 class="hh" id="helpTtl">Hilfe · So lernst du mit dem Tool</h2>
     <p class="hlead">Übe die Pflanzen deiner Fachrichtung – mit Karteikarten, Quiz, Selbst eingeben und einer
       Nachschlage-Liste. Gerechnet wird <b>komplett in deinem Browser</b> – einmal geladen, funktioniert
       alles <b>auch ohne Internet</b> (nur der <b>Bilder-Quiz</b> und die Online-Infos im ℹ-Fenster brauchen
       Netz); dein Fortschritt wird je Profil auf dem Gerät gespeichert. Keine Prüfungslisten, keine Noten –
       nur üben.</p>
-
-    <h4>In drei Schritten</h4>
+    <details class="hsec" open><summary>In vier Schritten</summary><div class="hbody">
     <ol class="hsteps">
       <li><b>Fachrichtung &amp; Ausbildung</b> oben wählen – das bestimmt deinen Lernstoff.</li>
       <li>Am einfachsten: <b>»Weiter lernen«</b> – die Übungsform (Bilder, Quiz, Karteikarte,
@@ -1337,8 +1358,8 @@ body.stagefull #stage>.sessionbar{
       <b>Familie</b>. Genau das musst du in der Prüfung zur vorgelegten Pflanze schreiben. Unter
       <b>»Optionen · Abfrage«</b> kannst du die Richtung <b>umdrehen</b> (botanischer Name → deutscher Name);
       im <b>Bilder</b>-Modus ist die Aufgabe fest: <b>Bild → voller Name</b> (botanisch + deutsch).</p>
-
-    <h4>Die fünf Modi</h4>
+    </div></details>
+    <details class="hsec"><summary>Die fünf Modi</summary><div class="hbody">
     <dl class="hdl">
       <dt>Karteikarten</dt><dd>Vorne steht (je nach <b>Abfrage</b>) der <b>deutsche</b> oder der
         <b>botanische Name</b>; zum <b>Umdrehen</b> tippen und die Rückseite prüfen – in Prüfungsrichtung mit
@@ -1415,8 +1436,8 @@ body.stagefull #stage>.sessionbar{
         weglassen), und ob zu jeder Pflanze eine <b>Merkzeile zur Namensherkunft</b> erscheint
         (Bedeutung des botanischen Namens, Latein/Griechisch → Deutsch, kuratiert – ohne Gewähr).</dd>
     </dl>
-
-    <h4>Einstellungen</h4>
+    </div></details>
+    <details class="hsec"><summary>Einstellungen</summary><div class="hbody">
     <dl class="hdl">
       <dt>Abfrage</dt><dd>Was gefragt wird. <b>Deutscher Name → botanisch</b> ist die Prüfungsrichtung
         und der Standard; <b>botanisch → deutscher Name</b> übt den umgekehrten Weg. Im <b>Bilder</b>-Modus
@@ -1443,8 +1464,8 @@ body.stagefull #stage>.sessionbar{
         Informationsflut. Optional; die Info-Links (ℹ) bleiben in jedem Fall erhalten.</dd>
       <dt>Karten/Sitzung</dt><dd>Wie viele Karten eine Sitzung umfasst.</dd>
     </dl>
-
-    <h4>Fortschritt &amp; mehr</h4>
+    </div></details>
+    <details class="hsec"><summary>Fortschritt &amp; mehr</summary><div class="hbody">
     <ul class="hnotes">
       <li>Der Balken zeigt <b>neu · am Lernen · sitzt</b>. „sitzt" heißt sicher gemerkt (Stufe 4–5 von 5).</li>
       <li><b>Wie kommt eine Pflanze auf „sitzt"?</b> Jede richtige Antwort bringt sie eine Stufe weiter –
@@ -1486,7 +1507,10 @@ body.stagefull #stage>.sessionbar{
         anderes Gerät = eigener Fortschritt.</li>
       <li>Fast jedes Feld hat einen <b>Tooltip</b> – kurz mit der Maus darüber verweilen.</li>
     </ul>
+    </div></details>
+    </div>
   </section>
+  </div>
 
   <section class="progress" id="progress" hidden></section>
 

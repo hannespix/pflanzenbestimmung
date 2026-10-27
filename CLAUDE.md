@@ -2171,6 +2171,39 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       über `page.emulateMediaType("print")`), `tests/learn.mjs` (Hydrangea/maple/orange bleiben,
       Karten/Verbreitungsdateien weiterhin raus).
 
+- [x] **Audit-Paket 2 (Handy/Lesbarkeit): Funde 5, 6, 11, 15, 16, 17, 18.**
+      **Prüfungswerkzeug (`template.html`):** **(5)** »Aktuelle Prüfung«/Vorschau werden schmal
+      (`@media ≤640px` und `@container cursel ≤520px`) **zweizeilig** – `.pvrow` als Flex mit
+      Umbruch: Zeile 1 Nummer + Name in voller Breite (`.pvname{flex:1 1 200px}`), Zeile 2 die
+      Aktionen rechtsbündig (`margin-left:auto`); passen sie neben den Namen, bleibt es eine
+      Zeile. Vorher quetschte die Aktionsspalte den Namen auf wenige Wörter je Zeile, das ℹ lag
+      über dem Familiennamen. **(11)** Listenzeilen mobil: `.namecell{display:contents}`, Name und
+      Meta stapeln in Spalte 2, die Checkbox überspannt beide Zeilen, die Aktionen stehen **rechts**
+      (Spalte 3) statt in einer dritten Zeile. **Dabei gefunden:** die Touch-Regel
+      `.rowacts .iconbtn{opacity:1}` (0,2,0) verlor gegen `.rowacts .iconbtn:not(.info){opacity:0}`
+      (0,3,0) – Bearbeiten/Löschen waren auf Touch-Geräten **unsichtbar, belegten aber Platz**
+      (daher stand das ℹ scheinbar allein). Jetzt gleiche Spezifität; zusätzlich zeigt das Handy im
+      Modus »Prüfung erstellen« nur das ℹ (`body.m-exam … {display:none}`), in »Liste verwalten«
+      alle drei (die »Aktuelle Prüfung« hat ✎ ohnehin). **(6)** Notenrechner: `td.pct` mit
+      `white-space:nowrap` (»ab 90 %« zerfiel mobil in drei Zeilen), kompakte Tabelle ≤640px
+      (12,5 px, 4 px Zellen-Padding, Grenzfeld 52 px). **(18)** ZP-Marker über eigene Token
+      `--zp-ink/--zp-bg/--zp-line` (hell 6,5:1, dunkel 8,5:1 – vorher dunkel 1,92:1 wegen fest
+      hellem Hintergrund), Kategorie-Zähler `.cnt` auf `--ink-soft`.
+      **Lern-Tool (`learn.html`/`learn.js`):** **(15)** Hilfe ist ein **Dialog** wie im
+      Prüfungswerkzeug (`#helpScrim` + `.modal.helppanel`, `role=dialog`, × / Esc / Klick daneben,
+      Fokus hinein und zurück zum Hilfe-Knopf, Fokusfalle; `openHelp/closeHelp/helpKey`); der
+      Inhalt scrollt in `.hscroll`, die vier Themen sind `<details class="hsec">`-Klappen (erste
+      offen); Überschrift »In vier Schritten« (es waren vier). **(16)** Im Listenmodus blendet
+      `applyMode` auch `#chooseWrap` (»Selbst wählen«) aus – zurück über »← Zurück zum Lernen«.
+      **(17)** Sekundärtexte auf `--ink-soft` (≥4,5:1) und ≥10 px: `.mdiff` 10 px fett,
+      `.opts-sub`, `.stage-note`, `.gnote` 12 px, `.exf-hint`, `.lc-h`/`.lc-h2`, `.famfoot`,
+      `.zpnote`; **Dunkelmodus:** aktiver Modus-Tab tonig (`--green-tint` + `--green-deep`,
+      ≈8:1) statt gefüllt (3,6:1). Tests: `tests/smoke.mjs` 9c (360 px: zweizeilige Prüfung ohne
+      Überlappung, Aktionen rechts, Bearbeiten/Löschen nur in »Liste verwalten« und dort sichtbar,
+      Notenrechner einzeilig, ZP/Zähler hell + dunkel ≥4,5:1; 8i erwartet Hover-Gating nur ohne
+      `hover:none`), `tests/learn.mjs` (Hilfe-Dialog: Fokus/Esc/×/Klappen/»vier Schritten«,
+      Listenmodus ohne Sitzungs-Klappen, Kontraste hell + dunkel – nach der Tab-Transition gemessen).
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.
