@@ -125,7 +125,7 @@ input,select{font-family:inherit; color:inherit}
 /* Hilfe-Panel */
 .help{max-width:820px}
 .hlead{font-size:14px; color:var(--ink-soft); margin:0 0 14px; line-height:1.5}
-.help h4{font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--sepia); margin:18px 0 8px; border-bottom:1px solid var(--rule); padding-bottom:4px}
+.help h3{font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--sepia); margin:18px 0 8px; border-bottom:1px solid var(--rule); padding-bottom:4px}
 .hsteps{margin:0; padding-left:22px; display:flex; flex-direction:column; gap:6px; font-size:14px; line-height:1.5}
 .hnotes{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:5px; font-size:13.5px; line-height:1.45; color:var(--ink-soft)}
 .hdl{margin:0; display:grid; grid-template-columns:minmax(130px,190px) 1fr; gap:6px 16px; font-size:13.5px; line-height:1.45}
@@ -303,16 +303,16 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .prsave input[type="text"]{flex:1; min-width:160px}
 .prsave[hidden]{display:none}
 .modal{background:var(--surface); border:1px solid var(--rule-strong); border-radius:6px; max-width:520px; width:100%; box-shadow:0 18px 50px rgba(28,42,34,.28); overflow:hidden}
-.modal header{padding:18px 22px 14px; border-bottom:1px solid var(--rule); background:var(--surface-2)}
-.modal header h3{font-family:var(--serif); font-size:19px; margin:0; font-weight:600}
-.modal header p{margin:3px 0 0; font-size:13px; color:var(--ink-soft)}
+.modal .mhead{padding:18px 22px 14px; border-bottom:1px solid var(--rule); background:var(--surface-2)}   /* div statt <header>: sonst doppelte banner-Landmarken (Audit) */
+.modal .mhead h3{font-family:var(--serif); font-size:19px; margin:0; font-weight:600}
+.modal .mhead p{margin:3px 0 0; font-size:13px; color:var(--ink-soft)}
 .modal .body{padding:18px 22px; display:grid; gap:13px}
 .modal .grid2{display:grid; grid-template-columns:1fr 1fr; gap:13px}
 .fld{display:flex; flex-direction:column; gap:4px}
 .fld label{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia)}
 .fld input,.fld select,.fld textarea{border:1px solid var(--rule-strong); border-radius:3px; padding:8px 10px; font-size:14px; background:var(--card); width:100%}
 .fld textarea{resize:vertical; min-height:52px; font-family:inherit}
-.modal footer{padding:14px 22px 18px; display:flex; gap:10px; justify-content:flex-end; border-top:1px solid var(--rule)}
+.modal .mfoot{padding:14px 22px 18px; display:flex; gap:10px; justify-content:flex-end; border-top:1px solid var(--rule)}
 /* ---- Pflanzen-Info-Modal (aus dem Lern-Tool portiert; opt-in Wikipedia) ----
    Eigener Namensraum .infoscrim/.infobox, damit die neun Panel-Modale (.scrim/.modal,
    via .open sichtbar) unberührt bleiben – dieses Modal wird per JS erzeugt und ist
@@ -950,11 +950,11 @@ body{overflow-x:clip}
         <p class="gtitle">Hilfe · Kurzanleitung &amp; alle Funktionen</p>
         <p class="hlead">Dieses Werkzeug zieht zufällig Pflanzen aus einer Liste, druckt Prüfungsbogen und Musterlösung und rechnet Noten – für die Pflanzenkenntnis-Prüfung der Gärtnerberufe (Gärtner/in und Fachwerker/in, alle sieben Fachrichtungen). Es rechnet <b>komplett in deinem Browser</b>: einmal geladen, arbeitet es <b>auch ohne Internet</b>, und Prüfungsdaten verlassen das Gerät nicht. Alle Änderungen werden je Profil im Browser gespeichert.</p>
 
-        <h4>In fünf Schritten zur Prüfung</h4>
+        <h3>In fünf Schritten zur Prüfung</h3>
         <ol class="hsteps">
           <li><b>Fachrichtung &amp; Ausbildung</b> oben wählen (z. B. Gemüsebau · Gärtner/in). Jedes der 14 Profile hat eine eigene Liste, ein eigenes Bewertungsschema und einen eigenen Notenschlüssel.</li>
-          <li>Bei Bedarf unter <b>»Filter«</b> (aufklappen) die Liste <b>durchsuchen und filtern</b> –
-            Suche, Kategorie oder „nur ZP-relevant". Ein aktiver Filter bleibt in der Filter-Zeile sichtbar.</li>
+          <li>Die <b>Suche</b> steht immer oben; unter <b>»Filter«</b> (aufklappen) lässt sich die Liste nach
+            <b>Kategorie</b> oder „nur ZP-relevant" eingrenzen. Ein aktiver Filter bleibt in der Filter-Zeile sichtbar.</li>
           <li><b>Anzahl</b> festlegen und <b>Zufällig ziehen</b> – oder Arten in der Liste unten einzeln anhaken.</li>
           <li><b>Vorschau · bearbeiten</b>: Reihenfolge per ▲▼ ändern, Arten bearbeiten, ergänzen oder entfernen.</li>
           <li><b>Bogen drucken</b>: im Dialog Prüfungsbogen (leer) oder Musterlösung (mit Antworten) wählen.
@@ -962,7 +962,7 @@ body{overflow-x:clip}
             unter dem Prüfungsdatum abgelegt (Panel »Prüfungen«); eine geladene Prüfung wird stattdessen aktualisiert.</li>
         </ol>
 
-        <h4>Werkzeuge (Kopfzeile)</h4>
+        <h3>Werkzeuge (Kopfzeile)</h3>
         <p class="hlead">Direkt sichtbar sind die beiden häufigsten Werkzeuge – <b>Prüfungen</b> und
           <b>Notenrechner</b>. Alles Seltenere (Excel-Import, Art hinzufügen, Prüfungsschema,
           Einstellungen, Sicherung) liegt aufgeräumt hinter dem Knopf <b>»Verwaltung«</b> und
@@ -975,7 +975,7 @@ body{overflow-x:clip}
           <dt>Einstellungen</dt><dd>Passt den Druckbogen an: Titel, <b>Fußzeile</b> (zuständige Stelle, zwei Zeilen) und den Vermerk auf der Musterlösung – so ist das Werkzeug für jede zuständige Stelle nutzbar. Gilt geräteweit.</dd>
         </dl>
 
-        <h4>Liste &amp; Daten</h4>
+        <h3>Liste &amp; Daten</h3>
         <dl class="hdl">
           <dt>Excel importieren</dt><dd>Liest eine .xlsx/.xls-Liste ein. Kopfzeile, Gattung/Art-Trennung, Familie, deutscher Name, Kategorien und ZP werden automatisch erkannt; beim Import kann die Liste ersetzt oder ergänzt werden.</dd>
           <dt>Art hinzufügen</dt><dd>Fügt eine einzelne Art von Hand hinzu (mit Synonymen, Bemerkungen und ZP-Kennzeichen).</dd>
@@ -983,7 +983,7 @@ body{overflow-x:clip}
           <dt>Standardliste</dt><dd>Verwirft die im Browser gespeicherten Änderungen dieses Profils und stellt die hinterlegte Liste wieder her.</dd>
         </dl>
 
-        <h4>Datenherkunft</h4>
+        <h3>Datenherkunft</h3>
         <p class="hlead">Die hinterlegten Listen stammen <b>unverändert aus den amtlichen
           Prüfungslisten</b> der Regierungspräsidien Baden-Württemberg: botanischer Name
           (Gattung, Art), Familie, deutscher Name, Synonyme und die ZP-Kennzeichnung. Angepasst
@@ -1006,7 +1006,7 @@ body{overflow-x:clip}
           rufen auch nichts aus dem Netz ab.
           <a href="rechtliches.html#datenquellen" target="_blank" rel="noopener">Ausführlich: Datenquellen &amp; Inhalte</a></p>
 
-        <h4>Gut zu wissen</h4>
+        <h3>Gut zu wissen</h3>
         <ul class="hnotes">
           <li>Alle Werkzeuge öffnen als <b>Fenster</b> über der Liste – Schließen mit <b>×</b>, <b>Esc</b> oder Klick auf den abgedunkelten Hintergrund.</li>
           <li>Die Druckbögen entsprechen den <b>offiziellen AP-Formularen</b> der Regierungspräsidien Baden-Württemberg – je nach Profil Fachwerker-, GaLaBau- oder Produktions-Formular (Spalten und Punkte aus dem Prüfungsschema).</li>
@@ -1021,10 +1021,11 @@ body{overflow-x:clip}
   </section>
   </div>
 
+  <main>
   <div class="findbar">
     <div class="field search big">
       <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
-      <input id="q" type="search" placeholder="Suche: Gattung, Art, Familie, Name …" autocomplete="off" title="Live-Suche in Gattung, Art, Familie, deutschem Namen und Synonymen. Wirkt auch auf das Zufalls-Ziehen (nur Treffer werden gezogen).">
+      <input id="q" type="search" aria-label="Pflanzenliste durchsuchen (Gattung, Art, Familie, Name, Synonym)" placeholder="Suche: Gattung, Art, Familie, Name …" autocomplete="off" title="Live-Suche in Gattung, Art, Familie, deutschem Namen und Synonymen. Wirkt auch auf das Zufalls-Ziehen (nur Treffer werden gezogen).">
     </div>
     <details class="filterbar" id="filterOpts">
       <summary title="Zusätzliche Filter (Kategorie, ZP) – wirken auch auf das Zufalls-Ziehen (nur Treffer werden gezogen)">
@@ -1065,8 +1066,8 @@ body{overflow-x:clip}
       <div class="left">
         <p class="gtitle">Notenrechner</p>
         <div class="ginputs">
-          <div class="gfld"><label>Erreichte Punkte</label><input id="gPts" type="number" min="0" step="0.5" inputmode="decimal" placeholder="z. B. 156" title="Vom Prüfling erreichte Punktzahl eingeben (Nachkommastellen erlaubt)."></div>
-          <div class="gfld"><label>von Höchstpunktzahl</label><div class="maxrow"><input id="gMax" type="number" min="1" step="1" value="200" title="Höchstpunktzahl der Prüfung (Grundlage der Notenberechnung)."><button class="btn ghost small" id="gSync" title="Höchstpunktzahl aus der aktuellen Auswahl übernehmen (Pflanzenzahl × Punkte je Pflanze).">aus Auswahl: 200 P.</button></div></div>
+          <div class="gfld"><label for="gPts">Erreichte Punkte</label><input id="gPts" type="number" min="0" step="0.5" inputmode="decimal" placeholder="z. B. 156" title="Vom Prüfling erreichte Punktzahl eingeben (Nachkommastellen erlaubt)."></div>
+          <div class="gfld"><label for="gMax">von Höchstpunktzahl</label><div class="maxrow"><input id="gMax" type="number" min="1" step="1" value="200" title="Höchstpunktzahl der Prüfung (Grundlage der Notenberechnung)."><button class="btn ghost small" id="gSync" title="Höchstpunktzahl aus der aktuellen Auswahl übernehmen (Pflanzenzahl × Punkte je Pflanze).">aus Auswahl: 200 P.</button></div></div>
         </div>
         <div class="gres" id="gRes"><div class="gempty">Punkte eingeben …</div></div>
       </div>
@@ -1089,7 +1090,7 @@ body{overflow-x:clip}
       <div class="left noborder">
         <p class="gtitle">Prüfungsschema · Spalten, Punkte &amp; Anzahl</p>
         <div class="scwrap">
-          <div class="gfld scanz"><label>Pflanzen je Prüfung</label><input id="scAnzahl" type="number" min="1" max="60" step="1"></div>
+          <div class="gfld scanz"><label for="scAnzahl">Pflanzen je Prüfung</label><input id="scAnzahl" type="number" min="1" max="60" step="1"></div>
           <div class="scgrid" id="scFields"></div>
         </div>
         <p class="gnote" id="scSum"></p>
@@ -1161,7 +1162,8 @@ body{overflow-x:clip}
     </div>
     <div class="pvlist" id="currentSelList"></div>
   </section>
-  <main id="list"></main>
+  <div id="list"></div>
+  </main>
 
   <footer class="pagefoot">
     <span>Pflanzenkenntnis · Prüfen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">/*__BUILD__*/</span></span>
@@ -1175,7 +1177,7 @@ body{overflow-x:clip}
 <!-- ========== Import-Dialog ========== -->
 <div class="scrim" id="importScrim">
   <div class="modal">
-    <header><h3>Excel importieren</h3><p id="importSummary">Datei wird gelesen …</p></header>
+    <div class="mhead"><h3>Excel importieren</h3><p id="importSummary">Datei wird gelesen …</p></div>
     <div class="body">
       <div class="radio-cards" id="importChoice">
         <label class="rcard sel"><input type="radio" name="impmode" value="replace" checked><div><b>Bestehende Liste ersetzen</b><span>Alle vorhandenen Arten werden gelöscht und durch die Excel-Daten ersetzt.</span></div></label>
@@ -1183,44 +1185,44 @@ body{overflow-x:clip}
       </div>
       <div class="hint" id="importHint"></div>
     </div>
-    <footer>
+    <div class="mfoot">
       <button class="btn ghost" id="importCancel">Abbrechen</button>
       <button class="btn primary" id="importConfirm">Importieren</button>
-    </footer>
+    </div>
   </div>
 </div>
 
 <!-- ========== Bearbeiten-Dialog ========== -->
 <div class="scrim" id="editScrim">
   <div class="modal">
-    <header><h3 id="editTitle">Art bearbeiten</h3><p>Gattung und Art werden im Druckbogen getrennt bewertet.</p></header>
+    <div class="mhead"><h3 id="editTitle">Art bearbeiten</h3><p>Gattung und Art werden im Druckbogen getrennt bewertet.</p></div>
     <div class="body">
       <div class="grid2">
-        <div class="fld"><label>Gattung</label><input id="fGattung" placeholder="z. B. Allium"></div>
-        <div class="fld"><label>Art (Epitheton)</label><input id="fArt" placeholder="z. B. cepa Cepa-Grp."></div>
+        <div class="fld"><label for="fGattung">Gattung</label><input id="fGattung" placeholder="z. B. Allium"></div>
+        <div class="fld"><label for="fArt">Art (Epitheton)</label><input id="fArt" placeholder="z. B. cepa Cepa-Grp."></div>
       </div>
       <div class="grid2">
-        <div class="fld"><label>Familie</label><input id="fFamilie" placeholder="z. B. Amaryllidaceae"></div>
-        <div class="fld"><label>Kategorie</label><input id="fKat" list="katlist" placeholder="z. B. Gemüsepflanzen"><datalist id="katlist"></datalist></div>
+        <div class="fld"><label for="fFamilie">Familie</label><input id="fFamilie" placeholder="z. B. Amaryllidaceae"></div>
+        <div class="fld"><label for="fKat">Kategorie</label><input id="fKat" list="katlist" placeholder="z. B. Gemüsepflanzen"><datalist id="katlist"></datalist></div>
       </div>
-      <div class="fld"><label>Deutscher Name</label><input id="fDe" placeholder="z. B. Küchen-Zwiebel"></div>
+      <div class="fld"><label for="fDe">Deutscher Name</label><input id="fDe" placeholder="z. B. Küchen-Zwiebel"></div>
       <div class="grid2">
-        <div class="fld"><label>Synonyme</label><input id="fSyn" placeholder="optional"></div>
-        <div class="fld"><label>ZP-relevant</label><select id="fZp"><option value="0">nein</option><option value="1">ja</option></select></div>
+        <div class="fld"><label for="fSyn">Synonyme</label><input id="fSyn" placeholder="optional"></div>
+        <div class="fld"><label for="fZp">ZP-relevant</label><select id="fZp"><option value="0">nein</option><option value="1">ja</option></select></div>
       </div>
-      <div class="fld"><label>Bemerkungen</label><textarea id="fBem" placeholder="optional – erscheint nur intern, nicht auf dem Prüfungsbogen"></textarea></div>
+      <div class="fld"><label for="fBem">Bemerkungen</label><textarea id="fBem" placeholder="optional – erscheint nur intern, nicht auf dem Prüfungsbogen"></textarea></div>
     </div>
-    <footer>
+    <div class="mfoot">
       <button class="btn ghost" id="editCancel">Abbrechen</button>
       <button class="btn primary" id="editSave">Speichern</button>
-    </footer>
+    </div>
   </div>
 </div>
 
 <!-- ========== Druck-Dialog ========== -->
 <div class="scrim" id="printScrim">
   <div class="modal">
-    <header><h3>Bogen drucken</h3><p>Welche Variante möchtest du drucken?</p></header>
+    <div class="mhead"><h3>Bogen drucken</h3><p>Welche Variante möchtest du drucken?</p></div>
     <div class="body">
       <div class="radio-cards">
         <button class="rcard rcard-btn" id="printBlank">
@@ -1240,7 +1242,7 @@ body{overflow-x:clip}
         </div>
       </div>
     </div>
-    <footer><button class="btn ghost" id="printCancel">Abbrechen</button></footer>
+    <div class="mfoot"><button class="btn ghost" id="printCancel">Abbrechen</button></div>
   </div>
 </div>
 

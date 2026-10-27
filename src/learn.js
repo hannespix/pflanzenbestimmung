@@ -27,7 +27,8 @@ const ICONS = {
   keys:   `<rect x="2.5" y="6.5" width="19" height="11" rx="2.5"/><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6 14h12"/>`,
   list:   `<path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1" fill="currentColor" stroke="none"/>`,
   sliders:`<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/>`,
-  trophy: `<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.5 4M17 6h2.5a2.5 2.5 0 0 1-2.5 4"/><path d="M12 14v3M9 20h6M10 17h4"/>`
+  trophy: `<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.5 4M17 6h2.5a2.5 2.5 0 0 1-2.5 4"/><path d="M12 14v3M9 20h6M10 17h4"/>`,
+  clock:  `<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>`
 };
 function ico(name, cls){                       // → <svg> im einheitlichen Strichstil
   const d = ICONS[name]; if(!d) return "";
@@ -1232,7 +1233,7 @@ function fmtDur(ms){
 function clockStart(){ if(scoreable() && sess.active) qStart = Date.now(); }
 function clockStop(){ if(qStart){ sess.ms = (sess.ms||0) + (Date.now()-qStart); qStart = 0; } }
 function clockNow(){ return (sess.ms||0) + (qStart ? Date.now()-qStart : 0); }
-function clockTick(){ const e=$("#sclock"); if(e) e.textContent = fmtDur(clockNow()); }
+function clockTick(){ const e=$("#sclockT")||$("#sclock"); if(e) e.textContent = fmtDur(clockNow()); }
 function clockRun(on){
   if(clockTimer){ clearInterval(clockTimer); clockTimer=null; }
   if(on) clockTimer = setInterval(clockTick, 1000);
@@ -1512,7 +1513,21 @@ function startChallenge(){                // genau die Karten der Herausforderun
 /* Fokus-Modus: die laufende Lektion füllt auf dem Smartphone den ganzen Schirm.
    Reines CSS-Overlay (body.stagefull) statt Fullscreen-API – das funktioniert auch
    auf dem iPhone (die echte Fullscreen-API greift dort nur für Videos). */
-function stageFull(on){ try{ document.body.classList.toggle("stagefull", !!on); }catch(e){} }
+function stageFull(on){
+  try{
+    document.body.classList.toggle("stagefull", !!on);
+    // Audit: Tab wanderte im Fokus-Modus in die verdeckten Elemente dahinter – alles außer der
+    // Bühne ist jetzt inert (Toast und per JS angehängte Dialoge liegen außerhalb von .wrap).
+    // Geschwister der Bühne UND ihrer Vorfahren bis .wrap (die Bühne liegt in <main>, Kopf und
+    // Fußzeile daneben); Body-Ebene (Toast, per JS angehängte Dialoge) bleibt bewusst unberührt.
+    let node=$("#stage");
+    while(node && node.parentElement && !(node.classList && node.classList.contains("wrap")) && node.parentElement!==document.body){
+      const par=node.parentElement;
+      [...par.children].forEach(el=>{ if(el!==node) el.inert=!!on; });
+      node=par;
+    }
+  }catch(e){}
+}
 function startSession(){
   endChallengeOverride();                 // eigene Sitzung: eigene Einstellungen
   queue = buildQueue(); qi = 0; photoMisses = 0; qStart = 0;
@@ -1557,7 +1572,7 @@ function startGuided(){
    mehr: die geführte Lektion ist seit v3 des Links direkt duellfähig.) */
 function startQuizWith(cards){
   mode="quiz"; store.set(LS_PREFIX+"mode",mode);
-  $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.mode===mode));
+  syncModeTabs();
   queue = cards.slice(); qi = 0; photoMisses = 0; qStart = 0;
   sess = { total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, baseMode:mode, cards:cards.slice(), challenge:null };
   clockRun(true); stageFull(true);
@@ -1569,7 +1584,7 @@ function sessionBar(){
     (mode!=="cards"?`<span>${sess.correct} richtig</span>`:``)+
     (examScoring()&&sess.pts?`<span class="spts" title="Punkte dieser Sitzung – ein Schreibfehler zählt halb, der Rest kommt bei der fehlerfreien Wiederholung dazu">${nfmt(sess.pts.sum)} / ${nfmt(sess.pts.max)} P.</span>`:``)+
     ((sess.combo||0)>=3?`<span class="scombo" title="Treffer in Folge – ab 3 gibt es Bonuspunkte, jede 5er-Stufe wird gefeiert">${sess.combo}× in Folge</span>`:``)+
-    (scoreable()?`<span class="sclock" id="sclock" title="Denkzeit dieser Sitzung – die Uhr läuft nur, solange eine Frage offen ist">${fmtDur(clockNow())}</span>`:``)+
+    (scoreable()?`<span class="sclock" id="sclock" title="Denkzeit dieser Sitzung – die Uhr läuft nur, solange eine Frage offen ist">${ico("clock")}<span id="sclockT">${fmtDur(clockNow())}</span></span>`:``)+
     `<button class="btn ghost" id="btnStop" title="Sitzung beenden">beenden</button></div>`;
 }
 /* Warum kommt DIESE Karte gerade so? In der geführten Lektion wechselt die
@@ -1645,8 +1660,8 @@ function finishSession(){
       : (mine && theirs && mine>theirs) ? `<b class="duel-lose">Gleiche Quote – ${esc(who)} war schneller. Revanche?</b>`
       : `<b>Gleichstand!</b>`;
     extra = `<div class="duel-result">
-      <div class="duel-row"><span>Du</span><span class="duel-pct">${accEff} %</span><span class="duel-raw">${sess.correct}/${doneEff}</span>${mine?`<span class="duel-time">${fmtDur(mine)}</span>`:""}</div>
-      <div class="duel-row"><span>${esc(who)}</span><span class="duel-pct">${theirAcc} %</span><span class="duel-raw">${ch.s}/${ch.t}</span>${theirs?`<span class="duel-time">${fmtDur(theirs)}</span>`:""}</div>
+      <div class="duel-row"><span>Du</span><span class="duel-pct">${accEff} %</span><span class="duel-raw">${sess.correct}/${doneEff}</span>${mine?`<span class="duel-time">${ico("clock")}${fmtDur(mine)}</span>`:""}</div>
+      <div class="duel-row"><span>${esc(who)}</span><span class="duel-pct">${theirAcc} %</span><span class="duel-raw">${ch.s}/${ch.t}</span>${theirs?`<span class="duel-time">${ico("clock")}${fmtDur(theirs)}</span>`:""}</div>
       <p class="duel-verdict">${verdict}</p></div>`;
   }
   // Teilen direkt nach JEDER bewerteten Lektion – auch nach der geführten und nach
@@ -1694,6 +1709,12 @@ function renderCard(){
 function cardKeys(e){
   if(mode!=="cards" || !sess || !sess.active || !$("#card")) return;
   if(e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  // Audit: Enter/Leertaste auf einem ANDEREN Knopf (»beenden«, Teilen …) darf die Karte nicht
+  // umdrehen – nur die Karte selbst (und die Bewertungs-Knöpfe) gehören zur Tastatursteuerung;
+  // hinter einem offenen Dialog (Info-Karte, Lightbox, Hilfe) bewerten die Ziffern nicht.
+  const t = e.target && e.target.closest ? e.target.closest("button,a,[role='button'],summary") : null;
+  if(t && !t.closest("#card,.r-again,.r-hard,.r-good")) return;
+  if(document.querySelector(".scrim:not([hidden]), .lbscrim")) return;
   if(!flipped){
     if(e.key===" " || e.key==="Enter" || e.key==="Spacebar"){ e.preventDefault(); flipCard(); }
     return;
@@ -1972,10 +1993,10 @@ function renderList(){
     const sub = showFam
       ? `${c.de?esc(c.de):""}${c.de&&c.fam?" · ":""}${c.fam?`<span class="sp-fam">${esc(c.fam)}</span>`:""}`
       : (c.de?esc(c.de):"");
-    return `<li class="sprow" data-idx="${idx}" tabindex="0" role="button" aria-label="${esc(botName(c))} – Infos öffnen">
-      <div class="sp-main"><span class="sp-bot">${esc(botName(c))}</span>${c.zp?'<span class="sp-zp" title="prüfungsrelevant (ZP)">ZP</span>':""}<span class="sp-go">ℹ</span></div>
-      ${sub?`<div class="sp-sub">${sub}</div>`:""}
-    </li>`; };
+    return `<li><button type="button" class="sprow" data-idx="${idx}" aria-label="${esc(botName(c))} – Infos öffnen">
+      <span class="sp-main"><span class="sp-bot">${esc(botName(c))}</span>${c.zp?'<span class="sp-zp" title="prüfungsrelevant (ZP)">ZP</span>':""}<span class="sp-go">ℹ</span></span>
+      ${sub?`<span class="sp-sub">${sub}</span>`:""}
+    </button></li>`; };
   let html=`<div class="listtop">${p.length} ${p.length===1?"Art":"Arten"}${term?(" · Treffer für »"+esc(raw)+"«"):""} · sortiert nach ${SORT_LABEL[listSort]} · zum Nachschlagen antippen</div>`;
   // Datenherkunft dort nennen, wo nachgeschlagen wird: Namen = amtliche Liste, Gliederung = erzeugt
   const profL = profilLabel();
@@ -2012,10 +2033,9 @@ function renderList(){
     }
   }
   stage.innerHTML=html;
-  stage.querySelectorAll(".sprow").forEach(li=>{
-    const c=flat[+li.getAttribute("data-idx")];
-    li.onclick=()=>openInfo(c);
-    li.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openInfo(c); } };
+  stage.querySelectorAll(".sprow").forEach(b=>{          // echter Button: Enter/Leertaste nativ
+    const c=flat[+b.getAttribute("data-idx")];
+    b.onclick=()=>openInfo(c);
   });
   stage.querySelectorAll(".cathead-i").forEach(b=> b.onclick=()=>openFamilyInfo(b.dataset.fam));
 }
@@ -2175,6 +2195,10 @@ function syncOptsSummary(){
   sub.textContent = bits.length ? bits.join(" · ")
     : (mode==="photo" ? "Antwort" : "Abfrage")+" · Lernstoff · ZP · Sitzungslänge";   // im Bilder-Quiz gibt es keine Richtung zu wählen
   sub.classList.toggle("active", bits.length>0);
+}
+function syncModeTabs(){                       // Audit: Tabs tragen aria-pressed (Zustand für Screenreader)
+  const tabs=$("#modeTabs"); if(!tabs) return;
+  tabs.querySelectorAll("button").forEach(x=>{ const on=x.dataset.mode===mode; x.classList.toggle("on",on); x.setAttribute("aria-pressed",String(on)); });
 }
 function applyMode(){
   const isList = mode==="list";
@@ -4176,7 +4200,7 @@ function sortenInfoHTML(card){
   const was = /sorte/i.test(card.a) ? "'Sorte'" : /cultivar/i.test(card.a) ? "Cultivars" : /hybrid/i.test(card.a) ? "Hybriden" : "diese Gruppenangabe";
   const bsp = SORTEN_BEISPIELE[taxon] || [];
   return `<div class="sorten">
-    <h4>${ico("info","sorten-ic")} Was heißt »${esc(was)}«?</h4>
+    <h3>${ico("info","sorten-ic")} Was heißt »${esc(was)}«?</h3>
     <p>Die Prüfungsliste nennt hier <b>keine bestimmte Sorte</b>: In der Prüfung steht eine beliebige
       Gartensorte vor dir – bewertet wird <i>${esc(taxon)}</i>. Das Lern-Tool zeigt den Platzhalter
       deshalb als »in Sorten«; beim Eingeben zählt <i>${esc(taxon)}</i> als vollständig richtig.</p>
@@ -4242,8 +4266,8 @@ function openFamilyInfo(famStr){
   closeInfo();
   const lat = famKey(famStr), info = FAM_INFO[lat], de = (info&&info.de) || famGerman(famStr);
   const body = info
-    ? `<div class="fam-sec"><h4>Was die Arten gemeinsam haben</h4><p>${esc(info.m)}</p></div>
-       <div class="fam-sec"><h4>Erkennen &amp; merken</h4><p>${esc(info.t)}</p></div>`
+    ? `<div class="fam-sec"><h3>Was die Arten gemeinsam haben</h3><p>${esc(info.m)}</p></div>
+       <div class="fam-sec"><h3>Erkennen &amp; merken</h3><p>${esc(info.t)}</p></div>`
     : `<div class="fam-sec"><p class="fam-none">Zu dieser Familie liegt noch kein Steckbrief vor.</p>
        <p>Allgemeiner Lerntipp: Achte auf <b>Blütenaufbau</b> (Zahl der Blütenblätter, Symmetrie),
        <b>Blattstellung</b> (wechsel- oder gegenständig) und die <b>Frucht</b> – diese Merkmale verraten
@@ -4555,7 +4579,7 @@ function wire(){
   $("#modeTabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{
     if(b.dataset.mode==="list" && mode!=="list") lastLearnMode=mode;   // Rückweg aus der Liste
     mode=b.dataset.mode; store.set(LS_PREFIX+"mode",mode);
-    $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
+    syncModeTabs();
     vt(applyMode);   // Moduswechsel blendet weich über
   });
   $("#btnStart").onclick=startSession;
@@ -4564,7 +4588,7 @@ function wire(){
     const target = mode==="list" ? (lastLearnMode||"photo") : "list";
     if(mode!=="list") lastLearnMode=mode;
     mode=target; store.set(LS_PREFIX+"mode",mode);
-    $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.mode===mode));
+    syncModeTabs();
     vt(applyMode);
   };
   const chip=$("#profileChip"), ps=$("#profScrim");         // Beruf: Chip öffnet das Profil-Modal
@@ -4672,7 +4696,7 @@ function openIntro(auto, onClose){
       if(ch.m==="quiz"||ch.m==="type"||ch.m==="photo") mode = ch.m;
       applyChallengePrefs(ch);                     // Banner und Auswahlfelder zeigen gleich die Aufgabe des Links
     }
-    $("#modeTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.mode===mode));
+    syncModeTabs();
     const parts = pid.match(/^(.*)_(gaertner|fachwerker)$/);
     if(parts){ $("#frSelect").value=parts[1]; $("#nivSelect").value=parts[2]; }
     wire();

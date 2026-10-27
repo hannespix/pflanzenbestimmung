@@ -469,6 +469,10 @@ async function main() {
   // Hilfe als Dialog (Audit): öffnet im Scrim mit ×, Fokus geht hinein und per Esc zurück zum
   // Hilfe-Knopf, die Themen sind Klappen (erste offen), »In vier Schritten« (es sind vier).
   const help = await page.evaluate(() => {
+    if (typeof sess !== "undefined" && sess && sess.active) {   // laufende Karteikarten-Sitzung beenden: im Fokus-Modus ist der Rest der Seite inert (Hilfe-Knopf verdeckt)
+      document.querySelector("#btnStop").click();
+      const ov = document.querySelector("#btnOverview"); if (ov) ov.click(); else exitSession();
+    }
     const b = document.querySelector("#btnHelp"), s = document.querySelector("#helpScrim"), h = document.querySelector("#helpPanel");
     b.focus(); b.click();
     const opened = !s.hidden && b.classList.contains("active") && b.getAttribute("aria-pressed") === "true";
@@ -2072,7 +2076,7 @@ async function main() {
   // Keine bunten Emojis in der Oberfläche – Symbole sind einheitliche Strich-SVGs.
   // (Geprüft wird der sichtbare Text der Startansicht samt Modalen, nicht der Quelltext.)
   const keineEmojis = await page.evaluate(() => {
-    const EMO = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+    const EMO = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2300}-\u{23FF}]/u;   // inkl. ⏱ & Co. (U+2300–23FF, Audit)
     const treffer = [];
     const sammle = (wo) => {
       const w = document.createTreeWalker(wo, NodeFilter.SHOW_TEXT, {
@@ -2977,6 +2981,54 @@ async function main() {
     "Lesbarkeit (hell): Tags ≥10 px und Sekundärtexte ≥4,5:1 erwartet: " + JSON.stringify(lesbar));
   assert(lesbar.onDark >= 4.5 && lesbar.mdiffDark >= 4.5,
     "Lesbarkeit (dunkel): aktiver Modus-Tab + Tag ≥4,5:1 erwartet: " + JSON.stringify(lesbar));
+
+  // Audit (Barrierefreiheit): Toast = Live-Region; Listenzeilen sind echte Buttons in <li>; Modus-Tabs tragen
+  // aria-pressed; Enter auf »beenden« dreht die Karte nicht um; Ziffern bewerten nicht hinter einem offenen
+  // Dialog; im Fokus-Modus ist alles außerhalb der Bühne inert; Touch-Ziele ≥44 px; keine ⏱-Glyphe; Hilfe aktuell.
+  const a11y2 = await page.evaluate(async () => {
+    const out = {}, tick = ms => new Promise(r => setTimeout(r, ms));
+    out.toast = document.querySelector("#toast").getAttribute("role") === "status" && document.querySelector("#toast").getAttribute("aria-live") === "polite";
+    out.listRows = document.querySelectorAll("#stage ul.splist > li > button.sprow").length;
+    out.badRows = document.querySelectorAll("#stage li[role]").length + document.querySelectorAll("#stage ul.splist > :not(li)").length;
+    out.noClockGlyph = !/\u23F1/.test(document.documentElement.outerHTML);
+    const hilfe = document.querySelector("#helpPanel").textContent;
+    out.helpFresh = /Optionen · Lernstoff/.test(hilfe) && !/Duell-Quiz/.test(hilfe) && !/Tipp- oder/.test(hilfe) && /geführten\s+Lektion/.test(hilfe);
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    out.pressed = [...document.querySelectorAll("#modeTabs button")].every(b => b.getAttribute("aria-pressed") === String(b.classList.contains("on")))
+      && document.querySelector('#modeTabs button[data-mode="cards"]').getAttribute("aria-pressed") === "true";
+    document.querySelector("#sessLen").value = "3";
+    startSession(); await tick(120);
+    out.inert = document.querySelector(".masthead").inert === true && document.querySelector(".setup").inert === true && document.querySelector("#stage").inert !== true;
+    const stop = document.querySelector("#btnStop"); stop.focus();
+    stop.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    out.noFlipOnStop = !document.querySelector("#card .answer") && sess.active;
+    const card = document.querySelector("#card"); card.focus();
+    card.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
+    out.flipped = !!document.querySelector("#card .answer");
+    openInfo(current); await tick(40);
+    const doneBefore = sess.done, qiBefore = qi;
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "3", bubbles: true }));
+    out.noRateBehindDialog = sess.done === doneBefore && qi === qiBefore;
+    closeInfo();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "3", bubbles: true })); await tick(80);
+    out.rated = sess.done === doneBefore + 1 || qi === qiBefore + 1;
+    document.querySelector("#btnStop").click(); await tick(80);
+    const ov = document.querySelector("#btnOverview"); if (ov) ov.click(); else exitSession(); await tick(40);
+    out.inertOff = document.querySelector(".masthead").inert !== true && document.querySelector(".setup").inert !== true;
+    const h = sel => { const e = document.querySelector(sel); return e ? e.getBoundingClientRect().height : -1; };
+    out.how = h("#btnHow"); out.rank = h("#rankName"); out.herb = h("#btnHerb");
+    document.querySelector("#profileChip").click(); await tick(450);   // Eingangs-Animation des Modals (scale .965→1) abwarten
+    out.sel = h("#frSelect");
+    document.querySelector("#profDone").click();
+    document.querySelector('#modeTabs button[data-mode="list"]').click();
+    return out;
+  });
+  assert(a11y2.toast && a11y2.listRows >= 100 && a11y2.badRows === 0 && a11y2.pressed && a11y2.noClockGlyph && a11y2.helpFresh,
+    "Barrierefreiheit: Toast-Live-Region, li>button-Zeilen, aria-pressed, keine ⏱-Glyphe, Hilfe aktuell: " + JSON.stringify(a11y2));
+  assert(a11y2.inert && a11y2.noFlipOnStop && a11y2.flipped && a11y2.noRateBehindDialog && a11y2.rated && a11y2.inertOff,
+    "Tastatur/Fokus-Modus: beenden dreht nicht um, Dialog blockt Ziffern, inert an/aus: " + JSON.stringify(a11y2));
+  for (const k of ["how", "rank", "herb", "sel"])
+    assert(a11y2[k] >= 43.5, "Touch-Ziel zu klein (" + k + ": " + Math.round(a11y[k]) + "px, mindestens 44px erwartet)");
 
   // Barrierefreie Touch-Bedienung (schmale/Touch-Viewports): ≥44-px-Ziele für
   // Hilfe-Link, Profil-Chip, Ansicht-/Filter-Knöpfe, Suchfeld und Fußzeilen-Link;
