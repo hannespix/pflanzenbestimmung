@@ -17,7 +17,7 @@ jobs:
       - name: Build (Single-File HTML)
         run: python3 build.py
       - name: Verteilkopien im Repo-Root sind aktuell
-        run: git diff --exit-code index.html pflanzenkenntnis.html pflanzen-lernen.html rechtliches.html
+        run: git diff --exit-code -I 'id="buildStamp"' index.html pflanzenkenntnis.html pflanzen-lernen.html rechtliches.html
       - name: Offline-Check Wurzel = Lern-Tool (kein CDN, keine externen Ressourcen)
         run: python3 tools/check_offline.py dist/index.html
       - name: Offline-Check Weiterleitung /pruefung
