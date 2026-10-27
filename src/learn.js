@@ -593,14 +593,15 @@ function streakBump(){
    der Karteikarte am wenigsten. Teilweise richtig gibt anteilig. Global über
    alle Profile (Key pflanzenlernen.xp = {x:Punkte, r:zuletzt gefeierter Rang}). */
 const LS_XP = LS_PREFIX+"xp";
-const RANKS = [                                  // Gärtner-Laufbahn statt Level-Zahlen
-  {n:"Keimling",          x:0},
-  {n:"Sämling",           x:150},
-  {n:"Steckling",         x:500},
-  {n:"Jungpflanze",       x:1200},
-  {n:"Stockmutter",       x:2500},
-  {n:"Meistergärtner/in", x:5000}
+const RANKS = [                                  // Gärtner-Laufbahn statt Level-Zahlen – jede Stufe erklärt sich selbst
+  {n:"Keimling",          x:0,    d:"gerade aufgegangen – die ersten Punkte"},
+  {n:"Sämling",           x:150,  d:"erste Blätter – du bist dabei"},
+  {n:"Steckling",         x:500,  d:"schlägt Wurzeln – regelmäßig am Üben"},
+  {n:"Jungpflanze",       x:1200, d:"wächst kräftig – viele Namen sitzen"},
+  {n:"Prachtexemplar",    x:2500, d:"voll entwickelt – kaum noch Lücken"},
+  {n:"Meistergärtner/in", x:5000, d:"kennt sie alle – die höchste Stufe"}
 ];
+const RANK_HOW = "Punkte gibt es für richtige Antworten: Selbst eingeben 10 · Auswahl 5 · Karteikarte 3 – plus Bonus ab drei Treffern in Folge.";
 const XP_BASE = { cards:3, quiz:5, type:10 };    // Karteikarte < Auswahl < freies Tippen
 function xpLoad(){ try{ const o=JSON.parse(store.get(LS_XP)||"{}"); return (o&&typeof o==="object")?o:{}; }catch(e){ return {}; } }
 function xpSave(o){ try{ store.set(LS_XP, JSON.stringify(o)); }catch(e){} }
@@ -621,7 +622,7 @@ function xpAdd(n, anchor){                       // Punkte gutschreiben, Rangauf
     const nach=rankOf(o.x).i;
     if(nach>vor && o.r!==nach){                  // neuer Rang: einmalig feiern
       o.r=nach; xpSave(o);
-      toast(`Neuer Rang: ${RANKS[nach].n}`);
+      toast(`Neuer Rang: ${RANKS[nach].n} – ${RANKS[nach].d}`);
       celebrate(anchor||$("#stage")||document.body, 2);
     } else xpSave(o);
     if(sess.active) sess.xp=(sess.xp||0)+n;      // in der Sitzungsleiste mitzählen
@@ -635,18 +636,47 @@ function canPopover(){
   try{ return ("popover" in HTMLElement.prototype) && window.CSS && CSS.supports("anchor-name: --a"); }
   catch(e){ return false; }
 }
+function rankRowsHTML(jetzt){                     // eine Zeile je Rang: Name · ab wie vielen Punkten · was er bedeutet
+  return RANKS.map((r,i)=>`<div class="rkp-row${i===jetzt?" on":""}"><span class="r-n">${esc(r.n)}</span><span class="r-x">ab ${r.x} P.</span><span class="r-d">${esc(r.d||"")}</span></div>`).join("");
+}
+/* Dieselbe Laufbahn als Dialog – für Browser ohne Popover/Anchor-Positioning (der
+   Rang-Knopf bleibt so nie tot; ein Tooltip ist am Handy unsichtbar). */
+function openRankModal(){
+  closeInfo();
+  const jetzt=rankOf(xpTotal()).i, xp=xpTotal();
+  const scrim = el("div","scrim"); scrim.id="infoScrim";
+  scrim.innerHTML = `<div class="modal rankmodal" role="dialog" aria-modal="true" aria-label="Deine Laufbahn">
+     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <div class="modal-head">
+       <div class="mh-bot fam">Deine Laufbahn</div>
+       <div class="mh-fam">${xp} Punkte · Rang: ${esc(RANKS[jetzt].n)}</div>
+     </div>
+     <div class="rkp-list">${rankRowsHTML(jetzt)}</div>
+     <div class="famfoot">${esc(RANK_HOW)}</div>
+   </div>`;
+  document.body.appendChild(scrim); infoEl=scrim;
+  scrim.addEventListener("click", e=>{ if(e.target===scrim) closeInfo(); });
+  scrim.querySelector("#infoClose").onclick = closeInfo;
+  document.addEventListener("keydown", infoKey);
+  infoReturnFocus = document.activeElement;
+  try{ scrim.querySelector("#infoClose").focus(); }catch(e){}
+}
 function wireRankPopover(){
-  const chip=$("#rankName"); if(!chip || !canPopover()) return;
+  const chip=$("#rankName"); if(!chip) return;
+  if(chip.tagName!=="BUTTON"){ chip.setAttribute("role","button"); chip.tabIndex=0; }
+  chip.setAttribute("aria-label","Laufbahn ansehen: alle Ränge, was sie bedeuten und ihre Punktzahlen");
+  if(!canPopover()){                             // kein Popover/Anchor: Übersicht als Dialog
+    chip.onclick=openRankModal;
+    chip.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openRankModal(); } };
+    return;
+  }
   let pop=$("#rankPop");
   if(!pop){
     pop=el("div"); pop.id="rankPop"; pop.setAttribute("popover","auto");
     document.body.appendChild(pop);
   }
   const jetzt=rankOf(xpTotal()).i;
-  pop.innerHTML = `<div class="rkp-h">Laufbahn</div>`+
-    RANKS.map((r,i)=>`<div class="rkp-row${i===jetzt?" on":""}"><span class="r-n">${esc(r.n)}</span><span class="r-x">ab ${r.x} P.</span></div>`).join("");
-  if(chip.tagName!=="BUTTON"){ chip.setAttribute("role","button"); chip.tabIndex=0; }
-  chip.setAttribute("aria-label","Laufbahn ansehen: alle Ränge und ihre Punktzahlen");
+  pop.innerHTML = `<div class="rkp-h">Deine Laufbahn</div>`+rankRowsHTML(jetzt)+`<div class="rkp-f">${esc(RANK_HOW)}</div>`;
   const zeig=()=>{ try{ pop.togglePopover(); }catch(e){} };
   chip.onclick=zeig;
   chip.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); zeig(); } };

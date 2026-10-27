@@ -2047,20 +2047,21 @@ async function main() {
     renderProgress();
     const chip = document.querySelector("#rankName");
     const pop = document.querySelector("#rankPop");
-    let offen = null, zeilen = 0, aktiv = "";
+    let offen = null, zeilen = 0, aktiv = "", erkl = 0;
     if (kann && chip) {
       chip.click();
       offen = pop.matches(":popover-open");
       zeilen = pop.querySelectorAll(".rkp-row").length;
       const on = pop.querySelector(".rkp-row.on .r-n");
       aktiv = on ? on.textContent : "";
+      erkl = [...pop.querySelectorAll(".rkp-row .r-d")].filter((e) => e.textContent.trim().length > 8).length;
       chip.click();
     }
     openHerbarium();
     const grid = document.querySelector(".herbgrid");
     const ct = grid ? getComputedStyle(grid).containerType : "";
     document.querySelector("#infoClose").click();
-    return { kann, hatPop: !!pop, rolle: chip ? (chip.tagName === "BUTTON" ? "button" : chip.getAttribute("role")) : "", offen, zeilen, aktiv, ct,
+    return { kann, hatPop: !!pop, rolle: chip ? (chip.tagName === "BUTTON" ? "button" : chip.getAttribute("role")) : "", offen, zeilen, aktiv, erkl, ct,
       oklch: CSS.supports("color: oklch(0.5 0.1 150)") };
   });
   if (stufe5.kann) {
@@ -2068,7 +2069,29 @@ async function main() {
       "Rang-Popover: Chip muss Knopf sein und das Popover im Top-Layer öffnen: " + JSON.stringify(stufe5));
     assert(stufe5.zeilen === 6 && stufe5.aktiv === "Keimling",
       "Rang-Popover muss alle sechs Ränge zeigen und den aktuellen hervorheben: " + JSON.stringify(stufe5));
+    assert(stufe5.erkl === 6, "Rang-Popover muss zu jedem Rang sagen, was er bedeutet: " + JSON.stringify(stufe5));
   }
+
+  // Laufbahn: allgemeinverständliche Rangnamen (kein Fachjargon wie »Stockmutter«), jede Stufe mit
+  // Erklärung; ohne Popover-Unterstützung öffnet der Rang-Knopf dieselbe Übersicht als Dialog.
+  const laufbahn = await page.evaluate(() => {
+    const namen = RANKS.map((r) => r.n), erkl = RANKS.every((r) => (r.d || "").length > 8);
+    openRankModal();
+    const m = document.querySelector("#infoScrim .rankmodal");
+    const zeilen = m ? m.querySelectorAll(".rkp-row").length : 0;
+    const on = m ? m.querySelector(".rkp-row.on .r-n") : null;
+    const how = m ? /Selbst eingeben 10/.test(m.textContent) : false;
+    document.querySelector("#infoClose").click();
+    const zu = !document.querySelector("#infoScrim");
+    const hilfe = document.querySelector("#helpPanel").textContent.replace(/\s+/g, " ");
+    return { namen, erkl, zeilen, aktiv: on ? on.textContent : "", how, zu,
+      hilfe: /Punkte & Ränge/.test(hilfe) && /Prachtexemplar/.test(hilfe) };
+  });
+  assert(!laufbahn.namen.includes("Stockmutter") && laufbahn.namen[4] === "Prachtexemplar" && laufbahn.erkl,
+    "Ränge müssen allgemeinverständlich heißen und jeder eine Erklärung tragen: " + JSON.stringify(laufbahn));
+  assert(laufbahn.zeilen === 6 && laufbahn.aktiv === "Keimling" && laufbahn.how && laufbahn.zu,
+    "Laufbahn-Dialog (Fallback ohne Popover) muss sechs erklärte Ränge, den aktuellen und die Punkteregel zeigen: " + JSON.stringify(laufbahn));
+  assert(laufbahn.hilfe, "Die Hilfe muss Punkte & Ränge samt Laufbahn erklären: " + JSON.stringify(laufbahn));
   assert(stufe5.ct === "inline-size",
     "Container Queries: das Herbarium-Raster muss ein Inline-Size-Container sein: " + JSON.stringify(stufe5));
 

@@ -1425,7 +1425,7 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       freies **Tippen 10** > **Auswahl 5** > **Karteikarte 3** (Selbsteinschätzung
       am wenigsten, weil am schwächsten belegt), »Unsicher« 1; Teilpunkte anteilig
       (Prüfungsmodus: `got/max`, Bilder-»hard« = halb). **Sechs Ränge**
-      (`RANKS`): Keimling · Sämling · Steckling · Jungpflanze · Stockmutter ·
+      (`RANKS`): Keimling · Sämling · Steckling · Jungpflanze · Prachtexemplar (bis #143 »Stockmutter«) ·
       Meistergärtner/in (0/150/500/1200/2500/5000 P.); Aufstieg wird **einmalig**
       gefeiert (Toast + Feuerwerk, `o.r` merkt den zuletzt gefeierten Rang).
       Anzeige: Rang-Zeile unter der Lernserie (`#rankRow`: Rang kursiv · grüner
@@ -2042,6 +2042,25 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Baumschul-Gärtner-Liste nennt die Art *Prunus cerasifera* »Blutpflaume, Gewöhnliche
       Kirschpflaume« (Blutpflaume ist die Sorte 'Nigra') – Ungenauigkeit, kein eindeutiger
       Fehler. Eine Meldung der Fehler an die zuständige Stelle ist Sache des Betreibers.
+
+- [x] **Rang »Stockmutter« ersetzt + Laufbahn erklärt sich selbst** (Rückmeldung mit Screenshot:
+      »Begriff Stockmutter ist nicht gut – was soll das überhaupt sein?«). Befund: Die fünfte
+      Stufe der XP-Laufbahn hieß nach dem Zierpflanzenbau-Fachbegriff für die Mutterpflanze,
+      von der Stecklinge geschnitten werden – als Rang unverständlich und schief. Dazu war die
+      Laufbahn nirgends erklärt: Das Rang-Popover zeigte nur Namen und Punktzahlen, der Hilfe-Text
+      kannte Punkte und Ränge gar nicht, und auf Geräten ohne Popover-/Anchor-Unterstützung war
+      der Rang-Knopf tot (nur ein am Handy unsichtbarer Tooltip). Vier Änderungen in `learn.js`/
+      `learn.html`: (1) Rang 5 heißt **Prachtexemplar** (allgemeinverständlich, bleibt im
+      Pflanzen-Bild: Keimling → Sämling → Steckling → Jungpflanze → Prachtexemplar →
+      Meistergärtner/in). (2) Jeder Rang trägt eine **Bedeutung** (`RANKS[i].d`, z. B. »voll
+      entwickelt – kaum noch Lücken«), die im Popover (`.r-d`), im Aufstiegs-Toast und im neuen
+      Dialog erscheint; Fuß `RANK_HOW` nennt die Punkteregel (Selbst eingeben 10 · Auswahl 5 ·
+      Karteikarte 3 · Serienbonus). (3) **Fallback-Dialog** `openRankModal()` (gleiches
+      `.scrim`-Modal wie die Stufen-Leiter): `wireRankPopover` hängt ihn an den Rang-Knopf,
+      wenn `canPopover()` falsch ist – kein toter Knopf mehr. (4) Hilfe-Absatz **»Punkte &
+      Ränge«** unter »Fortschritt & mehr«. `tests/learn.mjs` prüft: Erklärzeile je Rang im
+      Popover, kein »Stockmutter«/Rang 5 = Prachtexemplar, Dialog mit sechs Rängen + aktuellem
+      Rang + Punkteregel, Hilfe-Absatz.
 
 ## Offene Aufgaben (TODO)
 
