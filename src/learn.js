@@ -1661,20 +1661,28 @@ function sessionBar(){
     `<button class="btn ghost" id="btnStop" title="Sitzung beenden">beenden</button></div>`;
 }
 /* Warum kommt DIESE Karte gerade so? In der geführten Lektion wechselt die
-   Übungsform mit dem Lernstand (neu → Bild, dann ohne Bild, dann selbst abrufen,
-   zuletzt tippen). Ohne Hinweis wirkt das wie ein zufällig »eingemischtes« Quiz –
-   deshalb eine ruhige Zeile über der Aufgabe. Nur in der geführten Lektion; bei
-   einer angenommenen Herausforderung fehlt der fremde Lernstand, dann nennt sie
-   nur die Übungsform. */
-const GUIDED_WIE = { photo:"am Bild erkennen", quiz:"jetzt ohne Bild",
+   Übungsform mit dem Lernstand (neu → Bild, ab Stufe 2 am Namen statt am Bild, dann
+   selbst abrufen, zuletzt tippen). Ohne Hinweis wirkt das wie ein zufällig
+   »eingemischtes« Quiz – deshalb eine ruhige Zeile über der Aufgabe. Nur in der
+   geführten Lektion; bei einer angenommenen Herausforderung fehlt der fremde
+   Lernstand, dann nennt sie nur die Übungsform.
+   Wortlaut: »jetzt ohne Bild« las sich wie ein Fehler des Bilder-Quiz (Rückmeldung mit
+   drei Screenshots) – der gewollte Schritt heißt jetzt »am Namen statt am Bild«, und ein
+   ECHTER Ausfall (Bild geplant, aber keins gefunden bzw. »Ohne Bilder weiterlernen«
+   gewählt) wird als solcher benannt. */
+const GUIDED_WIE = { photo:"am Bild erkennen", quiz:"jetzt am Namen statt am Bild",
                      cards:"selbst abrufen", type:"prüfungsnah eingeben" };
 function guidedNoteHTML(card){
   if(!sess.auto || !card) return "";
-  const wie = GUIDED_WIE[mode]; if(!wie) return "";
+  let wie = GUIDED_WIE[mode]; if(!wie) return "";
+  const plan = sess.formOf ? sess.formOf.get(card) : undefined;
+  if(mode==="quiz" && plan==="photo")                  // Bild war geplant, kommt aber nicht: ehrlich sagen, warum
+    wie = sess.photoGiveUp ? "ohne Bild – auf deinen Wunsch" : "kein brauchbares Bild gefunden – deshalb Auswahlfrage";
   const box = sess.boxOf ? sess.boxOf.get(card) : undefined;
   const stufe = box===undefined ? "" : box ? `Stufe ${box} von 5` : "Neu";
   return `<div class="gnote" title="Die geführte Lektion wählt die Übungsform nach deinem Lernstand: `+
-    `neu → am Bild erkennen, dann ohne Bild, dann selbst abrufen, zuletzt selbst eingeben wie in der Prüfung.">`+
+    `neu → am Bild erkennen · ab Stufe 2 am Namen statt am Bild (gewollt, kein Fehler) · Stufe 3 selbst abrufen · ab Stufe 4 selbst eingeben wie in der Prüfung. `+
+    `Durchgehend Bilder: unter »Selbst wählen« den Modus Bilder nehmen.">`+
     `${stufe?esc(stufe)+" · ":""}${esc(wie)}</div>`;
 }
 function showGuidedNote(){
@@ -2320,10 +2328,11 @@ function stripCultivar(a){                            // botanischer Name ohne S
    bisher – das Kürzel wurde so zum »Art-Epitheton« (»Taraxacum sect.«), und die Bildsuche
    verwarf jedes Löwenzahn-Foto als »andere Art« (Realfall: nie ein Bild im Bilder-Quiz). */
 const RANK_TOKEN = /^([×x]|var\.|subsp\.|ssp\.|supsp\.|f\.|cv\.|convar\.|nothof\.|sect\.|sec\.|subg\.|agg\.)$/i;
+const GROUP_TOKEN = /^(cultivars?|hybriden?|sorten|grp\.?|gruppe|group|hort\.?)$/i;   // Sammel-/Sortenwort – auch kleingeschrieben (»Lupinus cultivars«, 7 Zeilen) kein Epitheton
 function binomEpithet(a){
   const s = stripCultivar(a);                          // sonst wäre bei »Weigela 'Bristol Ruby'« »'Bristol« das Epitheton
   const w = (s.split(" ").filter(w=> w && !RANK_TOKEN.test(w))[0] || "").replace(/[,;:]+$/,"");   // »vulgaris, A. Cultivars« → vulgaris
-  return /^[a-zäöüß]/.test(w) ? w : "";                // großgeschrieben = Sektion/Gruppe (»Ruderalia«, »Cultivars«) – kein Art-Epitheton
+  return /^[a-zäöüß]/.test(w) && !GROUP_TOKEN.test(w) ? w : "";   // großgeschrieben = Sektion/Gruppe (»Ruderalia«), Sammelwort (»Cultivars«/»cultivars«) – kein Art-Epitheton
 }
 function searchName(c){ return norm(c.g+" "+binomEpithet(c.a)); }
 /* Sektion (»sect. Ruderalia«, auch der Quell-Tippfehler »sec.«) → ihr Name, sonst "". */

@@ -1095,10 +1095,11 @@ function stripCultivar(a){                            // botanischer Name ohne S
    bisher – das Kürzel wurde so zum »Art-Epitheton« (»Taraxacum sect.«), und die Bildsuche
    verwarf jedes Löwenzahn-Foto als »andere Art« (Realfall: nie ein Bild im Bilder-Quiz). */
 const RANK_TOKEN = /^([×x]|var\.|subsp\.|ssp\.|supsp\.|f\.|cv\.|convar\.|nothof\.|sect\.|sec\.|subg\.|agg\.)$/i;
+const GROUP_TOKEN = /^(cultivars?|hybriden?|sorten|grp\.?|gruppe|group|hort\.?)$/i;   // Sammel-/Sortenwort – auch kleingeschrieben (»Lupinus cultivars«, 7 Zeilen) kein Epitheton
 function binomEpithet(a){
   const s = stripCultivar(a);                          // sonst wäre bei »Weigela 'Bristol Ruby'« »'Bristol« das Epitheton
   const w = (s.split(" ").filter(w=> w && !RANK_TOKEN.test(w))[0] || "").replace(/[,;:]+$/,"");   // »vulgaris, A. Cultivars« → vulgaris
-  return /^[a-zäöüß]/.test(w) ? w : "";                // großgeschrieben = Sektion/Gruppe (»Ruderalia«, »Cultivars«) – kein Art-Epitheton
+  return /^[a-zäöüß]/.test(w) && !GROUP_TOKEN.test(w) ? w : "";   // großgeschrieben = Sektion/Gruppe (»Ruderalia«), Sammelwort (»Cultivars«/»cultivars«) – kein Art-Epitheton
 }
 function searchName(c){ return norm(c.g+" "+binomEpithet(c.a)); }
 /* Sektion (»sect. Ruderalia«, auch der Quell-Tippfehler »sec.«) → ihr Name, sonst "". */
