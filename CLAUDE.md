@@ -2131,6 +2131,9 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       neue Ausgabe aktiv ist. Test-Haken `__swUpdate`/`__swReloadHook`; `tests/learn.mjs` und
       `tests/smoke.mjs` prüfen Stempel, Leerlauf → Neuladen, laufende Sitzung/gezogene Prüfung →
       genau ein Hinweis mit Knopf.
+      **CI-Falle behoben:** `build.yml` vergleicht die Root-Kopien mit `git diff -I 'id="buildStamp"'`,
+      weil das Stempel-Datum (letzter Commit) zwischen lokalem Build und CI-Merge-Commit abweicht,
+      sobald beide an verschiedenen Tagen liegen – ohne `-I` wäre jeder PR am Folgetag rot.
 
 ## Offene Aufgaben (TODO)
 
