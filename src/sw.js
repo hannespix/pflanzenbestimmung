@@ -28,7 +28,10 @@ const ASSETS = [
 
 self.addEventListener("install", (e) => {
   self.skipWaiting();
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).catch(() => {}));
+  // Kein .catch: Schlägt das Vorladen auch nur einer Datei fehl (schwache Leitung), scheitert
+  // die Installation sauber und der bisherige Cache bleibt bestehen. Mit .catch »gelang« sie
+  // trotzdem, »activate« räumte den alten Cache ab – und die App war offline leer (Audit-Fund).
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
 });
 
 self.addEventListener("activate", (e) => {

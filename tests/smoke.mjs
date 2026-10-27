@@ -809,6 +809,87 @@ async function main() {
       "Verwaltung: Light-Dismiss/Esc muss Zustand + ARIA mitziehen: " + JSON.stringify(admin));
   }
 
+  // 8y2) Audit: Ein Klick auf einen Menüpunkt schließt das Verwaltungs-Menü – im Popover-Modus
+  //      lag es sonst im Top-Layer ÜBER dem geöffneten Dialog »Neue Art« und verdeckte die Felder.
+  const admClick = await page.evaluate(async () => {
+    const bar = document.querySelector("#adminBar"), btn = document.querySelector("#btnAdmin");
+    btn.click(); await new Promise((r) => setTimeout(r, 20));
+    const offen = !bar.hidden;
+    document.querySelector("#btnAdd").click(); await new Promise((r) => setTimeout(r, 80));
+    const dlg = document.querySelector("#editScrim").classList.contains("open");
+    const zu = bar.hidden && !bar.matches(":popover-open") && btn.getAttribute("aria-expanded") === "false";
+    const f = document.querySelector("#fGattung"); f.scrollIntoView({ block: "center" });
+    const r = f.getBoundingClientRect();
+    const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    const frei = !!top && !top.closest("#adminBar");
+    document.querySelector("#editCancel").click();
+    return { offen, dlg, zu, frei, treffer: top && (top.id || top.className) };
+  });
+  assert(admClick.offen && admClick.dlg && admClick.zu && admClick.frei,
+    "Verwaltung: Menüpunkt-Klick muss das Menü schließen, der Dialog muss frei liegen: " + JSON.stringify(admClick));
+
+  // 8y3) Audit: [hidden] gilt auch gegen .btn{display:flex} – »Aktualisieren« darf ohne
+  //      geladene Prüfung nicht sichtbar sein.
+  const hiddenOk = await page.evaluate(() => {
+    clearSel();
+    const b = document.querySelector("#exUpdate");
+    return { hidden: b.hidden, display: getComputedStyle(b).display };
+  });
+  assert(hiddenOk.hidden && hiddenOk.display === "none",
+    "[hidden] muss wirklich ausblenden (#exUpdate): " + JSON.stringify(hiddenOk));
+
+  // 8y4) Audit: »Mischen« muss die neue Reihenfolge sofort zeigen (Aktuelle Prüfung), nicht nur drucken.
+  const misch = await page.evaluate(() => {
+    drawRandom();
+    const lesen = () => [...document.querySelectorAll("#currentSelList .pvrow .binom")].map((e) => e.textContent.replace(/\s+/g, " ").trim());
+    const vorher = lesen();
+    shuffleSel();
+    const nachher = lesen();
+    const soll = selectedPlants().map((p) => (p.gattung + " " + p.art).replace(/\s+/g, " ").trim());
+    return { n: nachher.length, passt: JSON.stringify(nachher) === JSON.stringify(soll), anders: JSON.stringify(vorher) !== JSON.stringify(nachher) };
+  });
+  assert(misch.n === 20 && misch.passt && misch.anders,
+    "Mischen: »Aktuelle Prüfung« muss die gemischte Reihenfolge zeigen: " + JSON.stringify(misch));
+
+  // 8y5) Audit: Excel-Import »Liste ersetzen« setzt Auswahl und geladene Prüfung zurück – die alte
+  //      Auswahl verwies sonst auf die neu vergebenen IDs (fremde Arten im Bogen).
+  const ersetzt = await page.evaluate(() => {
+    drawRandom();
+    const vorher = selection.length;
+    pendingImport = [
+      { gattung: "Testus", art: "primus", familie: "Testaceae", deutscher_name: "Erste Testpflanze", kategorie: "Test", zp: 1, synonyme: "", bemerkungen: "" },
+      { gattung: "Testus", art: "secundus", familie: "Testaceae", deutscher_name: "Zweite Testpflanze", kategorie: "Test", zp: 0, synonyme: "", bemerkungen: "" }
+    ];
+    const r = document.querySelector('input[name="impmode"][value="replace"]'); if (r) r.checked = true;
+    doImport();
+    const out = { vorher, sel: selection.length, loaded: loadedExamId, n: cache.length,
+      panel: document.querySelectorAll("#currentSelList .pvrow").length,
+      update: getComputedStyle(document.querySelector("#exUpdate")).display };
+    const alt = window.confirm; window.confirm = () => true;
+    try { resetToDefault(); } finally { window.confirm = alt; }
+    out.zurueck = cache.length;
+    return out;
+  });
+  assert(ersetzt.vorher === 20 && ersetzt.sel === 0 && ersetzt.loaded === null && ersetzt.n === 2 && ersetzt.panel === 0 && ersetzt.update === "none",
+    "Import (ersetzen): Auswahl/geladene Prüfung müssen zurückgesetzt sein: " + JSON.stringify(ersetzt));
+  assert(ersetzt.zurueck > 2, "Standardliste nach dem Import-Test nicht wiederhergestellt: " + JSON.stringify(ersetzt));
+
+  // 8y6) Audit: Druck bleibt weiß – Punktraster/Lichtkegel (Stufe 2) dürfen den amtlichen
+  //      Leerbogen nicht bedrucken; die Musterlösung behält Kopf/Zebra (print-color-adjust).
+  await page.emulateMediaType("print");
+  const druck = await page.evaluate(() => {
+    drawRandom(); buildSheet("solution");
+    const cs = getComputedStyle(document.body), sh = getComputedStyle(document.querySelector("#sheet"));
+    const th = document.querySelector("#sheet table.exam thead th"), tcs = th ? getComputedStyle(th) : {};
+    return { bodyImg: cs.backgroundImage, bodyBg: cs.backgroundColor, sheetBg: sh.backgroundColor,
+      adjust: tcs.printColorAdjust || tcs.webkitPrintColorAdjust || "", thBg: tcs.backgroundColor };
+  });
+  await page.emulateMediaType("screen");
+  assert(druck.bodyImg === "none" && druck.bodyBg === "rgb(255, 255, 255)" && druck.sheetBg === "rgb(255, 255, 255)",
+    "Druck: Hintergrund muss weiß und ohne Punktraster/Lichtkegel sein: " + JSON.stringify(druck));
+  assert(druck.adjust === "exact", "Musterlösung: Tabellenkopf braucht print-color-adjust:exact: " + JSON.stringify(druck));
+  await page.evaluate(() => clearSel());
+
   // 9) Mobile-Layout: Status-Pille überlagert die Überschrift nicht (schmale Breite)
   await page.setViewport({ width: 360, height: 720, deviceScaleFactor: 1 });
   const mobile = await page.evaluate(() => {

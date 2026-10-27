@@ -1089,8 +1089,11 @@ async function main() {
   // eine Art gerade kein Foto, kommt sie ans Ende der Runde und es geht mit der nächsten
   // ART weiter – erst nach einer ganzen Runde ohne Bild wird gefragt (nie still gewechselt).
   const photoSkip = await page.evaluate(async () => {
-    const bad = ["Quercus_robur_range_map.svg", "Verbreitung_Fagus.png", "Wappen_Baden.svg"];
-    const good = ["Quercus_robur_Blatt.jpg", "Rosa-canina-Bluete.JPG"];
+    const bad = ["Quercus_robur_range_map.svg", "Verbreitung_Fagus.png", "Wappen_Baden.svg",
+      "Acer_distribution_map.png", "Hydrangea_Verbreitungskarte.png", "Fagus_sylvatica_range.jpg"];
+    // Audit-Fund: »range« traf als Teilstring jede Hydrangea, »map« jeden »maple«, »range« auch »orange«
+    const good = ["Quercus_robur_Blatt.jpg", "Rosa-canina-Bluete.JPG", "Hydrangea_macrophylla_01.jpg",
+      "Hydrangea paniculata 'Grandiflora'.jpg", "Acer_maple_leaf_autumn.jpg", "Citrus_sinensis_orange_fruit.jpg"];
     __clearPhotoCache(); photoTried.clear(); __setPhotoSource(() => Promise.resolve(null));
     document.querySelector('#modeTabs button[data-mode="photo"]').click();
     document.querySelector("#sessLen").value = "4";
@@ -1340,7 +1343,7 @@ async function main() {
     const w1 = await photoFor(weig); const n1 = abrufe;
     const w2 = await photoFor(weig); const n2 = abrufe;
     Object.assign(r, { weigTmp: !!(w1 && w1.tmp), weigFile: w1 && w1.file, weigCredit: w1 && w1.artist, weigSame: w1 === w2, weigNoRefetch: n2 === n1,
-      weigNichtGemerkt: !(localStorage.getItem("pflanzenlernen.photos6") || "").includes(weig.key) });
+      weigNichtGemerkt: !(localStorage.getItem("pflanzenlernen.photos7") || "").includes(weig.key) });
     __setJsonp(window.__offlineJsonp); __clearPhotoCache(); photoTried.clear();
     // d) Platzhalter 'Sorte': die Liste meint die Art → direkt der Art-Artikel
     prof("garten_und_landschaftsbau", "fachwerker");

@@ -2135,6 +2135,42 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       weil das Stempel-Datum (letzter Commit) zwischen lokalem Build und CI-Merge-Commit abweicht,
       sobald beide an verschiedenen Tagen liegen – ohne `-I` wäre jeder PR am Folgetag rot.
 
+- [x] **Audit-Paket 1 (sofort): zehn bestätigte Fehler aus dem Tool- und UI-Audit behoben**
+      (Funde 2–4, 7, 8, 10, 12, 26–28; Fund 1, die CI-Stempel-Falle, kam schon mit #146).
+      **(2) Bildfilter mit Wortgrenzen:** `usablePhoto()` arbeitete als Teilstring-Filter und
+      verwarf damit jede *Hydrangea* (»range«), jeden »maple«-Dateinamen (»map«) und jede
+      »orange« – genau die Dateien, die `commonsScore` bevorzugt. Jetzt `\b`-Grenzen auf dem
+      normalisierten Dateinamen; deutsche Komposita bleiben erfasst (»Verbreitungskarte« über
+      Präfix »verbreitung« / Suffix »karte«). Dieselbe Korrektur in `wikiGallery` von `app.js`;
+      Bild-Cache auf `pflanzenlernen.photos7` (alte Fehltreffer verfallen).
+      **(3) Excel-Import »ersetzen«** setzt `selection` und `loadedExamId` zurück – die alte
+      Auswahl verwies sonst auf die neu vergebenen IDs 1…n, Bogen/Vorschau/»Aktuelle Prüfung«
+      zeigten fremde Arten. **(4) Verwaltungs-Menü** schließt beim Klick auf einen Menüpunkt
+      (delegierter Listener auf `#adminBar`; das Popover im Top-Layer lag sonst über dem
+      geöffneten Dialog »Neue Art«/Schema/Einstellungen und verdeckte die Felder).
+      **(7) Druck-Guard** in `template.html` mit `!important` + `#sheet{background:#fff}`: die
+      spätere »Stufe 2«-Regel (Lichtkegel + Punktraster) gewann die Kaskade und bedruckte den
+      amtlichen Leerbogen, sobald im Browser »Hintergrundgrafiken« an waren (`learn.html` hatte
+      den Guard schon mit `!important`). **(8)** Musterlösung (`#sheet.sol-look`) mit
+      `print-color-adjust:exact` – grüner Kopf und Zebrastreifen auch ohne Hintergrundgrafiken.
+      **(10)** `[hidden]{display:none!important}` auch in `template.html` (`.btn{display:flex}`
+      überstimmte das Attribut, »Aktualisieren« war ohne geladene Prüfung sichtbar).
+      **(12)** `shuffleSel()` ruft `syncSelUI()` – Mischen war nur im Druck sichtbar.
+      **(26) Deploy nur nach grünen Tests:** `deploy.yml` hat einen vorgeschalteten Job
+      `pruefen` (Seeds = amtliche Listen, Build, Offline-Check, die drei Puppeteer-Tests); die
+      Upload-Jobs `deploy` und `pages` hängen per `needs` daran und veröffentlichen das geprüfte
+      Artefakt (`actions/upload-artifact` → `download-artifact`, nichts wird zweimal gebaut).
+      `cancel-in-progress` gilt nur noch für PR-Vorschauen – ein abgebrochenes `mirror --reverse`
+      hätte sonst einen gemischten Live-Stand hinterlassen. **(27)** `sw.js`: `addAll` ohne
+      `.catch` – scheitert das Vorladen, scheitert die Installation sauber und der alte Cache
+      bleibt (vorher »gelang« sie trotzdem, `activate` löschte den alten Cache → offline leer).
+      **(28)** `npm test` = smoke + learn + pwa (`tests/start.mjs` gab es nicht mehr),
+      `npm run check` prüft alle fünf Seiten. Tests: `tests/smoke.mjs` (Menüpunkt schließt das
+      Menü und der Dialog liegt frei – `elementFromPoint`, `[hidden]` wirkt, Mischen zeigt die
+      Reihenfolge, Ersetzen-Import setzt Auswahl zurück, Druck-Guard + `print-color-adjust`
+      über `page.emulateMediaType("print")`), `tests/learn.mjs` (Hydrangea/maple/orange bleiben,
+      Karten/Verbreitungsdateien weiterhin raus).
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.

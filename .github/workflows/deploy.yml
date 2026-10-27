@@ -1,11 +1,16 @@
 name: deploy
 
-# Veröffentlicht das Werkzeug auf ZWEI Kanälen – beide aus demselben Build:
+# Veröffentlicht das Werkzeug auf ZWEI Kanälen – beide aus demselben, geprüften Build:
 #   1. eigener Webspace  → https://pflanze-bw.de            (Job »deploy«)
 #   2. GitHub Pages      → https://<user>.github.io/<repo>/ (Job »pages«)
 # Der Pages-Kanal bleibt als Zweitadresse bestehen, weil junge Domains in manchen
-# Firmennetzen geblockt werden – github.io ist dort erreichbar. Die beiden Jobs
+# Firmennetzen geblockt werden – github.io ist dort erreichbar. Die beiden Upload-Jobs
 # laufen unabhängig: fällt einer aus, veröffentlicht der andere trotzdem.
+#
+# Vor JEDEM Upload steht der Job »pruefen«: Pflanzendaten = amtliche Listen, Build,
+# Offline-Check aller Seiten UND die drei Puppeteer-Tests (Prüfungswerkzeug, Lern-Tool,
+# PWA). Erst wenn alles grün ist, wird hochgeladen. (Vorher ging eine Seite online, die
+# der parallel laufende »build«-Workflow noch als kaputt melden konnte – Audit-Fund.)
 #
 # Zwei Auslöser:
 #   • Push auf main (also nach jedem Merge) → LIVE ins Web-Wurzelverzeichnis + Pages
@@ -28,20 +33,84 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Nie zwei Deploys gleichzeitig auf dasselbe Ziel.
+# Nie zwei Deploys gleichzeitig auf dasselbe Ziel. Eine PR-Vorschau darf ein neuerer Lauf
+# abbrechen (es zählt nur der jüngste Stand). Der LIVE-Lauf wird NICHT abgebrochen: ein
+# mitten im Upload gestopptes »mirror --reverse« hinterließe einen gemischten Stand online
+# (Audit-Fund) – weitere Live-Läufe warten, bis der laufende fertig ist.
 concurrency:
   group: deploy-${{ github.event_name == 'pull_request' && github.event.number || 'live' }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # ── Kanal 1: eigener Webspace (Live + PR-Vorschau) ────────────────────────
-  deploy:
+  # ── Stufe 0: prüfen und bauen – einmal, für beide Kanäle ──────────────────
+  pruefen:
     runs-on: ubuntu-latest
-    # Forks bekommen keine Secrets – dort läuft nur der Workflow »build«.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Die Pflanzendaten müssen sich byte-genau aus den amtlichen Excel-Listen in
+      # data/ ergeben (wie in build.yml). Weichen sie ab, wird gar nicht erst gebaut.
+      - name: Pflanzendaten = amtliche Listen (Seeds aus data/ reproduzierbar)
+        run: bash tools/rebuild_seeds.sh && git diff --exit-code seeds/
+
+      - name: Build (Single-File HTML + PWA-Dateien)
+        run: python3 build.py
+
+      # Eine Seite, die externe Ressourcen zöge, geht nicht online.
+      - name: Offline-Check aller Seiten
+        run: |
+          for f in index pflanzenkenntnis pflanzen-lernen rechtliches; do
+            python3 tools/check_offline.py "dist/$f.html"
+          done
+          python3 tools/check_offline.py dist/pruefung/index.html
+
+      - name: Puppeteer (inkl. Chromium) installieren
+        run: npm install --no-save puppeteer@23
+
+      - name: Puppeteer-Smoke-Test Prüfungswerkzeug
+        run: node tests/smoke.mjs
+
+      - name: Puppeteer-Smoke-Test Lern-Tool
+        run: node tests/learn.mjs
+
+      - name: PWA-Test (Manifest, Service Worker, Offline-Cache)
+        run: node tests/pwa.mjs
+
+      - name: Zu veröffentlichende Dateien sammeln
+        run: |
+          mkdir -p _site
+          cp dist/index.html dist/pflanzenkenntnis.html dist/pflanzen-lernen.html dist/rechtliches.html _site/
+          # hübsche Adresse /pruefung (Unterverzeichnis mit Weiterleitung)
+          mkdir -p _site/pruefung && cp dist/pruefung/index.html _site/pruefung/
+          # PWA: Manifest, Service Worker, Icons
+          cp dist/manifest.webmanifest dist/sw.js _site/
+          cp dist/icon-192.png dist/icon-512.png dist/icon-maskable.png dist/apple-touch-icon.png _site/
+          ls -l _site
+
+      # Der geprüfte Stand wandert als Artefakt zu den Upload-Jobs – beide Kanäle
+      # veröffentlichen exakt die getesteten Dateien, nichts wird zweimal gebaut.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: _site
+          if-no-files-found: error
+          retention-days: 3
+
+  # ── Kanal 1: eigener Webspace (Live + PR-Vorschau) ────────────────────────
+  deploy:
+    needs: pruefen
+    runs-on: ubuntu-latest
+    # Forks bekommen keine Secrets – dort läuft nur die Prüfung.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
       # Fehlt das Passwort, ist ein Live-Deploy ein echter Fehler – eine
       # PR-Vorschau dagegen nur eine Annehmlichkeit und wird still übersprungen.
       - name: Zugangsdaten vorhanden?
@@ -61,48 +130,11 @@ jobs:
             fi
           fi
 
-      - uses: actions/setup-python@v5
+      - uses: actions/download-artifact@v4
         if: steps.cred.outputs.ok == 'yes'
         with:
-          python-version: "3.12"
-
-      # Erst die Daten prüfen: Die Pflanzendaten müssen sich byte-genau aus den
-      # amtlichen Excel-Listen in data/ ergeben (wie in build.yml). Weichen sie ab,
-      # wird gar nicht erst gebaut und hochgeladen.
-      - uses: actions/setup-node@v4
-        if: steps.cred.outputs.ok == 'yes'
-        with:
-          node-version: "20"
-
-      - name: Pflanzendaten = amtliche Listen (Seeds aus data/ reproduzierbar)
-        if: steps.cred.outputs.ok == 'yes'
-        run: bash tools/rebuild_seeds.sh && git diff --exit-code seeds/
-
-      - name: Build (Single-File HTML + PWA-Dateien)
-        if: steps.cred.outputs.ok == 'yes'
-        run: python3 build.py
-
-      # Erst prüfen, dann hochladen: eine Seite, die externe Ressourcen zöge,
-      # geht nicht online.
-      - name: Offline-Check aller vier Seiten
-        if: steps.cred.outputs.ok == 'yes'
-        run: |
-          for f in index pflanzenkenntnis pflanzen-lernen rechtliches; do
-            python3 tools/check_offline.py "dist/$f.html"
-          done
-          python3 tools/check_offline.py dist/pruefung/index.html
-
-      - name: Zu veröffentlichende Dateien sammeln
-        if: steps.cred.outputs.ok == 'yes'
-        run: |
-          mkdir -p _site
-          cp dist/index.html dist/pflanzenkenntnis.html dist/pflanzen-lernen.html dist/rechtliches.html _site/
-          # hübsche Adresse /pruefung (Unterverzeichnis mit Weiterleitung)
-          mkdir -p _site/pruefung && cp dist/pruefung/index.html _site/pruefung/
-          # PWA: Manifest, Service Worker, Icons
-          cp dist/manifest.webmanifest dist/sw.js _site/
-          cp dist/icon-192.png dist/icon-512.png dist/icon-maskable.png dist/apple-touch-icon.png _site/
-          ls -l _site
+          name: site
+          path: _site
 
       - name: lftp installieren
         if: steps.cred.outputs.ok == 'yes'
@@ -135,6 +167,7 @@ jobs:
           TLSVERIFY: ${{ vars.DEPLOY_TLS_VERIFY || 'yes' }}
           ZIEL: ${{ steps.ziel.outputs.dir }}
         run: |
+          ls -l _site
           # mkdir vor »fail-exit«, damit ein bereits vorhandenes Verzeichnis nicht abbricht.
           lftp -u "$NUTZER" --env-password -p "$PORT" "$PROTO://$HOST" -e "
             set sftp:auto-confirm yes;
@@ -164,22 +197,6 @@ jobs:
             cls -l $ZIEL;
             bye" || true
 
-      # Einmalig: Reste des Anführungszeichen-Fehlers sichtbar machen (Login-Verzeichnis).
-      - name: Login-Verzeichnis auf Reste prüfen
-        if: steps.cred.outputs.ok == 'yes'
-        env:
-          LFTP_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
-          HOST: ${{ vars.DEPLOY_HOST || 's179.goserver.host' }}
-          NUTZER: ${{ vars.DEPLOY_USER || 'web69' }}
-          PORT: ${{ vars.DEPLOY_PORT || '22' }}
-          PROTO: ${{ vars.DEPLOY_PROTO || 'sftp' }}
-        run: |
-          lftp -u "$NUTZER" --env-password -p "$PORT" "$PROTO://$HOST" -e "
-            set sftp:auto-confirm yes;
-            echo == Login-Verzeichnis;
-            cls -la .;
-            bye" || true
-
       - name: Ergebnis
         if: steps.cred.outputs.ok == 'yes'
         run: |
@@ -196,6 +213,7 @@ jobs:
   # SFTP-Upload scheitert. Pull Requests bleiben außen vor – Pages hat nur eine
   # Fassung, Vorschauen liegen auf dem Webspace.
   pages:
+    needs: pruefen
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
@@ -206,39 +224,10 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
+      - uses: actions/download-artifact@v4
         with:
-          python-version: "3.12"
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Pflanzendaten = amtliche Listen (Seeds aus data/ reproduzierbar)
-        run: bash tools/rebuild_seeds.sh && git diff --exit-code seeds/
-
-      - name: Build (Single-File HTML + PWA-Dateien)
-        run: python3 build.py
-
-      - name: Offline-Check aller vier Seiten
-        run: |
-          for f in index pflanzenkenntnis pflanzen-lernen rechtliches; do
-            python3 tools/check_offline.py "dist/$f.html"
-          done
-          python3 tools/check_offline.py dist/pruefung/index.html
-
-      - name: Zu veröffentlichende Dateien sammeln
-        run: |
-          mkdir -p _site
-          cp dist/index.html dist/pflanzenkenntnis.html dist/pflanzen-lernen.html dist/rechtliches.html _site/
-          # hübsche Adresse /pruefung (Unterverzeichnis mit Weiterleitung)
-          mkdir -p _site/pruefung && cp dist/pruefung/index.html _site/pruefung/
-          # PWA: Manifest, Service Worker, Icons
-          cp dist/manifest.webmanifest dist/sw.js _site/
-          cp dist/icon-192.png dist/icon-512.png dist/icon-maskable.png dist/apple-touch-icon.png _site/
-          ls -l _site
+          name: site
+          path: _site
 
       # enablement: true schaltet Pages beim ersten Lauf selbst frei (Quelle:
       # »GitHub Actions«), falls es in den Repository-Einstellungen noch aus ist.

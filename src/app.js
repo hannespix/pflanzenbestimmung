@@ -463,7 +463,10 @@ function openImportDialog(recs,fname){
 }
 function doImport(){
   const mode=document.querySelector('input[name="impmode"]:checked').value;
-  if(mode==="replace"){ cache=[]; nextId=1; }
+  if(mode==="replace"){
+    cache=[]; nextId=1;
+    selection=[]; loadedExamId=null; syncExamControls();   // Audit: die alte Auswahl verwies sonst auf die neu vergebenen IDs – fremde Arten im Bogen
+  }
   const existing=new Set(cache.map(p=>(p.gattung+"|"+p.art+"|"+p.deutscher_name).toLowerCase()));
   let added=0,skipped=0;
   for(const r of pendingImport){
@@ -612,6 +615,7 @@ function drawRandom(){
 }
 function shuffleSel(){
   for(let i=selection.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [selection[i],selection[j]]=[selection[j],selection[i]]; }
+  syncSelUI();                                   // »Aktuelle Prüfung«/Vorschau mitziehen – sonst druckte nur der Bogen die neue Reihenfolge (Audit-Fund)
   toast("Reihenfolge neu gemischt");
 }
 function clearSel(){ selection=[]; loadedExamId=null; syncExamControls(); renderList(); syncSelUI(); }
@@ -1981,7 +1985,9 @@ function wikiGallery(title){                           // iiurlwidth rundet der 
           const ii = p.imageinfo && p.imageinfo[0];
           if(!ii || !(ii.thumburl||ii.url)) return false;
           if(ii.mime && !/^image\/(jpeg|png|webp)$/i.test(ii.mime)) return false;
-          return !/(\.svg$|map|karte|wappen|logo|icon|commons-logo|disambig)/i.test(f);
+          if(/\.svg$/i.test(f)) return false;
+          const fn = f.replace(/[_\-.]+/g," ");          // Wortgrenzen: »map« traf sonst »maple«, »range« jede Hydrangea (Audit-Fund)
+          return !/(\bmaps?\b|karten?\b|verbreitung|\bdistribution\b|\branges?\b|\bwappen\b|\blogos?\b|\bicons?\b|commons logo|disambig)/i.test(fn);
         })
         .map(p=>{ const ii=p.imageinfo[0];
           return { src: ii.thumburl||ii.url, file: String(p.title||"").replace(/^(File|Datei):/i,""), w: ii.width||0 }; })   // w: Originalbreite (Großansicht nie darüber hinaus)
@@ -2514,6 +2520,14 @@ function wire(){
     bar.hidden=!open;
     admSync(open);
   };
+  // Menüpunkt gewählt → Menü zu. Im Popover-Modus lag die Leiste sonst im Top-Layer ÜBER dem
+  // geöffneten Dialog (»Neue Art«, Schema, Einstellungen) und verdeckte dessen Felder (Audit-Fund).
+  $("#adminBar").addEventListener("click",e=>{
+    if(!e.target.closest("button")) return;
+    const bar=$("#adminBar");
+    if(admPop){ try{ bar.hidePopover(); }catch(e2){} }
+    bar.hidden=true; admSync(false);
+  });
   $("#btnImport").onclick=pickExcel;
   $("#btnAdd").onclick=()=>openEdit(null);
   $("#btnGrade").onclick=openGrader;
