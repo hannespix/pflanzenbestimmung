@@ -9,7 +9,7 @@
 /* ---------- kleine Helfer ---------- */
 const $ = s => document.querySelector(s);
 const el = (t,c) => { const e=document.createElement(t); if(c) e.className=c; return e; };
-const esc = s => (s==null?"":String(s)).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+const esc = s => (s==null?"":String(s)).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));   // auch ' (Audit)
 /* Strich-Icons statt bunter Emojis (die werden je nach Gerät unterschiedlich
    gerendert und wirken unprofessionell). Gleicher Stil wie die übrigen Icons. */
 const APPICONS = {
@@ -172,21 +172,45 @@ const store = (()=>{
   let ok=false;
   try{ const k=LS_PREFIX+"__probe"; localStorage.setItem(k,"1"); localStorage.removeItem(k); ok=true; }catch(e){ ok=false; }
   const mem=new Map();
+  const isQuota = e => !!e && (e.name==="QuotaExceededError" || e.name==="NS_ERROR_DOM_QUOTA_REACHED" || e.code===22 || e.code===1014);
   return {
     get persistent(){ return ok; },
-    get(k){ if(ok){ try{ return localStorage.getItem(k); }catch(e){ ok=false; } } return mem.has(k)?mem.get(k):null; },
-    set(k,v){ v=String(v); if(ok){ try{ localStorage.setItem(k,v); return true; }catch(e){ ok=false; } } mem.set(k,v); return false; },
+    get(k){ if(mem.has(k)) return mem.get(k); if(ok){ try{ return localStorage.getItem(k); }catch(e){ ok=false; } } return null; },
+    // Audit: ein voller Speicher (QuotaExceededError) ist kein Totalausfall – nur DIESER Schreibvorgang scheitert
+    set(k,v){ v=String(v); if(ok){ try{ localStorage.setItem(k,v); mem.delete(k); return true; }catch(e){ if(!isQuota(e)) ok=false; } } mem.set(k,v); return false; },
     remove(k){ if(ok){ try{ localStorage.removeItem(k); }catch(e){ ok=false; } } mem.delete(k); }
   };
 })();
 let persistTimer=null, isSeed=true;
+function persistNow(){
+  const saved=store.set(dataKey(profileId), JSON.stringify({v:2,plants:cache,schema,nextId}));
+  store.set(LS_PREFIX+"profile", profileId);
+  isSeed=false; setStatus(saved?"saved":"session");
+}
 function persist(){
   clearTimeout(persistTimer);
-  persistTimer=setTimeout(()=>{
-    const saved=store.set(dataKey(profileId), JSON.stringify({v:2,plants:cache,schema,nextId}));
-    store.set(LS_PREFIX+"profile", profileId);
-    isSeed=false; setStatus(saved?"saved":"session");
-  },300);
+  persistTimer=setTimeout(()=>{ persistTimer=null; persistNow(); },300);
+}
+function flushPersist(){                                 // Audit: ausstehende Änderung vor Profilwechsel/Reload sofort sichern
+  if(persistTimer){ clearTimeout(persistTimer); persistTimer=null; persistNow(); }
+}
+try{ addEventListener("pagehide", flushPersist); addEventListener("beforeunload", flushPersist); }catch(e){}
+const SCHEMA_KEYS=["gattung","art","familie","deutscher_name"];
+/* Gespeichertes/gesichertes Schema geprüft übernehmen (Audit): unbekannte Spalten, kaputte
+   Punkte, unmögliche Anzahl oder eine Skala, die linBands werfen ließe, fallen auf den
+   Profil-Standard zurück – Feld für Feld, nicht alles oder nichts. */
+function normalizeSchema(s, def){
+  const base=cloneSchema(def.schema), out={};
+  const seen=new Set();
+  out.cols=(Array.isArray(s&&s.cols)?s.cols:[])
+    .filter(c=>c&&SCHEMA_KEYS.includes(c.key)&&isFinite(+c.pts)&&+c.pts>=0&&!seen.has(c.key)&&seen.add(c.key))
+    .map(c=>({key:c.key,pts:+c.pts}));
+  if(!out.cols.length) out.cols=base.cols;
+  const n=parseInt(s&&s.anzahl,10); out.anzahl=(n>=1&&n<=60)?n:base.anzahl;
+  const lin=(s&&s.scale&&Array.isArray(s.scale.lin))?s.scale.lin.map(Number):null;
+  const linOk=!!lin&&lin.length===5&&lin.every(x=>isFinite(x)&&x>0&&x<=100)&&lin.every((x,i)=>i===0||x<lin[i-1]);
+  out.scale={mode:"linear",lin:linOk?lin:base.scale.lin.slice()};
+  return out;
 }
 function normPlant(p){
   return {id:p.id,gattung:p.gattung||"",art:p.art||"",familie:p.familie||"",
@@ -208,8 +232,7 @@ function loadProfile(id){
     try{
       const d=JSON.parse(raw);
       cache=(d.plants||[]).map(normPlant);
-      schema=(d.schema&&Array.isArray(d.schema.cols))?d.schema:cloneSchema(def.schema);
-      if(!schema.scale) schema.scale=cloneSchema(def.schema).scale;
+      schema=(d.schema&&Array.isArray(d.schema.cols))?normalizeSchema(d.schema,def):cloneSchema(def.schema);   // geprüft übernehmen (Audit)
       scaleCfg=schema.scale;
       nextId=d.nextId || (cache.reduce((m,p)=>Math.max(m,p.id),0)+1);
       isSeed=false; setStatus(store.persistent?"saved":"session");
@@ -219,6 +242,7 @@ function loadProfile(id){
   }
 }
 function switchProfile(id){
+  flushPersist();                                        // Audit: ausstehende Änderung am alten Profil erst sichern
   loadProfile(id);
   store.set(LS_PREFIX+"profile", id);
   applyDrawDefault();
@@ -250,13 +274,14 @@ function backupData(){
 function applyBackup(d){
   if(!d||!Array.isArray(d.plants)) throw new Error("Format");
   cache=d.plants.map(normPlant);
-  if(d.schema&&Array.isArray(d.schema.cols)){ schema=d.schema; if(!schema.scale) schema.scale=cloneSchema(PROFILE_DEFS[profileId].schema).scale; scaleCfg=schema.scale; }
-  else if(d.scale&&d.scale.mode){ schema.scale=d.scale; scaleCfg=schema.scale; }
+  const def=PROFILE_DEFS[profileId];
+  if(d.schema&&Array.isArray(d.schema.cols)){ schema=normalizeSchema(d.schema,def); scaleCfg=schema.scale; }   // Audit: geprüft übernehmen (linBands konnte sonst werfen)
+  else if(d.scale&&d.scale.mode){ schema.scale=normalizeSchema({cols:schema.cols,anzahl:schema.anzahl,scale:d.scale},def).scale; scaleCfg=schema.scale; }
   nextId=d.nextId || (cache.reduce((m,p)=>Math.max(m,p.id),0)+1);
   // Geräteweite Daten wiederherstellen (rückwärtskompatibel: fehlt der Schlüssel
   // in älteren Sicherungen, bleibt der Bestand unangetastet).
   let exN=null;
-  if(Array.isArray(d.exams)){ exams=d.exams; saveExams(); exN=d.exams.length; }
+  if(Array.isArray(d.exams)){ const seen=new Set(); exams=d.exams.filter(e=>e&&typeof e==="object"&&e.id&&!seen.has(e.id)&&seen.add(e.id)); saveExams(); exN=exams.length; }   // doppelte IDs raus (Audit)
   if(d.settings&&typeof d.settings==="object"){ settings=Object.assign(defaultSettings(),d.settings); saveSettings(); }
   selection=[]; loadedExamId=null; markDirty(); refresh(); renderAll();
   return { plants:cache.length, exams:exN };
@@ -373,7 +398,23 @@ function findHeaderRow(rows){
   return -1;
 }
 function mapCols(h){ const m={}; h.forEach((c,i)=>{ const v=norm(c); for(const k of Object.keys(HEAD)){ if(HEAD[k].test(v)&&m[k]==null) m[k]=i; } }); return m; }
+/* Wie der Konverter (tools/xlsx_to_seed.mjs): gerade Apostrophe um Sortennamen und die drei
+   Beikraut-Schreibweisen der Quelllisten vereinheitlicht – sonst behielt eine im Werkzeug
+   importierte Excel `Nigra´ und »Bei-, Wild- oder Unkräuter« (Audit). */
+const quotesQ = s => norm(s).replace(/[`´‘’‚“”„"]/g, "'");
+const KAT_ALIAS = { "Wildkräuter":"Wild- & Beikräuter", "Bei-, Wild- oder Unkräuter":"Wild- & Beikräuter", "Unkräuter, Wildkräuter":"Wild- & Beikräuter" };
+const katName = k => KAT_ALIAS[k] || k;
+/* SheetJS (624 KB) steckt als text/plain-Block in der Seite und wird erst beim ersten
+   Excel-Import ausgewertet – der Erstaufruf spart so die Parse-/Compile-Zeit der Bibliothek
+   (Audit, Lighthouse mobil). Als eingefügtes Inline-Skript statt eval: verträgt sich mit der CSP. */
+function ensureXLSX(){
+  if(typeof XLSX!=="undefined") return true;
+  const t=document.getElementById("sheetjs-text"); if(!t) return false;
+  const sc=document.createElement("script"); sc.textContent=t.textContent; document.head.appendChild(sc);
+  t.textContent=""; return typeof XLSX!=="undefined";
+}
 function parseWorkbook(buf){
+  if(!ensureXLSX()) throw new Error("Excel-Bibliothek konnte nicht geladen werden");
   const wb=XLSX.read(buf,{type:"array"});
   const out=[];
   for(const name of wb.SheetNames){
@@ -411,7 +452,7 @@ function parseWorkbook(buf){
       const cells=rows[i].map(x=>x==null?"":x);
       while(cells.length<=maxIdx) cells.push("");
       const joined=cells.map(norm).join(""); if(!joined) continue;
-      const bot=hasBot?norm(cells[m.botanisch]):"";
+      const bot=hasBot?quotesQ(cells[m.botanisch]):"";
       const fam=norm(cells[m.familie]);
       const a0=norm(cells[0]);
       // Fußzeilen / URLs / Stand-Angaben überspringen (vor der Kategorie-Erkennung)
@@ -422,8 +463,8 @@ function parseWorkbook(buf){
       }
       let g,ar;
       if(hasGA && norm(cells[m.gattung])){
-        g=norm(cells[m.gattung]); ar=tidyName(cells[m.art]);
-        if(m.sorte!=null){ const sv=tidyName(cells[m.sorte]); if(sv) ar=norm(ar+" "+sv); }
+        g=norm(cells[m.gattung]); ar=quotesQ(tidyName(cells[m.art]));
+        if(m.sorte!=null){ const sv=quotesQ(tidyName(cells[m.sorte])); if(sv) ar=norm(ar+" "+sv); }
       }
       else { if(!bot) continue; ({gattung:g,art:ar}=splitBinomial(bot)); }
       if(!g) continue;
@@ -432,10 +473,10 @@ function parseWorkbook(buf){
       if(m.kategorie!=null){ const kv=norm(cells[m.kategorie]); if(kv) rowKat=kv; }
       out.push({
         gattung:g, art:ar, familie:fam,
-        deutscher_name:m.deutsch!=null?norm(cells[m.deutsch]):"",
-        kategorie:rowKat,
+        deutscher_name:m.deutsch!=null?quotesQ(cells[m.deutsch]):"",
+        kategorie:katName(rowKat),
         zp:(m.zp!=null && /zp|x|ja|1|✓/i.test(norm(cells[m.zp])))?1:0,
-        synonyme:m.synonyme!=null?norm(cells[m.synonyme]):"",
+        synonyme:m.synonyme!=null?quotesQ(cells[m.synonyme]):"",
         bemerkungen:""
       });
     }
@@ -604,7 +645,7 @@ function toggleSel(id){
 }
 function drawRandom(){
   const pool=currentFilter().map(p=>p.id);
-  const want=parseInt($("#drawCount").value)||drawTarget();
+  const raw=parseInt($("#drawCount").value,10), want=raw>0?raw:drawTarget();   // Audit: negativ/0 → Profil-Soll (vorher pool.slice(0,-5) = alle außer fünf)
   const n=Math.min(want, pool.length);
   if(!pool.length){ toast("Keine Arten im aktuellen Filter",true); return; }
   for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
@@ -825,7 +866,7 @@ function copyExam(id){
   copy.id="ex"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36);
   copy.savedAt=new Date().toISOString();
   copy.date=todayISO();
-  copy.label=(ex.label?ex.label+" ":"")+"(Kopie)";
+  copy.label=((ex.label||"").replace(/\s*\(Kopie\)\s*$/,"").trim()+" (Kopie)").trim();   // nicht »(Kopie) (Kopie)« (Audit)
   exams.unshift(copy); saveExams(); renderExams();
   toast("Prüfung kopiert – mit heutigem Datum, jetzt bearbeitbar (»Laden«)");
 }
@@ -1924,8 +1965,11 @@ function jsonpGet(url){
     const cb = "__wpcb"+(++__wpN);
     const sc = document.createElement("script");
     let done = false;
-    const cleanup = ()=>{ try{ delete window[cb]; }catch(e){ window[cb]=undefined; } if(sc.parentNode) sc.parentNode.removeChild(sc); };
-    const to = setTimeout(()=>{ if(done) return; done=true; cleanup(); reject(new Error("timeout")); }, 7000);
+    const cleanup = (spaet)=>{                         // spaet: nach Zeitüberschreitung bleibt ein stiller No-op stehen – eine verspätete Antwort warf sonst »__wpcbN is not defined« (Audit)
+      if(spaet) window[cb] = ()=>{ try{ delete window[cb]; }catch(e){ window[cb]=undefined; } };
+      else { try{ delete window[cb]; }catch(e){ window[cb]=undefined; } }
+      if(sc.parentNode) sc.parentNode.removeChild(sc); };
+    const to = setTimeout(()=>{ if(done) return; done=true; cleanup(true); reject(new Error("timeout")); }, 7000);
     window[cb] = d=>{ if(done) return; done=true; clearTimeout(to); cleanup(); resolve(d); };
     sc.onerror = ()=>{ if(done) return; done=true; clearTimeout(to); cleanup(); reject(new Error("network")); };
     sc.src = url + "&callback=" + cb;
@@ -2173,10 +2217,13 @@ document.addEventListener("keydown",e=>{                // Capture: Esc gilt zue
 }, true);
 function lbWire(img, label, list, loader){               // Bild anklick- UND tastaturbedienbar machen
   if(!img) return;
+  img.__lb = { list, loader };                           // spätere Aufrufe (Galerie nachgeladen) aktualisieren nur Liste/Loader …
+  img.setAttribute("aria-label", label||"Bild vergrößern");
+  if(img.__lbWired) return;                              // … statt ein zweites Klick-Paar anzuhängen (Audit: Lightbox öffnete erst einzeln, dann als Galerie)
+  img.__lbWired = true;
   img.classList.add("lb-zoom");
   img.setAttribute("role","button"); img.tabIndex=0;
-  img.setAttribute("aria-label", label||"Bild vergrößern");
-  const go=()=>openLightbox(img.currentSrc||img.src, img.alt, list, 0, loader);
+  const go=()=>openLightbox(img.currentSrc||img.src, img.alt, img.__lb.list, 0, img.__lb.loader);
   img.addEventListener("click",go);
   img.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); } });
 }
@@ -2537,10 +2584,10 @@ function wire(){
   $("#btnOpen").onclick=importJsonFile;
   $("#btnSave").onclick=exportBackup;
   $("#btnReset").onclick=resetToDefault;
-  $("#q").addEventListener("input",()=>{ renderList(); syncSelUI(); syncFilterSummary(); });
+  $("#q").addEventListener("input",()=>{ renderList(); syncFilterSummary(); });   // Audit: die Zeilen kommen aus renderList bereits mit Auswahl-Zustand – syncSelUI (inkl. »Aktuelle Prüfung«) muss nicht bei jedem Tastendruck mitrendern
   $("#cat").addEventListener("change",()=>{ vt(()=>{ renderList(); syncSelUI(); }); syncFilterSummary(); });   // Gefiltertes gleitet heraus/herein
   $("#onlyzp").addEventListener("change",()=>{ vt(()=>{ renderList(); syncSelUI(); }); syncFilterSummary(); });
-  $("#drawCount").addEventListener("input",()=>{ $("#selTarget").textContent=$("#drawCount").value||drawTarget(); });
+  $("#drawCount").addEventListener("input",()=>{ const v=parseInt($("#drawCount").value,10); $("#selTarget").textContent=v>0?v:drawTarget(); });
   $("#btnDraw").onclick=()=>vt(drawRandom);   // gezogene Prüfung gleitet ins Panel
   $("#btnShuffle").onclick=shuffleSel;
   $("#btnClear").onclick=clearSel;

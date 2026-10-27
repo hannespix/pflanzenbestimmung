@@ -21,8 +21,10 @@ Prüfungswerkzeug — der einzige interne Verweis führt auf Impressum/Datenschu
 ## 2. Bauart
 
 - **Statische Dateien, kein Server.** Jede Anwendung ist **eine einzige HTML-Datei**, die
-  Programm, Gestaltung und Pflanzendaten vollständig enthält: Lernanwendung 619 KB,
-  Prüfungswerkzeug 1316 KB, Rechtliches 23 KB.
+  Programm, Gestaltung und Pflanzendaten vollständig enthält: Lernanwendung rund 670 KB,
+  Prüfungswerkzeug rund 1,3 MB (davon 624 KB Excel-Bibliothek, die erst beim ersten Import
+  ausgewertet wird), Rechtliches rund 32 KB; komprimiert gehen etwa 205 KB bzw. 445 KB über
+  die Leitung.
 - **Kein Backend, keine Datenbank, keine Anmeldung, keine Nutzerkonten.** Alles rechnet im
   Browser. Es gibt keinen Serverprozess, der betrieben, aktualisiert oder abgesichert werden
   müsste — ein beliebiger Webserver, der Dateien ausliefert, genügt.

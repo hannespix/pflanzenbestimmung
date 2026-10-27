@@ -204,8 +204,8 @@ async function main() {
   assert(modalA11y.focusInside, "Beim Öffnen muss der Fokus ins Modal wandern: " + JSON.stringify(modalA11y));
   assert(modalA11y.toastLive === "polite", "Toast muss eine aria-live-Region sein: " + JSON.stringify(modalA11y));
 
-  // Hell/Dunkel-Umschalter setzt data-theme und merkt die Wahl. Sitzt jetzt in der
-  // »Verwaltung« (Gruppe »Ansicht«) statt im Kopf – Delegation auf .themetoggle.
+  // Hell/Dunkel-Umschalter setzt data-theme und merkt die Wahl. Sitzt als runder Knopf im
+  // Kopf (ein Ort auf allen drei Seiten – Audit) – Delegation auf .themetoggle.
   const themeT = await page.evaluate(() => {
     const b = document.querySelector(".themetoggle");
     if (!b) return { has: false };
@@ -227,8 +227,8 @@ async function main() {
     "Theme-Umschalter muss dunkel/hell wechseln und die Wahl speichern: " + JSON.stringify(themeT));
   assert(themeT.homeHref === "pflanzen-lernen.html" && /Lernversion/.test(themeT.lernHref || ""),
     "Kopf muss zur Lernversion verlinken (pflanzen-lernen.html): " + JSON.stringify(themeT));
-  assert(themeT.helpDezent && !themeT.toggleInHead,
-    "»Hilfe« muss dezent im Kopf stehen, der Design-Umschalter aus dem Kopf raus (in die Verwaltung): " + JSON.stringify(themeT));
+  assert(themeT.helpDezent && themeT.toggleInHead,
+    "»Hilfe« dezent im Kopf, Design-Umschalter als runder Knopf im Kopf (ein Ort auf allen Seiten – Audit): " + JSON.stringify(themeT));
 
   // 1c) Hilfe-Modal öffnet mit Inhalt und markiert seinen Button; Tooltips vorhanden
   const help = await page.evaluate(() => {
@@ -1008,6 +1008,93 @@ async function main() {
   assert(a11y.landmarksInModals === 0 && a11y.h4 === 0 && a11y.h3 >= 5 && a11y.mains === 1 && a11y.inMain,
     "Struktur: keine Landmarken in Dialogen, h3 in der Hilfe, genau ein <main> mit Suche/Liste/Prüfung: " + JSON.stringify(a11y));
 
+  // 9e) Audit-Paket 4 (Prüfungswerkzeug): Anzahl-Feld, Notengrenzen editieren, echter Excel-Import mit
+  //     Konverter-Normalisierung (SheetJS erst beim Import geladen), Sicherung mit defektem Schema,
+  //     Quota-Fallback, flushPersist vor Profilwechsel, »(Kopie)« nur einmal, esc('), Kopf-Umschalter, <h1>, CSP.
+  const p4 = await page.evaluate(async () => {
+    const out = {}, stub = fn => { const alt = window.confirm; window.confirm = () => true; try { fn(); } finally { window.confirm = alt; } };
+    const dc = document.querySelector("#drawCount");
+    dc.value = "-5"; drawRandom(); out.neg = selection.length;
+    dc.value = "0"; drawRandom(); out.nul = selection.length;
+    dc.value = "3"; drawRandom(); out.drei = selection.length;
+    dc.value = ""; clearSel(); out.soll = drawTarget();
+    openGrader();
+    const g = document.querySelector('#gTable .gedge[data-i="0"]');
+    g.value = "95"; g.dispatchEvent(new Event("change"));
+    out.lin0 = scaleCfg.lin[0];
+    flushPersist();                                                    // das Speichern ist um 300 ms verzögert
+    const stored = JSON.parse(store.get("pflanzenkenntnis.data." + profileId) || "{}");
+    out.linSaved = !!(stored.schema && stored.schema.scale && stored.schema.scale.lin && stored.schema.scale.lin[0] === 95);
+    g.value = "90"; g.dispatchEvent(new Event("change"));
+    document.querySelector("#graderScrim .pclose").click();
+    out.xlsxBefore = typeof XLSX; out.ensure = ensureXLSX(); out.xlsxAfter = typeof XLSX;
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+      ["Nr.", "Botanischer Name", "Familie", "Deutscher Name", "ZP"],
+      ["1", "Prunus cerasifera `Nigra´", "Rosaceae", "Blutpflaume", ""],
+      ["Bei-, Wild- oder Unkräuter", "", "", "", ""],                 // Rubrik-Zeile wie in den amtlichen Listen (nur Spalte A)
+      ["2", "Taraxacum officinale", "Asteraceae", "Löwenzahn", "ZP"]]), "Liste");
+    const recs = parseWorkbook(XLSX.write(wb, { type: "array", bookType: "xlsx" }));
+    out.recs = recs.map(r => [r.gattung, r.art, r.kategorie, r.zp]);
+    let err = null;
+    try {
+      applyBackup({ v: 2, profile: profileId, plants: [{ id: 1, gattung: "Testus", art: "unus", familie: "Testaceae", deutscher_name: "Test" }],
+        schema: { cols: [{ key: "foo", pts: "x" }], anzahl: -3, scale: { mode: "ihk", lin: [1, 2, 3] } },
+        exams: [{ id: "dup1", date: "2026-01-01", label: "A", plants: [], schema: {} }, { id: "dup1", date: "2026-01-02", label: "B", plants: [], schema: {} }] });
+    } catch (e) { err = String(e); }
+    out.backupErr = err; out.schemaCols = schema.cols.map(c => c.key).join(","); out.schemaAnzahl = schema.anzahl; out.lin = scaleCfg.lin.join(",");
+    out.examsDedup = exams.length; exams = []; saveExams();
+    stub(resetToDefault); out.restored = cache.length > 2;
+    const origSet = Storage.prototype.setItem; let fails = 1;
+    Storage.prototype.setItem = function (k, v) { if (fails-- > 0) { const e = new Error("quota"); e.name = "QuotaExceededError"; throw e; } return origSet.call(this, k, v); };
+    out.q1 = store.set("pflanzenkenntnis.__q", "a"); out.q2 = store.set("pflanzenkenntnis.__q", "b");
+    Storage.prototype.setItem = origSet;
+    out.qPersistent = store.persistent; out.qValue = localStorage.getItem("pflanzenkenntnis.__q"); localStorage.removeItem("pflanzenkenntnis.__q");
+    const oldId = profileId, otherId = oldId === "gemuesebau_gaertner" ? "baumschule_gaertner" : "gemuesebau_gaertner";
+    cache.push({ id: nextId++, gattung: "Flushus", art: "testus", familie: "F", deutscher_name: "", kategorie: "", zp: 0, synonyme: "", bemerkungen: "" }); markDirty();
+    switchProfile(otherId);
+    out.flushed = /Flushus/.test(store.get("pflanzenkenntnis.data." + oldId) || "");
+    switchProfile(oldId); stub(resetToDefault); localStorage.removeItem("pflanzenkenntnis.data." + otherId);
+    exams.unshift({ id: "kop1", date: "2026-01-01", label: "Test (Kopie)", plants: [], schema: {}, fr: "", niveau: "" });
+    copyExam("kop1"); out.kopie = exams[0].label; exams = []; saveExams();
+    out.esc = esc("a'b\"c");
+    out.toggleHead = !!document.querySelector(".mast-right .themetoggle"); out.toggleAdmin = !!document.querySelector("#adminBar .themetoggle");
+    out.h1 = /\u00a0·/.test(document.querySelector(".masthead h1").textContent);
+    out.csp = !!document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+    return out;
+  });
+  assert(p4.neg === p4.soll && p4.nul === p4.soll && p4.drei === 3, "Anzahl-Feld: negativ/0 → Profil-Soll, 3 → 3: " + JSON.stringify(p4));
+  assert(p4.lin0 === 95 && p4.linSaved, "Notengrenzen editieren muss übernehmen und speichern: " + JSON.stringify(p4));
+  assert(p4.xlsxBefore === "undefined" && p4.ensure && p4.xlsxAfter !== "undefined", "SheetJS darf erst beim Import ausgewertet werden: " + JSON.stringify(p4));
+  assert(JSON.stringify(p4.recs) === JSON.stringify([["Prunus", "cerasifera 'Nigra'", "", 0], ["Taraxacum", "officinale", "Wild- & Beikräuter", 1]]),
+    "Excel-Import muss wie der Konverter normalisieren (Apostrophe, Beikraut-Kategorie): " + JSON.stringify(p4.recs));
+  assert(p4.backupErr === null && p4.schemaCols === "gattung,art,familie,deutscher_name" && p4.schemaAnzahl === 20 && p4.lin === "90,70,50,30,10" && p4.examsDedup === 1 && p4.restored,
+    "Sicherung mit defektem Schema: kein Fehler, Standard greift, doppelte Prüfungen raus: " + JSON.stringify(p4));
+  assert(p4.q1 === false && p4.q2 === true && p4.qPersistent && p4.qValue === "b", "Quota-Fallback: ein voller Speicher darf localStorage nicht dauerhaft abschalten: " + JSON.stringify(p4));
+  assert(p4.flushed, "flushPersist: Änderung vor dem Profilwechsel muss gespeichert sein: " + JSON.stringify(p4));
+  assert(p4.kopie === "Test (Kopie)" && p4.esc === "a&#39;b&quot;c", "Kopie-Suffix nur einmal, esc maskiert ': " + JSON.stringify(p4));
+  assert(p4.toggleHead && !p4.toggleAdmin && p4.h1 && p4.csp, "Kopf-Umschalter, <h1> mit geschütztem Leerzeichen, CSP-Meta: " + JSON.stringify(p4));
+
+  // 9f) CSP wirkt: fremde Skripte/Bilder werden geblockt, Wikipedia/Commons (JSONP + Bilder) nicht.
+  const cp = await browser.newPage();                 // eigene Seite: die erwarteten CSP-/Netz-Meldungen gehören nicht in die Konsolenfehler des Hauptlaufs
+  await cp.goto(FILE, { waitUntil: "load" });
+  await cp.waitForFunction("window.pickExcel!=null");
+  const csp = await cp.evaluate(() => new Promise((resolve) => {
+    window.__cspProbe = window.__cspProbe2 = () => {};
+    const viol = [];
+    document.addEventListener("securitypolicyviolation", (e) => viol.push(e.blockedURI + " [" + e.effectiveDirective + "]"));
+    const add = (tag, src) => { const el = document.createElement(tag); el.onerror = () => {}; el.src = src; document.head.appendChild(el); };
+    add("script", "https://de.wikipedia.org/w/api.php?action=query&format=json&callback=__cspProbe");
+    add("script", "https://commons.wikimedia.org/w/api.php?action=query&format=json&callback=__cspProbe2");
+    add("img", "https://upload.wikimedia.org/wikipedia/commons/thumb/x/y/Z.jpg/960px-Z.jpg");
+    add("script", "https://example.com/fremd.js");
+    add("img", "https://example.com/fremd.png");
+    setTimeout(() => resolve(viol), 500);
+  }));
+  await cp.close();
+  assert(csp.some(v => /example\.com.*script/.test(v)) && csp.some(v => /example\.com.*img/.test(v)), "CSP muss fremde Skripte/Bilder blocken: " + JSON.stringify(csp));
+  assert(!csp.some(v => /wikipedia|wikimedia/.test(v)), "CSP darf Wikipedia/Commons (JSONP + Bilder) nicht blocken: " + JSON.stringify(csp));
+
   // 10) Rechtliches (Audit): <main>, kein Link auf die eingestellte ODR-Plattform, keine »Startseite«,
   //     Datenschutz nennt pbw.theme, den gespeicherten Duell-Namen und WhatsApp/wa.me;
   //     Design-Knopf und »zurück« sind ≥44 px (Handy).
@@ -1020,13 +1107,13 @@ async function main() {
     return { main: document.querySelectorAll("main").length, inMain: !!document.querySelector("main #datenschutz"),
       odr: /consumers\/odr/.test(document.documentElement.innerHTML), start: /Startseite/.test(t),
       theme: /pbw\.theme/.test(t), name: /pflanzenlernen\.name/.test(t), wa: /WhatsApp/.test(t) && /wa\.me/.test(t),
-      vsbg: /§ 36 VSBG/.test(t), btn: h("#btnTheme"), back: h(".back") };
+      vsbg: /§ 36 VSBG/.test(t), btn: h("#btnTheme"), back: h(".back"), csp: !!document.querySelector('meta[http-equiv="Content-Security-Policy"]') };
   });
   await rp.close();
   assert(rerrs.length === 0, "Rechtliches: Konsolenfehler: " + rerrs.join(" | "));
   assert(recht.main === 1 && recht.inMain && !recht.odr && !recht.start && recht.theme && recht.name && recht.wa && recht.vsbg,
     "Rechtliches: <main>, ODR raus, keine Startseite, Datenschutz vollständig: " + JSON.stringify(recht));
-  assert(recht.btn >= 43.5 && recht.back >= 43.5, "Rechtliches: Design-Knopf/»zurück« ≥44 px erwartet: " + JSON.stringify(recht));
+  assert(recht.btn >= 43.5 && recht.back >= 43.5 && recht.csp, "Rechtliches: Design-Knopf/»zurück« ≥44 px + CSP-Meta erwartet: " + JSON.stringify(recht));
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();

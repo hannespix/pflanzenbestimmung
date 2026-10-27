@@ -281,7 +281,7 @@ async function main() {
   assert(a11y.modalFocus, "Info-Modal muss den Fokus auf den »Schließen«-Knopf setzen: " + JSON.stringify(a11y));
 
   // Herbarium 2.0: Hell/Dunkel-Umschalter setzt data-theme und merkt die Wahl.
-  // Sitzt jetzt in den »Optionen« (Sitzung) statt im Kopf – Delegation auf .themetoggle.
+  // Sitzt als runder Knopf im Kopf (ein Ort auf allen drei Seiten – Audit) – Delegation auf .themetoggle.
   const theme = await page.evaluate(() => {
     const b = document.querySelector(".themetoggle");
     if (!b) return { has: false };
@@ -314,8 +314,8 @@ async function main() {
   assert(head.noHomeLink, "Lern-Tool ist selbst die Startseite – kein Startseite-Link im Kopf: " + JSON.stringify(head));
   assert(head.legalKept, "Impressum/Datenschutz muss über die Fußzeile erreichbar bleiben: " + JSON.stringify(head));
   assert(head.helpDezent, "»Hilfe« muss als dezenter .helplink im Kopf stehen: " + JSON.stringify(head));
-  assert(!head.toggleInHead && head.toggleInOpts,
-    "Design-Umschalter muss in den Optionen sitzen, nicht mehr im Kopf: " + JSON.stringify(head));
+  assert(head.toggleInHead && !head.toggleInOpts,
+    "Design-Umschalter sitzt als runder Knopf im Kopf (ein Ort auf allen Seiten – Audit), nicht mehr in den Optionen: " + JSON.stringify(head));
 
   // Bilder-Quiz: Buchdeckel/Titelseiten/Scans digitalisierter Werke werden verworfen
   // (Praxisfall: Buchdeckel statt Majoran-Foto); Herbarbelege gelten als Tafel.
@@ -828,7 +828,7 @@ async function main() {
       : Promise.resolve({ thumb: PX, src: "cm", title: "T", file: "T.jpg", url: "https://x/y" }); });
     document.querySelector('#modeTabs button[data-mode="photo"]').click();
     startSession();
-    await new Promise((r) => setTimeout(r, 1500));        // erste Wiederholung nach ~0,9 s
+    for (let t = 0; t < 60 && !(n >= 2 && document.querySelector("#phImg")); t++) await new Promise((r) => setTimeout(r, 50));   // erste Wiederholung nach ~0,9 s – polling statt fester Pause (Audit)
     const nachAussetzer = { versuche: n, bild: !!document.querySelector("#phImg"),
       keineMeldung: !document.querySelector(".ph-note") };
     document.querySelector('#modeTabs button[data-mode="cards"]').click();
@@ -1051,7 +1051,7 @@ async function main() {
     startSession();
     await new Promise((r) => setTimeout(r, 60));
     const frueh = document.querySelector("#stage").textContent;
-    await new Promise((r) => setTimeout(r, 3200));        // 0,9 s + 1,8 s Wiederholungen
+    for (let t = 0; t < 100 && !document.querySelector("#phRetry"); t++) await new Promise((r) => setTimeout(r, 50));   // 0,9 s + 1,8 s Wiederholungen – polling statt fester Pause (Audit)
     const txt = document.querySelector("#stage").textContent;
     const res = { wiederholt: /neuer Versuch/i.test(frueh), fruehKeineMeldung: !/Warte auf die Bilder/i.test(frueh),
       note: /Warte auf die Bilder/i.test(txt), retry: !!document.querySelector("#phRetry"),
@@ -3028,7 +3028,87 @@ async function main() {
   assert(a11y2.inert && a11y2.noFlipOnStop && a11y2.flipped && a11y2.noRateBehindDialog && a11y2.rated && a11y2.inertOff,
     "Tastatur/Fokus-Modus: beenden dreht nicht um, Dialog blockt Ziffern, inert an/aus: " + JSON.stringify(a11y2));
   for (const k of ["how", "rank", "herb", "sel"])
-    assert(a11y2[k] >= 43.5, "Touch-Ziel zu klein (" + k + ": " + Math.round(a11y[k]) + "px, mindestens 44px erwartet)");
+    assert(a11y2[k] >= 43.5, "Touch-Ziel zu klein (" + k + ": " + Math.round(a11y2[k]) + "px, mindestens 44px erwartet)");
+
+  // Audit-Paket 4 (Lern-Tool): Quota-Fallback, Bild-Cache-Deckel, »Neu« statt »Stufe 0«, toter Code weg,
+  // esc('), Kopf-Umschalter, <h1>, CSP, Herausforderung erzwingt ihr Profil, Profilwechsel beendet die Sitzung.
+  const p4 = await page.evaluate(async () => {
+    const out = {}, tick = ms => new Promise(r => setTimeout(r, ms));
+    const origSet = Storage.prototype.setItem; let fails = 1;
+    Storage.prototype.setItem = function (k, v) { if (fails-- > 0) { const e = new Error("quota"); e.name = "QuotaExceededError"; throw e; } return origSet.call(this, k, v); };
+    out.q1 = store.set("pflanzenlernen.__q", "a"); out.q2 = store.set("pflanzenlernen.__q", "b");
+    Storage.prototype.setItem = origSet;
+    out.qPersistent = store.persistent; out.qValue = localStorage.getItem("pflanzenlernen.__q"); localStorage.removeItem("pflanzenlernen.__q");
+    __clearPhotoCache();
+    for (let i = 0; i < 450; i++) __rememberPhoto("k" + i, { thumb: "x" });
+    out.cap = Object.keys(photoStoreLoad()).length; __clearPhotoCache();
+    out.neu = /Neu/.test(stepHTML(0)) && !/Stufe 0/.test(stepHTML(0)) && /3×/.test(stepHTML(0)); out.stufe2 = /Stufe 2 von 5/.test(stepHTML(2));
+    out.dead = typeof promptSub === "undefined" && typeof startQuizWith === "undefined" && typeof printColOn === "undefined";
+    out.esc = esc("a'b");
+    out.toggleHead = !!document.querySelector(".mast-right .themetoggle"); out.toggleOpts = !!document.querySelector("#setOpts .themetoggle");
+    out.h1 = /\u00a0·/.test(document.querySelector(".masthead h1").textContent);
+    out.csp = !!document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+    const vorher = profileId, ziel = vorher === "baumschule_gaertner" ? "gemuesebau_gaertner" : "baumschule_gaertner";
+    const parts = vorher.match(/^(.*)_(gaertner|fachwerker)$/);
+    document.querySelector('#modeTabs button[data-mode="quiz"]').click();
+    pendingChallenge = { p: ziel, m: "quiz", i: [0, 1, 2], s: 2, t: 3 };
+    startChallenge(); await tick(80);
+    out.chProfile = profileId; out.chCards = queue.length; out.chFirst = !!queue[0] && queue[0].key === cardsFor(ziel)[0].key;
+    document.querySelector("#btnStop").click(); await tick(60);
+    let ov = document.querySelector("#btnOverview"); if (ov) ov.click(); else exitSession();
+    pendingChallenge = null;
+    document.querySelector("#frSelect").value = parts[1]; document.querySelector("#nivSelect").value = parts[2]; applyProfile(); await tick(60);
+    out.back = profileId === vorher;
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    document.querySelector("#sessLen").value = "3"; startSession(); await tick(60);
+    out.wasActive = sess.active;
+    document.querySelector("#frSelect").value = ziel.replace(/_(gaertner|fachwerker)$/, ""); applyProfile(); await tick(80);
+    out.endedOnSwitch = !sess.active && !document.body.classList.contains("stagefull");
+    document.querySelector("#frSelect").value = parts[1]; applyProfile(); await tick(60);
+    document.querySelector('#modeTabs button[data-mode="list"]').click();
+    return out;
+  });
+  assert(p4.q1 === false && p4.q2 === true && p4.qPersistent && p4.qValue === "b", "Quota-Fallback (Lern-Tool): " + JSON.stringify(p4));
+  assert(p4.cap <= 400 && p4.neu && p4.stufe2 && p4.dead && p4.esc === "a&#39;b", "Bild-Cache-Deckel 400, »Neu« statt »Stufe 0«, toter Code weg, esc('): " + JSON.stringify(p4));
+  assert(p4.toggleHead && !p4.toggleOpts && p4.h1 && p4.csp, "Kopf-Umschalter, <h1>, CSP (Lern-Tool): " + JSON.stringify(p4));
+  assert(p4.chProfile !== p4.back && p4.chCards === 3 && p4.chFirst && p4.back,
+    "Herausforderung muss das Profil des Links erzwingen (und danach zurück): " + JSON.stringify(p4));
+  assert(p4.wasActive && p4.endedOnSwitch, "Profilwechsel während einer Sitzung muss sie sauber beenden: " + JSON.stringify(p4));
+
+  // Bildnachweis ohne Layoutsprung (Platz reserviert) + richtige Option im Dunkelmodus lesbar
+  const p4b = await page.evaluate(async () => {
+    const tick = ms => new Promise(r => setTimeout(r, ms));
+    const PX = "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200"><rect width="320" height="200" fill="#8a6"/></svg>');
+    __clearPhotoCache(); photoTried.clear();
+    __setPhotoSource(() => Promise.resolve({ thumb: PX, src: "cm", title: "T", file: "T.jpg", url: "https://x/y", artist: "A", license: "CC" }));
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();
+    const pa = document.querySelector("#phAnswer"); pa.value = "mc"; pa.dispatchEvent(new Event("change"));
+    document.querySelector("#sessLen").value = "3"; startSession();
+    for (let t = 0; t < 60 && !document.querySelector("#phImg"); t++) await tick(50);
+    await tick(120);
+    const slot = !!document.querySelector(".ph-srcslot");
+    const top0 = document.querySelector("#opts").offsetTop;            // Layout-Position (ohne die Einfahr-Transform der Optionen)
+    const ok = [...document.querySelectorAll("#opts .opt")].find(o => o.textContent.includes(current.g));
+    (ok || document.querySelector("#opts .opt")).click(); await tick(200);
+    const top1 = document.querySelector("#opts").offsetTop;
+    const credit = !!document.querySelector("#stage .ph-src");
+    const prev = document.documentElement.dataset.theme; document.documentElement.dataset.theme = "dark"; await tick(350);
+    const lum = c => { const m = (c.match(/\d+(\.\d+)?/g) || [255, 255, 255]).map(Number);
+      const f = v => { v /= 255; return v <= .04045 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+      return .2126 * f(m[0]) + .7152 * f(m[1]) + .0722 * f(m[2]); };
+    const bgOf = el => { for (let p = el; p; p = p.parentElement) { const c = getComputedStyle(p).backgroundColor;
+      if (c && !/rgba?\(0, 0, 0, 0\)/.test(c) && c !== "transparent") return c; } return "rgb(255,255,255)"; };
+    const corr = document.querySelector("#opts .opt.correct");
+    const dark = corr ? Math.round((Math.max(lum(getComputedStyle(corr).color), lum(bgOf(corr))) + .05) / (Math.min(lum(getComputedStyle(corr).color), lum(bgOf(corr))) + .05) * 100) / 100 : -1;
+    if (prev) document.documentElement.dataset.theme = prev; else delete document.documentElement.dataset.theme;
+    document.querySelector("#btnStop").click(); await tick(60);
+    const ov = document.querySelector("#btnOverview"); if (ov) ov.click(); else exitSession();
+    __setPhotoSource(null); __clearPhotoCache();
+    document.querySelector('#modeTabs button[data-mode="list"]').click();
+    return { slot, shift: Math.abs(top1 - top0), credit, dark, disabled: corr ? corr.disabled : null };
+  });
+  assert(p4b.slot && p4b.credit && p4b.shift <= 1, "Bildnachweis darf die Optionen nicht verschieben (Platz reserviert): " + JSON.stringify(p4b));
+  assert(p4b.dark >= 4.5, "Dunkelmodus: richtige Option muss nach der Antwort lesbar bleiben (≥4,5:1): " + JSON.stringify(p4b));
 
   // Barrierefreie Touch-Bedienung (schmale/Touch-Viewports): ≥44-px-Ziele für
   // Hilfe-Link, Profil-Chip, Ansicht-/Filter-Knöpfe, Suchfeld und Fußzeilen-Link;

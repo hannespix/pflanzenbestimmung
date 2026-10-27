@@ -11,13 +11,14 @@ online aufgerufen, als App installiert oder als Datei per `file://` geöffnet:
   ziehen, Prüfungsbogen und Musterlösung drucken, Noten rechnen, Prüfungen nach
   Datum speichern.
 - **`pflanzen-lernen.html` — Lern-Tool (für Azubis).** Dieselben Pflanzenlisten
-  zum Üben: Karteikarten mit Spaced-Repetition (Leitner), Multiple-Choice-Quiz und
-  Tippen — **keine** Prüfungslisten-Erstellung, **kein** Notenschlüssel.
+  zum Üben: Karteikarten mit Spaced-Repetition (Leitner), Multiple-Choice-Quiz, Bilder-Quiz
+  und Selbst eingeben — **keine** Prüfungslisten-Erstellung, **kein** Notenschlüssel.
 
-Eine gemeinsame **Startseite** (`index.html`) verzweigt zu beiden Werkzeugen
-(**Lernen** / **Prüfen**); zusätzlich sind die beiden Tools direkt untereinander
-verlinkt. Von jeder Seite führt eine Fußzeile zu **Impressum & Datenschutz**
-(`rechtliches.html`).
+Die **Wurzel** (`index.html`) ist das Lern-Tool (dieselbe Datei wie
+`pflanzen-lernen.html`); Prüfende erreichen ihr Werkzeug über `/pruefung` bzw.
+`pflanzenkenntnis.html`. Nur das Prüfungswerkzeug verlinkt zur Lernversion – das
+Lern-Tool ist für Azubis bewusst eine Sackgasse. Von jeder Seite führt eine Fußzeile
+zu **Impressum & Datenschutz** (`rechtliches.html`).
 
 > Zuständige Stelle: Regierungspräsidium Freiburg · Abschlussprüfung Gärtner/in
 > und Fachwerker/in.
@@ -61,7 +62,7 @@ Arbeitsanweisungen für die Weiterentwicklung mit Claude Code stehen in
 - **Prüfungsschema** einstellbar: welche Felder mit wie vielen Punkten (auch
   Nachkommastellen wie 0,5) bewertet werden, in **welcher Reihenfolge** (▲▼ –
   bestimmt die Spaltenfolge auf dem Bogen) und wie viele Pflanzen je Prüfung.
-- **Notenrechner** mit **linearer BW-Skala** (Standard) oder IHK-Schlüssel;
+- **Notenrechner** mit **linearer BW-Skala** (ein IHK-Schlüssel wird bewusst nicht angeboten);
   Notengrenzen editierbar; zeigt Note, Prozent, Dezimalnote und die Punktschwellen.
 - **Browser-Speicher** (localStorage) je Profil, **Sicherung als `.json`**
   (enthält die Profilliste **sowie die gespeicherten Prüfungen und die
@@ -82,7 +83,8 @@ Arbeitsanweisungen für die Weiterentwicklung mit Claude Code stehen in
 
 Für Auszubildende zum **Üben** derselben Pflanzenlisten — ohne Prüfungslisten-
 Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (dieselben
-14 Profile und Listen wie im Prüfungswerkzeug); ein Link führt zur Prüfungsversion.
+14 Profile und Listen wie im Prüfungswerkzeug). Das Lern-Tool verlinkt bewusst **nicht**
+auf das Prüfungswerkzeug (Einbahnstraße – Azubis sollen es nicht sehen).
 
 - **Feste, prüfungsnahe Lernrichtung:** Wie in der Abschlussprüfung erkennt man die
   Pflanze (der greifbarste bildlose Anker ist ihr **deutscher Name**) und nennt die
@@ -99,7 +101,7 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
     »sitzt« ab Box 4.
   - **Multiple-Choice-Quiz** – zum deutschen Namen den richtigen **botanischen Namen**
     unter plausiblen Ablenkern (bevorzugt aus **demselben Thema**).
-  - **Tippen** – zum deutschen Namen den **botanischen Namen** selbst eingeben;
+  - **Selbst eingeben** – zum deutschen Namen den **botanischen Namen** per Tastatur eingeben;
     tippfehlertolerant (kleine Abweichungen zählen als richtig), Gattung und Art werden
     getrennt geprüft. Ist der **deutsche Name** gesucht, zählt jedes in der Liste
     geführte **Synonym**, Bindestriche/Leerzeichen sind egal, und die zusammengezogenen
@@ -140,9 +142,9 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
   unverändert – die Zuordnung ist Anzeigelogik.
 - **Abfragerichtung wählbar** (»Optionen · Abfrage«): Standard ist die Prüfungsrichtung
   **deutscher Name → botanisch**; umschaltbar auf **botanisch → deutscher Name**. Im
-  **Bilder**-Modus stehen **Bild → botanischer Name** und **Bild → deutscher Name** zur
-  Wahl. Beim Tippen zählt jede in der Liste geführte Schreibweise (auch ohne Bindestrich).
-- **Lernstoff eingrenzen** (»Optionen · Auswahl«): **alle Arten**, ein **Thema** oder eine
+  **Bilder**-Modus ist die Aufgabe fest: **Bild → voller Name** (botanisch + deutsch).
+  Beim Eingeben zählt jede in der Liste geführte Schreibweise (auch ohne Bindestrich).
+- **Lernstoff eingrenzen** (»Optionen · Lernstoff«): **alle Arten**, ein **Thema** oder eine
   **Pflanzenfamilie** (jeweils mit Artenzahl), dazu optional nur **ZP-relevante** Arten;
   Sitzungslänge einstellbar.
 - **»nur Prüfungsstoff« (Fachwerker):** ein optionaler Schalter, der **nur bei
@@ -191,9 +193,8 @@ werden zusätzlich als **Vorschau** unter `…/vorschau/pr-<Nummer>/` veröffent
 dass die Live-Seite erst beim Merge wechselt (Einrichtung siehe *Deployment* unten).
 **Zweitadresse:** <https://hannespix.github.io/pflanzenbestimmung/> — derselbe Stand
 liegt parallel auf GitHub Pages, weil manche Firmennetze junge Domains sperren.
-Die **Startseite** verzweigt zu *Lernen* und *Prüfen*; die
-Werkzeuge liegen unter `…/pflanzenkenntnis.html` und `…/pflanzen-lernen.html` und
-sind zusätzlich direkt untereinander verlinkt.
+Die **Wurzel** ist das Lern-Tool; das Prüfungswerkzeug liegt unter `…/pruefung`
+bzw. `…/pflanzenkenntnis.html` und verlinkt zur Lernversion (nicht umgekehrt).
 
 ### Deployment (eigener Webspace **und** GitHub Pages)
 
@@ -234,11 +235,10 @@ Dateinamen sind stabil und werden überschrieben.
 Hochgeladen werden `index.html`, `pflanzenkenntnis.html`, `pflanzen-lernen.html`,
 `rechtliches.html` sowie die PWA-Dateien (`manifest.webmanifest`, `sw.js`, Icons).
 
-**Offline:** `index.html` (Startseite), `pflanzenkenntnis.html` (Prüfende) bzw.
-`pflanzen-lernen.html` (Azubis) aus dem Repo-Root im Browser öffnen (Doppelklick
-genügt — die Dateien sind eigenständig und benötigen kein Internet; für die
-Verzweigung der Startseite und den Fußzeilen-Link zu `rechtliches.html`
-(Impressum & Datenschutz) müssen alle im selben Ordner liegen). Identisch
+**Offline:** `pflanzenkenntnis.html` (Prüfende) bzw. `pflanzen-lernen.html`
+(= `index.html`, Azubis) aus dem Repo-Root im Browser öffnen (Doppelklick genügt —
+die Dateien sind eigenständig und benötigen kein Internet; für den Fußzeilen-Link
+zu `rechtliches.html` (Impressum & Datenschutz) müssen alle im selben Ordner liegen). Identisch
 gebaut liegen sie auch unter `dist/`. Änderungen bzw. Lernfortschritt bleiben im
 Browser gespeichert.
 
@@ -255,12 +255,12 @@ offline. Diese Assets (`manifest.webmanifest`, `sw.js`, `icon-*.png`) erzeugt
 ## Build
 
 ```bash
-python3 build.py                                   # erzeugt dist/ + Root-Verteilkopien (Startseite, beide Tools, Rechtliches)
+python3 build.py                                   # erzeugt dist/ + Root-Verteilkopien (beide Tools, Rechtliches, /pruefung-Weiterleitung)
 python3 tools/check_offline.py dist/index.html             # prüft: keine externen Ressourcen
+python3 tools/check_offline.py dist/pruefung/index.html
 python3 tools/check_offline.py dist/pflanzenkenntnis.html
 python3 tools/check_offline.py dist/pflanzen-lernen.html
 python3 tools/check_offline.py dist/rechtliches.html
-node tests/start.mjs                               # Puppeteer-Smoke Startseite (Verzweigung + Rechtliches)
 node tests/smoke.mjs                               # Puppeteer-Smoke Prüfungswerkzeug
 node tests/learn.mjs                               # Puppeteer-Smoke Lern-Tool
 node tests/pwa.mjs                                 # PWA: Manifest + Service Worker + Offline-Cache
@@ -282,12 +282,11 @@ python3 build.py
 ├─ CLAUDE.md                 Arbeitsanweisungen für Claude Code
 ├─ README.md
 ├─ build.py                  Template + Logik + Seeds (+ SheetJS)  →  dist/ + Root-Kopien
-├─ index.html                Verteilkopie Startseite (versioniert)
+├─ index.html                Verteilkopie Lern-Tool = Wurzel (versioniert, identisch mit pflanzen-lernen.html)
 ├─ pflanzenkenntnis.html     Verteilkopie Prüfungswerkzeug (versioniert)
 ├─ pflanzen-lernen.html      Verteilkopie Lern-Tool (versioniert)
 ├─ rechtliches.html          Verteilkopie Impressum & Datenschutz (versioniert)
 ├─ src/
-│  ├─ start.html             HTML der Startseite (Verzweigung Lernen/Prüfen)
 │  ├─ template.html          HTML-Gerüst Prüfungswerkzeug (CSS, Platzhalter)
 │  ├─ app.js                 gesamte Logik Prüfungswerkzeug (Vanilla JS)
 │  ├─ learn.html             HTML-Gerüst Lern-Tool (CSS, Platzhalter)
@@ -300,16 +299,18 @@ python3 build.py
 ├─ tools/
 │  ├─ xlsx_to_seed.mjs       Excel → seeds/<id>.json
 │  ├─ rebuild_seeds.sh       alle Seeds aus data/<id>.<ext> neu erzeugen
+│  ├─ categorize_seeds.py    Wuchsform-Kategorien für Listen ohne eigene Kategorien (offengelegt)
+│  ├─ fix_source_gaps.py     offengelegte Ergänzungen/Berichtigungen der Quelllisten
 │  └─ check_offline.py       CI-Check: keine externen Ressourcen (Datei als Argument)
 ├─ tests/
-│  ├─ start.mjs              Puppeteer-Smoke Startseite (Verzweigung) gegen dist/
-│  ├─ smoke.mjs              Puppeteer-Smoke Prüfungswerkzeug gegen dist/ (file://)
-│  └─ learn.mjs              Puppeteer-Smoke Lern-Tool gegen dist/ (file://)
+│  ├─ smoke.mjs              Puppeteer-Smoke Prüfungswerkzeug + Rechtliches gegen dist/ (file://)
+│  ├─ learn.mjs              Puppeteer-Smoke Lern-Tool gegen dist/ (file://)
+│  └─ pwa.mjs                PWA-Test (Manifest, Service Worker, Offline-Cache) über lokalen HTTP-Server
 ├─ data/                     Quell-Excel je Profil (data/<profil-id>.<ext>)
 └─ dist/                     Build-Ergebnis (nicht versioniert)
 ```
 
-Die Dateien **`index.html`** (Startseite), **`pflanzenkenntnis.html`**,
+Die Dateien **`index.html`** (Lern-Tool, Wurzel), **`pflanzenkenntnis.html`**,
 **`pflanzen-lernen.html`** und **`rechtliches.html`** (Impressum & Datenschutz) im
 Repo-Root sind die fertigen Offline-Dateien zum direkten Herunterladen und Öffnen.
 `build.py` schreibt sie bei jedem Build byte-identisch zu den Kopien in `dist/` mit
@@ -361,7 +362,8 @@ Das Tool ist iterativ entstanden; die Architektur hat sich dabei bewusst vereinf
    Druck-Schlüsselzeile.
 3. **Umstellung auf die lineare BW-Skala:** ausgelöst durch die Rechtsprechung des
    VGH Baden-Württemberg (gleichmäßige Punkt-Noten-Zuordnung). Der ungleichmäßige
-   IHK-Schlüssel bleibt als Umschaltoption inkl. offizieller Dezimaltabelle.
+   IHK-Schlüssel blieb zunächst als Umschaltoption und wurde später auf Wunsch
+   entfernt – für die Gärtnerberufe in BW wird immer linear gerechnet.
 4. **Listen hartkodiert** und Ergänzungen in den **Browser-Speicher** verlagert
    (zuerst IndexedDB), damit das Tool ohne externe Datei sofort läuft.
 5. **SQLite entfernt:** für ein Array von Datensätzen war eine Datenbank-Engine
