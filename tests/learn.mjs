@@ -3441,6 +3441,33 @@ async function main() {
   assert(/Neue Version/.test(swu.hinweis) && swu.nichtNeu && swu.einmal === 1 && swu.perKnopf === 2,
     "Neue Version während einer Sitzung → ein Hinweis mit Knopf »Jetzt neu laden« statt Neuladen: " + JSON.stringify(swu));
 
+  // CSP (Hotfix nach Audit-Paket 4): Wikimedia liefert Vorschaubilder seit 2026 von
+  // thumb.wikimedia.org statt upload.wikimedia.org (Tech News 2026/36). Fest eingetragene Hosts
+  // blockten jedes neu gesuchte Quiz-Bild (»Bild konnte nicht geladen werden«). Die Policy muss
+  // deshalb *.wikimedia.org/*.wikipedia.org pauschal erlauben – auf eigener Seite geprüft, weil
+  // die erwarteten Block-Meldungen sonst als Konsolenfehler zählen.
+  const cp = await browser.newPage();
+  await cp.goto(FILE, { waitUntil: "load" });
+  await cp.waitForFunction("window.startSession!=null", { timeout: 10000 });
+  const cspL = await cp.evaluate(() => new Promise((resolve) => {
+    const viol = [];
+    document.addEventListener("securitypolicyviolation", (e) => viol.push(e.blockedURI + " [" + e.effectiveDirective + "]"));
+    const add = (tag, src) => { const el = document.createElement(tag); el.onerror = () => {}; el.src = src; document.head.appendChild(el); };
+    add("img", "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c9/X.jpg/960px-X.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail");
+    add("img", "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/X.jpg/960px-X.jpg");
+    add("img", "https://neu.wikimedia.org/x.jpg");
+    add("img", "https://example.com/fremd.png");
+    add("script", "https://example.com/fremd.js");
+    const meta = (document.querySelector('meta[http-equiv="Content-Security-Policy"]') || {}).content || "";
+    const big = lbBig("https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c9/X.jpg/960px-X.jpg?utm_source=commons.wikimedia.org", 4000);
+    setTimeout(() => resolve({ viol, meta, big }), 500);
+  }));
+  await cp.close();
+  assert(cspL.viol.some(v => /example\.com.*img/.test(v)) && cspL.viol.some(v => /example\.com.*script/.test(v)), "CSP (Lern-Tool) muss fremde Bilder/Skripte blocken: " + JSON.stringify(cspL.viol));
+  assert(!cspL.viol.some(v => /wikimedia|wikipedia/.test(v)), "CSP (Lern-Tool) darf keinen Wikimedia-Host blocken – auch thumb.wikimedia.org nicht: " + JSON.stringify(cspL.viol));
+  assert(/img-src[^;]*https:\/\/\*\.wikimedia\.org/.test(cspL.meta) && /img-src[^;]*https:\/\/\*\.wikipedia\.org/.test(cspL.meta), "CSP img-src muss *.wikimedia.org/*.wikipedia.org pauschal erlauben: " + cspL.meta);
+  assert(/^https:\/\/thumb\.wikimedia\.org\/.*\/1920px-X\.jpg\?utm_source=/.test(cspL.big), "lbBig muss auch auf dem neuen Host thumb.wikimedia.org ableiten (1920 px, Query bleibt): " + cspL.big);
+
   // Zurück auf sauberen Zustand für die Aufräum-Schritte
   await page.goto("about:blank");
   await page.goto(FILE, { waitUntil: "load" });

@@ -2291,6 +2291,36 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Herausforderung erzwingt Profil, Profilwechsel beendet die Sitzung, Bildnachweis ohne
       Verschieben der Optionen, richtige Option dunkel ≥4,5:1.
 
+- [x] **Hotfix: Bilder-Quiz meldete »Bild konnte nicht geladen werden« – die CSP ließ den neuen
+      Wikimedia-Bildhost nicht durch** (Rückmeldung mit Screenshot direkt nach den vier Audit-
+      Paketen: »seit den Fixes kommt oft … so kann man nicht arbeiten«). **Ursache:** Die mit
+      Paket 4 eingeführte Content-Security-Policy erlaubte Bilder nur von drei fest eingetragenen
+      Hosts (`upload.wikimedia.org`, `commons.wikimedia.org`, `de.wikipedia.org`). Wikimedia zieht
+      die Vorschaubilder aber gerade von `upload.` nach **`thumb.wikimedia.org`** um (Tech News
+      2026/36, T427465): Die API-Felder `thumburl` (Commons `imageinfo`) und `thumbnail.source`
+      (`pageimages`) liefern seither den neuen Host samt `utm_`-Query; nur Originale bleiben auf
+      `upload.`. Jedes neu gesuchte Quiz-Bild verwarf der Browser damit vor dem Abruf
+      (`securitypolicyviolation [img-src]`, »Refused to load the image«), die Ausweich-Kette über
+      die weiteren Ansichten derselben Art ebenso → Meldung statt Bild. **»Oft« statt »immer«**,
+      weil im Bild-Cache (`photos7`) gemerkte Treffer aus der Zeit vor dem Host-Umzug noch
+      `upload.`-Adressen tragen. Ebenso betroffen: die Wikipedia-Vorschau der Info-Karte in
+      **beiden** Werkzeugen (`pithumbsize`). **Verifiziert, nicht vermutet:** API-Antworten live
+      abgefragt (`iiurlwidth=640` → `thumb.wikimedia.org/…/960px-…` – der Server rundet also
+      tatsächlich auf die Standardstufe), dann auf der Live-Seite per Puppeteer ein `<img>` von
+      `thumb.` (geblockt, Violation-Event) gegen eines von `upload.` (lädt). Mein erster Live-Test
+      hatte nur `upload.` probiert und deshalb nichts gefunden. **Fix:** `img-src` erlaubt jetzt
+      pauschal `https://*.wikimedia.org https://*.wikipedia.org` (alle drei Seiten, Kommentar im
+      `<head>`); `script-src` bleibt eng – die zwei JSONP-Endpunkte stehen fest im Code. Keine
+      Cache-Bereinigung nötig: die gemerkten `thumb.`-Adressen sind richtig, nur die Policy war
+      falsch; die neue Version aktiviert sich über `swUpdate` von selbst. **Dauerhafte Guards:**
+      `tests/smoke.mjs` 9f und ein neuer Block in `tests/learn.mjs` prüfen, dass weder `thumb.`
+      noch `upload.` noch ein erfundener künftiger Host `neu.wikimedia.org` geblockt wird (fremde
+      Hosts weiterhin schon), dass `img-src` die Wildcards trägt und dass `lbBig` auch auf dem
+      neuen Host ableitet (1920 px, Query bleibt). *Lehre:* Eine CSP mit fest eingetragenen
+      Fremd-Hosts ist eine tickende Abhängigkeit – für Inhalte, die nur angezeigt werden (Bilder),
+      die Domain pauschal freigeben; und beim Prüfen eines Verdachts die Adresse nehmen, die die
+      API **heute** liefert, nicht die aus dem Code.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.

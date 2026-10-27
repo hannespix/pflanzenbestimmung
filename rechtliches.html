@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://de.wikipedia.org https://commons.wikimedia.org; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://upload.wikimedia.org https://commons.wikimedia.org https://de.wikipedia.org; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<!-- CSP: Bilder pauschal von *.wikimedia.org/*.wikipedia.org – Wikimedia zieht Vorschaubilder von upload. nach
+     thumb.wikimedia.org um (Tech News 2026/36); fest eingetragene Hosts ließen den Bilder-Quiz leer (#151). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://de.wikipedia.org https://commons.wikimedia.org; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.wikimedia.org https://*.wikipedia.org; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Impressum &amp; Datenschutz · Pflanzenkenntnis</title>
