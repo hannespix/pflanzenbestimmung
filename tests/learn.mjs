@@ -2215,10 +2215,15 @@ async function main() {
   // einmalig gefeiert; Combo zählt Treffer in Folge (ab 3 sichtbar, Bonus gestaffelt).
   const xp = await page.evaluate(async () => {
     localStorage.removeItem("pflanzenlernen.xp");
-    const r0 = rankOf(0), r1 = rankOf(RANKS[1].x), rTop = rankOf(RANKS[RANKS.length - 1].x + 999);
-    xpAdd(RANKS[1].x);                                   // Aufstieg Keimling → Sämling
+    // Lernstand für die Rang-Bedingungen: ein anderes Profil mit zehn angefangenen Arten (bestes Profil zählt)
+    localStorage.setItem("pflanzenlernen.progress.obstbau_fachwerker", JSON.stringify(Object.fromEntries(
+      cardsFor("obstbau_fachwerker").slice(0, 10).map((c) => [c.key, { box: 1, due: "2099-01-01", seen: 1, correct: 1, wrong: 0 }]))));
+    __masteryReset();
+    const VOLL = { started: 100, fest: 100, n: 100, share: 1 };
+    const r0 = rankOf(0), r1 = rankOf(RANKS[1].x), rTop = rankOf(RANKS[RANKS.length - 1].x + 999, VOLL);
+    xpAdd(RANKS[1].x);                                   // Aufstieg Keimling → Sämling (Punkte + zehn angefangene Arten)
     const nachAufstieg = rankOf(xpTotal()).name;
-    const gefeiert = xpTotal() === RANKS[1].x;
+    const gefeiert = xpTotal() === RANKS[1].x && xpLoad().r === 1;
     // Quiz-Sitzung: erst falsch (Combo bleibt 0), dann drei richtige in Folge
     $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
     document.querySelector('#modeTabs button[data-mode="quiz"]').click();
@@ -2240,6 +2245,7 @@ async function main() {
     const xpDelta = xpTotal() - vorXP;
     document.querySelector('#modeTabs button[data-mode="cards"]').click();   // Sitzung beenden
     localStorage.removeItem("pflanzenlernen.xp");
+    localStorage.removeItem("pflanzenlernen.progress.obstbau_fachwerker"); __masteryReset();
     return { r0: r0.name, r1: r1.name, rTopNext: rTop.next, nachAufstieg, gefeiert,
       comboNachFehler, sichtbarBei2: !!bar2, sichtbarBei3: !!bar3, combo3, comboText, xpDelta,
       bonus: [comboBonus(2), comboBonus(3), comboBonus(5), comboBonus(10)] };
@@ -2253,6 +2259,77 @@ async function main() {
   assert(JSON.stringify(xp.bonus) === JSON.stringify([0, 2, 4, 8]),
     "Combo-Bonus muss gestaffelt sein (0/2/4/8 bei 2/3/5/10): " + JSON.stringify(xp.bonus));
   assert(xp.xpDelta >= 15, "Drei richtige Quiz-Antworten müssen mindestens 15 Punkte bringen: " + xp.xpDelta);
+
+  // Rang = Punkte UND Lernstand (Rückmeldung: »Prachtexemplar« nach 20 sitzenden Arten und leerem
+  // Herbarium). Jede Stufe hat eine Bedingung am Lernstand; die Stufen kommen nur der Reihe nach;
+  // das am weitesten gediehene Profil zählt; ein Aufstieg durch den Lernstand wird gefeiert, ein
+  // Absinken (neue Regel) senkt still die Feier-Marke.
+  const gate = await page.evaluate(() => {
+    const M = (started, fest, n) => ({ started, fest, n, share: n ? fest / n : 0 });
+    const viel = 99999;
+    const out = { namen: [M(0, 0, 100), M(10, 0, 100), M(30, 5, 100), M(60, 25, 100), M(80, 60, 100), M(100, 90, 100)].map((m) => rankOf(viel, m).name),
+      punkteBinden: rankOf(2000, M(100, 90, 100)).name,
+      reihe: rankOf(viel, M(5, 90, 100)).name,           // Sämling-Bedingung fehlt → trotz 90 % sitzt keine höhere Stufe
+      fehlt: gateNeed(RANKS[3], M(30, 5, 100)), fehlt2: gateNeed(RANKS[2], M(30, 1, 100)),
+      steck: rankOf(2500, M(30, 5, 100)) };
+    // UI: Punkte reichen für Prachtexemplar, der Lernstand nicht → Rang bleibt Steckling, Tooltip + Laufbahn nennen, was fehlt
+    localStorage.removeItem("pflanzenlernen.xp"); xpSave({ x: 2500, r: 2 });
+    const OF = "obstbau_fachwerker", cs = cardsFor(OF), n = cs.length;   // 54 Arten
+    const prog = (fest, started) => Object.fromEntries(cs.slice(0, started).map((c, i) => [c.key, { box: i < fest ? 4 : 1, due: "2099-01-01", seen: 3, correct: 3, wrong: 0 }]));
+    localStorage.setItem("pflanzenlernen.progress." + OF, JSON.stringify(prog(5, 30))); __masteryReset();
+    renderProgress();
+    const chip = document.querySelector("#rankName");
+    out.chip = { name: chip.querySelector(".rk-name").textContent, title: chip.title, best: masteryBest().id, fest: masteryBest().fest, n: masteryBest().n };
+    openRankModal();
+    const m = document.querySelector("#infoScrim .rankmodal");
+    out.modal = { kopf: m.querySelector(".mh-fam").textContent, bedingungen: [...m.querySelectorAll(".rkp-row .r-x")].map((e) => e.textContent) };
+    document.querySelector("#infoClose").click();
+    // Aufstieg durch den Lernstand: 25 % sitzen (14 von 54) → Jungpflanze, gefeiert; ohne neue Punkte
+    const toastVor = document.querySelector("#toast").textContent;
+    localStorage.setItem("pflanzenlernen.progress." + OF, JSON.stringify(prog(14, 30))); __masteryReset();
+    rankCheck();
+    out.auf = { rang: rankOf(xpTotal()).name, gefeiert: xpLoad().r === 3, toast: document.querySelector("#toast").textContent, toastVor };
+    // Absinken (z. B. Regel geändert): still, Feier-Marke folgt nach unten
+    localStorage.removeItem("pflanzenlernen.progress." + OF); __masteryReset();
+    rankCheck();
+    out.ab = { rang: rankOf(xpTotal()).name, marke: xpLoad().r };
+    localStorage.removeItem("pflanzenlernen.xp"); __masteryReset(); renderProgress();
+    return out;
+  });
+  assert(JSON.stringify(gate.namen) === JSON.stringify(["Keimling", "Sämling", "Steckling", "Jungpflanze", "Prachtexemplar", "Meistergärtner/in"]),
+    "Rang-Bedingungen am Lernstand (10 angefangen · 5 sitzen · 25 % · 60 % · 90 %): " + JSON.stringify(gate.namen));
+  assert(gate.punkteBinden === "Jungpflanze" && gate.reihe === "Keimling",
+    "Punkte binden weiterhin (2000 P. = Jungpflanze), Stufen nur der Reihe nach: " + JSON.stringify({ p: gate.punkteBinden, r: gate.reihe }));
+  assert(/noch 20 Arten müssen sitzen \(25 %\)/.test(gate.fehlt) && /noch 4 Arten müssen sitzen/.test(gate.fehlt2) && gate.steck.name === "Steckling" && gate.steck.need === 0 && /20 Arten/.test(gate.steck.needText),
+    "Was fehlt, wird in Worten genannt: " + JSON.stringify({ f: gate.fehlt, f2: gate.fehlt2, s: gate.steck }));
+  assert(gate.chip.name === "Steckling" && /sitzen/.test(gate.chip.title) && /Jungpflanze/.test(gate.chip.title) && gate.chip.best === "obstbau_fachwerker" && gate.chip.fest === 5,
+    "Chip: Punkte reichen, Lernstand nicht → Steckling, Tooltip nennt die fehlenden Arten; bestes Profil zählt: " + JSON.stringify(gate.chip));
+  assert(/5 von 54 Arten sitzen/.test(gate.modal.kopf) && /Jungpflanze/.test(gate.modal.kopf) && gate.modal.bedingungen.filter((t) => /Arten (angefangen|sitzen)/.test(t)).length === 5,
+    "Laufbahn-Dialog nennt Lernstand, nächste Stufe und je Stufe die Bedingung: " + JSON.stringify(gate.modal));
+  assert(gate.auf.rang === "Jungpflanze" && gate.auf.gefeiert && /Neuer Rang: Jungpflanze/.test(gate.auf.toast),
+    "Aufstieg allein durch den Lernstand (25 % sitzen) muss gefeiert werden: " + JSON.stringify(gate.auf));
+  assert(gate.ab.rang === "Keimling" && gate.ab.marke === 0,
+    "Absinken: Rang fällt still, die Feier-Marke folgt (nächster Aufstieg wird wieder gefeiert): " + JSON.stringify(gate.ab));
+
+  // Herbarium · »Thema üben«: Knopf je Sammelkarte → Lernstoff auf das Thema, geführte Lektion nur damit
+  const themaUeben = await page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    openHerbarium();
+    const btns = [...document.querySelectorAll("#infoScrim .hc-learn")], karten = document.querySelectorAll("#infoScrim .herbcard").length;
+    const t = btns[1].dataset.t;
+    btns[1].click(); await wait(120);
+    const out = { knoepfe: btns.length, karten, thema: t, zu: !document.querySelector("#infoScrim"), scope: $("#cat").value,
+      aktiv: !!(sess.active && sess.auto), nurThema: queue.length > 0 && queue.every((c) => c.thema === t), n: queue.length,
+      summary: (document.querySelector(".setopts summary") || {}).textContent || "" };
+    document.querySelector("#btnStop").click(); await wait(60);
+    const ov = document.querySelector("#btnOverview"); if (ov) ov.click(); else exitSession();
+    $("#cat").value = ""; $("#cat").dispatchEvent(new Event("change"));
+    return out;
+  });
+  assert(themaUeben.knoepfe === themaUeben.karten && themaUeben.knoepfe > 1 && themaUeben.zu && themaUeben.scope === "t:" + themaUeben.thema,
+    "Herbarium: jede Karte hat »Thema üben«, Klick schließt das Modal und stellt den Lernstoff auf das Thema: " + JSON.stringify(themaUeben));
+  assert(themaUeben.aktiv && themaUeben.nurThema && themaUeben.n > 0 && themaUeben.summary.indexOf(themaUeben.thema) >= 0,
+    "»Thema üben« startet eine geführte Lektion nur mit diesem Thema, Optionen-Kopfzeile zeigt es: " + JSON.stringify(themaUeben));
 
   // Stufe 5: Rang-Popover (Top-Layer, am Rang-Namen verankert) – nur wo Popover UND
   // Anchor-Positioning können; Container Queries auf dem Herbarium-Raster.

@@ -523,7 +523,7 @@ function boxAfter(cur, g){                    // Zielbox je Bewertung (cur = akt
 const todayISO = () => { const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
 function addDays(iso,n){ const d=new Date(iso+"T00:00:00"); d.setDate(d.getDate()+n); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function progKey(){ return LS_PREFIX+"progress."+profileId; }
-function loadProgress(){ try{ const raw=store.get(progKey()); progress=raw?JSON.parse(raw):{}; if(typeof progress!=="object"||!progress) progress={}; }catch(e){ progress={}; } }
+function loadProgress(){ try{ const raw=store.get(progKey()); progress=raw?JSON.parse(raw):{}; if(typeof progress!=="object"||!progress) progress={}; }catch(e){ progress={}; } masteryReset(); }
 function saveProgress(){ store.set(progKey(), JSON.stringify(progress)); }
 function pget(key){ return progress[key] || {box:0,due:"",seen:0,correct:0,wrong:0}; }
 function grade(card, g){ // g: 'again' | 'hard' | 'good'
@@ -603,38 +603,95 @@ function streakBump(){
    der Karteikarte am wenigsten. Teilweise richtig gibt anteilig. Global über
    alle Profile (Key pflanzenlernen.xp = {x:Punkte, r:zuletzt gefeierter Rang}). */
 const LS_XP = LS_PREFIX+"xp";
+/* Rang = Punkte UND Lernstand (Rückmeldung: »Prachtexemplar« nach 20 sitzenden Arten und
+   leerem Herbarium). Punkte messen Fleiß, nicht Können – jede Stufe verlangt deshalb
+   zusätzlich, dass der Lernstand mitwächst: erst angefangene Arten, dann Arten, die wirklich
+   »sitzen« (Box 4–5, also mehrere richtige Antworten über Tage; die Intervalle machen das
+   bewusst langsam). Maßgeblich ist das am weitesten gediehene Profil – der Rang ist global,
+   der Lernstand je Profil. Die Stufen werden nur der Reihe nach erreicht. */
 const RANKS = [                                  // Gärtner-Laufbahn statt Level-Zahlen – jede Stufe erklärt sich selbst
   {n:"Keimling",          x:0,    d:"gerade aufgegangen – die ersten Punkte"},
-  {n:"Sämling",           x:150,  d:"erste Blätter – du bist dabei"},
-  {n:"Steckling",         x:500,  d:"schlägt Wurzeln – regelmäßig am Üben"},
-  {n:"Jungpflanze",       x:1200, d:"wächst kräftig – viele Namen sitzen"},
-  {n:"Prachtexemplar",    x:2500, d:"voll entwickelt – kaum noch Lücken"},
-  {n:"Meistergärtner/in", x:5000, d:"kennt sie alle – die höchste Stufe"}
+  {n:"Sämling",           x:150,  d:"erste Blätter – du bist dabei",          g:{started:10}},
+  {n:"Steckling",         x:500,  d:"schlägt Wurzeln – regelmäßig am Üben",   g:{fest:5}},
+  {n:"Jungpflanze",       x:1200, d:"wächst kräftig – viele Namen sitzen",    g:{share:0.25}},
+  {n:"Prachtexemplar",    x:2500, d:"voll entwickelt – kaum noch Lücken",     g:{share:0.6}},
+  {n:"Meistergärtner/in", x:5000, d:"kennt sie alle – die höchste Stufe",     g:{share:0.9}}
 ];
-const RANK_HOW = "Punkte gibt es für richtige Antworten: Selbst eingeben 10 · Auswahl 5 · Karteikarte 3 – plus Bonus ab drei Treffern in Folge.";
+const RANK_HOW = "Punkte gibt es für richtige Antworten: Selbst eingeben 10 · Auswahl 5 · Karteikarte 3 – plus Bonus ab drei Treffern in Folge. Höhere Ränge brauchen zusätzlich Arten, die wirklich sitzen – Punkte allein reichen nicht.";
 const XP_BASE = { cards:3, quiz:5, type:10 };    // Karteikarte < Auswahl < freies Tippen
 function xpLoad(){ try{ const o=JSON.parse(store.get(LS_XP)||"{}"); return (o&&typeof o==="object")?o:{}; }catch(e){ return {}; } }
 function xpSave(o){ try{ store.set(LS_XP, JSON.stringify(o)); }catch(e){} }
 function xpTotal(){ return Math.max(0, +(xpLoad().x||0)); }
-function rankOf(xp){
-  let i=0; for(let k=0;k<RANKS.length;k++) if(xp>=RANKS[k].x) i=k;
+function gateText(r){                            // Lernstand-Bedingung einer Stufe in Worten
+  const g=r.g||{};
+  if(g.started) return `${g.started} Arten angefangen`;
+  if(g.fest)    return `${g.fest} Arten sitzen`;
+  if(g.share)   return `${Math.round(g.share*100)} % der Arten sitzen`;
+  return "";
+}
+function gateOk(r, m){
+  const g=r.g||{};
+  return (!g.started || m.started>=g.started) && (!g.fest || m.fest>=g.fest) && (!g.share || (m.n>0 && m.fest/m.n>=g.share));
+}
+function gatePct(r, m){                          // Fortschritt zur Lernstand-Bedingung (0–100)
+  const g=r.g||{}; let q=1;
+  if(g.started) q=m.started/g.started; else if(g.fest) q=m.fest/g.fest; else if(g.share) q=m.n ? (m.fest/m.n)/g.share : 0;
+  return Math.max(0, Math.min(100, Math.round(q*100)));
+}
+function gateNeed(r, m){                         // was zum nächsten Rang am Lernstand noch fehlt ("" = erfüllt)
+  const g=r.g||{};
+  if(g.started && m.started<g.started) return `noch ${g.started-m.started} Arten anfangen`;
+  if(g.fest && m.fest<g.fest){ const f=g.fest-m.fest; return `noch ${f} ${f===1?"Art muss":"Arten müssen"} sitzen`; }
+  if(g.share && m.n>0 && m.fest/m.n<g.share){ const f=Math.ceil(g.share*m.n)-m.fest; return `noch ${f} ${f===1?"Art muss":"Arten müssen"} sitzen (${Math.round(g.share*100)} %)`; }
+  if(g.share && !m.n) return `${Math.round(g.share*100)} % der Arten müssen sitzen`;
+  return "";
+}
+function masteryOf(id){                          // Lernstand eines Profils: angefangen (Box ≥1), sitzt (Box ≥4), gesamt
+  let prog = progress;
+  if(id!==profileId){ try{ prog = JSON.parse(store.get(LS_PREFIX+"progress."+id)||"{}")||{}; }catch(e){ prog = {}; } }
+  const n = ((typeof SEEDS!=="undefined" && SEEDS[id]) || []).length;
+  let started=0, fest=0;
+  Object.keys(prog||{}).forEach(k=>{ const b=+(prog[k]&&prog[k].box)||0; if(b>0) started++; if(b>=4) fest++; });
+  return { id, n, started, fest, share: n ? fest/n : 0 };
+}
+const masteryCache = new Map();                  // andere Profile ändern sich in dieser Seite nicht – einmal rechnen (Profilwechsel leert)
+function masteryReset(){ masteryCache.clear(); }
+function masteryBest(){                          // das am weitesten gediehene Profil zählt
+  let best = masteryOf(profileId);
+  try{
+    Object.keys(typeof SEEDS!=="undefined" ? SEEDS : {}).forEach(id=>{
+      if(id===profileId) return;
+      if(!masteryCache.has(id)) masteryCache.set(id, store.get(LS_PREFIX+"progress."+id)==null ? null : masteryOf(id));
+      const m = masteryCache.get(id); if(!m) return;
+      if(m.share>best.share || (m.share===best.share && (m.fest>best.fest || (m.fest===best.fest && m.started>best.started)))) best = m;
+    });
+  }catch(e){}
+  return best;
+}
+function rankOf(xp, m){                          // m: Lernstand (Standard: bestes Profil)
+  m = m || masteryBest();
+  let i=0;
+  for(let k=1;k<RANKS.length;k++){ if(xp>=RANKS[k].x && gateOk(RANKS[k], m)) i=k; else break; }   // nur der Reihe nach
   const cur=RANKS[i], next=RANKS[i+1]||null;
   const spanne = next ? next.x-cur.x : 1;
-  return { i, name:cur.n, next:next?next.n:null, need:next?next.x-xp:0,
-           pct: next ? Math.min(100, Math.round((xp-cur.x)/spanne*100)) : 100 };
+  const xpPct = next ? Math.min(100, Math.round(Math.max(0,xp-cur.x)/spanne*100)) : 100;
+  return { i, name:cur.n, next:next?next.n:null, need:next?Math.max(0,next.x-xp):0,
+           needText: next ? gateNeed(next, m) : "",
+           pct: next ? Math.min(xpPct, gatePct(next, m)) : 100 };
+}
+function rankCheck(anchor){                      // Rang neu bestimmen – gestiegen (Punkte ODER Lernstand) → einmalig feiern
+  try{
+    const o=xpLoad(), i=rankOf(Math.max(0,+o.x||0)).i, r=+o.r||0;
+    if(i>r){ o.r=i; xpSave(o); toast(`Neuer Rang: ${RANKS[i].n} – ${RANKS[i].d}`); celebrate(anchor||$("#stage")||document.body, 2); }
+    else if(i<r){ o.r=i; xpSave(o); }           // gesunken (z. B. neue Regel): der nächste Aufstieg wird wieder gefeiert
+  }catch(e){}
 }
 function xpAdd(n, anchor){                       // Punkte gutschreiben, Rangaufstieg feiern
   n = Math.max(0, Math.round(n||0));
   if(!n) return 0;
   try{
-    const o=xpLoad(), vor=rankOf(xpTotal()).i;
-    o.x=(+o.x||0)+n;
-    const nach=rankOf(o.x).i;
-    if(nach>vor && o.r!==nach){                  // neuer Rang: einmalig feiern
-      o.r=nach; xpSave(o);
-      toast(`Neuer Rang: ${RANKS[nach].n} – ${RANKS[nach].d}`);
-      celebrate(anchor||$("#stage")||document.body, 2);
-    } else xpSave(o);
+    const o=xpLoad(); o.x=(+o.x||0)+n; xpSave(o);
+    rankCheck(anchor);
     if(sess.active) sess.xp=(sess.xp||0)+n;      // in der Sitzungsleiste mitzählen
   }catch(e){}
   return n;
@@ -647,19 +704,20 @@ function canPopover(){
   catch(e){ return false; }
 }
 function rankRowsHTML(jetzt){                     // eine Zeile je Rang: Name · ab wie vielen Punkten · was er bedeutet
-  return RANKS.map((r,i)=>`<div class="rkp-row${i===jetzt?" on":""}"><span class="r-n">${esc(r.n)}</span><span class="r-x">ab ${r.x} P.</span><span class="r-d">${esc(r.d||"")}</span></div>`).join("");
+  return RANKS.map((r,i)=>{ const gt=gateText(r);
+    return `<div class="rkp-row${i===jetzt?" on":""}"><span class="r-n">${esc(r.n)}</span><span class="r-x">ab ${r.x} P.${gt?` · ${esc(gt)}`:""}</span><span class="r-d">${esc(r.d||"")}</span></div>`; }).join("");
 }
 /* Dieselbe Laufbahn als Dialog – für Browser ohne Popover/Anchor-Positioning (der
    Rang-Knopf bleibt so nie tot; ein Tooltip ist am Handy unsichtbar). */
 function openRankModal(){
   closeInfo();
-  const jetzt=rankOf(xpTotal()).i, xp=xpTotal();
+  const xp=xpTotal(), m=masteryBest(), r=rankOf(xp, m), jetzt=r.i;
   const scrim = el("div","scrim"); scrim.id="infoScrim";
   scrim.innerHTML = `<div class="modal rankmodal" role="dialog" aria-modal="true" aria-label="Deine Laufbahn">
      <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
      <div class="modal-head">
        <div class="mh-bot fam">Deine Laufbahn</div>
-       <div class="mh-fam">${xp} Punkte · Rang: ${esc(RANKS[jetzt].n)}</div>
+       <div class="mh-fam">${xp} Punkte · ${m.fest} von ${m.n} Arten sitzen · Rang: ${esc(RANKS[jetzt].n)}${r.next?` · bis ${esc(r.next)}: ${esc([r.need?`noch ${r.need} P.`:"", r.needText].filter(Boolean).join(" und ") || "gleich geschafft")}`:""}</div>
      </div>
      <div class="rkp-list">${rankRowsHTML(jetzt)}</div>
      <div class="famfoot">${esc(RANK_HOW)}</div>
@@ -685,8 +743,10 @@ function wireRankPopover(){
     pop=el("div"); pop.id="rankPop"; pop.setAttribute("popover","auto");
     document.body.appendChild(pop);
   }
-  const jetzt=rankOf(xpTotal()).i;
-  pop.innerHTML = `<div class="rkp-h">Deine Laufbahn</div>`+rankRowsHTML(jetzt)+`<div class="rkp-f">${esc(RANK_HOW)}</div>`;
+  const m=masteryBest(), r=rankOf(xpTotal(), m), jetzt=r.i;
+  pop.innerHTML = `<div class="rkp-h">Deine Laufbahn <span class="rkp-m">${m.fest} von ${m.n} Arten sitzen</span></div>`+rankRowsHTML(jetzt)+
+    (r.next?`<div class="rkp-need">Bis ${esc(r.next)}: ${esc([r.need?`noch ${r.need} P.`:"", r.needText].filter(Boolean).join(" und ") || "gleich geschafft")}</div>`:"")+
+    `<div class="rkp-f">${esc(RANK_HOW)}</div>`;
   const zeig=()=>{ try{ pop.togglePopover(); }catch(e){} };
   chip.onclick=zeig;
   chip.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); zeig(); } };
@@ -1158,14 +1218,16 @@ function renderProgress(){
        <button class="legend-i" id="btnHow" aria-label="So wächst dein Fortschritt" title="So wächst dein Fortschritt – die fünf Stufen erklärt">${ico("info")}</button>
      </div>
      ${(()=>{ const st=streakState(), goal=streakGoal(), done=Math.min(st.n||0, goal);
+       rankCheck();                                                  // Aufstieg auch durch den Lernstand (eine Art mehr »sitzt«)
        const xp=xpTotal(), r=rankOf(xp);
+       const bis = r.next ? ` · bis ${esc(r.next)}: ${esc([r.need?`noch ${r.need} P.`:"", r.needText].filter(Boolean).join(" und ") || "gleich geschafft")}` : "";
        // EINE kompakte Chip-Zeile statt drei Textzeilen: Serie · Tagesziel · Rang · Herbarium
        return `<div class="statusrow" id="streakRow">
          <span class="chip flamechip${(st.s||0)>0?" on":""}" title="Lernserie: an so vielen Tagen in Folge hast du dein Tagesziel erreicht. Rekord: ${st.b||0} ${(st.b||0)===1?"Tag":"Tage"}.">
            <span class="sflame${(st.s||0)>0?" on":""}">${ico("flame")}<b>${st.s||0}</b></span></span>
          <span class="chip goalchip" title="Heute bearbeitete Karten – ab dem Tagesziel (${goal}) zählt der Tag für die Serie. Einstellbar unter Optionen.">
            <span class="ring" style="--p:${Math.round(done/goal*100)}"></span><span class="sr-n">${done}/${goal} heute</span></span>
-         <button class="chip rankchip" id="rankName" title="Erfahrungspunkte: freies Eingeben bringt am meisten, Ankreuzen weniger, die Karteikarte am wenigsten. ${xp} P.${r.next?` · noch ${r.need} bis ${esc(r.next)}`:""}">
+         <button class="chip rankchip" id="rankName" title="Rang aus Punkten und Lernstand – höhere Stufen brauchen Arten, die wirklich sitzen. ${xp} P.${bis}">
            ${ico("sprout")}<span class="rk-name">${esc(r.name)}</span><i class="rk-mini"><b style="width:${r.pct}%"></b></i></button>
          <button class="chip" id="btnHerb" title="Deine Themen-Sammlung: Jedes gemeisterte Thema legt eine gepresste Pflanze ins Herbarium.">${ico("leaf")}Herbarium</button>
        </div>`; })()}`;
@@ -4420,6 +4482,7 @@ function openHerbarium(){
        <div class="hc-name">${esc(t)}</div>
        <div class="hc-bar"><i style="width:${e.n?Math.round(e.fest/e.n*100):0}%"></i></div>
        <div class="hc-n">${e.fest}/${e.n} sitzt</div>
+       <button type="button" class="btn small hc-learn" data-t="${esc(t)}" title="Geführte Lektion nur mit den Arten dieses Themas">${fertig?"Wiederholen":"Thema üben"}</button>
        ${zeigOffen?`<div class="hc-open"><div class="hc-open-h">Es fehlen noch</div>
          <ul>${liste}</ul>${e.offen.length>6?`<div class="hc-more">+ ${e.offen.length-6} weitere</div>`:""}</div>`:""}
      </div>`; }).join("");
@@ -4439,9 +4502,19 @@ function openHerbarium(){
   scrim.addEventListener("click", e=>{ if(e.target===scrim) closeInfo(); });
   scrim.querySelector("#infoClose").onclick = closeInfo;
   const hh=scrim.querySelector("#herbHow"); if(hh) hh.onclick=openHowModal;
+  scrim.querySelectorAll(".hc-learn").forEach(b=>{ b.onclick=()=>learnTheme(b.dataset.t); });
   document.addEventListener("keydown", infoKey);
   infoReturnFocus = document.activeElement;
   try{ scrim.querySelector("#infoClose").focus(); }catch(e){}
+}
+/* Aus dem Herbarium direkt üben (Nutzerfrage »nur Gräser lernen?«): Lernstoff auf dieses Thema
+   stellen – dasselbe Feld wie Optionen · Lernstoff, dort bleibt es sichtbar und umstellbar –
+   und eine geführte Lektion starten. */
+function learnTheme(t){
+  const sel=$("#cat");
+  if(sel){ const v="t:"+t; sel.value = [...sel.options].some(o=>o.value===v) ? v : ""; sel.dispatchEvent(new Event("change")); }   // wie eine Wahl unter Optionen · Lernstoff
+  closeInfo();
+  startGuided();
 }
 
 /* ---------- »So wächst dein Fortschritt« als Grafik statt Textwand ----------
@@ -4866,6 +4939,7 @@ window.__setJsonp=fn=>{ jsonp = fn || ((...a)=>jsonpGet(...a)); };   // API-Antw
 window.__clearPhotoCache=()=>{ photoStore={}; photoTmp.clear(); photoSeenStore={}; photoMoreTried.clear(); try{ store.set(LS_PHOTOS,"{}"); store.set(LS_SEEN,"{}"); }catch(e){} };
 window.__getPhotoSeen=photoSeenGet; window.__setPhotoSeen=photoSeenSet;   // für Tests: zuletzt gezeigte Ansicht je Art
 window.__rememberPhoto=photoRemember;   // für Tests: »für diese Art gibt es kein Bild« (null) vormerken
+window.__masteryReset=masteryReset; window.masteryBest=masteryBest; window.masteryOf=masteryOf; window.gateNeed=gateNeed; window.rankCheck=rankCheck;
 window.photoless=photoless;
 window.stepsLeft=stepsLeft;   // für Tests: Treffer bis »sitzt«
 window.stepHTML=stepHTML;
