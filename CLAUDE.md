@@ -2351,6 +2351,38 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       weiter« = eine Auswahlfrage im Bilder-Modus, »Nochmal versuchen« lädt. Die Lightbox-
       Ketten-Assertions auf vier Adressen (mit Ausweich-Host) gehoben.
 
+- [x] **Rang = Punkte UND Lernstand + »Thema üben« im Herbarium** (zwei Rückmeldungen: »Man steigt
+      arg schnell im Level – bin schon Prachtexemplar, hab aber erst 20 fix und ein leeres Herbarium«
+      und »Kann man die Herbarium-Gruppen händisch ansteuern, z. B. nur Gräser lernen?«).
+      **(1) Ränge:** Punkte messen Fleiß, nicht Können – mit Combo-Bonus waren 2500 P. in ein paar
+      Tagen erreicht, während »sitzt« (Box 4, drei richtige Antworten über ≥ 11 Tage) bewusst langsam
+      wächst. Jede Stufe hat jetzt zusätzlich eine **Bedingung am Lernstand** (`RANKS[i].g`):
+      Sämling ≥ 10 Arten angefangen · Steckling ≥ 5 Arten sitzen · Jungpflanze ≥ 25 % · Prachtexemplar
+      ≥ 60 % · Meistergärtner/in ≥ 90 % der Arten sitzen; die Stufen kommen **nur der Reihe nach**
+      (`rankOf(xp, m)`, Schleife bricht an der ersten unerfüllten). Maßgeblich ist das **am weitesten
+      gediehene Profil** (`masteryBest()` über alle `progress.<id>`-Speicher, andere Profile einmal
+      gerechnet in `masteryCache`, `loadProgress` leert ihn) – der Rang ist global, der Lernstand je
+      Profil; Profilwechsel senkt ihn nicht. `rankCheck()` ersetzt die Vor/Nach-Logik in `xpAdd` und
+      läuft auch in `renderProgress` → ein Aufstieg **allein durch den Lernstand** (eine Art mehr
+      sitzt) wird gefeiert; sinkt der Rang (neue Regel), folgt die Feier-Marke `o.r` still nach unten,
+      damit der nächste Aufstieg wieder gefeiert wird. Anzeige: Chip-Tooltip, Popover-Zeilen (»ab
+      150 P. · 10 Arten angefangen«) und der Fallback-Dialog nennen Bedingung, Lernstand (»5 von 54
+      Arten sitzen«) und was zur nächsten Stufe fehlt (`gateNeed`: »noch 20 Arten müssen sitzen
+      (25 %)«); der Mini-Balken zeigt die bindende Größe (`min(Punkte, Lernstand)`). Hilfe-Absatz
+      angepasst. **Ehrlich:** Der Nutzer fällt damit von Prachtexemplar auf Steckling (20 sitzt von
+      304 = 6,6 %; Jungpflanze braucht 76) – gewollt, der Rang soll zeigen, was man kann.
+      **(2) Herbarium:** Jede Sammelkarte hat einen Knopf **»Thema üben«** (»Wiederholen« bei
+      gemeisterten) → `learnTheme(t)` stellt das Lernstoff-Feld `#cat` auf `t:<Thema>` (dasselbe
+      Feld wie Optionen · Lernstoff, per `change`-Ereignis – `refreshView` ist lokal in `wire()`),
+      schließt das Modal und startet die geführte Lektion. Die Wahl bleibt sichtbar in der
+      Optionen-Kopfzeile und dort umstellbar. Hilfe-Absatz »Herbarium · Thema üben« (nennt auch
+      Optionen · Lernstoff mit Thema/Familie). `tests/learn.mjs`: Rang-Kette über die sechs
+      Lernstände, Punkte binden weiter (2000 P. = Jungpflanze), Reihenfolge, `gateNeed`-Wortlaut,
+      Chip/Dialog bei »Punkte reichen, Lernstand nicht«, bestes Profil zählt, Aufstieg nur durch
+      Lernstand gefeiert, Absinken still; Herbarium-Knopf je Karte → Modal zu, Scope gesetzt,
+      geführte Lektion nur mit dem Thema, Kopfzeile nennt es. XP-Test auf die Bedingungen gehoben
+      (zehn angefangene Arten in einem Zweitprofil).
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.
