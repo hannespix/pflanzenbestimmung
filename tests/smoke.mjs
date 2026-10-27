@@ -1087,13 +1087,18 @@ async function main() {
     add("script", "https://de.wikipedia.org/w/api.php?action=query&format=json&callback=__cspProbe");
     add("script", "https://commons.wikimedia.org/w/api.php?action=query&format=json&callback=__cspProbe2");
     add("img", "https://upload.wikimedia.org/wikipedia/commons/thumb/x/y/Z.jpg/960px-Z.jpg");
+    add("img", "https://thumb.wikimedia.org/wikipedia/commons/thumb/x/y/Z.jpg/960px-Z.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail");   // neuer Thumbnail-Host (Wikimedia 2026)
+    add("img", "https://neu.wikimedia.org/x.jpg");                                             // ein künftiger Host unter wikimedia.org darf nicht brechen
     add("script", "https://example.com/fremd.js");
     add("img", "https://example.com/fremd.png");
-    setTimeout(() => resolve(viol), 500);
+    const meta = (document.querySelector('meta[http-equiv="Content-Security-Policy"]') || {}).content || "";
+    setTimeout(() => resolve({ viol, meta }), 500);
   }));
   await cp.close();
-  assert(csp.some(v => /example\.com.*script/.test(v)) && csp.some(v => /example\.com.*img/.test(v)), "CSP muss fremde Skripte/Bilder blocken: " + JSON.stringify(csp));
-  assert(!csp.some(v => /wikipedia|wikimedia/.test(v)), "CSP darf Wikipedia/Commons (JSONP + Bilder) nicht blocken: " + JSON.stringify(csp));
+  assert(csp.viol.some(v => /example\.com.*script/.test(v)) && csp.viol.some(v => /example\.com.*img/.test(v)), "CSP muss fremde Skripte/Bilder blocken: " + JSON.stringify(csp.viol));
+  assert(!csp.viol.some(v => /wikipedia|wikimedia/.test(v)), "CSP darf Wikipedia/Commons (JSONP + Bilder, auch thumb.wikimedia.org) nicht blocken: " + JSON.stringify(csp.viol));
+  assert(/img-src[^;]*https:\/\/\*\.wikimedia\.org/.test(csp.meta) && /img-src[^;]*https:\/\/\*\.wikipedia\.org/.test(csp.meta),
+    "CSP img-src muss *.wikimedia.org/*.wikipedia.org pauschal erlauben (Host-Umzug upload → thumb): " + csp.meta);
 
   // 10) Rechtliches (Audit): <main>, kein Link auf die eingestellte ODR-Plattform, keine »Startseite«,
   //     Datenschutz nennt pbw.theme, den gespeicherten Duell-Namen und WhatsApp/wa.me;
