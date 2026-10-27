@@ -324,6 +324,64 @@ async function main() {
   assert(head.toggleInHead && !head.toggleInOpts,
     "Design-Umschalter sitzt als runder Knopf im Kopf (ein Ort auf allen Seiten – Audit), nicht mehr in den Optionen: " + JSON.stringify(head));
 
+
+  // Rang-Kürzel »sect.« (Realfall Taraxacum sect. Ruderalia = Gewöhnlicher Löwenzahn, Screenshot:
+  // im Bilder-Quiz nie ein Bild). Ursache war nicht die Köhler-Tafel allein (die wird zu Recht
+  // verworfen), sondern das Kürzel: »sect.« galt als Art-Epitheton, der Suchname wurde
+  // »Taraxacum sect.«, und fileMentionsOther verwarf jede Datei der Sektions-Kategorie als
+  // »andere Art«. Jetzt: Sektion = Taxon »Taraxacum sect. Ruderalia« (Artikel + Commons-Kategorie),
+  // kein Epitheton (jede Datei der Gattung darf vertreten), Sektionsname zählt beim Ranking.
+  // Die Commons-Antwort ist die echte Dateiliste der Kategorie (Stand der Umsetzung).
+  const sektion = await page.evaluate(async () => {
+    const prev = [$("#frSelect").value, $("#nivSelect").value];
+    $("#frSelect").value = "garten_und_landschaftsbau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    const lz = allCards.find((c) => c.g === "Taraxacum" && /Ruderalia/.test(c.a));
+    const wege = photoSteps(lz).map((s) => s.k + ":" + s.q);
+    const live = ["Fly drops.jpg", "Löwenzahn IMG 5372.jpg", "Mellansjön 01.jpg", "Taraxacum sect. Ruderalia 01.JPG", "Taraxacum officinale 2.jpg",
+      "Dandelion flower 1001.jpg", "Missbildung Loewenzahn (Taraxacum officinale agg.).jpg", "Taraxacum sect R1.JPG",
+      "Puccinia taraxaci - Botanischer Garten Düsseldorf-0075.jpg", "Harilik võilill.jpg", "9 Aug 2014 Swan Family Neuer Teich 110605260.jpg", "Taraxacum sect Ruderalia02 ies.jpg"];
+    const cmPage = (i, file) => ({ index: i, title: "File:" + file, imageinfo: [{ thumburl: "https://x/" + file, mime: "image/jpeg", width: 2000, descriptionurl: "https://commons/" + file }] });
+    const cmAnswer = (files) => ({ query: { pages: Object.fromEntries(files.map((f, i) => ["p" + i, cmPage(i + 1, f)])) } });
+    const abrufe = [];
+    __clearPhotoCache(); photoTried.clear();
+    __setJsonp((url) => {
+      const q = decodeURIComponent((url.match(/(?:gsrsearch|titles)=([^&]+)/) || [])[1] || ""); abrufe.push(q);
+      if (/commons/.test(url) && /^File:/.test(q)) return Promise.resolve({ query: { pages: { "1": { title: q, imageinfo: [{ mime: "image/jpeg", extmetadata: {} }] } } } });
+      if (/commons/.test(url)) return Promise.resolve(/incategory:"Taraxacum sect\. Ruderalia"/.test(q) ? cmAnswer(live) : { query: { pages: {} } });
+      if (q === "Taraxacum sect. Ruderalia") return Promise.resolve({ query: { pages: { "1": { title: "Gewöhnlicher Löwenzahn",
+        extract: "Der Gewöhnliche Löwenzahn (Taraxacum sect. Ruderalia; früher Taraxacum officinale L.) stellt eine Gruppe sehr ähnlicher Pflanzenarten in der Gattung Löwenzahn (Taraxacum) dar.",
+        pageimage: "Taraxacum_officinale_-_Köhler–s_Medizinal-Pflanzen-135.jpg", thumbnail: { source: "https://x/koehler.jpg" } } } } });
+      return Promise.resolve({ query: { pages: { "-1": { title: q, missing: "" } } } });
+    });
+    const hit = await wikiPhoto(lz);
+    __setJsonp(window.__offlineJsonp); __clearPhotoCache(); photoTried.clear();
+    const out = { wege, abrufe, file: hit && hit.file, src: hit && hit.src, gal: (hit && hit.gal) || [],
+      epi: binomEpithet("sect. Ruderalia"), such: searchName(lz), taxon: taxonName(lz), typo: taxonName({ g: "Taraxacum", a: "sec. Ruderalia" }),
+      rubus: photoSteps({ g: "Rubus", a: "sect. Rubus (fruticosus)", de: "Echte Brombeere" }).map((s) => s.k + ":" + s.q),
+      hybrid: photoSteps({ g: "Syringa", a: "x chinensis", de: "Chinesischer Flieder" }).map((s) => s.k + ":" + s.q),
+      andere: fileMentionsOther("Taraxacum officinale 2.jpg", lz), eigene: fileMentionsOther("Taraxacum sect. Ruderalia 01.JPG", lz),
+      koehler: looksIllustration("Taraxacum_officinale_-_Köhler–s_Medizinal-Pflanzen-135.jpg"),
+      missbildung: looksDamage("Missbildung Loewenzahn (Taraxacum officinale agg.).jpg"),
+      leyland: pageFitsCard({ title: "Leyland-Zypresse", extract: "Die Leyland-Zypresse (× Hesperotropsis leylandii) ist ein Nadelgehölz." }, { g: "×Hesperotropsis", a: "leylandii" }),
+      epis: ["vulgaris, A. Cultivars", "× pendulina nothof. tristis", "vinifera supsp. vinvifera", "Cultivars", "- Hybriden", "x chinensis"].map(binomEpithet),
+      gruppe: [pureGroupName("Cultivars"), pureGroupName("sect. Ruderalia"), pureGroupName("vulgaris Conditiva-Grp.")] };
+    $("#frSelect").value = prev[0]; $("#nivSelect").value = prev[1]; applyProfile();   // Profil der folgenden Tests wiederherstellen
+    return out;
+  });
+  assert(sektion.epi === "" && sektion.such === "Taraxacum" && sektion.taxon === "Taraxacum sect. Ruderalia" && sektion.typo === "Taraxacum sect. Ruderalia",
+    "»sect.« ist ein Rang-Kürzel, kein Epitheton: Suchname = Gattung (Deep-Links), Taxon = »Taraxacum sect. Ruderalia« (auch beim Quell-Tippfehler »sec.«): " + JSON.stringify(sektion));
+  assert(JSON.stringify(sektion.wege) === JSON.stringify(["wp:Taraxacum sect. Ruderalia", 'cm:incategory:"Taraxacum sect. Ruderalia"', "wp:Wiesen-Löwenzähne", "cm:Taraxacum sect. Ruderalia"]),
+    "Suchwege der Sektion: Artikel + Commons-Kategorie des Taxons, deutscher Name, Volltext – NICHT die Gattung allein: " + JSON.stringify(sektion.wege));
+  assert(sektion.file === "Taraxacum sect. Ruderalia 01.JPG" && sektion.src === "cm" && sektion.abrufe.length === 2 && sektion.gal.length >= 4,
+    "Löwenzahn bekommt ein Foto aus der Sektions-Kategorie (Köhler-Tafel verworfen, Sektionsname gewinnt das Ranking, Rost-/Missbildungs-Fotos raus): " + JSON.stringify({ file: sektion.file, src: sektion.src, abrufe: sektion.abrufe, gal: sektion.gal.length }));
+  assert(!sektion.andere && !sektion.eigene && sektion.koehler && sektion.missbildung && sektion.leyland,
+    "Filter: Dateien der Gattung gelten bei Sektionen nicht als »andere Art«, Köhler = Tafel, Missbildung = Schadbild, Hybridgattung ohne × im Artikel passt: " + JSON.stringify(sektion));
+  assert(JSON.stringify(sektion.rubus) === JSON.stringify(["wp:Rubus sect. Rubus", 'cm:incategory:"Rubus sect. Rubus"', "wp:Rubus fruticosus", "wp:Echte Brombeere", "cm:Rubus sect. Rubus"]) &&
+    JSON.stringify(sektion.hybrid) === JSON.stringify(["wp:Syringa × chinensis", "wp:Syringa chinensis", 'cm:incategory:"Syringa × chinensis"', "wp:Chinesischer Flieder", "cm:Syringa × chinensis"]),
+    "Brombeere (Klammer-Epitheton) und Hybride (× für Artikel/Kategorie, Binom als Zweitweg): " + JSON.stringify({ rubus: sektion.rubus, hybrid: sektion.hybrid }));
+  assert(JSON.stringify(sektion.epis) === JSON.stringify(["vulgaris", "pendulina", "vinifera", "", "", "chinensis"]) && JSON.stringify(sektion.gruppe) === JSON.stringify([true, false, false]),
+    "binomEpithet: Komma/Rang-Kürzel/Tippfehler/Gruppenwort/Hybrid-x; Sektion ist kein Sammel-Eintrag: " + JSON.stringify({ epis: sektion.epis, gruppe: sektion.gruppe }));
+
   // Bilder-Quiz: Buchdeckel/Titelseiten/Scans digitalisierter Werke werden verworfen
   // (Praxisfall: Buchdeckel statt Majoran-Foto); Herbarbelege gelten als Tafel.
   // Deutsche Pflanzennamen mit »buch« im Wort (Buche, Buchsbaum) bleiben erlaubt.
@@ -1719,6 +1777,78 @@ async function main() {
   assert(sortenInfo.art.note === "" && sortenInfo.art.img === sortenInfo.ART && sortenInfo.platz.note === "" && sortenInfo.unterart.note === "",
     "Info-Karte: reine Art, Platzhalter 'Sorte' und passende Unterart bekommen keinen Hinweis: " + JSON.stringify({ art: sortenInfo.art, platz: sortenInfo.platz, unterart: sortenInfo.unterart }));
 
+  // Gattungs-Notnagel: Für »Syringa x chinensis · Chinesischer Flieder« gibt es keinen Artikel
+  // (weder Hybride – in beiden Schreibweisen – noch Binom noch deutscher Name). Statt der
+  // Sackgasse »nicht gefunden« erscheint der Artikel zur GATTUNG (»Syringa« → »Flieder«),
+  // deutlich gekennzeichnet; ein Foto DIESER Art aus der Quiz-Bildsuche ersetzt das
+  // Gattungsbild. Eine Begriffsklärung als »Gattungsartikel« wird abgelehnt (ehrlich: nicht gefunden).
+  const gattung = await page.evaluate(async () => {
+    const px = (t) => "data:image/svg+xml," + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><title>" + t + "</title></svg>");
+    const GATT = px("gattung"), ART = px("art");
+    const wp = (title, extract, thumb, props) => ({ query: { pages: { "1": Object.assign({ title, extract, thumbnail: { source: thumb } }, props || {}) } } });
+    const missing = { query: { pages: { "-1": { title: "x", missing: "" } } } };
+    let titles = [];
+    const flieder = wp("Flieder", "Flieder (Syringa) ist eine Pflanzengattung aus der Familie der Ölbaumgewächse (Oleaceae). Sie umfasst etwa 20 bis 25 Arten.", GATT);
+    __setJsonp((url) => {
+      if (/generator=images/.test(url)) return Promise.resolve({ query: { pages: {} } });
+      const t = decodeURIComponent((url.match(/titles=([^&]+)/) || [])[1] || "");
+      titles.push(t);
+      if (t === "Syringa" || t === "Flieder") return Promise.resolve(flieder);
+      if (t === "Abies") return Promise.resolve(wp("Abies", "Abies steht für: Tannen, eine Pflanzengattung; Abies (Ort), ein Dorf", GATT, { pageprops: { disambiguation: "" } }));
+      return Promise.resolve(missing);
+    });
+    const laden = async (c) => {
+      wikiCache.delete(c.key); openInfo(c); document.querySelector("#wpLoad").click();
+      for (let i = 0; i < 80 && !document.querySelector("#wpHost .wp-text, #wpHost .wp-note"); i++) await new Promise((r) => setTimeout(r, 25));
+      const h = document.querySelector("#wpHost"), img = h.querySelector("img");
+      const r = { note: (h.querySelector(".wp-taxon") || {}).textContent || "", img: img ? img.getAttribute("src") : null, alt: img ? img.getAttribute("alt") : null,
+        src: (h.querySelector(".wp-src") || {}).textContent || "", text: (h.querySelector(".wp-text") || {}).textContent || "",
+        none: (h.querySelector(".wp-note") || {}).textContent || "", btn: !!document.querySelector("#wpLoad") };
+      closeInfo(); return r;
+    };
+    const prev = [$("#frSelect").value, $("#nivSelect").value];
+    $("#frSelect").value = "garten_und_landschaftsbau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    const syr = allCards.find((c) => c.g === "Syringa" && /chinensis/.test(c.a));
+    const abies = allCards.find((c) => c.g === "Abies" && /koreana/.test(c.a));
+    __clearPhotoCache(); photoTried.clear(); __setPhotoSource(() => Promise.resolve(null));
+    const ohne = await laden(syr); const reihe = titles.slice();
+    titles = []; __clearPhotoCache(); photoTried.clear();
+    __setPhotoSource(() => Promise.resolve({ thumb: ART, gal: [ART], src: "cm", file: "Syringa × chinensis 01.jpg",
+      url: "https://commons.wikimedia.org/wiki/File:Syringa_×_chinensis_01.jpg", artist: "Test", license: "CC BY-SA 4.0", title: "T" }));
+    const mitFoto = await laden(syr);
+    titles = []; __setPhotoSource(() => Promise.resolve(null));
+    const bkl = await laden(abies);                   // Gattung »Abies« hier als Begriffsklärung → ehrlich »nicht gefunden«
+    const bklReihe = titles.slice();
+    __setPhotoSource(null); __setJsonp(window.__offlineJsonp); __clearPhotoCache(); photoTried.clear();
+    $("#frSelect").value = prev[0]; $("#nivSelect").value = prev[1]; applyProfile();   // Profil der folgenden Tests wiederherstellen
+    const pg = (title, extract, props) => Object.assign({ title, extract }, props || {});
+    const c = { g: "Syringa", a: "x chinensis", de: "Chinesischer Flieder" };
+    return { ohne, reihe, mitFoto, bkl, bklReihe, GATT, ART, cands: wikiCandidates(syr), gcands: wikiGenusCandidates(syr),
+      ok: {
+        flieder: genusArticleOk(pg("Flieder", "Flieder (Syringa) ist eine Pflanzengattung aus der Familie der Ölbaumgewächse (Oleaceae)."), c),
+        weigela: genusArticleOk(pg("Weigelien", "Die Pflanzengattung Weigelien (Weigela, Syn.: Weigelia) gehört heute zur Unterfamilie Diervilloideae."), { g: "Weigela", a: "florida" }),
+        loewenzahn: genusArticleOk(pg("Löwenzahn (Taraxacum)", "Löwenzahn (Taraxacum) ist eine Pflanzengattung innerhalb der Familie der Korbblütler (Asteraceae)."), { g: "Taraxacum", a: "sect. Ruderalia" }),
+        iris: genusArticleOk(pg("Iris", "Iris steht für: Iris (Vorname), weiblicher Vorname Schwertlilien (Iris), eine Pflanzengattung", { pageprops: { disambiguation: "" } }), { g: "Iris", a: "sibirica" }),
+        rose: genusArticleOk(pg("Rose", "Rose steht für: Rosen, Pflanzenarten aus der Gattung Rosa"), { g: "Rosa", a: "canina" }),
+        beta: genusArticleOk(pg("Beta", "Beta (Aussprache ['be:ta], griechisches Neutrum Βῆτα, Majuskel Β, Minuskel β) ist der zweite Buchstabe des griechischen Alphabets."), { g: "Beta", a: "vulgaris" }),
+        artikelArt: genusArticleOk(pg("Gewöhnliche Rosskastanie", "Die Gewöhnliche Rosskastanie (Aesculus hippocastanum), auch Gemeine Rosskastanie genannt, ist eine Pflanzenart aus der Gattung der Rosskastanien (Aesculus)."), { g: "Aesculus", a: "x carnea" }),
+        fremd: genusArticleOk(pg("Hartriegel", "Hartriegel (Cornus) ist eine Pflanzengattung innerhalb der Familie der Hartriegelgewächse."), c),
+      } };
+  });
+  assert(/Kein eigener Wikipedia-Artikel/.test(gattung.ohne.note) && /Gattung/.test(gattung.ohne.note) && /Syringa/.test(gattung.ohne.note) && /Flieder/.test(gattung.ohne.note) &&
+    /beschreiben die Gattung/.test(gattung.ohne.note) && gattung.ohne.img === gattung.GATT && /Flieder \(Syringa\) ist eine Pflanzengattung/.test(gattung.ohne.text) && /Wikipedia – Flieder/.test(gattung.ohne.src),
+    "Info-Karte: ohne eigenen Artikel erscheint der Gattungsartikel (Flieder) mit deutlichem Hinweis und Gattungsbild: " + JSON.stringify(gattung.ohne));
+  assert(JSON.stringify(gattung.reihe) === JSON.stringify(["Syringa x chinensis", "Syringa × chinensis", "Syringa chinensis", "Chinesischer Flieder", "Syringa"]),
+    "Kandidaten-Reihenfolge: voller Name → Hybrid-Zeichen × → Binom → deutscher Name → erst dann die Gattung: " + JSON.stringify(gattung.reihe));
+  assert(gattung.mitFoto.img === gattung.ART && /zeigt diese Art/.test(gattung.mitFoto.note) && /Wikimedia Commons/.test(gattung.mitFoto.src) && gattung.mitFoto.alt === "Bild der Art",
+    "Info-Karte: gibt es ein Foto DIESER Art aus der Bildsuche, ersetzt es das Gattungsbild (mit Nachweis): " + JSON.stringify(gattung.mitFoto));
+  assert(gattung.bkl.note === "" && /auch nicht zur Gattung/.test(gattung.bkl.none) && gattung.bkl.btn === false && gattung.bklReihe.includes("Abies") && gattung.bklReihe.includes("Tanne"),
+    "Begriffsklärung ist kein Gattungsartikel → ehrlich »nicht gefunden – auch nicht zur Gattung« (Grundwort »Tanne« wurde noch probiert): " + JSON.stringify({ bkl: gattung.bkl, reihe: gattung.bklReihe }));
+  assert(JSON.stringify(gattung.gcands) === JSON.stringify(["Syringa", "Flieder"]) && !gattung.cands.some((t) => /^syringa$/i.test(t)),
+    "Gattungs-Kandidatinnen (lateinische Gattung + deutsches Grundwort) stehen getrennt von der Hauptliste: " + JSON.stringify({ cands: gattung.cands, gcands: gattung.gcands }));
+  assert(gattung.ok.flieder && gattung.ok.weigela && gattung.ok.loewenzahn && !gattung.ok.iris && !gattung.ok.rose && !gattung.ok.beta && !gattung.ok.artikelArt && !gattung.ok.fremd,
+    "genusArticleOk: echte Gattungsartikel ja; Begriffsklärung (pageprops/»steht für«), Fremdartikel (Beta), Artartikel (Rosskastanie), falsche Gattung nein: " + JSON.stringify(gattung.ok));
+
   // Bild-Lightbox: das Quiz-Foto ist klick- UND tastaturbedienbar (role=button) und
   // öffnet die Großansicht (größeres Commons-Derivat); Esc schließt, Fokus kehrt zurück.
   const lightbox = await page.evaluate(async () => {
@@ -2414,6 +2544,7 @@ async function main() {
       dillBinomLetzter: low(dc)[dc.length - 1] === "anethum graveolens",
       raps0: wikiCandidates(raps)[0].toLowerCase(),
       autoHasBinom: low(wikiCandidates(auto)).includes("cornus kousa"),
+      steckGenus: wikiGenusCandidates(steck), grpGenus: wikiGenusCandidates({ g: "Solidago", a: "Cultivars", de: "Goldruten - Arten" }),
     };
   });
   assert(wikiCand.steck.includes("Steckrübe") && wikiCand.steckDeVorBinom && wikiCand.steckBinomLetzter,
@@ -2426,6 +2557,8 @@ async function main() {
     "Reine Art: das Binom bleibt erster Kandidat: " + wikiCand.raps0);
   assert(wikiCand.autoHasBinom,
     "Autonym (subsp. = Art): das Binom bleibt Kandidat (dieselbe Pflanze): " + JSON.stringify(wikiCand));
+  assert(JSON.stringify(wikiCand.steckGenus) === JSON.stringify(["Brassica", "Rübe"]) && wikiCand.grpGenus.length === 0,
+    "Gattungs-Notnagel: Steckrübe → erst nach der Elternart Gattung + Grundwort; Sammel-Eintrag führt die Gattung schon in der Hauptliste: " + JSON.stringify({ steck: wikiCand.steckGenus, grp: wikiCand.grpGenus }));
 
   // Deutsche Namen: die Listen führen drei Muster – alle müssen als richtig zählen,
   // ohne dass ein blankes Adjektiv durchgeht (Profil: Gemüsebau/Gärtner)

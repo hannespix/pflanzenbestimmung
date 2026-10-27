@@ -712,6 +712,47 @@ async function main() {
   });
   assert(taxon.ok && /Artikel zur Art Solanum lycopersicum/.test(taxon.note) && /Varietät »var\. cerasiforme«/.test(taxon.note) && taxon.img && /Tomate/.test(taxon.text),
     "Prüfungswerkzeug-Info-Karte: Varietät mit Art-Artikel muss den Hinweis tragen (Bild bleibt): " + JSON.stringify(taxon));
+
+  // Gattungs-Notnagel (wie im Lern-Tool): »Syringa x chinensis« hat keinen Artikel – weder als
+  // Hybride (x/×) noch als Binom noch unter »Chinesischer Flieder«. Statt der Sackgasse zeigt
+  // die Karte den Artikel zur Gattung (»Syringa« → »Flieder«), deutlich gekennzeichnet.
+  await page.select("#frSelect", "garten_und_landschaftsbau"); await page.select("#nivSelect", "gaertner");
+  await page.$eval("#nivSelect", (e) => e.dispatchEvent(new Event("change")));
+  await page.waitForFunction("[...document.querySelectorAll('#list .row')].some((r) => /Syringa/.test(r.textContent) && /chinensis/.test(r.textContent))", { timeout: 10000 });
+  const gatt = await page.evaluate(async () => {
+    const PX = "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==";
+    const wp = (title, extract, props) => ({ query: { pages: { "1": Object.assign({ title, extract, thumbnail: { source: PX } }, props || {}) } } });
+    const titles = [];
+    window.__setJsonp((url) => {
+      if (/generator=images/.test(url)) return Promise.resolve({ query: { pages: {} } });
+      const t = decodeURIComponent((url.match(/titles=([^&]+)/) || [])[1] || ""); titles.push(t);
+      if (t === "Syringa" || t === "Flieder") return Promise.resolve(wp("Flieder", "Flieder (Syringa) ist eine Pflanzengattung aus der Familie der Ölbaumgewächse (Oleaceae)."));
+      return Promise.resolve({ query: { pages: { "-1": { title: t, missing: "" } } } });
+    });
+    const row = [...document.querySelectorAll("#list .row")].find((r) => /Syringa/.test(r.textContent) && /chinensis/.test(r.textContent));
+    const btn = row && [...row.querySelectorAll(".rowacts .iconbtn")].find((b) => /Mehr zur Pflanze/.test(b.title));
+    if (!btn) return { ok: false };
+    btn.click();
+    document.querySelector(".infoscrim #wpLoad").click();
+    for (let i = 0; i < 80 && !document.querySelector(".infoscrim .wphost .wp-text, .infoscrim .wphost .wp-note"); i++) await new Promise((r) => setTimeout(r, 25));
+    const h = document.querySelector(".infoscrim .wphost");
+    const res = { ok: true, note: (h.querySelector(".wp-taxon") || {}).textContent || "", img: !!h.querySelector("img"),
+      text: (h.querySelector(".wp-text") || {}).textContent || "", reihe: titles.slice(),
+      bkl: genusArticleOk({ title: "Iris", extract: "Iris steht für: Schwertlilien (Iris), eine Pflanzengattung", pageprops: { disambiguation: "" } }, { g: "Iris", a: "sibirica" }),
+      cands: wikiCandidates({ g: "Syringa", a: "x chinensis", de: "Chinesischer Flieder" }),
+      gcands: wikiGenusCandidates({ g: "Syringa", a: "x chinensis", de: "Chinesischer Flieder" }),
+      taxon: taxonName({ g: "Taraxacum", a: "sect. Ruderalia" }), epi: binomEpithet("sect. Ruderalia"), epi2: binomEpithet("vulgaris, A. Cultivars") };
+    const x = document.querySelector(".infoscrim .infobox-x"); if (x) x.click();
+    window.__setJsonp(null);
+    return res;
+  });
+  assert(gatt.ok && /Kein eigener Wikipedia-Artikel/.test(gatt.note) && /Gattung/.test(gatt.note) && /Flieder/.test(gatt.note) && gatt.img && /Flieder \(Syringa\)/.test(gatt.text),
+    "Prüfungswerkzeug-Info-Karte: ohne eigenen Artikel erscheint der Gattungsartikel mit Hinweis (Bild = Gattung): " + JSON.stringify(gatt));
+  assert(JSON.stringify(gatt.reihe) === JSON.stringify(["Syringa x chinensis", "Syringa × chinensis", "Syringa chinensis", "Chinesischer Flieder", "Syringa"]) &&
+    JSON.stringify(gatt.gcands) === JSON.stringify(["Syringa", "Flieder"]) && !gatt.cands.some((t) => /^syringa$/i.test(t)) && gatt.bkl === false,
+    "Kandidaten-Reihenfolge (Hybrid-Zeichen ×, Gattung zuletzt, Begriffsklärung abgelehnt): " + JSON.stringify({ reihe: gatt.reihe, cands: gatt.cands, gcands: gatt.gcands, bkl: gatt.bkl }));
+  assert(gatt.taxon === "Taraxacum sect. Ruderalia" && gatt.epi === "" && gatt.epi2 === "vulgaris",
+    "Rang-Kürzel »sect.« ist kein Epitheton (Deep-Links auf die Gattung), Komma wird gestrichen: " + JSON.stringify({ taxon: gatt.taxon, epi: gatt.epi, epi2: gatt.epi2 }));
   await page.select("#frSelect", prevProfile[0]); await page.select("#nivSelect", prevProfile[1]);
   await page.$eval("#nivSelect", (e) => e.dispatchEvent(new Event("change")));
   await page.waitForFunction("document.querySelectorAll('#list .row').length>0", { timeout: 10000 });
