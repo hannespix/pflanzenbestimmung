@@ -2204,6 +2204,41 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       `hover:none`), `tests/learn.mjs` (Hilfe-Dialog: Fokus/Esc/×/Klappen/»vier Schritten«,
       Listenmodus ohne Sitzungs-Klappen, Kontraste hell + dunkel – nach der Tab-Transition gemessen).
 
+- [x] **Audit-Paket 3 (Barrierefreiheit, Texte, Rechtliches): Funde 19–23, 29–32.**
+      **Prüfungswerkzeug:** **(19)** jedes Formularfeld hat einen zugänglichen Namen – `#q` mit
+      `aria-label`, `label[for]` für Notenrechner (`gPts`/`gMax`), Schema-Anzahl (`scAnzahl`) und
+      den ganzen Bearbeiten-Dialog (`fGattung` … `fBem`, `fZp`), die fünf Notengrenzen (`.gedge`)
+      bekommen in `renderGrader` ein `aria-label` (»Note N: Untergrenze in Prozent«). **(23)**
+      Dialog-Kopf/-Fuß sind `div.mhead`/`div.mfoot` statt `<header>`/`<footer>` (sonst doppelte
+      banner-/contentinfo-Landmarken), die Hilfe nutzt `h3` statt `h4` (Sprung h2→h4), Suche,
+      Ziehen-Leiste, »Aktuelle Prüfung« und Liste liegen in **einem** `<main>` (`#list` ist jetzt
+      ein `div`). **(31)** Hilfe-Schritt 2 beschreibt die immer sichtbare Suche; die Rücksetz-Rückfrage
+      der Einstellungen nennt »Regierungspräsidien Baden-Württemberg« (= Standard).
+      **Lern-Tool:** **(20)** Toast ist Live-Region (`role=status`, `aria-live=polite`); Listenzeilen
+      sind `<li><button class="sprow">` statt `li[role=button]` (ungültige Rolle, Liste ohne
+      Listeneinträge) – Enter/Leertaste nativ, kein eigener `keydown` mehr, Innen-Elemente sind
+      `span` (Phrasing-Content im Button). **(21)** `cardKeys`: nur die Karte selbst (und die
+      Bewertungs-Knöpfe) gehören zur Tastatursteuerung – Enter/Leertaste auf »beenden« o. ä.
+      dreht nicht mehr um; hinter offenem Dialog (`.scrim`, Lightbox) bewerten die Ziffern nicht;
+      `stageFull()` setzt alles außerhalb der Bühne (`.wrap`-Kinder außer `#stage`) **inert**
+      (Tab wanderte in verdeckte Elemente). **(22)** Touch-Ziele ≥44 px in der Touch-Media-Query:
+      ℹ an der Legende (`.legend-i`), Status-Chips, Profil-Selects, `.linklike`, Quellen-Links
+      (Innenabstand mit negativem Außenabstand), `.cathead-i`. **(23)** `#stage` ist ein `div`,
+      `<main>` umschließt Setup, Fortschritt, Suche und Bühne (`main{margin-top}` → `#stage`);
+      Modus-Tabs tragen `aria-pressed` (zentral `syncModeTabs()`); Steckbrief-/Sorten-Modal mit
+      `h3` statt `h4`. **(32)** ⏱ (U+23F1, auf Handys buntes Emoji) ersetzt durch `ico("clock")`
+      in Sitzungsleiste (`#sclockT` für den Tick) und Duell-Vergleich; Hilfe ohne Glyphe; der
+      Emoji-Test deckt U+2300–23FF mit ab. **(31)** Hilfe: »Optionen · Lernstoff«, Lernduell
+      auch nach der geführten Lektion, der entfallene »Duell-Quiz«-Knopf ist raus.
+      **Rechtliches:** **(29)** ODR-Absatz gestrichen (Plattform seit 20.07.2025 eingestellt), der
+      § 36 VSBG-Hinweis bleibt; »Startseite« entfernt. **(30)** Datenschutz nennt `pbw.theme`,
+      `pflanzenlernen.name` (nur im selbst verschickten Duell-Link) und den WhatsApp-Knopf
+      (`wa.me`, Meta). **(23)** Inhalt in `<main>`; **(22)** Design-Knopf 44 px, »← zurück« 44 px.
+      Tests: `tests/smoke.mjs` 9d (benannte Felder inkl. `.gedge`, keine header/footer in Dialogen,
+      h3, ein `<main>`) + 10 (Rechtliches: `<main>`, kein ODR, keine Startseite, Datenschutz,
+      Touch-Ziele), `tests/learn.mjs` (Live-Region, `li>button`-Zeilen, `aria-pressed`, beenden
+      dreht nicht um, Dialog blockt Ziffern, inert an/aus, Touch-Ziele, keine ⏱-Glyphe, Hilfe aktuell).
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.

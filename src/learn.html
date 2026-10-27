@@ -170,8 +170,8 @@ input,select{font-family:inherit; color:inherit}
 .duel-row span:first-child{flex:1; text-align:left; font-weight:600; color:var(--green-deep)}
 .duel-pct{font-family:var(--mono); font-size:16px; font-weight:600}
 .duel-raw{font-family:var(--mono); font-size:12px; color:var(--ink-faint); min-width:44px; text-align:right}
-.duel-time{font-family:var(--mono); font-size:12px; color:var(--sepia); min-width:46px; text-align:right}
-.duel-time::before{content:"⏱ "; opacity:.7}
+.duel-time{font-family:var(--mono); font-size:12px; color:var(--sepia); min-width:46px; display:inline-flex; align-items:center; justify-content:flex-end; gap:4px}
+.duel-time .ic{width:12px; height:12px; opacity:.7}   /* Strich-Icon statt der Uhr-Glyphe U+23F1 (Handys rendern sie als buntes Emoji – Audit) */
 .duel-verdict{margin:0; padding:10px 14px; text-align:center; background:var(--green-tint); font-size:14.5px}
 .duel-win{color:var(--green-deep)} .duel-lose{color:var(--madder)}
 
@@ -420,7 +420,7 @@ button.chip:hover{background:var(--green-tint); border-color:var(--green); color
   border:1px dashed var(--rule-strong); border-radius:8px; padding:6px 10px; margin:0 auto 10px; max-width:520px}
 
 /* Lernbühne */
-main{margin-top:18px}
+#stage{margin-top:18px}
 .stage-empty{text-align:center; padding:48px 24px; border:1.5px dashed var(--rule-strong); border-radius:6px; background:var(--surface); color:var(--ink-soft)}
 .stage-empty svg{width:46px; height:46px; color:var(--green); opacity:.7}
 .stage-empty h2{font-family:var(--serif); color:var(--ink); font-size:20px; margin:12px 0 6px}
@@ -429,7 +429,8 @@ main{margin-top:18px}
 .sessionbar .sbar i{display:block; height:100%; background:var(--green); transition:width .2s}
 .sessionbar .spts{color:var(--green-deep); font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap}
 .sessionbar .sclock{color:var(--sepia); font-variant-numeric:tabular-nums; white-space:nowrap}
-.sessionbar .sclock::before{content:"⏱ "; opacity:.7}
+.sessionbar .sclock{display:inline-flex; align-items:center; gap:4px}
+.sessionbar .sclock .ic{width:13px; height:13px; opacity:.7}
 
 /* Karteikarte */
 .card{border:1px solid var(--rule-strong); border-radius:8px; background:var(--surface); box-shadow:0 2px 10px var(--shadow); min-height:230px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:34px 26px; text-align:center; cursor:pointer; position:relative}
@@ -578,13 +579,15 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .cathead-i:hover{background:var(--card); border-color:var(--green); transform:scale(1.08)}
 .mh-bot.fam{font-style:normal}
 .fambody{display:flex; flex-direction:column; gap:14px}
-.fam-sec h4{font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); margin:0 0 5px}
+.fam-sec h3{font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); margin:0 0 5px}
 .fam-sec p{font-size:14.5px; line-height:1.6; color:var(--ink); margin:0}
 .fam-sec .fam-none{font-style:italic; color:var(--ink-soft)}
 .famfoot{margin-top:14px; padding-top:12px; border-top:1px solid var(--rule); font-size:12.5px; line-height:1.5; color:var(--ink-soft)}
 .catn{font-family:var(--mono); font-size:11px; font-weight:400; color:var(--sepia); background:var(--surface-2); border:1px solid var(--rule); border-radius:10px; padding:1px 8px}
 .splist{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr 1fr; gap:8px}
-.sprow{min-width:0; overflow:hidden; border:1px solid var(--rule-strong); background:var(--surface); border-radius:6px; padding:10px 12px; cursor:pointer; transition:background .12s,border-color .12s,transform .04s}
+.splist>li{min-width:0; list-style:none}
+/* Zeile = echter <button> im <li> (vorher li[role=button] – ungültige Rolle, Liste ohne Listeneinträge; Audit) */
+.sprow{display:block; width:100%; text-align:left; font:inherit; color:inherit; appearance:none; -webkit-appearance:none; min-width:0; overflow:hidden; border:1px solid var(--rule-strong); background:var(--surface); border-radius:6px; padding:10px 12px; cursor:pointer; transition:background .12s,border-color .12s,transform .04s}
 .sprow:hover{background:var(--card); border-color:var(--green)}
 .sprow:active{transform:translateY(1px)}
 .sprow:focus-visible{outline:2px solid var(--madder); outline-offset:2px}
@@ -594,7 +597,7 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .zpnote{display:flex; align-items:center; gap:6px; margin:-6px 2px 14px; font-size:12px; color:var(--ink-soft)}
 .zpnote .sp-zp{font-size:9px}
 .sp-go{font-size:14px; color:var(--green); flex:none}
-.sp-sub{font-size:12.5px; color:var(--ink-soft); margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.sp-sub{display:block; font-size:12.5px; color:var(--ink-soft); margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .sp-fam{color:var(--sepia)}
 
 /* Info-Modal (Quellen-Deeplinks offline + optionale Online-Infos) */
@@ -624,7 +627,7 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .etym-note{padding:2px 15px 11px; font-size:11px; color:var(--ink-soft); font-style:italic}
 /* Platzhalter »'Sorte'« in der Info-Karte: Erklärung + Beispiel-Sorten */
 .sorten{margin:0 0 14px; padding:9px 13px 8px; border:1px solid var(--rule); border-left:3px solid var(--gold); border-radius:10px; background:var(--surface-2); font-size:13px; line-height:1.5; color:var(--ink)}
-.sorten h4{margin:0 0 4px; font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); display:flex; align-items:center; gap:5px}
+.sorten h3{margin:0 0 4px; font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); display:flex; align-items:center; gap:5px}
 .sorten .sorten-ic{width:14px; height:14px; flex:none}
 .sorten p{margin:4px 0}
 .sorten-bsp{font-family:var(--serif); font-size:14px}
@@ -703,7 +706,7 @@ body{line-height:1.5}
 .wrap{padding:38px 22px 100px}
 .masthead{padding:24px 26px; box-shadow:0 1px 2px var(--shadow), 0 18px 40px -34px rgba(34,53,43,.55)}
 .setup{padding:18px 20px; gap:16px}
-main{margin-top:22px}
+#stage{margin-top:22px}
 .progress{padding:14px 18px}
 .btn{transition:background .15s, border-color .15s, box-shadow .15s, transform .06s}
 .btn.primary:hover{box-shadow:0 8px 20px -10px var(--green-deep)}
@@ -1003,6 +1006,14 @@ body.stagefull #stage>.sessionbar{
    größerem Abstand; am Desktop bleibt die kompakte Optik unverändert. */
 @media (hover:none),(pointer:coarse),(max-width:640px){
   .btn,.modes button,.modal-x{min-height:44px}
+  /* Audit: ℹ an der Fortschritts-Legende (19 px), Rang-/Herbarium-Chips (32 px), Profil-Selects (36 px),
+     der Link im Herbarium und die Quellen-Links waren zu kleine Tippziele */
+  .legend-i{min-width:44px; min-height:44px; padding:0; margin:-12px -6px; display:inline-flex; align-items:center; justify-content:center}
+  .chip,button.chip{min-height:44px}
+  .pfield select{min-height:44px}
+  .linklike{min-height:44px; display:inline-flex; align-items:center}
+  .wp-src a,.mh-src a,.listsrc a,.famfoot a{display:inline-block; padding:12px 2px; margin:-12px 0}
+  .cathead-i{min-width:44px; min-height:44px}
   .helplink{min-height:44px; padding:8px 12px}
   .profchip{min-height:44px}
   .introlink{min-height:44px; display:inline-flex; align-items:center; padding:8px 4px}
@@ -1234,6 +1245,7 @@ body.stagefull #stage>.sessionbar{
 
   <div class="duelbanner" id="duelBanner" hidden></div>
 
+  <main>
   <div class="setup">
     <!-- Ein-Knopf-Start: »Weiter lernen« startet eine GEFÜHRTE Sitzung (Übungsform je
          Karte nach Lernstand). Alles Weitere – Modi einzeln + Feineinstellungen – steckt
@@ -1478,14 +1490,14 @@ body.stagefull #stage>.sessionbar{
         35 Tage je Stufe. Genau diese Pausen sorgen dafür, dass die Namen dauerhaft hängenbleiben. Am
         ersten Tag ist „sitzt" deshalb noch nicht zu erwarten; dass Pflanzen von <i>neu</i> zu
         <i>am Lernen</i> wandern, ist bereits der Fortschritt. Wer schneller wiederholen will, grenzt den
-        Lernstoff unter <b>Optionen · Auswahl</b> auf ein Thema ein.</li>
+        Lernstoff unter <b>Optionen · Lernstoff</b> auf ein Thema ein.</li>
       <li><b>ℹ Mehr zur Pflanze</b> öffnet Quellen-Links (Wikipedia, NaturaDB u. a.) und – optional, nur
         auf Knopfdruck – einen deutschen Kurztext samt Bild von Wikipedia. Der Kern funktioniert komplett
         ohne Internet.</li>
       <li>Bei einem Treffer fliegen ein paar Blättchen – und am Ende einer Sitzung ab 80 % bzw. bei einem
         gewonnenen Duell etwas mehr. Wer im Betriebssystem »weniger Bewegung« eingestellt hat, sieht nichts
         davon.</li>
-      <li><b>Denkzeit ⏱:</b> In Quiz, Selbst eingeben und Bilder läuft oben eine Uhr. Sie zählt nur, solange eine
+      <li><b>Denkzeit:</b> In Quiz, Selbst eingeben und Bilder läuft oben eine Uhr. Sie zählt nur, solange eine
         Frage offen ist – Wartezeit auf ein Bild und das Lesen der Lösung zählen nicht mit. Karteikarten
         laufen ohne Uhr.</li>
       <li><b>Punkte &amp; Ränge:</b> Jede richtige Antwort bringt Erfahrungspunkte – Selbst eingeben 10, Auswahl 5,
@@ -1496,13 +1508,13 @@ body.stagefull #stage>.sessionbar{
         Handy den ganzen Bildschirm – Kopf und Menüs verschwinden, du siehst nur noch die aktuelle Aufgabe.
         Oben bleibt die Fortschrittsleiste mit dem Knopf <b>beenden</b>; darüber (oder am Ende der Sitzung)
         geht es zurück zur Übersicht.</li>
-      <li><b>Lernduell:</b> Nach einer Quiz-, Tipp- oder Bilder-Sitzung kannst du dein Ergebnis <b>teilen</b>
+      <li><b>Lernduell:</b> Nach einer Quiz-, Selbst-eingeben- oder Bilder-Sitzung – und ebenso nach der geführten
+        Lektion (»Weiter lernen«) – kannst du dein Ergebnis <b>teilen</b>
         und jemanden <b>herausfordern</b> – per WhatsApp/Teilen-Knopf oder Link. Der Link enthält genau
         dieselben Karten und Fragen sowie deine Trefferquote und deine Denkzeit; wer ihn öffnet, versucht
         beides zu schlagen und kann dir sein Ergebnis zurückschicken. Bei <b>gleicher Trefferquote
         entscheidet die Zeit</b>. Ergebnis und Zeit stehen verschlüsselt im Link – mal eben eine bessere
-        Zahl hineinschreiben geht nicht. Aus der geführten Sitzung (»Weiter lernen«) kommst du am Ende
-        über <b>»Diese Lektion als Duell-Quiz«</b> dorthin: gleiche Karten als reines Quiz, danach teilen.</li>
+        Zahl hineinschreiben geht nicht.</li>
       <li>Dein Fortschritt bleibt im Browser gespeichert (je Profil getrennt). Anderer Browser oder
         anderes Gerät = eigener Fortschritt.</li>
       <li>Fast jedes Feld hat einen <b>Tooltip</b> – kurz mit der Maus darüber verweilen.</li>
@@ -1526,7 +1538,8 @@ body.stagefull #stage>.sessionbar{
     </button>
   </div>
 
-  <main id="stage"></main>
+  <div id="stage"></div>
+  </main>
 
   <p class="disclaimer">
     <b>Inoffizielles Hilfsmittel</b> – kein amtliches Angebot der Regierungspräsidien. Die
@@ -1546,7 +1559,7 @@ body.stagefull #stage>.sessionbar{
 <!-- Druckbare Lernliste (nur im Ausdruck sichtbar; Form des Prüfungsbogens) -->
 <div id="printList"></div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>   <!-- Live-Region wie im Prüfungswerkzeug: »sitzt jetzt«, Rangaufstieg, Serie werden angesagt (Audit) -->
 
 <script>
 const SEEDS=/*__SEEDS__*/{};

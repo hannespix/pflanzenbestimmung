@@ -40,7 +40,7 @@ a{color:var(--green-deep)}
 .masthead::before{content:""; position:absolute; left:0; top:0; bottom:0; width:6px; background:repeating-linear-gradient(180deg,var(--green) 0 10px,var(--green-deep) 10px 20px)}
 .eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:var(--sepia); margin:0 0 6px 8px}
 .masthead h1{font-family:var(--serif); font-weight:600; font-size:clamp(23px,4vw,30px); margin:0 0 2px 8px; letter-spacing:-.01em}
-.back{display:inline-block; margin:16px 0 0 8px; font-family:var(--mono); font-size:12.5px; text-decoration:none; color:var(--green-deep)}
+.back{display:inline-flex; align-items:center; min-height:44px; margin:6px 0 0 2px; padding:0 6px; font-family:var(--mono); font-size:12.5px; text-decoration:none; color:var(--green-deep)}   /* ≥44 px Tippziel (Audit) */
 .back:hover{text-decoration:underline}
 section.doc{background:var(--surface); border:1px solid var(--rule-strong); border-radius:4px; padding:24px 26px; margin-top:18px; box-shadow:0 1px 0 var(--shadow)}
 h2{font-family:var(--serif); font-weight:600; font-size:22px; color:var(--green-deep); margin:0 0 4px}
@@ -80,7 +80,7 @@ code{font-family:var(--mono); font-size:.88em; color:var(--green-deep); backgrou
   --glass:rgba(18,23,19,.72); --glass-m:rgba(20,26,21,.9);
   --shadow-1:0 1px 2px rgba(0,0,0,.45); --shadow-2:0 18px 44px -20px rgba(0,0,0,.6)}}
 .themebtn{position:relative; border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--sepia);
-  width:36px; height:36px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+  width:44px; height:44px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;   /* ≥44 px Tippziel (Audit) */
   cursor:pointer; padding:0; flex:none; transition:background .15s, transform .15s}
 .themebtn:hover{background:var(--card); transform:rotate(14deg)}
 .themebtn .ic{width:17px; height:17px}
@@ -201,12 +201,13 @@ input[type=checkbox],input[type=radio]{accent-color:var(--green)}
     <a class="back" href="index.html" onclick="if(history.length>1){history.back();return false}">← zurück</a>
   </header>
 
+  <main>
   <section class="doc" id="impressum">
     <h2>Impressum</h2>
     <h3>Angaben gemäß § 5 DDG</h3>
     <p class="lead">Dieses Impressum gilt für <b>alle Seiten</b> des Angebots unter
       <a href="https://pflanze-bw.de" target="_blank" rel="noreferrer">pflanze-bw.de</a>
-      (Startseite, Lernen, Prüfen und diese Seite).</p>
+      (Lernen, Prüfen und diese Seite).</p>
     <address>
       Hannes Pix<br>
       Eisenbahnstraße 19<br>
@@ -224,11 +225,10 @@ input[type=checkbox],input[type=radio]{accent-color:var(--green)}
     <h3>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h3>
     <p>Hannes Pix, Anschrift wie oben.</p>
 
-    <h3>EU-Streitschlichtung</h3>
-    <p>Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit:
-      <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noreferrer">ec.europa.eu/consumers/odr</a>.
-      Ich bin nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer
-      Verbraucherschlichtungsstelle teilzunehmen.</p>
+    <h3>Verbraucherstreitbeilegung</h3>
+    <p>Ich bin nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer
+      Verbraucherschlichtungsstelle teilzunehmen (§ 36 VSBG). Die frühere EU-Plattform zur
+      Online-Streitbeilegung (OS-Plattform) wurde zum 20. Juli 2025 eingestellt.</p>
 
     <p class="lead">Dieses Werkzeug ist ein nicht-kommerzielles Hilfsmittel ohne Konto, ohne Bezahlfunktion
       und ohne redaktionelle Inhalte Dritter. Für extern verlinkte Seiten sind deren Betreiber
@@ -335,7 +335,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--green)}
     <h3>Das Wichtigste zuerst</h3>
     <ul>
       <li>Der Webserver liefert nur die Seiten aus – <b>verarbeitet wird alles lokal in deinem Browser</b>
-        (Startseite, <b>Lernen</b> und <b>Prüfen</b>). Es gibt keine Anmeldung, kein Konto und keine
+        (<b>Lernen</b> und <b>Prüfen</b>). Es gibt keine Anmeldung, kein Konto und keine
         Verarbeitung deiner Eingaben auf einem Server.</li>
       <li>Es setzt <b>keine Cookies</b>, nutzt <b>kein Tracking</b>, keine Analyse- oder Werbedienste.</li>
       <li>Deine Eingaben – Lernfortschritt, Einstellungen, gezogene Prüfungslisten – bleiben im
@@ -367,7 +367,11 @@ input[type=checkbox],input[type=radio]{accent-color:var(--green)}
       Browsers genutzt (Namensräume <span class="hint">pflanzenlernen.</span> im Lern-Tool bzw.
       <span class="hint">pflanzenkenntnis.</span> im Prüfungswerkzeug). Diese Daten verbleiben ausschließlich
       auf deinem Gerät, sind für mich nicht einsehbar und können jederzeit über die Einstellungen deines
-      Browsers gelöscht werden. Ein anderer Browser oder ein anderes Gerät hat einen eigenen, getrennten Stand.</p>
+      Browsers gelöscht werden. Ein anderer Browser oder ein anderes Gerät hat einen eigenen, getrennten Stand.
+      Dazu kommen zwei weitere Schlüssel: <span class="hint">pbw.theme</span> merkt sich geräteweit das gewählte helle
+      oder dunkle Design (alle Seiten), und <span class="hint">pflanzenlernen.name</span> speichert – nur wenn du beim
+      Lernduell einen Namen eingibst – diesen Namen; er wird ausschließlich in den Duell-Link aufgenommen, den du
+      selbst verschickst.</p>
 
     <h3>Installation & Offline-Cache (PWA)</h3>
     <p>Die Seiten lassen sich als <b>App zum Home-Bildschirm hinzufügen</b> (Progressive Web App). Dazu legt ein
@@ -400,6 +404,11 @@ input[type=checkbox],input[type=radio]{accent-color:var(--green)}
       (Wikipedia, NaturaDB und iNaturalist). Diese Links öffnen einen neuen Tab; sobald du sie anklickst, verlässt
       du dieses Werkzeug. Für die dort verarbeiteten Daten sind allein die jeweiligen Betreiber verantwortlich;
       es gelten deren Datenschutzbestimmungen.</p>
+    <p>Im Lern-Tool öffnet der Knopf <b>»WhatsApp«</b> im Teilen-Block (Lernduell) den Dienst
+      <span class="hint">wa.me</span> der Meta Platforms Ireland Ltd. in einem neuen Tab – erst beim Anklicken und
+      mit dem vorbereiteten Text (Trefferquote, Denkzeit, optional dein Name und der Duell-Link). Erst dort
+      entscheidest du, ob und an wen du die Nachricht sendest; ab dem Klick gelten die Datenschutzbestimmungen
+      von WhatsApp. Der Teilen-Knopf des Systems (»Ergebnis teilen«) übergibt den Text an die von dir gewählte App.</p>
 
     <h3>Keine Weitergabe</h3>
     <p>Es werden keine personenbezogenen Daten durch dieses Werkzeug erhoben, gespeichert (außer lokal auf deinem
@@ -421,6 +430,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--green)}
     <p class="note">Hinweis: Dieses Impressum und diese Datenschutzerklärung sind nach bestem Wissen erstellt,
       ersetzen aber keine Rechtsberatung.</p>
   </section>
+  </main>
 </div>
 <script>/* Hell/Dunkel-Umschalter: übersteuert die System-Einstellung, Wahl wird gespeichert */(function(){var b=document.getElementById("btnTheme");if(!b)return;b.addEventListener("click",function(){var r=document.documentElement,sys=window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light",cur=r.dataset.theme||sys,nx=cur==="dark"?"light":"dark";var ap=function(){r.dataset.theme=nx;try{localStorage.setItem("pbw.theme",nx);}catch(e){}};if(document.startViewTransition&&!window.__noVT&&!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)){document.startViewTransition(ap);}else{ap();}});})();</script>
 </body>

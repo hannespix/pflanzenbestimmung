@@ -2384,7 +2384,7 @@ function updateSettings(){
   toast("Einstellungen gespeichert");
 }
 function resetSettings(){
-  if(!confirm("Alle Einstellungen auf die Standardwerte (Regierungspräsidium Freiburg) zurücksetzen?")) return;
+  if(!confirm("Alle Einstellungen auf die Standardwerte (Regierungspräsidien Baden-Württemberg) zurücksetzen?")) return;
   settings=defaultSettings(); saveSettings(); renderSettings();
   toast("Einstellungen zurückgesetzt");
 }
@@ -2430,7 +2430,7 @@ function renderGrader(){
     const hi=b.stufe===1?max:(thresholdPts(bands[b.stufe-2].lo,max)-1);
     const range=b.stufe===6?`0 – ${thresholdPts(bands[4].lo,max)-1}`:`${lo} – ${hi}`;
     const pctCell = b.stufe<=5
-      ? `ab <input class="gedge" type="number" min="1" max="99" step="1" value="${b.lo}" data-i="${b.stufe-1}"> %`
+      ? `ab <input class="gedge" type="number" min="1" max="99" step="1" value="${b.lo}" data-i="${b.stufe-1}" aria-label="Note ${b.stufe}: Untergrenze in Prozent"> %`
       : `0–${bands[4].lo-1} %`;
     return `<tr class="${b.stufe===hitStufe?'hit':''}">
       <td class="g"><span class="swatch" style="background:${b.color}"></span>${b.stufe}</td>

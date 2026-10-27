@@ -986,6 +986,48 @@ async function main() {
   assert(handy.hell.zp >= 4.5 && handy.dunkel.zp >= 4.5 && handy.hell.cnt >= 4.5 && handy.dunkel.cnt >= 4.5,
     "ZP-Marker/Zähler müssen hell und dunkel ≥4,5:1 haben: " + JSON.stringify(handy));
 
+  // 9d) Audit (Barrierefreiheit): jedes Formularfeld hat einen zugänglichen Namen (label[for]/aria-label),
+  //     die Notengrenzen tragen aria-label, Dialog-Köpfe/-Füße sind keine Landmarken (kein header/footer
+  //     im Modal), Hilfe-Überschriften ohne Sprung (h3 statt h4), Suche/Liste/Prüfung liegen in <main>.
+  const a11y = await page.evaluate(() => {
+    openGrader();
+    const named = el => !!(el.getAttribute("aria-label") || el.getAttribute("aria-labelledby")
+      || (el.id && document.querySelector('label[for="' + el.id + '"]')) || el.closest("label"));
+    const fields = [...document.querySelectorAll('#q, #graderScrim input, #schemaScrim input, #schemaScrim select, #editScrim input, #editScrim select, #editScrim textarea, #settingsScrim input, #settingsScrim textarea')];
+    const unnamed = fields.filter(el => !named(el)).map(el => el.id || el.className);
+    const gedge = [...document.querySelectorAll("#gTable .gedge")];
+    const gedgeNamed = gedge.length === 5 && gedge.every(i => /Note \d/.test(i.getAttribute("aria-label") || ""));
+    document.querySelector("#graderScrim .pclose").click();
+    return { unnamed, gedgeNamed,
+      landmarksInModals: document.querySelectorAll(".modal header, .modal footer").length,
+      h4: document.querySelectorAll("#helpPanel h4").length, h3: document.querySelectorAll("#helpPanel h3").length,
+      mains: document.querySelectorAll("main").length,
+      inMain: !!document.querySelector("main #q") && !!document.querySelector("main #list") && !!document.querySelector("main #currentSel") };
+  });
+  assert(a11y.unnamed.length === 0 && a11y.gedgeNamed, "Felder ohne zugänglichen Namen: " + JSON.stringify(a11y));
+  assert(a11y.landmarksInModals === 0 && a11y.h4 === 0 && a11y.h3 >= 5 && a11y.mains === 1 && a11y.inMain,
+    "Struktur: keine Landmarken in Dialogen, h3 in der Hilfe, genau ein <main> mit Suche/Liste/Prüfung: " + JSON.stringify(a11y));
+
+  // 10) Rechtliches (Audit): <main>, kein Link auf die eingestellte ODR-Plattform, keine »Startseite«,
+  //     Datenschutz nennt pbw.theme, den gespeicherten Duell-Namen und WhatsApp/wa.me;
+  //     Design-Knopf und »zurück« sind ≥44 px (Handy).
+  const rp = await browser.newPage();
+  const rerrs = []; rp.on("pageerror", (e) => rerrs.push(e.message));
+  await rp.setViewport({ width: 360, height: 720, deviceScaleFactor: 1 });
+  await rp.goto("file://" + path.join(ROOT, "dist", "rechtliches.html"), { waitUntil: "load" });
+  const recht = await rp.evaluate(() => {
+    const t = document.body.textContent, h = sel => { const e = document.querySelector(sel); return e ? e.getBoundingClientRect().height : -1; };
+    return { main: document.querySelectorAll("main").length, inMain: !!document.querySelector("main #datenschutz"),
+      odr: /consumers\/odr/.test(document.documentElement.innerHTML), start: /Startseite/.test(t),
+      theme: /pbw\.theme/.test(t), name: /pflanzenlernen\.name/.test(t), wa: /WhatsApp/.test(t) && /wa\.me/.test(t),
+      vsbg: /§ 36 VSBG/.test(t), btn: h("#btnTheme"), back: h(".back") };
+  });
+  await rp.close();
+  assert(rerrs.length === 0, "Rechtliches: Konsolenfehler: " + rerrs.join(" | "));
+  assert(recht.main === 1 && recht.inMain && !recht.odr && !recht.start && recht.theme && recht.name && recht.wa && recht.vsbg,
+    "Rechtliches: <main>, ODR raus, keine Startseite, Datenschutz vollständig: " + JSON.stringify(recht));
+  assert(recht.btn >= 43.5 && recht.back >= 43.5, "Rechtliches: Design-Knopf/»zurück« ≥44 px erwartet: " + JSON.stringify(recht));
+
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
   console.log("Smoke-Test OK – Boot, Modul-Modals (öffnen/×/Esc, aktive Buttons), Hilfe + Tooltips, Profilwechsel (148/248), Schema-Matrix, Ziehen, Bogen (offizielle Formulare), Druck-Dialog speichert/aktualisiert Prüfung, Prüfungen (speichern/laden/kopieren/aktualisieren), Prüfungs-JSON-Import (Gerätewechsel), Sicherung mit Profilwechsel, Einstellungen, Vorschau, Info-Karte (ℹ in Liste + Aktueller Prüfung: Namensherleitung, Deep-Links, opt-in Wikipedia, ×/Esc), Persistenz, Mobile-Kopf, Touch-Ziele (≥44px, Zeile wählt an/ab, #gMax breit genug), Bild-Lightbox (Galerie: Pfeile, Zähler, Wischen), Verwaltung als Popover (Top-Layer, Light-Dismiss).");
