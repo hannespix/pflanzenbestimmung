@@ -3743,17 +3743,62 @@ function photoGalList(p){
   const urls = (p && p.gal && p.gal.length) ? p.gal : (p && p.thumb ? [p.thumb] : []);
   return urls.map((u,i)=>({ src:u, label:`Bild ${i+1} der gesuchten Pflanze` }));
 }
-/* Platzhalter-Arten (»'Sorte'«, »Hybriden«): nicht immer dasselbe Foto, sondern eine der
-   gleich gut bewerteten Ansichten – so sieht man die Art in verschiedenen Gartensorten
-   (Blütenfarbe, Wuchs) und lernt, sie trotzdem zu erkennen. Die Galerie beginnt mit der
-   gezeigten Ansicht, Datei und Bildnachweis gehören zu ihr. */
-function photoVariant(p){
-  const n = Math.min(p.top||1, (p.gal||[]).length), i = n>1 ? Math.floor(Math.random()*n) : 0;
+/* ---------- Nicht immer dasselbe Bild zuerst ----------
+   Wer eine Art immer am selben Foto sieht, lernt das Foto auswendig – nicht die
+   Pflanze. Deshalb merkt sich das Werkzeug je Art, welche Ansicht zuletzt zuerst
+   gezeigt wurde (pflanzenlernen.photoseen), und nimmt beim nächsten Mal die nächste:
+   reihum durch alle geprüften Ansichten (Habitus, Blatt, Blüte, Frucht; bei
+   Platzhalter-Arten verschiedene Sorten). Die erste Begegnung zeigt die am besten
+   bewertete Ansicht; nennen mindestens zwei Dateinamen die Art, bleibt die Rotation
+   unter diesen (ein Kategoriebild ohne Namen im Dateinamen ist seltener eindeutig).
+   Die Galerie beginnt mit der gezeigten Ansicht, Datei und Bildnachweis gehören zu ihr. */
+const LS_SEEN = LS_PREFIX+"photoseen";
+let photoSeenStore = null;
+function photoSeenLoad(){
+  if(!photoSeenStore){ try{ photoSeenStore = JSON.parse(store.get(LS_SEEN)||"{}") || {}; }catch(e){ photoSeenStore = {}; } }
+  return photoSeenStore;
+}
+function photoSeenGet(key){ const v = photoSeenLoad()[key]; return (typeof v==="number") ? v : null; }
+function photoSeenSet(key, i){
+  const s = photoSeenLoad(); delete s[key]; s[key] = i;   // neu einsortieren → der älteste Eintrag fällt zuerst
+  const ks = Object.keys(s); if(ks.length > 1500) delete s[ks[0]];
+  try{ store.set(LS_SEEN, JSON.stringify(s)); }catch(e){}
+}
+function photoVariant(p, card){
+  const gal = p.gal||[], n = gal.length, key = card && card.key;
+  if(n<2){ if(key) photoSeenSet(key, 0); return p; }
+  const named = gal.map((_,k)=>k).filter(k => p.galInfo && p.galInfo[k] && commonsScore(p.galInfo[k].file, card||{})>0);
+  const order = named.length>=2 ? named : gal.map((_,k)=>k);
+  const last = key ? photoSeenGet(key) : null;
+  const i = order[(order.indexOf(last)+1) % order.length];   // unbekannt/-1 → erste; sonst die nächste
+  if(key) photoSeenSet(key, i);
   if(!i) return p;
   const rot = a => a.slice(i).concat(a.slice(0,i));
   const info = (p.galInfo && p.galInfo[i]) || {};
-  return Object.assign({}, p, { thumb: p.gal[i], gal: rot(p.gal), galInfo: p.galInfo ? rot(p.galInfo) : p.galInfo,
+  return Object.assign({}, p, { thumb: gal[i], gal: rot(gal), galInfo: p.galInfo ? rot(p.galInfo) : p.galInfo,
     file: info.file || p.file, url: info.url || p.url, artist: info.artist || "", license: info.license || "" });
+}
+/* Artikelbild (src:"wp"): nur EINE Ansicht bekannt. Beim ersten Mal reicht sie; ab der
+   zweiten Begegnung holen wir einmalig die Bilder des Artikels (dieselbe Abfrage wie die
+   Galerie der Großansicht) und behalten die, deren Dateiname DIESE Art nennt und keine
+   andere Art derselben Gattung – sie werden zu weiteren Ansichten (gemerkt, kein
+   zweiter Abruf). Netzfehler schluckt wikiGallery ([]) – dann nächste Sitzung erneut. */
+const photoMoreTried = new Set();
+function phThumb(src){ return String(src||"").replace(/\/(\d{2,4})px-/, "/640px-"); }   // Quiz-Breite statt 1200 px
+async function photoMoreViews(p, card){
+  if(!p || p.src!=="wp" || !p.title || (p.gal && p.gal.length>1)) return p;
+  if(photoSeenGet(card.key)==null || photoMoreTried.has(card.key)) return p;   // erste Begegnung: Artikelbild reicht
+  photoMoreTried.add(card.key);
+  let list = [];
+  try{ list = await wikiGallery(p.title, true); }catch(e){ return p; }
+  const extra = list.filter(it => it.src!==p.thumb && it.file!==p.file && commonsScore(it.file, card)>0 && !fileMentionsOther(it.file, card)).slice(0,5);
+  if(!extra.length) return p;
+  const q = Object.assign({}, p, {
+    gal: [p.thumb].concat(extra.map(it=>phThumb(it.src))), top: 1,
+    galInfo: [{ file:p.file, url:p.url, artist:p.artist||"", license:p.license||"" }].concat(
+      extra.map(it=>({ file:it.file, url:"https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(it.file) }))) });
+  if(photoTmp.has(card.key)) photoTmp.set(card.key, q); else photoRemember(card.key, q);
+  return q;
 }
 function photoGalLoader(p){
   if(!p || p.src!=="wp" || !p.title) return null;
@@ -3835,7 +3880,9 @@ async function renderPhoto(){
     return;
   }
   photoMisses = 0; sess.photoDefer = 0;
-  if(cultivarKind(c.a)==="placeholder" && p.gal && p.gal.length>1 && (p.top||0)>1) p = photoVariant(p);
+  p = await photoMoreViews(p, c);                     // Artikelbild: ab der zweiten Begegnung weitere Ansichten holen
+  if(current!==c) return;
+  p = photoVariant(p, c);                              // nicht immer dasselbe Bild zuerst (merkt sich die letzte Ansicht)
   const gal = photoGalList(p), viele = gal.length>1;
   $("#stage").querySelector(".photobox").innerHTML =
     `<div class="ph-wrap"><img class="ph-img" id="phImg" src="${esc(p.thumb)}" alt="Bild der gesuchten Pflanze">`+
@@ -3981,8 +4028,12 @@ function prefetchPhoto(){
   // Vorsprung genau das, was den Unterschied zwischen »flüssig« und »hakelig« macht.
   // Auch Arten, die früher einmal ohne Treffer blieben (gemerkte null), bekommen je
   // Sitzung einen neuen Versuch, und der soll schon vorab laufen.
-  for(const nx of [queue[qi+1], queue[qi+2]])
-    if(nx && !photoStoreLoad()[nx.key] && !photoTried.has(nx.key)) photoFor(nx).catch(()=>{});
+  for(const nx of [queue[qi+1], queue[qi+2]]){
+    if(!nx) continue;
+    const known = photoStoreLoad()[nx.key];
+    if(known && known.src==="wp") photoMoreViews(known, nx).catch(()=>{});          // weitere Ansichten schon vorab
+    else if(!known && !photoTried.has(nx.key)) photoFor(nx).catch(()=>{});
+  }
 }
 function answerPhoto(btn, chosen, p){
   const c=current, correct=answerText(c);
@@ -4619,7 +4670,8 @@ window.wikiPhoto=wikiPhoto;
 window.__setPhotoSource=fn=>{ photoSource = fn || wikiPhoto; };
 window.__setPhotoWait=ms=>{ phWaitMs = ms || 6000; };   // für Tests: Takt des Wartebildschirms
 window.__setJsonp=fn=>{ jsonp = fn || ((...a)=>jsonpGet(...a)); };   // API-Antworten für Tests vorgeben
-window.__clearPhotoCache=()=>{ photoStore={}; photoTmp.clear(); try{ store.set(LS_PHOTOS,"{}"); }catch(e){} };
+window.__clearPhotoCache=()=>{ photoStore={}; photoTmp.clear(); photoSeenStore={}; photoMoreTried.clear(); try{ store.set(LS_PHOTOS,"{}"); store.set(LS_SEEN,"{}"); }catch(e){} };
+window.__getPhotoSeen=photoSeenGet; window.__setPhotoSeen=photoSeenSet;   // für Tests: zuletzt gezeigte Ansicht je Art
 window.__rememberPhoto=photoRemember;   // für Tests: »für diese Art gibt es kein Bild« (null) vormerken
 window.photoless=photoless;
 window.stepsLeft=stepsLeft;   // für Tests: Treffer bis »sitzt«

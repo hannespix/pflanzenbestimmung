@@ -1532,8 +1532,10 @@ async function main() {
     "»Weigela Cultivars«: Platzhalter erkannt, »Weigelie« gilt, Info-Karte erklärt: " + JSON.stringify(sorte));
   assert(sorte.duell, "Duell-Wortlaut: »Fordere jemanden heraus oder gib einfach mit deinem Wissen an«, kein »Azubi-Kollegen«");
 
-  // Bildvielfalt: Platzhalter-Arten zeigen nicht immer dasselbe Foto, sondern eine der gleich
-  // gut bewerteten Ansichten; Galerie beginnt mit der gezeigten, Datei + Nachweis gehören dazu.
+  // Bildvielfalt: nicht immer dasselbe Foto zuerst – das Werkzeug merkt sich je Art die zuletzt
+  // zuerst gezeigte Ansicht (pflanzenlernen.photoseen) und nimmt beim nächsten Mal die nächste,
+  // reihum (erste Begegnung = beste Ansicht; Dateien, die die Art nennen, bevorzugt). Die Galerie
+  // beginnt mit der gezeigten Ansicht, Datei + Nachweis gehören dazu.
   const vielfalt = await page.evaluate(async () => {
     $("#frSelect").value = "garten_und_landschaftsbau"; $("#nivSelect").value = "gaertner"; applyProfile();
     const salvia = allCards.find((c) => c.g === "Salvia" && /nemorosa/.test(c.a));
@@ -1542,11 +1544,12 @@ async function main() {
     const ans = { query: { pages: { p1: cmP(1, "Salvia nemorosa Caradonna 1.jpg"), p2: cmP(2, "Salvia nemorosa Ostfriesland 2.jpg"),
       p3: cmP(3, "Salvia nemorosa Mainacht 3.jpg"), p4: cmP(4, "Hortus 4.jpg") } } };
     const p = pickCommons(ans, salvia);
-    const r0 = Math.random;
-    Math.random = () => 0.7; const v = photoVariant(p);           // dritte der drei gleich guten Ansichten
-    Math.random = () => 0;   const v0 = photoVariant(p); Math.random = r0;
-    const r = { top: p.top, galInfo: (p.galInfo || []).map((g) => g.file), vThumb: v.thumb, vFile: v.file, vArtist: v.artist,
-      vGal0: v.gal[0], vLen: v.gal.length, same: v0 === p, pUnveraendert: p.thumb === "https://x/Salvia nemorosa Caradonna 1.jpg" };
+    __clearPhotoCache();
+    const v0 = photoVariant(p, salvia), v1 = photoVariant(p, salvia), v2 = photoVariant(p, salvia), v3 = photoVariant(p, salvia);
+    const r = { top: p.top, galInfo: (p.galInfo || []).map((g) => g.file), pUnveraendert: p.thumb === "https://x/Salvia nemorosa Caradonna 1.jpg",
+      first: v0 === p, v1Thumb: v1.thumb, v1File: v1.file, v1Artist: v1.artist, v1Gal0: v1.gal[0], v1Len: v1.gal.length,
+      v2File: v2.file, v3File: v3.file, seen: __getPhotoSeen(salvia.key),
+      persist: JSON.parse(localStorage.getItem("pflanzenlernen.photoseen") || "{}")[salvia.key] };
     const px = (t) => "data:image/svg+xml," + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><title>" + t + "</title></svg>");
     const A = px("A"), B = px("B"), C = px("C");
     __clearPhotoCache(); photoTried.clear();
@@ -1556,14 +1559,17 @@ async function main() {
     const pa = $("#phAnswer"); pa.value = "mc"; pa.dispatchEvent(new Event("change"));
     $("#sessLen").value = "4"; startSession();
     await new Promise((res) => setTimeout(res, 90));
-    current = salvia; queue[qi] = salvia;                             // Platzhalter-Art erzwingen
-    Math.random = () => 0.7; await renderPhoto(); Math.random = r0;
+    current = salvia; queue[qi] = salvia;                             // diese Art erzwingen
+    __setPhotoSeen(salvia.key, 1);                                    // zuletzt war die zweite Ansicht zuerst dran …
+    await renderPhoto();
     const img = document.querySelector("#phImg");
-    r.quizC = !!img && img.getAttribute("src") === C;
+    r.quizC = !!img && img.getAttribute("src") === C;                 // … also jetzt die dritte
     const correct = answerText(current).toLowerCase();
     const btn = [...document.querySelectorAll("#opts .opt")].find((b) => b.querySelector("span:last-child").textContent.toLowerCase() === correct);
     if (btn) btn.click(); await new Promise((res) => setTimeout(res, 30));
     r.credit = (document.querySelector("#phSrc") || {}).textContent || "";
+    await renderPhoto();                                              // nächste Begegnung: reihum wieder die erste
+    r.quizA = (document.querySelector("#phImg") || {}).getAttribute("src") === A;
     document.querySelector('#modeTabs button[data-mode="cards"]').click();
     __setPhotoSource(null); __clearPhotoCache(); photoTried.clear();
     $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
@@ -1571,11 +1577,60 @@ async function main() {
   });
   assert(vielfalt.top === 3 && vielfalt.galInfo.length === 4 && vielfalt.galInfo[0] === "Salvia nemorosa Caradonna 1.jpg" && vielfalt.pUnveraendert,
     "pickCommons muss die Zahl der gleich guten Ansichten (top) und Datei/Nachweis je Ansicht liefern: " + JSON.stringify(vielfalt));
-  assert(vielfalt.vThumb === "https://x/Salvia nemorosa Mainacht 3.jpg" && vielfalt.vFile === "Salvia nemorosa Mainacht 3.jpg" &&
-    vielfalt.vArtist === "U3" && vielfalt.vGal0 === vielfalt.vThumb && vielfalt.vLen === 4 && vielfalt.same,
-    "photoVariant muss eine der besten Ansichten nach vorn drehen (Galerie, Datei, Nachweis) und bei 0 unverändert lassen: " + JSON.stringify(vielfalt));
-  assert(vielfalt.quizC && /UC/.test(vielfalt.credit),
-    "Bilder-Quiz: Platzhalter-Art zeigt die gedrehte Ansicht, der Bildnachweis gehört zu ihr: " + JSON.stringify(vielfalt));
+  assert(vielfalt.first && vielfalt.v1Thumb === "https://x/Salvia nemorosa Ostfriesland 2.jpg" && vielfalt.v1File === "Salvia nemorosa Ostfriesland 2.jpg" &&
+    vielfalt.v1Artist === "U2" && vielfalt.v1Gal0 === vielfalt.v1Thumb && vielfalt.v1Len === 4 &&
+    vielfalt.v2File === "Salvia nemorosa Mainacht 3.jpg" && vielfalt.v3File === "Salvia nemorosa Caradonna 1.jpg" &&
+    vielfalt.seen === 0 && vielfalt.persist === 0,
+    "photoVariant: erste Begegnung = beste Ansicht, danach reihum (nur Dateien, die die Art nennen), Galerie/Datei/Nachweis passend, Stand gespeichert: " + JSON.stringify(vielfalt));
+  assert(vielfalt.quizC && /UC/.test(vielfalt.credit) && vielfalt.quizA,
+    "Bilder-Quiz: nach gemerkter Ansicht 2 kommt Ansicht 3 (Bildnachweis gehört zu ihr), danach wieder die erste: " + JSON.stringify(vielfalt));
+
+  // Artikelbild (src:"wp"): nur eine Ansicht bekannt. Beim ersten Mal reicht sie; ab der zweiten
+  // Begegnung holt das Werkzeug einmalig die Bilder des Artikels und zeigt eine andere Ansicht –
+  // nur Dateien, die diese Art nennen und keine andere Art derselben Gattung; der Nachweis der
+  // neuen Ansicht kommt per Datei-Abruf. Gemerkt, kein zweiter Galerie-Abruf.
+  const wpRot = await page.evaluate(async () => {
+    const px = (t) => "data:image/svg+xml," + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><title>" + t + "</title></svg>");
+    const A = px("A"), B = px("B"), C = px("C"), D = px("D"), wait = (ms) => new Promise((res) => setTimeout(res, ms));
+    $("#frSelect").value = "garten_und_landschaftsbau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    const abies = allCards.find((c) => c.g === "Abies" && /koreana/.test(c.a));
+    __clearPhotoCache(); photoTried.clear();
+    __setPhotoSource(() => Promise.resolve({ thumb: A, src: "wp", title: "Korea-Tanne", file: "Abies koreana A.jpg", url: "https://x/y" }));
+    let galAbrufe = 0;
+    __setJsonp((url) => {
+      if (/generator=images/.test(url)) { galAbrufe++; return Promise.resolve({ query: { pages: {
+        1: { title: "File:Abies koreana Zapfen.jpg", imageinfo: [{ thumburl: B, mime: "image/jpeg" }] },
+        2: { title: "File:Abies nordmanniana Nadeln.jpg", imageinfo: [{ thumburl: C, mime: "image/jpeg" }] },   // andere Art der Gattung
+        3: { title: "File:Botanischer Garten 2019.jpg", imageinfo: [{ thumburl: D, mime: "image/jpeg" }] } } } }); }   // nennt die Art nicht
+      if (/prop=imageinfo/.test(url) && /titles=File/.test(url))
+        return Promise.resolve({ query: { pages: { 9: { title: "File:Abies koreana Zapfen.jpg", imageinfo: [{ extmetadata: { Artist: { value: "UZ" }, LicenseShortName: { value: "CC0" } } }] } } } });
+      return Promise.reject(new Error("offline"));
+    });
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();
+    const pa = $("#phAnswer"); pa.value = "mc"; pa.dispatchEvent(new Event("change"));
+    $("#sessLen").value = "4"; startSession(); await wait(90);
+    current = abies; queue[qi] = abies;
+    await renderPhoto();
+    const src = () => (document.querySelector("#phImg") || {}).getAttribute("src");
+    const erst = src() === A, abrufeErst = galAbrufe;                 // erste Begegnung: Artikelbild, kein Galerie-Abruf
+    await renderPhoto(); await wait(20);
+    const zweit = src() === B, abrufeZweit = galAbrufe;              // zweite: Zapfen-Foto (nordmanniana + namenlose Datei verworfen)
+    const gemerkt = ((photoStoreLoad()[abies.key] || {}).gal || []).length;
+    const correct = answerText(current).toLowerCase();
+    const btn = [...document.querySelectorAll("#opts .opt")].find((b) => b.querySelector("span:last-child").textContent.toLowerCase() === correct);
+    if (btn) btn.click(); await wait(40);
+    const credit = (document.querySelector("#phSrc") || {}).textContent || "";
+    await renderPhoto(); await wait(20);
+    const dritt = src() === A, abrufeDritt = galAbrufe;              // reihum wieder das Artikelbild, kein neuer Abruf
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    __setPhotoSource(null); __setJsonp(window.__offlineJsonp); __clearPhotoCache(); photoTried.clear();
+    $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    return { erst, abrufeErst, zweit, abrufeZweit, gemerkt, credit, dritt, abrufeDritt };
+  });
+  assert(wpRot.erst && wpRot.abrufeErst === 0 && wpRot.zweit && wpRot.abrufeZweit === 1 && wpRot.gemerkt === 2,
+    "Artikelbild: erste Begegnung ohne Abruf, zweite holt die Artikel-Bilder einmal und zeigt die Zapfen-Ansicht (nur Dateien mit dieser Art): " + JSON.stringify(wpRot));
+  assert(/UZ/.test(wpRot.credit) && wpRot.dritt && wpRot.abrufeDritt === 1,
+    "Artikelbild: Nachweis der neuen Ansicht per Datei-Abruf, danach reihum wieder das Artikelbild ohne weiteren Galerie-Abruf: " + JSON.stringify(wpRot));
 
   // Info-Karte: Für eine Sorte findet die Wikipedia-Kette nur den Artikel der Art
   // (»Seidiger Hartriegel« für 'Flaviramea'). Der Text passt, das Artikelbild zeigte
