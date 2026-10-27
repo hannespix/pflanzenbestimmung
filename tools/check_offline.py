@@ -18,6 +18,8 @@ FORBIDDEN = [
     (r'(cdnjs|jsdelivr|unpkg|googleapis|cloudflare|gstatic)\.', "CDN-Referenz gefunden"),
     (r'\bfetch\(\s*["\']https?://', "fetch() auf externe URL gefunden"),
     (r'new\s+XMLHttpRequest', "XMLHttpRequest gefunden (Offline-Tool sollte keinen Netzzugriff benötigen)"),
+    (r'<img[^>]+\bsrc\s*=\s*["\']https?:', "Externes <img src=…> gefunden"),
+    (r'\bfetch\s*\(', "fetch() gefunden – das Werkzeug lädt nichts nach (Wikipedia nur opt-in per JSONP-<script>)"),
 ]
 
 def main():

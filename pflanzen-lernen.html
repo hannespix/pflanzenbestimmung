@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://de.wikipedia.org https://commons.wikimedia.org; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://upload.wikimedia.org https://commons.wikimedia.org https://de.wikipedia.org; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pflanzenkenntnis · Lernen (Gärtnerberufe)</title>
@@ -117,6 +118,7 @@ input,select{font-family:inherit; color:inherit}
   font-size:13.5px; background:var(--surface-2)}
 .ph-src{margin-top:7px; font-size:11.5px; color:var(--ink-faint); line-height:1.5}
 .ph-src a{color:var(--sepia)}
+.ph-srcslot:empty{display:none}   /* Bildnachweis-Slot unter Optionen/Rückmeldung (Audit: kein Layoutsprung der Optionen beim Aufdecken) */
 .ph-note{margin:18px auto 0; max-width:460px; padding:18px 20px; border:1px solid var(--rule-strong);
   border-radius:8px; background:var(--surface); font-size:14px; line-height:1.55; color:var(--ink-soft); text-align:center}
 .ph-actions{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:12px}
@@ -322,9 +324,6 @@ button.chip:hover{background:var(--green-tint); border-color:var(--green); color
 .rankchip .rk-name{font-family:var(--serif); font-style:italic; font-size:13px; color:var(--green-deep)}
 .rk-mini{display:inline-block; width:26px; height:4px; border-radius:99px; background:var(--rule); overflow:hidden}
 .rk-mini b{display:block; height:100%; background:var(--green); border-radius:99px}
-.herblink{border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--green-deep);
-  border-radius:99px; padding:5px 12px; font-family:var(--mono); font-size:11px; cursor:pointer; min-height:32px}
-.herblink:hover{background:var(--green-tint); border-color:var(--green)}
 /* ℹ neben der Legende öffnet die grafische Stufen-Erklärung (kein Erklärabsatz mehr) */
 .legend-i{border:0; background:none; color:var(--sepia); cursor:pointer; padding:2px; line-height:0;
   border-radius:50%; opacity:.8}
@@ -335,10 +334,9 @@ button.chip:hover{background:var(--green-tint); border-color:var(--green); color
   font:inherit; text-decoration:underline; text-underline-offset:2px}
 .linklike:hover{color:var(--green)}
 /* Icons in Knöpfen/Zeilen sauber ausrichten */
-.btn .ic,.herblink .ic,.goHint .ic,#goHint .ic{width:16px; height:16px; flex:none}
+.btn .ic,.goHint .ic,#goHint .ic{width:16px; height:16px; flex:none}
 #goHint{display:inline-flex; align-items:center; gap:7px}
 #goHint b{color:var(--ink); font-size:15px}
-.herblink{display:inline-flex; align-items:center; gap:6px}
 .intro-tip .ic,.herb-how .ic{width:16px; height:16px; flex:none; color:var(--sepia)}
 /* Stufen-Erklärung als Leiter (ersetzt drei Textabsätze) */
 .howmodal{max-width:560px}
@@ -370,7 +368,6 @@ button.chip:hover{background:var(--green-tint); border-color:var(--green); color
 .stepline.now .pips i.on{transform:scale(1.15)}
 .stepline b{color:var(--green-deep)}
 @media (prefers-reduced-motion: reduce){ .stepline .pips i{transition:none} }
-.rankrow{display:flex; align-items:center; gap:8px; margin-top:8px; font-family:var(--mono); font-size:11px; color:var(--ink-soft); flex-wrap:wrap}
 .rk-name{font-family:var(--serif); font-size:14px; font-style:italic; color:var(--green-deep); letter-spacing:.01em}
 .rk-bar{flex:1; height:6px; background:var(--surface-2); border:1px solid var(--rule); border-radius:99px; overflow:hidden; min-width:70px}
 .rk-bar i{display:block; height:100%; background:linear-gradient(90deg,var(--green),var(--green-deep)); border-radius:99px;
@@ -472,7 +469,8 @@ button.chip:hover{background:var(--green-tint); border-color:var(--green); color
 .opt span:last-child{font-style:italic}   /* Antwortoptionen sind botanische Namen */
 .opt.correct{border-color:var(--green); background:var(--green-tint)}
 .opt.wrong{border-color:var(--madder-soft); background:var(--madder-tint)}
-.opt:disabled{cursor:default}
+.opt:disabled{cursor:default; color:var(--ink-soft)}   /* ausdrücklich statt UA-»graytext« – im Dunkelmodus lag das bei 2,6:1 (Audit) */
+.opt.correct:disabled{color:var(--ink)}                 /* die richtige Antwort bleibt in voller Textfarbe */
 
 /* Tippen */
 .typebox{display:flex; flex-direction:column; gap:12px; align-items:center}
@@ -834,6 +832,8 @@ body{line-height:1.5}
   font-size:13px; font-family:inherit; transition:background .15s, border-color .15s}
 .themetoggle:hover{background:var(--card); border-color:var(--green)}
 .themetoggle .ic{width:16px; height:16px; flex:none}
+.mast-right .themebtn{width:40px; height:40px; min-height:40px; padding:0; border-radius:50%; justify-content:center; gap:0}   /* ein Ort für alle Seiten: rund im Kopf (Audit) */
+.mast-right .themebtn .ic{width:17px; height:17px}
 .themetoggle .sun,.themetoggle .tt-light{display:none}
 :root[data-theme="dark"] .themetoggle .sun,:root[data-theme="dark"] .themetoggle .tt-light{display:revert}
 :root[data-theme="dark"] .themetoggle .moon,:root[data-theme="dark"] .themetoggle .tt-dark{display:none}
@@ -1018,6 +1018,7 @@ body.stagefull #stage>.sessionbar{
   .profchip{min-height:44px}
   .introlink{min-height:44px; display:inline-flex; align-items:center; padding:8px 4px}
   .themetoggle{min-height:44px}
+  .mast-right .themebtn{min-width:44px; width:44px; height:44px}
   select.mini,input.mini,.listsearch{min-height:44px}
   .switch,.po-ety,label.exf{min-height:44px; align-items:center}
   .setopts>summary,.choose>summary,.etym>summary{min-height:44px; display:flex; align-items:center}
@@ -1212,13 +1213,14 @@ body.stagefull #stage>.sessionbar{
     <div class="mast-top">
       <div class="mast-title">
         <p class="eyebrow">Pflanzen lernen · Gärtnerberufe</p>
-        <h1>Pflanzenkenntnis · Lernen</h1>
+        <h1>Pflanzenkenntnis&nbsp;· Lernen</h1>
       </div>
       <div class="mast-right">
         <!-- Bewusst KEIN Link zur Prüfungsversion: pflanze-bw.de führt direkt hierher;
              das Prüfungswerkzeug hat seine eigene Adresse (/pruefung) und geht Azubis
              nichts an. Impressum/Datenschutz bleibt über die Fußzeile erreichbar. -->
         <button class="helplink" id="btnHelp" type="button" aria-pressed="false" title="Kurzanleitung und Erklärung aller Modi und Einstellungen ein- oder ausblenden"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5"/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/></svg>Hilfe</button>
+        <button class="themetoggle themebtn" type="button" aria-label="Helles oder dunkles Design umschalten" title="Zwischen hellem und dunklem Design wechseln – die Wahl gilt für alle Seiten auf diesem Gerät"><svg class="ic moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.5 14.5A8.5 8.5 0 019.5 3.5a8.5 8.5 0 1011 11z"/></svg><svg class="ic sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
       </div>
     </div>
     <!-- Beruf einmal wählen, danach nur noch ein Chip: die beiden Auswahlfelder
@@ -1292,7 +1294,6 @@ body.stagefull #stage>.sessionbar{
             <div class="field" id="dirField"><label for="dir">Abfrage</label><select id="dir" class="mini" title="Was gefragt wird: deutscher Name → botanischer Name (wie in der Prüfung) oder umgekehrt. Im Bilder-Quiz ist die Aufgabe fest: Bild → voller Name."></select></div>
             <div class="field"><label for="sessLen">Karten/Sitzung</label><input id="sessLen" class="mini" type="number" min="5" max="100" value="20" title="Wie viele Karten (5–100) eine Sitzung umfasst. Neue und fällige Karten kommen zuerst."></div>
             <div class="field"><label for="dayGoal">Tagesziel</label><select id="dayGoal" class="mini" title="Ab so vielen bearbeiteten Karten zählt der Tag für deine Lernserie. Regelmäßig kleine Portionen wirken beim Karteikasten-Lernen mehr als seltene Marathons."><option>10</option><option selected>20</option><option>30</option><option>50</option></select></div>
-            <button class="themetoggle" type="button" aria-label="Helles oder dunkles Design umschalten" title="Zwischen hellem und dunklem Design wechseln – die Wahl gilt für alle Seiten auf diesem Gerät"><svg class="ic moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.5 14.5A8.5 8.5 0 019.5 3.5a8.5 8.5 0 1011 11z"/></svg><svg class="ic sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span class="tt-dark">Dunkles Design</span><span class="tt-light">Helles Design</span></button>
           </div>
           <div class="exfields" id="examFieldsRow" hidden></div>
         </div>
@@ -1551,7 +1552,7 @@ body.stagefull #stage>.sessionbar{
   </p>
 
   <footer class="foot">
-    <span>Pflanzenkenntnis · Lernen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 27.10.2026 · Version c3926f9</span></span>
+    <span>Pflanzenkenntnis · Lernen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 27.10.2026 · Version 4ee709a</span></span>
     <a class="legal" href="rechtliches.html">Impressum &amp; Datenschutz</a>
   </footer>
 </div>
@@ -1600,7 +1601,7 @@ function ico(name, cls){                       // → <svg> im einheitlichen Str
   return `<svg class="ic${cls?" "+cls:""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" `+
     `stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 }
-const esc = s => (s==null?"":String(s)).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+const esc = s => (s==null?"":String(s)).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));   // auch ' (Audit)
 const norm = s => (s==null?"":String(s)).replace(/\s+/g," ").trim();
 const deacc = s => (s==null?"":String(s)).normalize("NFD").replace(/[\u0300-\u036f]/g,"");   // akzentfrei (Suche, Adjektiv-Erkennung)
 const shuffle = a => { for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
@@ -1611,9 +1612,16 @@ const store = (()=>{
   let ok=false;
   try{ const k=LS_PREFIX+"__probe"; localStorage.setItem(k,"1"); localStorage.removeItem(k); ok=true; }catch(e){ ok=false; }
   const mem=new Map();
+  // Audit: ein voller Speicher (QuotaExceededError) ist kein Totalausfall – nur DIESER Schreibvorgang
+  // scheitert, der nächste (kleinere) darf wieder in localStorage. Vorher schaltete jeder Fehler den
+  // Browser-Speicher für die ganze Sitzung ab, und der Fortschritt wirkte danach verloren.
+  const isQuota = e => !!e && (e.name==="QuotaExceededError" || e.name==="NS_ERROR_DOM_QUOTA_REACHED" || e.code===22 || e.code===1014);
   return {
-    get(k){ if(ok){ try{ return localStorage.getItem(k); }catch(e){ ok=false; } } return mem.has(k)?mem.get(k):null; },
-    set(k,v){ v=String(v); if(ok){ try{ localStorage.setItem(k,v); return; }catch(e){ ok=false; } } mem.set(k,v); },
+    get persistent(){ return ok; },
+    get(k){ if(mem.has(k)) return mem.get(k); if(ok){ try{ return localStorage.getItem(k); }catch(e){ ok=false; } } return null; },
+    set(k,v){ v=String(v);
+      if(ok){ try{ localStorage.setItem(k,v); mem.delete(k); return true; }catch(e){ if(!isQuota(e)) ok=false; } }
+      mem.set(k,v); return false; },
   };
 })();
 
@@ -2036,6 +2044,7 @@ let progress = {};           // key -> {box(1..5), due(YYYY-MM-DD), seen, correc
 let mode = "cards";          // cards | quiz | type | list
 let lastLearnMode = "photo"; // zuletzt aktiver Nicht-Listen-Modus (Rückweg aus dem Listen-Schnellzugriff)
 let queue = [], qi = 0, current = null, flipped = false;
+let sessSeq = 0;                                        // Audit: renderPhoto prüft nach jedem await gegen die Sitzungs-Nummer
 let sess = { total:0, done:0, correct:0, ms:0, pts:null, active:false };
 let qStart = 0, clockTimer = null;   // Zeitmessung: Start der offenen Frage · Anzeige-Takt
 let listCats = new Set();     // aktive Filter-Tags der laufenden Dimension (leer = alle)
@@ -2116,6 +2125,7 @@ function stepHTML(boxOpt){
   const rest = stepsLeft(nach);
   const txt = neuFest ? `<b>Sitzt!</b> Kommt jetzt nur noch selten dran.`
     : nach>=4 ? `Sitzt sicher – Stufe ${nach} von 5.`
+    : nach<=0 ? `<b>Neu</b> · noch ${rest}× richtig bis <b>»sitzt«</b>`   // Audit: »Stufe 0 von 5« passte nicht zur Leiter, die mit »neu« beginnt
     : `Stufe ${nach} von 5 · noch ${rest}× richtig bis <b>»sitzt«</b>`;
   return `<div class="stepline${neuFest?" now":""}" title="Jede richtige Antwort bringt die Karte eine Stufe weiter; ab Stufe 4 gilt sie als sicher gemerkt und kommt nur noch selten dran.">
       <span class="pips">${pips}</span><span class="step-t">${txt}</span></div>`;
@@ -2401,7 +2411,6 @@ const deAll   = c => (c.de||"").split(/[,;]/).map(norm).filter(Boolean);   // Sy
 function promptHTML(c){                            // Vorderseite (im Bilder-Modus steht dort das Bild)
   return wantsDe() ? `<i>${esc(botName(c))}</i>` : esc(c.de||"—");   // gefragt wird nach allen geführten Namen
 }
-function promptSub(c){ return ""; }                // kein Hinweis vorne
 function answerText(c){ return wantsBoth() ? fullName(c) : wantsDe() ? deMain(c) : botName(c); }
 function answerLabel(){ return DIRS[curDir()].answer; }
 function promptLabel(){ return DIRS[curDir()].prompt; }
@@ -2431,18 +2440,24 @@ function answerMeta(c){
 }
 
 /* ---------- Distraktoren fürs Quiz ---------- */
+const atMemo = new Map();                              // Audit: answerText → deMain → expandAbbr lief je Frage für ALLE Karten (~10 RegExp je Aufruf)
+function answerTextMemo(x){
+  const k = String(curDir())+"|"+(wantsBoth()?1:0)+"|"+(examOnlyActive()?1:0);
+  let m = atMemo.get(x); if(!m || m.k!==k){ m = { k, v:answerText(x) }; atMemo.set(x, m); }
+  return m.v;
+}
 function distractors(c, n){
-  const want = answerText(c).toLowerCase();
+  const want = answerTextMemo(c).toLowerCase();
   // Im Bilder-Quiz keine Geschwister derselben Art anbieten (Tomate ↔ Kirschtomate):
   // Auf einem Foto wäre die Frage sonst auch mit perfektem Bild kaum zu entscheiden.
   const binom = searchName(c).toLowerCase();
-  const ok = x => x.key!==c.key && answerText(x).toLowerCase()!==want
+  const ok = x => x.key!==c.key && answerTextMemo(x).toLowerCase()!==want
                   && (mode!=="photo" || searchName(x).toLowerCase()!==binom);
   const same = allCards.filter(x=>ok(x) && x.thema===c.thema);
   const rest = allCards.filter(ok);
   const picks=[]; const seen=new Set([want]);
   for(const src of [shuffle(same.slice()), shuffle(rest.slice())]){
-    for(const x of src){ const t=answerText(x); const tl=t.toLowerCase(); if(!seen.has(tl)){ seen.add(tl); picks.push(t); if(picks.length>=n) return picks; } }
+    for(const x of src){ const t=answerTextMemo(x); const tl=t.toLowerCase(); if(!seen.has(tl)){ seen.add(tl); picks.push(t); if(picks.length>=n) return picks; } }
   }
   return picks;
 }
@@ -3058,11 +3073,16 @@ function startChallenge(){                // genau die Karten der Herausforderun
   const ch = pendingChallenge;
   if(!ch){ return startSession(); }
   applyChallengePrefs(ch); syncDirUI();   // auch wenn zwischendurch eigene Sitzungen liefen
+  if(ch.p && ch.p!==profileId && typeof SEEDS!=="undefined" && SEEDS[ch.p]){   // Audit: die Karten-Indizes gelten für das Profil des Links – nach einem Berufswechsel liefen sonst fremde Karten
+    const parts = ch.p.match(/^(.*)_(gaertner|fachwerker)$/);
+    if(parts){ $("#frSelect").value=parts[1]; $("#nivSelect").value=parts[2]; }
+    loadProfile(ch.p); profSub(); syncOptsSummary();
+  }
   const cards = (ch.i||[]).map(i=>allCards[i]).filter(Boolean);
   if(!cards.length){ toast("Karten dieser Herausforderung nicht gefunden",true); return; }
   const b=$("#duelBanner"); if(b) b.hidden=true;
   queue = cards.slice(); qi = 0; photoMisses = 0; qStart = 0;
-  sess = { total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, baseMode:mode, cards:cards.slice(), challenge:ch };
+  sess = { id:++sessSeq, total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, baseMode:mode, cards:cards.slice(), challenge:ch };
   // Geführte Lektion: die Übungsform je Karte kommt aus dem Link, damit wirklich
   // dieselbe Aufgabe läuft (nicht die, die der eigene Leitner-Stand vorgeben würde).
   if(ch.m==="guided" && Array.isArray(ch.f) && ch.f.length===cards.length){
@@ -3096,7 +3116,7 @@ function stageFull(on){
 function startSession(){
   endChallengeOverride();                 // eigene Sitzung: eigene Einstellungen
   queue = buildQueue(); qi = 0; photoMisses = 0; qStart = 0;
-  sess = { total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, baseMode:mode, cards:queue.slice(), challenge:null };
+  sess = { id:++sessSeq, total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, baseMode:mode, cards:queue.slice(), challenge:null };
   if(!queue.length){ toast("Keine Arten im aktuellen Filter",true); return; }
   clockRun(true); stageFull(true);
   nextCard();
@@ -3127,7 +3147,7 @@ function startGuided(){
   const formOf = new Map(), boxOf = new Map();
   q.forEach(c=>{ const b = pget(c.key).box||0; boxOf.set(c, b); formOf.set(c, guidedForm(b, online)); });
   queue=q; qi=0; photoMisses=0; qStart=0;
-  sess = { total:q.length, done:0, correct:0, scored:0, ms:0, pts:null, active:true, baseMode:mode,
+  sess = { id:++sessSeq, total:q.length, done:0, correct:0, scored:0, ms:0, pts:null, active:true, baseMode:mode,
            cards:q.slice(), challenge:null, auto:true, formOf, boxOf, modeBefore:mode };
   clockRun(true); stageFull(true);
   nextCard();
@@ -3135,14 +3155,6 @@ function startGuided(){
 /* Dieselben Karten als REINES Auswahl-Quiz spielen – z. B. um eine geführte
    Lektion noch einmal am Stück abzufragen. (Fürs Teilen braucht es das nicht
    mehr: die geführte Lektion ist seit v3 des Links direkt duellfähig.) */
-function startQuizWith(cards){
-  mode="quiz"; store.set(LS_PREFIX+"mode",mode);
-  syncModeTabs();
-  queue = cards.slice(); qi = 0; photoMisses = 0; qStart = 0;
-  sess = { total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, baseMode:mode, cards:cards.slice(), challenge:null };
-  clockRun(true); stageFull(true);
-  nextCard();
-}
 function sessionBar(){
   const pct = sess.total? Math.round(sess.done/sess.total*100):0;
   return `<div class="sessionbar"><span>${sess.done} / ${sess.total}</span><span class="sbar"><i style="width:${pct}%"></i></span>`+
@@ -3262,7 +3274,6 @@ function renderCard(){
   stage.innerHTML = sessionBar() + `<div class="card" id="card" role="button" tabindex="0" aria-label="Karteikarte – zum Umdrehen aktivieren">
       <span class="side-label">${esc(promptLabel())}</span>
       <div class="prompt">${promptHTML(c)}</div>
-      ${promptSub(c)?`<div class="sub">${esc(promptSub(c))}</div>`:""}
       <div class="flip-hint">Zum Umdrehen tippen · Leertaste</div>
     </div>`;
   $("#btnStop").onclick=finishSession;
@@ -3291,7 +3302,6 @@ function flipCard(){
   flipped=true; const c=current;
   $("#card").innerHTML = `<span class="side-label">${esc(answerLabel())}</span>
     <div class="prompt">${promptHTML(c)}</div>
-    ${promptSub(c)?`<div class="sub">${esc(promptSub(c))}</div>`:""}
     <div class="answer"><div class="big">${esc(answerText(c)||"—")}</div>
       ${answerMeta(c)?`<div class="meta">${answerMeta(c)}</div>`:""}</div>
     <div style="margin-top:14px">${infoBtnHTML("Mehr zur Pflanze")}</div>`;
@@ -3320,7 +3330,6 @@ function renderQuiz(){
   const stage=$("#stage");
   stage.innerHTML = sessionBar() +
     `<div class="qprompt">${promptHTML(c)}</div>
-     ${promptSub(c)?`<div class="qsub">${esc(promptSub(c))}</div>`:""}
      <div class="options" id="opts"></div>
      <div class="feedback" id="fb" aria-live="polite"></div>
      <div class="nav" id="nav"></div>`;
@@ -3371,7 +3380,6 @@ function renderType(){
   const stage=$("#stage");
   stage.innerHTML = sessionBar() +
     `<div class="qprompt">${promptHTML(c)}</div>
-     ${promptSub(c)?`<div class="qsub">${esc(promptSub(c))}</div>`:""}
      <div class="examform" id="typeForm">`+
        keys.map((k,i)=>`<label class="exrow" for="ty_${k}">
            <span class="exlab">${esc(FIELD_LABEL[k]||k)}<span class="expts">${nfmt(examPts(k))} P.</span></span>
@@ -3507,12 +3515,6 @@ function renderListControls(){
       <label class="po-ety" title="Zu jeder Pflanze eine kurze Merkzeile mit der Herkunft/Bedeutung des botanischen Namens mitdrucken (Latein/Griechisch → Deutsch, kuratiert – ohne Gewähr)."><input type="checkbox" id="printEty"${printEtyOn()?" checked":""}> Namensherkunft mitdrucken</label>
       <label class="po-ety" title="Jede Gruppe der gewählten Ansicht (Thema, Familie oder Anfangsbuchstabe) beginnt beim Drucken auf einer eigenen Seite – braucht mehr Papier, ist aber übersichtlicher zum Lernen."><input type="checkbox" id="printBreak"${printBreakOn()?" checked":""}> jede Gruppe auf neuer Seite</label>
     </div>`;
-  // Design-Umschalter auch im Listenmodus erreichbar (die Sitzungs-Optionen mit dem
-  // Umschalter sind hier ausgeblendet). Klick wird per Delegation (.themetoggle) behandelt.
-  const secDesign=`<div class="lc-sec">
-      <div class="lc-h">Design</div>
-      <button class="themetoggle" type="button" aria-label="Helles oder dunkles Design umschalten" title="Zwischen hellem und dunklem Design wechseln – die Wahl gilt für alle Seiten auf diesem Gerät"><svg class="ic moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.5 14.5A8.5 8.5 0 019.5 3.5a8.5 8.5 0 1011 11z"/></svg><svg class="ic sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span class="tt-dark">Dunkles Design</span><span class="tt-light">Helles Design</span></button>
-    </div>`;
   host.classList.toggle("open", open);
   host.innerHTML=`
     <button class="lc-toggle" id="lcToggle" aria-expanded="${open?"true":"false"}">
@@ -3524,7 +3526,6 @@ function renderListControls(){
       ${secAnsicht}
       ${secFilter}
       ${secPrint}
-      ${secDesign}
     </div>`;
   $("#lcToggle").onclick=()=>{ host.dataset.open = open?"0":"1"; renderListControls(); };
   host.querySelectorAll(".sortbtn").forEach(b=>b.onclick=()=>{
@@ -3633,7 +3634,6 @@ function loadPrintColsOff(){
 function savePrintColsOff(){ try{ store.set(LS_PREFIX+"printcols", JSON.stringify([...printColsOff])); }catch(e){} }
 function printEtyOn(){ return store.get(LS_PREFIX+"printety")==="1"; }   // Quelle: Speicher (Checkbox lebt nur im offenen Akkordeon)
 function printBreakOn(){ return store.get(LS_PREFIX+"printbreak")==="1"; }   // opt-in: jede Gruppe auf neuer Seite
-function printColOn(k){ if(!printColsOff) loadPrintColsOff(); return !printColsOff.has(k); }
 function renderPrintCols(){
   const host=$("#printCols"); if(!host) return;
   if(!printColsOff) loadPrintColsOff();
@@ -4692,8 +4692,11 @@ function jsonpGet(url){
     const cb = "__wpcb"+(++__wpN);
     const sc = document.createElement("script");
     let done = false;
-    const cleanup = ()=>{ try{ delete window[cb]; }catch(e){ window[cb]=undefined; } if(sc.parentNode) sc.parentNode.removeChild(sc); };
-    const to = setTimeout(()=>{ if(done) return; done=true; cleanup(); reject(new Error("timeout")); }, 7000);
+    const cleanup = (spaet)=>{                         // spaet: nach Zeitüberschreitung bleibt ein stiller No-op stehen – eine verspätete Antwort warf sonst »__wpcbN is not defined« (Audit)
+      if(spaet) window[cb] = ()=>{ try{ delete window[cb]; }catch(e){ window[cb]=undefined; } };
+      else { try{ delete window[cb]; }catch(e){ window[cb]=undefined; } }
+      if(sc.parentNode) sc.parentNode.removeChild(sc); };
+    const to = setTimeout(()=>{ if(done) return; done=true; cleanup(true); reject(new Error("timeout")); }, 7000);
     window[cb] = d=>{ if(done) return; done=true; clearTimeout(to); cleanup(); resolve(d); };
     sc.onerror = ()=>{ if(done) return; done=true; clearTimeout(to); cleanup(); reject(new Error("network")); };
     sc.src = url + "&callback=" + cb;
@@ -4930,10 +4933,13 @@ document.addEventListener("keydown",e=>{                // Capture: Esc gilt zue
 }, true);
 function lbWire(img, label, list, loader){               // Bild anklick- UND tastaturbedienbar machen
   if(!img) return;
+  img.__lb = { list, loader };                           // spätere Aufrufe (Galerie nachgeladen) aktualisieren nur Liste/Loader …
+  img.setAttribute("aria-label", label||"Bild vergrößern");
+  if(img.__lbWired) return;                              // … statt ein zweites Klick-Paar anzuhängen (Audit: Lightbox öffnete erst einzeln, dann als Galerie)
+  img.__lbWired = true;
   img.classList.add("lb-zoom");
   img.setAttribute("role","button"); img.tabIndex=0;
-  img.setAttribute("aria-label", label||"Bild vergrößern");
-  const go=()=>openLightbox(img.currentSrc||img.src, img.alt, list, 0, loader);
+  const go=()=>openLightbox(img.currentSrc||img.src, img.alt, img.__lb.list, 0, img.__lb.loader);
   img.addEventListener("click",go);
   img.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); } });
 }
@@ -5081,12 +5087,23 @@ function photoStoreLoad(){
   try{ photoStore = JSON.parse(store.get(LS_PHOTOS)||"{}") || {}; }catch(e){ photoStore = {}; }
   return photoStore;
 }
+const PHOTO_CAP = 400;                                 // Audit: 1500 Einträge samt Galerie + Nachweis kamen an die 5-MB-Grenze
+let photoSaveT = null;
 function photoRemember(key, val){
-  const s = photoStoreLoad(); s[key] = val;
+  const s = photoStoreLoad(); delete s[key]; s[key] = val;   // neu einsortieren → der älteste Eintrag fällt zuerst
   const ks = Object.keys(s);
-  if(ks.length > 1500) delete s[ks[0]];               // Deckel: älteste Einträge fallen raus
-  try{ store.set(LS_PHOTOS, JSON.stringify(s)); }catch(e){ /* Speicher voll – egal */ }
+  for(let i=0; ks.length-i > PHOTO_CAP; i++) delete s[ks[i]];
+  clearTimeout(photoSaveT); photoSaveT = setTimeout(photoStoreFlush, 250);   // gebündelt – jedes Bild serialisierte sonst den ganzen Cache
 }
+function photoStoreFlush(){
+  photoSaveT = null;
+  const s = photoStoreLoad();
+  if(!store.set(LS_PHOTOS, JSON.stringify(s))){        // Speicher voll: ältere Hälfte verwerfen, einmal nachsetzen
+    const ks = Object.keys(s); ks.slice(0, Math.ceil(ks.length/2)).forEach(k=>delete s[k]);
+    try{ store.set(LS_PHOTOS, JSON.stringify(s)); }catch(e){}
+  }
+}
+try{ addEventListener("pagehide", ()=>{ if(photoSaveT){ clearTimeout(photoSaveT); photoStoreFlush(); } }); }catch(e){}
 function wikiPage(d){                                  // erste Seite der Antwort (auch ohne extract)
   const pg = d && d.query && d.query.pages; if(!pg) return null;
   const k = Object.keys(pg)[0]; if(!k || k==="-1") return null;
@@ -5471,11 +5488,12 @@ function photoNotice(html){
   const stop=$("#btnStop"); if(stop) stop.onclick=finishSession;
 }
 async function renderPhoto(){
-  const c = current;
+  const c = current, sid = sess.id;
+  const stale = ()=> current!==c || !sess || !sess.active || sess.id!==sid;   // Sitzung beendet/neu gestartet → nichts mehr rendern (Audit)
   phWaitStop();
   if(sess.photoGiveUp){ mode = "quiz"; return renderQuiz(); }   // ausdrücklich gewählt (s. u.)
   $("#stage").innerHTML = sessionBar() + `<div class="photobox"><div class="ph-load">Bild wird geladen …</div></div>
-    <div class="options" id="opts"></div><div class="feedback" id="fb" aria-live="polite"></div><div class="nav" id="nav"></div>`;
+    <div class="options" id="opts"></div><div class="feedback" id="fb" aria-live="polite"></div><div class="ph-srcslot"></div><div class="nav" id="nav"></div>`;
   const stop=$("#btnStop"); if(stop) stop.onclick=finishSession;
   const box = ()=>$("#stage").querySelector(".photobox");
   // Lieber hartnäckig als schnell aufgeben: Ein kurzer Aussetzer (Funkloch,
@@ -5485,13 +5503,13 @@ async function renderPhoto(){
   for(let versuch=1; versuch<=3; versuch++){
     try{ p = await photoFor(c); netFail=false; break; }
     catch(e){ netFail=true; }
-    if(current!==c) return;
+    if(stale()) return;
     if(versuch===3) break;
     const b=box(); if(b) b.innerHTML=`<div class="ph-load">Bild wird geladen … <span class="ph-try">neuer Versuch ${versuch+1} von 3</span></div>`;
     await new Promise(r=>setTimeout(r, versuch*900));
-    if(current!==c) return;
+    if(stale()) return;
   }
-  if(current!==c) return;                              // Sitzung weitergelaufen (Abbruch/Weiter)
+  if(stale()) return;                              // Sitzung weitergelaufen (Abbruch/Weiter)
   if(netFail){
     // Kein Moduswechsel: Der Bildschirm wartet sichtbar auf die Verbindung und
     // versucht es von selbst weiter – sobald das Netz zurück ist, geht es weiter.
@@ -5502,7 +5520,7 @@ async function renderPhoto(){
       <button class="btn ghost" id="phOther">Andere Art zeigen</button></div>`);
     $("#phRetry").onclick=()=>{ phWaitStop(); renderPhoto(); };
     $("#phOther").onclick=()=>{ phWaitStop(); if(deferPhotoCard()) nextCard(); else renderPhoto(); };
-    phWaitTimer = setTimeout(()=>{ if(current===c && sess.active) renderPhoto(); }, phWaitMs);
+    phWaitTimer = setTimeout(()=>{ if(!stale()) renderPhoto(); }, phWaitMs);
     return;
   }
   if(!p){
@@ -5523,7 +5541,7 @@ async function renderPhoto(){
   }
   photoMisses = 0; sess.photoDefer = 0;
   p = await photoMoreViews(p, c);                     // Artikelbild: ab der zweiten Begegnung weitere Ansichten holen
-  if(current!==c) return;
+  if(stale()) return;
   p = photoVariant(p, c);                              // nicht immer dasselbe Bild zuerst (merkt sich die letzte Ansicht)
   const gal = photoGalList(p), viele = gal.length>1;
   $("#stage").querySelector(".photobox").innerHTML =
@@ -5654,9 +5672,10 @@ function finishPhotoAnswer(ok, g, p, solHTML, full){
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
 }
 function photoRevealCredit(p){                        // Bildnachweis erst jetzt (verrät sonst die Lösung)
-  const box=$("#stage").querySelector(".photobox");
-  if(!box || !p || box.querySelector(".ph-src")) return;
-  box.insertAdjacentHTML("beforeend", photoSrcLine(p));
+  const st=$("#stage"), box=st && st.querySelector(".photobox");
+  if(!box || !p || st.querySelector(".ph-src")) return;
+  const slot = st.querySelector(".ph-srcslot");          // Audit: unter Optionen/Rückmeldung statt in der Bildbox – die Optionen rutschen beim Aufdecken nicht mehr
+  if(slot) slot.innerHTML = photoSrcLine(p); else box.insertAdjacentHTML("beforeend", photoSrcLine(p));
   const show = cr => {
     const el2=$("#phSrc");
     if(el2 && cr && (cr.artist||cr.license))
@@ -5986,7 +6005,7 @@ function openHowModal(){
 function loadProfile(id){
   if(!(typeof SEEDS!=="undefined" && SEEDS[id])) id = SEEDS && SEEDS["gemuesebau_gaertner"] ? "gemuesebau_gaertner" : Object.keys(SEEDS||{})[0];
   profileId = id;
-  allCards = cardsFor(id);
+  allCards = cardsFor(id); atMemo.clear();
   loadProgress();
   if($("#listSearch")) $("#listSearch").value="";   // Suche beim Profilwechsel zurücksetzen
   listCats.clear();                                  // Kategorie-Tags beim Profilwechsel zurücksetzen
@@ -6019,12 +6038,13 @@ function refreshKat(){   // Auswahl der Lernsitzung: alles · ein Thema · eine 
    CH_PHA (mc · type · exam) bleibt davon unberührt. */
 const PH_ANSWER = { mc:"Auswahl (4 Namen)", exam:"Selbst eingeben (wie in der Prüfung)" };
 const PH_ANSWER_LEGACY = { type:"Namen eingeben (älterer Duell-Link)" };
-function phLabel(k){ return PH_ANSWER[k] || PH_ANSWER_LEGACY[k] || k; }
+const own = (o,k)=> Object.prototype.hasOwnProperty.call(o,k);   // Audit: »constructor« aus Link/Speicher ist keine Antwortart/Richtung
+function phLabel(k){ return (own(PH_ANSWER,k)&&PH_ANSWER[k]) || (own(PH_ANSWER_LEGACY,k)&&PH_ANSWER_LEGACY[k]) || k; }
 function loadPrefs(){                       // gespeicherte Abfrage-Einstellungen – nur noch angebotene Werte
   dirText  = DIRS_TEXT.includes(store.get(LS_PREFIX+"dirtext")) ? store.get(LS_PREFIX+"dirtext") : "de2bot";
   dirPhoto = dirsFor("photo").includes(store.get(LS_PREFIX+"dirphoto")) ? store.get(LS_PREFIX+"dirphoto") : "img2both";
   const pa = store.get(LS_PREFIX+"phanswer");
-  photoAnswer = PH_ANSWER[pa] ? pa : (pa==="type" ? "exam" : "mc");   // früheres »Namen tippen« → Eingabe bleibt Eingabe
+  photoAnswer = own(PH_ANSWER,pa) ? pa : (pa==="type" ? "exam" : "mc");   // früheres »Namen tippen« → Eingabe bleibt Eingabe
 }
 /* Ein Duell-Link gibt Richtung und Antwortart für GENAU diese Aufgabe vor – auch ältere,
    nicht mehr angebotene. Sobald eine eigene Sitzung startet oder man selbst etwas
@@ -6032,7 +6052,7 @@ function loadPrefs(){                       // gespeicherte Abfrage-Einstellunge
 let chOverride = false;
 function applyChallengePrefs(ch){
   if(ch.a && phLabel(ch.a)!==ch.a) photoAnswer = ch.a;
-  if(ch.r && DIRS[ch.r]){ if(DIRS_PHOTO.includes(ch.r)) dirPhoto=ch.r; else dirText=ch.r; }
+  if(ch.r && own(DIRS,ch.r)){ if(DIRS_PHOTO.includes(ch.r)) dirPhoto=ch.r; else dirText=ch.r; }
   if(ch.m==="guided" && ch.rp && DIRS_PHOTO.includes(ch.rp)) dirPhoto = ch.rp;   // Bild-Karten der geführten Lektion
   chOverride = true;
 }
@@ -6044,7 +6064,7 @@ function syncDirUI(){
   const isPhoto = mode==="photo", isList = mode==="list";
   const paw=$("#phAnswerField"); if(paw) paw.hidden = !isPhoto;
   const pas=$("#phAnswer"); if(pas){
-    const keys = Object.keys(PH_ANSWER).concat(PH_ANSWER[photoAnswer] ? [] : [photoAnswer]);   // ältere Antwortart (Duell-Link) sichtbar halten
+    const keys = Object.keys(PH_ANSWER).concat(own(PH_ANSWER,photoAnswer) ? [] : [photoAnswer]);   // ältere Antwortart (Duell-Link) sichtbar halten
     pas.innerHTML = keys.map(k=>`<option value="${k}">${esc(phLabel(k))}</option>`).join("");
     pas.value = photoAnswer;
   }
@@ -6380,7 +6400,6 @@ window.famName=famName;
 
 </script>
 <script>/* Hell/Dunkel-Umschalter: übersteuert die System-Einstellung, Wahl wird gespeichert.
-   Delegation auf .themetoggle – der Knopf sitzt in den »Optionen« (Sitzung) UND wird im
-   Listenmodus dynamisch erzeugt (renderListControls), deshalb kein fester Handler. */(function(){document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest(".themetoggle");if(!b)return;var r=document.documentElement,sys=window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light",cur=r.dataset.theme||sys,nx=cur==="dark"?"light":"dark";var ap=function(){r.dataset.theme=nx;try{localStorage.setItem("pbw.theme",nx);}catch(e){}};if(document.startViewTransition&&!window.__noVT&&!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)){document.startViewTransition(ap);}else{ap();}});})();</script>
+   Delegation auf .themetoggle – der runde Knopf sitzt im Kopf (ein Ort auf allen Seiten). */(function(){document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest(".themetoggle");if(!b)return;var r=document.documentElement,sys=window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light",cur=r.dataset.theme||sys,nx=cur==="dark"?"light":"dark";var ap=function(){r.dataset.theme=nx;try{localStorage.setItem("pbw.theme",nx);}catch(e){}};if(document.startViewTransition&&!window.__noVT&&!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)){document.startViewTransition(ap);}else{ap();}});})();</script>
 </body>
 </html>

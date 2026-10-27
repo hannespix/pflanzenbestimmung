@@ -2239,6 +2239,58 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Touch-Ziele), `tests/learn.mjs` (Live-Region, `li>button`-Zeilen, `aria-pressed`, beenden
       dreht nicht um, Dialog blockt Ziffern, inert an/aus, Touch-Ziele, keine ⏱-Glyphe, Hilfe aktuell).
 
+- [x] **Audit-Paket 4 (Robustheit & Pflege): Funde 9, 24, 33–44 – dazu 13, 14 und 25, die in
+      keiner Paketliste standen.** **Lern-Tool:** **(9)** `store.set` behandelt einen vollen
+      Speicher (`QuotaExceededError`) je Schreibvorgang statt den Browser-Speicher für die ganze
+      Sitzung abzuschalten (`isQuota`, `get` bevorzugt den RAM-Stand eines gescheiterten Schreibens;
+      gleiche Änderung in `app.js`); Bild-Cache auf **400** Einträge gedeckelt (`PHOTO_CAP`), neu
+      Erinnertes wird nach hinten sortiert, das Schreiben ist 250 ms gebündelt (`photoStoreFlush`,
+      bei Quota-Fehler ältere Hälfte weg, `pagehide` flusht). **(33)** `stepHTML(0)` sagt »Neu ·
+      noch 3× richtig« statt »Stufe 0 von 5«. **(34)** Der Bildnachweis landet in einem Slot
+      **unter** Optionen/Rückmeldung (`.ph-srcslot`), nicht mehr zwischen Bild und Optionen.
+      **(35)** `.opt:disabled` hat eine ausdrückliche Textfarbe (`--ink-soft`), die richtige Option
+      volle Tinte – vorher UA-»graytext« (dunkel 2,6:1). **(36)** Design-Umschalter als **runder
+      Knopf im Kopf** auf allen drei Seiten (`.mast-right .themebtn`); der Optionen-Eintrag und
+      der Listen-Abschnitt »Design« sind raus (Prüfwerkzeug: Gruppe »Ansicht« aus der Verwaltung
+      raus). **(37)** `<h1>` mit geschütztem Leerzeichen vor dem Trenner (»Pflanzenkenntnis ·« /
+      »Lernen«). **(38)** `renderPhoto` prüft nach jedem `await` gegen eine Sitzungs-Nummer
+      (`sess.id`/`sessSeq`, `stale()`), nicht nur gegen `current`. **(40)** `startChallenge` lädt
+      das Profil des Links, bevor Indizes zu Karten werden. **(41)** Toter Code raus
+      (`promptSub`, `startQuizWith`, `printColOn`, CSS `.herblink`/`.rankrow`); **bewusst nicht
+      gemacht:** ein gemeinsames `src/shared.js` beim Build – die 40 identischen Blöcke beider
+      Werkzeuge sind ein Refactoring mit echtem Regressionsrisiko ohne Nutzen für Nutzer, bleibt
+      als Idee in der TODO. **(42)** `esc()` maskiert `'`; JSONP lässt nach Zeitüberschreitung einen
+      stillen No-op-Callback stehen (kein `ReferenceError` bei später Antwort); `lbWire` ist
+      idempotent (zweiter Aufruf aktualisiert nur Liste/Loader); `own()` gegen Prototyp-Schlüssel
+      aus Link/Speicher (`PH_ANSWER`, `DIRS`); **CSP-Meta** auf allen drei Seiten (`script-src`
+      self + inline + de.wikipedia.org/commons.wikimedia.org für JSONP, `img-src` self/data/blob +
+      upload.wikimedia.org/commons/de.wikipedia, sonst `'self'`, `object-src 'none'`).
+      **(25)** `answerTextMemo` (Memo je Karte und Richtung) in `distractors`. **Prüfungswerkzeug:**
+      **(24)** SheetJS steckt als `<script type="text/plain" id="sheetjs-text">` in der Seite und
+      wird erst beim ersten Import ausgewertet (`ensureXLSX()`, als eingefügtes Inline-Skript –
+      CSP-verträglich, kein eval) – spart beim Erstaufruf das Parsen von 624 KB. **(13)** Der
+      Werkzeug-Import normalisiert wie der Konverter: gerade Apostrophe (`quotesQ`) und die drei
+      Beikraut-Schreibweisen (`KAT_ALIAS`/`katName`). **(14)** Ziehen: negative/0 Anzahl → Profil-
+      Soll (vorher `slice(0,-5)` = alle außer fünf). **(39)** `persistNow`/`flushPersist()`:
+      `switchProfile` sichert die ausstehende Änderung vorher, `pagehide`/`beforeunload` ebenso;
+      `normalizeSchema(s, def)` prüft Spalten (nur bekannte Schlüssel, Punkte ≥0, keine
+      Dubletten), Anzahl (1–60) und Skala (5 fallende Prozentwerte) **feldweise** gegen den
+      Profil-Standard – beim Laden aus dem Speicher und beim Sicherungs-Import; doppelte Prüfungs-
+      IDs aus der Sicherung werden verworfen. **(42)** `copyExam` hängt »(Kopie)« nur einmal an;
+      **(25)** die Suche rendert nicht mehr bei jedem Tastendruck die »Aktuelle Prüfung« mit.
+      **Werkzeuge/Doku:** `check_offline.py` erkennt zusätzlich `<img src=https…>` und jedes
+      `fetch(`; **(44)** README (Wurzel = Lern-Tool, kein `start.mjs`, »Selbst eingeben«, kein
+      IHK-Schlüssel, Dateibaum) und Technik-Doku (Größen) nachgezogen. **(43) Tests:** die zwei
+      langen festen Pausen (1,5 s/3,2 s) in `tests/learn.mjs` sind Polling; neu in
+      `tests/smoke.mjs` 9e/9f: Anzahl-Feld, Notengrenzen editieren (+ `flushPersist`), **echter
+      Excel-Import** (SheetJS erst beim Import, Normalisierung), Sicherung mit defektem Schema,
+      Quota-Fallback, `flushPersist` vor Profilwechsel, Kopie-Suffix, `esc`, Kopf-Umschalter,
+      `<h1>`, CSP-Meta und **CSP-Wirkung** (fremde Skripte/Bilder geblockt, Wikipedia/Commons
+      nicht – auf eigener Seite, weil die erwarteten Meldungen sonst als Konsolenfehler zählen);
+      `tests/learn.mjs`: Quota, Cache-Deckel, »Neu«, toter Code, `esc`, Kopf-Umschalter, CSP,
+      Herausforderung erzwingt Profil, Profilwechsel beendet die Sitzung, Bildnachweis ohne
+      Verschieben der Optionen, richtige Option dunkel ≥4,5:1.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.
@@ -2250,6 +2302,10 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       lehnt Hand-Edits in `seeds/` ab). Jeder neue Eingriff gehört zusätzlich in die
       Offenlegung (`.learnnote`, Hilfe »Datenherkunft«, `recht.html#datenquellen`,
       `docs/technik-kurzbeschreibung.md`) und in die Tests (`tests/learn.mjs`, `tests/smoke.mjs`).
+- [ ] Gemeinsamer Code beider Werkzeuge (Info-Karte, Lightbox, JSONP, Icons – ~40 identische
+      Blöcke in `app.js`/`learn.js`) könnte beim Build aus einer Datei `src/shared.js` eingefügt
+      werden. Bewusst zurückgestellt (Audit-Fund 41): Refactoring mit Regressionsrisiko, ohne
+      Nutzen für Nutzer; bei der nächsten größeren Änderung an einem der Blöcke erwägen.
 - [ ] Bei künftigen Listen-Updates: Excel nach `data/<profil-id>.<ext>` legen,
       `tools/rebuild_seeds.sh` (oder Konverter je Datei) laufen lassen, bauen,
       Offline-Check + Smoke-Test.
