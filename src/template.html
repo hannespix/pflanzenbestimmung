@@ -140,6 +140,7 @@ input,select{font-family:inherit; color:inherit}
 #btnAdmin.active::before{content:none} /* kein Punkt-Indikator – der Pfeil zeigt den Zustand */
 .admbar{display:flex; flex-wrap:wrap; gap:14px 26px; margin:12px 0 0 8px; padding:13px 16px; background:var(--surface-2); border:1px solid var(--rule); border-radius:5px; align-items:flex-start}
 .admbar[hidden]{display:none}
+[hidden]{display:none !important}   /* Audit: .btn{display:flex} überstimmte sonst das hidden-Attribut (»Aktualisieren« war ohne geladene Prüfung sichtbar) */
 .tgroup{display:flex; flex-direction:column; gap:6px}
 .tgroup .glabel{font-family:var(--mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--sepia); padding-left:2px}
 .tgroup .grow{display:flex; flex-wrap:wrap; gap:8px}
@@ -459,12 +460,12 @@ body.m-manage .selbar, body.m-manage #currentSel{display:none}
    data/leerboegen/: Arial, schwarze Linien, 10-mm-Schreibzeilen, ohne Raster. */
 @media print{
   @page{size:A4 portrait; margin:8mm 15mm 10mm}
-  body{background:var(--card); background-image:none}
+  body{background:#fff !important; background-image:none !important}   /* !important: die spätere »Stufe 2«-Regel (Lichtkegel + Punktraster) gewann sonst die Kaskade und bedruckte den amtlichen Leerbogen (Audit-Fund) */
   .wrap{display:none !important}
   .scrim{display:none !important}
   .infoscrim{display:none !important}
   .toast{display:none !important}
-  #sheet{display:block !important; color:#000; font-family:Arial,Helvetica,'Liberation Sans',sans-serif; line-height:1.25}
+  #sheet{display:block !important; background:#fff; color:#000; font-family:Arial,Helvetica,'Liberation Sans',sans-serif; line-height:1.25}
   .ftitle{font-size:16pt; font-weight:400; text-align:center; margin:0}
   .ftitle.fb{font-weight:700}
   .fsub{font-size:16pt; text-align:center; margin:0}
@@ -505,7 +506,7 @@ body.m-manage .selbar, body.m-manage #currentSel{display:none}
   .solution-note{font-size:8pt; color:#b00; border:.8pt solid #b00; padding:1pt 6pt; border-radius:2pt; display:inline-block; margin-left:6pt}
 
   /* ---- Musterlösung: schöneres, gut lesbares Layout (nicht der amtliche Leerbogen) ---- */
-  #sheet.sol-look{font-family:'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua',Georgia,serif; color:#22352b; line-height:1.3}
+  #sheet.sol-look{font-family:'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua',Georgia,serif; color:#22352b; line-height:1.3; print-color-adjust:exact; -webkit-print-color-adjust:exact}   /* grüner Kopf + Zebra auch ohne »Hintergrundgrafiken« (wie #printList im Lern-Tool) */
   #sheet.sol-look .ftitle{color:#2b4f38; font-weight:600; letter-spacing:-.01em}
   #sheet.sol-look .sheet-meta{font-family:'Segoe UI',system-ui,sans-serif; color:#56604f; margin:5pt 0 9pt}
   #sheet.sol-look .solution-note{color:#9c3b2e; border-color:#9c3b2e; border-radius:10pt; font-family:'Segoe UI',system-ui,sans-serif}

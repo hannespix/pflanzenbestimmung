@@ -1514,7 +1514,7 @@ body.stagefull #stage>.sessionbar{
   </p>
 
   <footer class="foot">
-    <span>Pflanzenkenntnis · Lernen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 27.10.2026 · Version e075b19</span></span>
+    <span>Pflanzenkenntnis · Lernen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 27.10.2026 · Version c6a24de</span></span>
     <a class="legal" href="rechtliches.html">Impressum &amp; Datenschutz</a>
   </footer>
 </div>
@@ -5012,7 +5012,7 @@ async function loadWiki(card, host, btn){
    Bewusst ein EIGENER Modus: Er lädt nichts beim Seitenaufbau, und ohne Netz
    sagt er das klar – Karteikarten, Quiz, Tippen und Liste bleiben offline voll
    nutzbar. */
-const LS_PHOTOS = LS_PREFIX+"photos6";                // gemerkte Bild-URLs (spart API-Abrufe; »6« = Commons-Standardgrößen – selbst abgeleitete 640-px-URLs taugen nicht mehr, alte Treffer verfallen)
+const LS_PHOTOS = LS_PREFIX+"photos7";                // gemerkte Bild-URLs (spart API-Abrufe; »7« = Bildfilter mit Wortgrenzen – Hortensien & Co. bekommen jetzt ein eigenes Foto, alte Fehltreffer verfallen)
 let photoStore = null, photoMisses = 0;
 function photoStoreLoad(){
   if(photoStore) return photoStore;
@@ -5038,8 +5038,11 @@ function usablePhoto(file){
   if(!file) return true;
   if(/\.(svg|pdf|djvu)$/i.test(file)) return false;  // PDF/DjVu = digitalisierte Bücher; ihr Vorschaubild ist der Buchdeckel
   if(/\(ia\b/i.test(file)) return false;             // »(IA xyz)« = Internet-Archive-Buchscan (»Garten-Dill« traf so ein Werk von 1768)
-  if(/(map|karte|distribution|range|verbreitung|locator|diagram|chart|wappen|logo|signature)/i.test(file)) return false;
   const f = String(file).replace(/[_\-.]+/g, " ");   // _-. sind Wortzeichen – erst normalisieren, sonst greift \b nicht (Book_cover)
+  // Karten/Diagramme/Wappen – mit WORTGRENZEN: als Teilstring verwarf »range« jede Hydrangea,
+  // »map« jeden »maple«-Dateinamen und »orange« jede Zitrusfrucht (Audit-Fund). Deutsche
+  // Komposita bleiben erfasst (»Verbreitungskarte«: Präfix »verbreitung«, Suffix »karte«).
+  if(/(\bmaps?\b|karten?\b|\bdistribution\b|\branges?\b|verbreitung|\blocator\b|\bdiagrams?\b|\bcharts?\b|\bwappen\b|\blogos?\b|\bsignature\b)/i.test(f)) return false;
   return !/(\bcover\b|einband|buchdeckel|deckblatt|titelblatt|titelseite|\btitle ?page\b|frontispi[sz]|manuscript|manuskript|handschrift|codex|\bbook\b|\bscans?\b|\bscanned\b)/i.test(f);
 }
 /* ---------- Welches Bild gehört wirklich zu DIESER Art? ----------
