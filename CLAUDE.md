@@ -2062,6 +2062,33 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Popover, kein »Stockmutter«/Rang 5 = Prachtexemplar, Dialog mit sechs Rängen + aktuellem
       Rang + Punkteregel, Hilfe-Absatz.
 
+- [x] **Bilder-Quiz: nicht immer dasselbe Bild zuerst** (Nutzerwunsch: »sonst lernt man Bilder
+      auswendig und nicht die Pflanze – random oder sich merken, welches Bild zuletzt zuerst
+      gezeigt wurde, und beim nächsten Mal ein anderes«). Umgesetzt als **Gedächtnis statt
+      Zufall** (`learn.js`): `photoVariant(p, card)` merkt sich je Art die zuletzt zuerst
+      gezeigte Ansicht (`pflanzenlernen.photoseen`, Deckel 1500, `photoSeenGet/Set`) und nimmt
+      beim nächsten Mal **reihum die nächste** aus den geprüften Ansichten (`p.gal` – bisher
+      drehte nur die Platzhalter-Art zufällig unter den gleich guten). Erste Begegnung = beste
+      Ansicht; nennen mindestens zwei Dateinamen die Art (`commonsScore>0`), bleibt die
+      Rotation unter diesen (ein namenloses Kategoriebild ist seltener eindeutig). Galerie
+      beginnt mit der gezeigten Ansicht, Datei/Nachweis gehören zu ihr. Gilt auch innerhalb
+      einer Sitzung (»Nochmal« zeigt eine andere Ansicht). **Artikelbild** (`src:"wp"`, nur
+      eine Ansicht bekannt): `photoMoreViews(p, card)` holt **ab der zweiten Begegnung**
+      einmalig die Artikelbilder (`wikiGallery(title, noArt)`, JSONP – `check_offline.py`
+      bleibt grün) und behält nur Dateien, die **diese** Art nennen und keine andere Art der
+      Gattung (`fileMentionsOther`); sie werden als `gal`/`galInfo` im Bild-Cache gemerkt
+      (kein zweiter Abruf; Thumb auf 640 px via `phThumb`), der Bildnachweis der neuen
+      Ansicht kommt wie bisher per Datei-Abruf (`photoCredit`). `prefetchPhoto` holt die
+      weiteren Ansichten der nächsten zwei Karten schon vorab; `photoMoreTried` begrenzt auf
+      einen Versuch je Sitzung (wikiGallery schluckt Netzfehler als `[]`). Hilfe-Text »Bilder«
+      ergänzt. Test-Haken `__getPhotoSeen`/`__setPhotoSeen`; `__clearPhotoCache` leert auch
+      den Stand. `tests/learn.mjs`: `vielfalt` umgestellt (erste = beste, dann reihum nur
+      Dateien mit Art, Galerie/Datei/Nachweis passend, Stand gespeichert; Quiz: nach gemerkter
+      Ansicht 2 kommt 3 samt Nachweis, danach wieder 1) + neuer Block `wpRot` (erste Begegnung
+      ohne Abruf, zweite holt einmal die Artikelbilder und zeigt das Zapfen-Foto – andere Art
+      und namenlose Datei verworfen –, Nachweis per Datei-Abruf, danach reihum ohne weiteren
+      Abruf).
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.
