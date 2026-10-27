@@ -2434,7 +2434,7 @@ function renderGrader(){
       : `0–${bands[4].lo-1} %`;
     return `<tr class="${b.stufe===hitStufe?'hit':''}">
       <td class="g"><span class="swatch" style="background:${b.color}"></span>${b.stufe}</td>
-      <td>${b.label}</td><td>${pctCell}</td><td class="pts">${range}</td></tr>`;
+      <td>${b.label}</td><td class="pct">${pctCell}</td><td class="pts">${range}</td></tr>`;
   }).join("");
   $("#gTable").innerHTML=`<thead><tr><th>Note</th><th></th><th>Prozent</th><th style="text-align:right">Punkte (${max})</th></tr></thead><tbody>${rows}</tbody>`;
   $("#gTable").querySelectorAll(".gedge").forEach(inp=>inp.onchange=()=>{

@@ -2191,6 +2191,7 @@ function applyMode(){
   // Im Listenmodus gibt es EIN Options-Akkordeon: die Sitzungs-Optionen sind ausgeblendet,
   // ihre listenrelevanten Schalter (ZP, Prüfungsstoff) stehen gespiegelt im Listen-Akkordeon.
   const so=$("#setOpts"); if(so) so.hidden = isList;
+  const cw=$("#chooseWrap"); if(cw) cw.hidden = isList;   // Audit: die Sitzungs-Klappe »Selbst wählen« hat in der Nachschlage-Liste nichts verloren – zurück geht es über »← Zurück zum Lernen«
   if(lsr) lsr.hidden = !isList;
   if(lc) lc.hidden = !isList;
   syncDirUI(); syncOptsSummary();
@@ -4577,11 +4578,41 @@ function wire(){
     document.addEventListener("keydown",e=>{ if(e.key==="Escape" && !ps.hidden) closeP(); });
     window.openProfile=openP;                               // Erstbesuch: nach dem Intro einmalig öffnen
   }
-  $("#btnHelp").onclick=()=>{
-    const h=$("#helpPanel"), b=$("#btnHelp"), willOpen=h.hidden;
-    h.hidden=!willOpen; b.classList.toggle("active",willOpen); b.setAttribute("aria-pressed",String(willOpen));
-    if(willOpen) h.scrollIntoView({behavior:"smooth",block:"nearest"});
-  };
+  $("#btnHelp").onclick=()=>{ if($("#helpScrim").hidden) openHelp(); else closeHelp(); };
+  $("#helpClose").onclick=closeHelp;
+  $("#helpScrim").addEventListener("click",e=>{ if(e.target===$("#helpScrim")) closeHelp(); });
+}
+
+/* ---------- Hilfe als Dialog ----------
+   Wie im Prüfungswerkzeug: ×, Esc oder Klick daneben schließen, der Fokus wandert hinein
+   und beim Schließen zurück zum Hilfe-Knopf (Fokusfalle wie bei der Info-Karte). Vorher
+   klappte die ~2 000 Wörter lange Hilfe in die Seite auf und ließ sich nur über den
+   Hilfe-Knopf ganz oben wieder schließen (Audit-Fund). */
+let helpReturnFocus=null;
+function helpKey(e){
+  if(e.key==="Escape"){ closeHelp(); return; }
+  if(e.key==="Tab"){
+    const h=$("#helpPanel");
+    const f=[...h.querySelectorAll('a[href],button:not([disabled]),summary,input,select,[tabindex]:not([tabindex="-1"])')].filter(x=>x.offsetParent!==null);
+    if(!f.length) return;
+    const first=f[0], last=f[f.length-1];
+    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+  }
+}
+function openHelp(){
+  const s=$("#helpScrim"), b=$("#btnHelp"); if(!s || !s.hidden) return;
+  helpReturnFocus=document.activeElement;
+  s.hidden=false; b.classList.add("active"); b.setAttribute("aria-pressed","true");
+  document.addEventListener("keydown", helpKey);
+  try{ $("#helpClose").focus(); }catch(e){}
+}
+function closeHelp(){
+  const s=$("#helpScrim"), b=$("#btnHelp"); if(!s || s.hidden) return;
+  s.hidden=true; b.classList.remove("active"); b.setAttribute("aria-pressed","false");
+  document.removeEventListener("keydown", helpKey);
+  if(helpReturnFocus && helpReturnFocus.focus){ try{ helpReturnFocus.focus(); }catch(e){} }
+  helpReturnFocus=null;
 }
 
 /* ---------- Start ---------- */

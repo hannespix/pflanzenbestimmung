@@ -647,6 +647,7 @@ async function main() {
     const editBtn = [...row.querySelectorAll(".rowacts .iconbtn")].find(b => !b.classList.contains("info"));
     const infoOpacity = getComputedStyle(openBtn).opacity;
     const editOpacity = editBtn ? getComputedStyle(editBtn).opacity : "1";
+    const touchMedia = matchMedia("(hover:none),(pointer:coarse)").matches;   // Headless meldet oft hover:none → dann dauerhaft sichtbar (gewollt)
     openBtn.click();
     const box = document.querySelector(".infoscrim .infobox");
     const links = [...document.querySelectorAll(".infoscrim .srcgrid a")].map(a => a.textContent.replace(/[↗\s]+$/, ""));
@@ -658,7 +659,7 @@ async function main() {
       hasWpBtn: !!document.querySelector(".infoscrim #wpLoad"),
       etyPresent: !!document.querySelector(".infoscrim details.etym"),
       leakedScrimOpen: document.querySelectorAll(".scrim.open").length,   // Info-Modal darf kein Panel öffnen
-      infoOpacity, editOpacity
+      infoOpacity, editOpacity, touchMedia
     };
     const x = document.querySelector(".infoscrim .infobox-x"); if (x) x.click();
     res.closedByX = !document.querySelector(".infoscrim");
@@ -672,8 +673,8 @@ async function main() {
   });
   assert(info.ok && info.role === "dialog" && info.hasHead,
     "Info-Modal öffnet nicht korrekt aus der Auswahl-Liste: " + JSON.stringify(info));
-  assert(info.infoOpacity === "1" && info.editOpacity === "0",
-    "ℹ muss ohne Hover sichtbar sein (opacity 1), Bearbeiten/Löschen hover-gated (opacity 0): " + JSON.stringify(info));
+  assert(info.infoOpacity === "1" && info.editOpacity === (info.touchMedia ? "1" : "0"),
+    "ℹ muss ohne Hover sichtbar sein (opacity 1); Bearbeiten/Löschen hover-gated (opacity 0) – außer auf Touch (hover:none), dort dauerhaft sichtbar: " + JSON.stringify(info));
   assert(JSON.stringify(info.links) === JSON.stringify(["Wikipedia", "NaturaDB", "iNaturalist"]),
     "Info-Modal muss die neutralen Deep-Links (Wikipedia/NaturaDB/iNaturalist) zeigen: " + JSON.stringify(info.links));
   assert(info.hasWpBtn, "Info-Modal muss den opt-in »Online-Infos laden«-Knopf (Wikipedia) haben: " + JSON.stringify(info));
@@ -929,6 +930,61 @@ async function main() {
     "Zeilen-Klick muss die Auswahl an-/abwählen (ganze Zeile als Trefferfläche): " + JSON.stringify(touch));
   assert(touch.btnNoToggle, "Klick auf den ℹ-Knopf darf die Auswahl nicht ändern: " + JSON.stringify(touch));
   assert(touch.gmax >= 80, "Höchstpunktzahl-Feld (#gMax) mobil zu schmal: " + touch.gmax + "px (mindestens 80px)");
+
+  // 9c) Audit (Handy, 360 px): »Aktuelle Prüfung« zweizeilig – Name in voller Breite, ℹ nicht über
+  //     dem Familiennamen, Zeilen kompakt; Listenzeilen mit Aktionen RECHTS statt dritter Zeile;
+  //     Notenrechner »ab 90 %« in einer Zeile; ZP-Marker und Zähler hell UND dunkel ≥ 4,5:1.
+  await page.select("#frSelect", "gemuesebau");
+  await page.select("#nivSelect", "gaertner");
+  await page.$eval("#frSelect", (e) => e.dispatchEvent(new Event("change")));
+  await page.waitForFunction("document.querySelectorAll('#list .row').length===148", { timeout: 10000 });
+  const handy = await page.evaluate(() => {
+    document.querySelector("#tabExam").click();
+    drawRandom();
+    const rows = [...document.querySelectorAll("#currentSelList .pvrow")];
+    const hoch = Math.max(...rows.map((r) => r.getBoundingClientRect().height));
+    const r0 = rows[0], name = r0.querySelector(".pvname").getBoundingClientRect();
+    const info = r0.querySelector(".pvacts .info").getBoundingClientRect(), fam = r0.querySelector(".fam").getBoundingClientRect();
+    const overlap = !(info.right <= fam.left || info.left >= fam.right || info.bottom <= fam.top || info.top >= fam.bottom);
+    const lrow = document.querySelector("#list .row");
+    const lh = lrow.getBoundingClientRect().height;
+    const acts = lrow.querySelector(".rowacts").getBoundingClientRect(), bin = lrow.querySelector(".binom").getBoundingClientRect();
+    const actsRight = acts.left >= bin.right - 1 && acts.top < bin.bottom + 40;
+    const ed = lrow.querySelector(".rowacts .iconbtn:not(.info)");
+    const edExam = getComputedStyle(ed).display;                       // »Prüfung erstellen«: nur ℹ
+    document.querySelector("#tabManage").click();
+    const edManage = { display: getComputedStyle(ed).display, opacity: getComputedStyle(ed).opacity };
+    document.querySelector("#tabExam").click();
+    openGrader();
+    const pct = document.querySelector("#gTable td.pct");
+    const pctRow = pct.closest("tr").getBoundingClientRect().height, nowrap = getComputedStyle(pct).whiteSpace === "nowrap";
+    document.querySelector("#graderScrim .pclose").click();
+    const lum = c => { const m = (c.match(/\d+(\.\d+)?/g) || [255, 255, 255]).map(Number);
+      const f = v => { v /= 255; return v <= .04045 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+      return .2126 * f(m[0]) + .7152 * f(m[1]) + .0722 * f(m[2]); };
+    const bgOf = el => { for (let p = el; p; p = p.parentElement) { const c = getComputedStyle(p).backgroundColor;
+      if (c && !/rgba?\(0, 0, 0, 0\)/.test(c) && c !== "transparent") return c; } return "rgb(255,255,255)"; };
+    const ratio = el => { if (!el) return -1; const a = lum(getComputedStyle(el).color), b = lum(bgOf(el));
+      return Math.round((Math.max(a, b) + .05) / (Math.min(a, b) + .05) * 100) / 100; };
+    const zp = document.querySelector("#list .tag.zp"), cnt = document.querySelector("#list .cathead .cnt");
+    const hell = { zp: ratio(zp), cnt: ratio(cnt) };
+    const prev = document.documentElement.dataset.theme;
+    document.documentElement.dataset.theme = "dark";
+    const dunkel = { zp: ratio(zp), cnt: ratio(cnt) };
+    if (prev) document.documentElement.dataset.theme = prev; else delete document.documentElement.dataset.theme;
+    clearSel();
+    return { hoch, nameW: Math.round(name.width), overlap, lh, actsRight, edExam, edManage, pctRow, nowrap, hell, dunkel };
+  });
+  assert(handy.edExam === "none" && handy.edManage.display !== "none" && handy.edManage.opacity === "1",
+    "Handy: Bearbeiten/Löschen nur in »Liste verwalten« – dort aber sichtbar (nicht opacity 0): " + JSON.stringify(handy));
+  assert(!handy.overlap && handy.nameW >= 200 && handy.hoch <= 190,   // 360 px: längster Name 3 Zeilen + Aktionszeile (vorher 200–300 px bei 390 px)
+    "Handy: »Aktuelle Prüfung« muss zweizeilig und ohne Überlappung sein: " + JSON.stringify(handy));
+  assert(handy.actsRight && handy.lh <= 110,
+    "Handy: Listenzeile – Aktionen rechts neben dem Namen, Zeile kompakt: " + JSON.stringify(handy));
+  assert(handy.nowrap && handy.pctRow <= 64,
+    "Handy: Notenrechner »ab … %« muss in einer Zeile bleiben: " + JSON.stringify(handy));
+  assert(handy.hell.zp >= 4.5 && handy.dunkel.zp >= 4.5 && handy.hell.cnt >= 4.5 && handy.dunkel.cnt >= 4.5,
+    "ZP-Marker/Zähler müssen hell und dunkel ≥4,5:1 haben: " + JSON.stringify(handy));
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();

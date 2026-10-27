@@ -226,7 +226,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
   color:var(--sepia); margin:22px 0 6px; padding-bottom:5px; border-bottom:1.5px solid var(--rule-strong);
   display:flex; justify-content:space-between; align-items:end;
 }
-.cathead .cnt{color:var(--ink-faint); letter-spacing:.06em}
+.cathead .cnt{color:var(--ink-soft); letter-spacing:.06em}   /* Audit: 2,78:1 war für 11 px zu schwach */
 .ledger{display:flex; flex-direction:column}
 .row{
   display:grid; grid-template-columns:26px 1fr auto; gap:14px; align-items:center;
@@ -251,7 +251,12 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .fam{font-family:var(--serif); color:var(--green-deep)}
 .de{color:var(--ink)}
 .tag{font-family:var(--mono); font-size:10px; letter-spacing:.05em; padding:1px 6px; border-radius:3px; text-transform:uppercase}
-.tag.zp{color:var(--gold); border:1px solid var(--gold); background:#f6efdc}
+/* ZP-Marker mit eigenen Token statt festem Hellton: im Dunkelmodus lag Gold auf dem hellen
+   Hintergrund bei 1,92:1 (praktisch unsichtbar), im Hellen bei 3,04:1 (Audit-Fund). */
+:root{--zp-ink:#6b5114; --zp-bg:#f6efdc; --zp-line:#c9a75a}
+:root[data-theme="dark"]{--zp-ink:#ecd08a; --zp-bg:#3a3120; --zp-line:#8a6f2b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--zp-ink:#ecd08a; --zp-bg:#3a3120; --zp-line:#8a6f2b}}
+.tag.zp{color:var(--zp-ink); border:1px solid var(--zp-line); background:var(--zp-bg)}
 .zpnote{display:flex; align-items:center; gap:7px; margin:4px 0 10px 2px; font-size:12px; color:var(--ink-soft); font-family:var(--sans)}
 .tag.bem{color:var(--sepia); border:1px dashed var(--rule-strong)}
 .rowacts{display:flex; gap:2px}
@@ -262,7 +267,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .iconbtn.info{color:var(--green-deep)}
 /* Touch/Tablet (kein Hover): Zeilen-Aktionen dauerhaft sichtbar, größere Tap-Ziele (~44px) */
 @media (hover:none),(pointer:coarse),(max-width:640px){
-  .rowacts .iconbtn{opacity:1}
+  .rowacts .iconbtn:not(.info){opacity:1}   /* gleiche Spezifität wie die Hover-Regel oben – sonst blieben Bearbeiten/Löschen auf Touch unsichtbar, belegten aber Platz (Audit-Fund) */
   .iconbtn,.pclose,.scmove{min-width:44px; min-height:44px}
   .btn,.btn.small{min-height:44px}
 }
@@ -429,6 +434,12 @@ body.m-manage .selbar, body.m-manage #currentSel{display:none}
 .gtable th{font-family:var(--mono); font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--sepia); font-weight:600}
 .gtable td.g{font-family:var(--serif); font-weight:600; white-space:nowrap}
 .gtable td.pts{font-family:var(--mono); text-align:right; white-space:nowrap}
+.gtable td.pct{white-space:nowrap}   /* »ab 90 %« bleibt EINE Zeile – mobil zerfiel es in drei (Audit-Fund) */
+@media (max-width:640px){
+  .gtable{font-size:12.5px}
+  .gtable th,.gtable td{padding:6px 4px}
+  .gtable td.pct .gedge{width:52px; min-width:52px; padding:2px 3px}
+}
 .gtable tr.hit{background:var(--green-tint)}
 .gtable tr.hit td{font-weight:600}
 .gtable .swatch{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:8px; vertical-align:middle}
@@ -443,9 +454,19 @@ body.m-manage .selbar, body.m-manage #currentSel{display:none}
   /* Auswahl-Bar bricht mobil um – die senkrechten Trenner würden frei stehen */
   .draw{border-right:none; padding-right:0}
   .selacts{border-left:none; padding-left:0}
-  .row{grid-template-columns:24px 1fr; gap:10px}
-  .rowacts{grid-column:1/-1; justify-content:flex-end}
-  .rowacts .iconbtn{opacity:1}
+  /* Listenzeile: Aktionen (ℹ · Bearbeiten · Löschen) RECHTS neben dem Namen statt in einer
+     eigenen dritten Zeile – die machte jede Zeile ~230 px hoch (Audit-Fund). Name und
+     Familie/dt. Name stapeln sich links, die Checkbox überspannt beide Zeilen. */
+  .row{grid-template-columns:24px minmax(0,1fr) auto; grid-template-rows:auto auto; gap:1px 10px; padding:8px 6px 8px 10px}
+  .row .chk{grid-row:1/3}
+  .row .namecell{display:contents}
+  .row .binom{grid-column:2; grid-row:1; align-self:end; font-size:15.5px}
+  .row .meta{grid-column:2; grid-row:2; align-self:start}
+  .rowacts{grid-column:3; grid-row:1/3; align-self:center; gap:0}
+  .rowacts .iconbtn:not(.info){opacity:1}
+  /* Handy + »Prüfung erstellen«: nur das ℹ – Bearbeiten/Löschen gehören zu »Liste verwalten«
+     (dort sichtbar; in der »Aktuellen Prüfung« gibt es ✎ ohnehin). Spart ~90 px je Zeile. */
+  body.m-exam .rowacts .iconbtn:not(.info){display:none}
   .modal .grid2{grid-template-columns:1fr}
   /* Kopf: Titel und Status/Hilfe stapeln, damit die Status-Pille die
      Überschrift nicht überlagert */
@@ -814,11 +835,24 @@ body{overflow-x:clip}
     position-try-fallbacks:flip-block, flip-inline; margin-top:8px}
 }
 /* Container Queries: die »Aktuelle Prüfung« reagiert auf ihre eigene Breite. */
+/* Schmale »Aktuelle Prüfung« (Handy oder schmaler Container): zweizeilig – Zeile 1 Nummer +
+   Name in voller Breite, Zeile 2 die Aktionen rechtsbündig (passen sie neben den Namen, bleibt
+   es EINE Zeile). Vorher quetschte die Aktionsspalte den Namen auf wenige Wörter je Zeile und
+   das ℹ lag über dem Familiennamen (Audit-Fund). */
 @supports (container-type: inline-size){
   #currentSel{container-type:inline-size; container-name:cursel}
-  @container cursel (max-width: 460px){
-    #currentSelList .pvrow{flex-wrap:wrap}
+  @container cursel (max-width: 520px){
+    #currentSelList .pvrow{display:flex; flex-wrap:wrap; gap:4px 10px; padding:9px 10px}
+    #currentSelList .pvnum{flex:none; width:28px}
+    #currentSelList .pvname{flex:1 1 200px}
+    #currentSelList .pvacts{margin-left:auto; gap:0}
   }
+}
+@media (max-width:640px){
+  .pvrow{display:flex; flex-wrap:wrap; gap:4px 10px; padding:9px 10px}
+  .pvnum{flex:none; width:28px}
+  .pvname{flex:1 1 200px}
+  .pvacts{margin-left:auto; gap:0}
 }
 /* Icon-Schutzregel: :where() hat Spezifität 0 – jede vorhandene Regel gewinnt,
    aber ein SVG ohne eigene Maße wuchert nicht mehr auf volle Breite. */
