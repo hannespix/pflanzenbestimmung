@@ -2460,6 +2460,27 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       `binomEpithet`-Fälle, Filter; `tests/smoke.mjs`: `taxonName`/`binomEpithet` im
       Prüfungswerkzeug.
 
+- [x] **Geführte Lektion: »jetzt ohne Bild« heißt jetzt »am Namen statt am Bild« + Rest der
+      Sammelwort-Lücke** (Rückmeldung »weiterhin Probleme beim Bilderquiz!« mit vier Screenshots).
+      **Befund:** Drei Screenshots zeigen die Pille »Stufe 2 von 5 · jetzt ohne Bild« – das ist
+      kein Ausfall, sondern der **gewollte** Schritt der geführten Lektion (`guidedForm`: Stufe
+      0–1 Bild, Stufe 2 Auswahl ohne Bild, 3 Karteikarte, 4–5 Eingabe). Der Wortlaut las sich
+      aber wie »Bild fehlt«. Der vierte Screenshot (vor dem Deploy von #155) zeigt *Lupinus
+      cultivars* ohne Bild: Das Sammelwort steht in **sieben** Zeilen **kleingeschrieben**
+      (»Hosta/Solidago/Tulipa/Lilium/Lupinus/Pyracantha cultivars«), und `binomEpithet` ließ
+      Kleingeschriebenes als Epitheton durch – Suchname »Lupinus cultivars«, jede Lupinen-Datei
+      als »andere Art« verworfen (dieselbe Mechanik wie beim Löwenzahn). **Fix:** `GROUP_TOKEN`
+      in `binomEpithet` (beide Werkzeuge) – Sammelwörter sind unabhängig von der Schreibweise
+      kein Epitheton; die Bildsuche läuft dann wie bei »Weigela Cultivars« über die Gattung
+      (Artikel »Lupinen«, Commons-Kategorie). **Pille** (`GUIDED_WIE`/`guidedNoteHTML`):
+      »jetzt am Namen statt am Bild«; war für die Karte ein Bild **geplant** (`sess.formOf`)
+      und kommt sie trotzdem als Auswahlfrage, steht der echte Grund da (»kein brauchbares Bild
+      gefunden – deshalb Auswahlfrage« bzw. »ohne Bild – auf deinen Wunsch« nach »Ohne Bilder
+      weiterlernen«); der Tooltip nennt den ganzen Pfad mit »gewollt, kein Fehler« und den Weg
+      zu durchgehenden Bildern (»Selbst wählen« → Bilder). Hilfe-Schritt 1 ebenso.
+      `tests/learn.mjs`: vier Pillen-Varianten (Stufe 2, Bild, Ausfall, Wunsch), `binomEpithet
+      ("cultivars")===""`, Suchwege für »Lupinus cultivars« auf Gattungsniveau.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.

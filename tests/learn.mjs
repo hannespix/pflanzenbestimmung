@@ -164,6 +164,23 @@ async function main() {
     "Abschluss der geführten Sitzung nennt die Quote über die bewerteten Karten: " + guided.summary);
   assert(/Stufe \d von 5|Neu/.test(guided.note) && /eingeben/i.test(guided.note) && !/tippen/i.test(guided.note),
     "Geführte Lektion: über der Aufgabe muss Lernstand + Übungsform stehen: " + JSON.stringify(guided.note));
+  // Wortlaut der Pille: »jetzt ohne Bild« las sich wie ein Fehler des Bilder-Quiz (drei
+  // Screenshots). Der gewollte Schritt heißt jetzt »am Namen statt am Bild«; ein echter
+  // Ausfall (Bild geplant, keins gefunden / »Ohne Bilder weiterlernen«) wird benannt.
+  const pille = await page.evaluate(() => {
+    const c = allCards[0], savedSess = sess, savedMode = mode, txt = (h) => h.replace(/<[^>]+>/g, "");
+    sess = { auto: true, boxOf: new Map([[c, 2]]), formOf: new Map([[c, "quiz"]]), photoGiveUp: false };
+    mode = "quiz"; const stufe2 = guidedNoteHTML(c);
+    sess.boxOf = new Map([[c, 0]]); sess.formOf = new Map([[c, "photo"]]); const ausfall = guidedNoteHTML(c);
+    sess.photoGiveUp = true; const wunsch = guidedNoteHTML(c);
+    sess.photoGiveUp = false; mode = "photo"; const bild = guidedNoteHTML(c);
+    sess = savedSess; mode = savedMode;
+    return { stufe2: txt(stufe2), ausfall: txt(ausfall), wunsch: txt(wunsch), bild: txt(bild), title: /gewollt, kein Fehler/.test(stufe2) };
+  });
+  assert(pille.stufe2 === "Stufe 2 von 5 · jetzt am Namen statt am Bild" && pille.bild === "Neu · am Bild erkennen" && pille.title &&
+    pille.ausfall === "Neu · kein brauchbares Bild gefunden – deshalb Auswahlfrage" && pille.wunsch === "Neu · ohne Bild – auf deinen Wunsch" &&
+    !/ohne Bild$/.test(pille.stufe2),
+    "Pille der geführten Lektion: gewollter Schritt »am Namen statt am Bild« (Tooltip: gewollt, kein Fehler), echter Ausfall wird benannt: " + JSON.stringify(pille));
   assert(guided.hatShare && guided.keinUmweg,
     "Geführte Lektion muss direkt teilbar sein – ohne Umweg über ein zweites Quiz: " + JSON.stringify(guided));
   assert(guided.dec && guided.dec.m === "guided" && Array.isArray(guided.dec.f) && guided.dec.f.length === guided.dec.i.length,
@@ -363,7 +380,9 @@ async function main() {
       koehler: looksIllustration("Taraxacum_officinale_-_Köhler–s_Medizinal-Pflanzen-135.jpg"),
       missbildung: looksDamage("Missbildung Loewenzahn (Taraxacum officinale agg.).jpg"),
       leyland: pageFitsCard({ title: "Leyland-Zypresse", extract: "Die Leyland-Zypresse (× Hesperotropsis leylandii) ist ein Nadelgehölz." }, { g: "×Hesperotropsis", a: "leylandii" }),
-      epis: ["vulgaris, A. Cultivars", "× pendulina nothof. tristis", "vinifera supsp. vinvifera", "Cultivars", "- Hybriden", "x chinensis"].map(binomEpithet),
+      epis: ["vulgaris, A. Cultivars", "× pendulina nothof. tristis", "vinifera supsp. vinvifera", "Cultivars", "- Hybriden", "x chinensis", "cultivars"].map(binomEpithet),
+      lupine: photoSteps({ g: "Lupinus", a: "cultivars", de: "Stauden-Lupine, Garten-Lupine" }).map((s) => s.k + ":" + s.q),
+      lupineAndere: fileMentionsOther("Lupinus polyphyllus 01.jpg", { g: "Lupinus", a: "cultivars" }),
       gruppe: [pureGroupName("Cultivars"), pureGroupName("sect. Ruderalia"), pureGroupName("vulgaris Conditiva-Grp.")] };
     $("#frSelect").value = prev[0]; $("#nivSelect").value = prev[1]; applyProfile();   // Profil der folgenden Tests wiederherstellen
     return out;
@@ -379,8 +398,10 @@ async function main() {
   assert(JSON.stringify(sektion.rubus) === JSON.stringify(["wp:Rubus sect. Rubus", 'cm:incategory:"Rubus sect. Rubus"', "wp:Rubus fruticosus", "wp:Echte Brombeere", "cm:Rubus sect. Rubus"]) &&
     JSON.stringify(sektion.hybrid) === JSON.stringify(["wp:Syringa × chinensis", "wp:Syringa chinensis", 'cm:incategory:"Syringa × chinensis"', "wp:Chinesischer Flieder", "cm:Syringa × chinensis"]),
     "Brombeere (Klammer-Epitheton) und Hybride (× für Artikel/Kategorie, Binom als Zweitweg): " + JSON.stringify({ rubus: sektion.rubus, hybrid: sektion.hybrid }));
-  assert(JSON.stringify(sektion.epis) === JSON.stringify(["vulgaris", "pendulina", "vinifera", "", "", "chinensis"]) && JSON.stringify(sektion.gruppe) === JSON.stringify([true, false, false]),
-    "binomEpithet: Komma/Rang-Kürzel/Tippfehler/Gruppenwort/Hybrid-x; Sektion ist kein Sammel-Eintrag: " + JSON.stringify({ epis: sektion.epis, gruppe: sektion.gruppe }));
+  assert(JSON.stringify(sektion.epis) === JSON.stringify(["vulgaris", "pendulina", "vinifera", "", "", "chinensis", ""]) && JSON.stringify(sektion.gruppe) === JSON.stringify([true, false, false]),
+    "binomEpithet: Komma/Rang-Kürzel/Tippfehler/Gruppenwort (auch kleingeschrieben)/Hybrid-x; Sektion ist kein Sammel-Eintrag: " + JSON.stringify({ epis: sektion.epis, gruppe: sektion.gruppe }));
+  assert(sektion.lupine[0] === "wp:Lupinus" && sektion.lupine.includes('cm:incategory:"Lupinus"') && sektion.lupineAndere === false,
+    "»Lupinus cultivars« (kleingeschrieben, 7 Zeilen): Bildsuche auf Gattungsniveau, Dateien der Gattung gelten nicht als »andere Art«: " + JSON.stringify({ lupine: sektion.lupine, andere: sektion.lupineAndere }));
 
   // Bilder-Quiz: Buchdeckel/Titelseiten/Scans digitalisierter Werke werden verworfen
   // (Praxisfall: Buchdeckel statt Majoran-Foto); Herbarbelege gelten als Tafel.
