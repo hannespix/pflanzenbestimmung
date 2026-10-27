@@ -2395,6 +2395,71 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Lernhilfen-Abschnitt). Kein Emoji, Strich-Icon wie überall. `tests/learn.mjs` prüft
       beide Stellen (Wortlaut »draußen«, »ersetzt … nicht«, »botanischen Namen«, Icon).
 
+- [x] **Info-Karte: Gattungs-Notnagel mit Warnung statt Sackgasse** (Rückmeldung mit
+      Screenshot: *Syringa x chinensis · Chinesischer Flieder* → »Kein deutscher Wikipedia-
+      Artikel gefunden«; Wunsch: »stattdessen Flieder vorschlagen, aber mit Warnung«). Live
+      geprüft: weder »Syringa x chinensis« noch »Syringa × chinensis«, »Syringa chinensis« oder
+      »Chinesischer Flieder« haben einen Artikel; »Syringa« leitet auf »Flieder« weiter. Neu in
+      **beiden** Werkzeugen (`wikiGenusCandidates`/`genusArticleOk`/`genusNote` in `learn.js`
+      **und** `app.js`): Findet die bisherige Kette nichts, probiert `loadWiki` die **lateinische
+      Gattung** (Weiterleitung auf den deutschen Gattungsartikel) und das **Grundwort des
+      deutschen Namens** (»Chinesischer Flieder« → »Flieder«, »Hänge-Birke« → »Birke«).
+      Angenommen wird nur ein **echter Gattungsartikel**: keine Begriffsklärung
+      (`pageprops.disambiguation` – `wikiJSONP` fragt es jetzt mit ab, `wikiFirstPage` lehnt
+      Begriffsklärungen für **alle** Kandidaten ab; Textmuster »steht für/bezeichnet/kann
+      bedeuten« als Fallback), kein Fremdartikel (»Beta« = griechischer Buchstabe), kein
+      Artartikel einer anderen Art (»Rosskastanie« → Gewöhnliche Rosskastanie), und der Artikel
+      muss die Gattung nennen. Live-Stichprobe über zwölf Gattungen/Grundwörter (Iris, Rosa, Rose,
+      Viola, Erica, Vinca, Dill, Lavendel = Begriffsklärung; Flieder, Birken, Hartriegel,
+      Hemlocktannen, Weigelien, Amberbäume = Gattungsartikel). Der Treffer trägt den Hinweis
+      (`.wp-taxon`) »**Kein eigener Wikipedia-Artikel** zu *Syringa x chinensis* – stattdessen
+      der Artikel zur **Gattung** *Syringa* (Flieder). Text und Bild beschreiben die Gattung –
+      nicht unbedingt diese Art.«; im **Lern-Tool** ersetzt – wie bei den Sorten – ein Foto
+      **dieser Art** aus der Quiz-Bildsuche (`photoFor`; die Commons-Kategorie »Syringa ×
+      chinensis« hat 18 Dateien) das Gattungsbild (»das Bild zeigt diese Art«, mit Nachweis).
+      Scheitert auch die Gattung: »… auch nicht zur Gattung« (`WP_NONE`). Nebenbei probiert
+      `wikiCandidates` Hybriden in **beiden Schreibweisen** (»x« ↔ »×«: de.wikipedia hat z. B.
+      für *Elaeagnus x ebbingei* nur die x-Weiterleitung). Steckrüben-/Dill-Regel unverändert
+      (Gattung erst **nach** der Elternart); reine Sammel-Einträge (»Solidago Cultivars«)
+      führen die Gattung weiter ohne Hinweis in der Hauptliste. Hilfe beider Werkzeuge ergänzt.
+      `tests/learn.mjs`: Abfrage-Reihenfolge (voller Name → × → Binom → deutscher Name →
+      Gattung), Hinweis + Gattungsbild, Artfoto ersetzt Gattungsbild, Begriffsklärung → ehrlich
+      »nicht gefunden« (Grundwort wurde noch probiert), `genusArticleOk` mit acht Fällen,
+      Gattungs-Kandidatinnen getrennt von der Hauptliste; `tests/smoke.mjs`: dasselbe im
+      Prüfungswerkzeug.
+
+- [x] **Bilder-Quiz: Rang-Kürzel »sect.« – der Löwenzahn bekommt wieder ein Bild** (Rückmeldung
+      mit Screenshots: *Taraxacum sect. Ruderalia* im Bilder-Quiz trotz mehrerer Versuche ohne
+      Bild, die Info-Karte zeigt eine Köhler-Tafel; Frage: »liegt das an der Zeichnung?«).
+      **Befund:** Die Tafel ist nur das erste Glied – sie wird zu Recht verworfen
+      (`looksIllustration`: »Köhler«, »Medizinal«). Der eigentliche Grund: `binomEpithet` kannte
+      das Rang-Kürzel **»sect.«** nicht (nur var./subsp./ssp./f./cv./convar.) und machte es zum
+      »Art-Epitheton« – der Suchname wurde **»Taraxacum sect.«** (kein Artikel, keine Kategorie),
+      und `fileMentionsOther` verwarf **jede** Datei der Commons-Kategorie »Taraxacum sect.
+      Ruderalia« (157 Dateien) als »andere Art«, weil auf »Taraxacum« immer ein anderes Wort
+      folgt (»officinale«, »sect«, »Ruderalia«). Betroffen: fünf Zeilen in vier Listen
+      (*Taraxacum sect. Ruderalia* ×4, einmal als Quell-Tippfehler »sec.«; *Rubus sect. Rubus
+      (fruticosus)*), dazu *Salix × pendulina nothof. tristis*, *Vitis vinifera supsp. vinvifera*
+      (Quell-Tippfehler) und *Aquilegia vulgaris, A. Cultivars* (Komma blieb am Epitheton).
+      **Fix** (beide Werkzeuge): `RANK_TOKEN` (zusätzlich sect./sec./nothof./supsp./subg./agg.),
+      Komma/Semikolon am Epitheton gestrichen, **großgeschriebenes erstes Wort = Sektion/Gruppe,
+      kein Epitheton** (`binomEpithet` → ""); neu `sectName()` und `taxonName()` = Name in der
+      Form, die Wikipedia/Commons führen (Sektion »Taraxacum sect. Ruderalia«, Hybride mit
+      **»×«** – die Commons-Kategorie »Syringa × chinensis« hat 18 Dateien, die mit Buchstaben-x
+      keine). `photoSteps` sucht damit Artikel + Kategorie des **Taxons** (bei Hybriden
+      zusätzlich das Binom ohne Zeichen; bei Sektionen bewusst **nicht** die Gattung allein –
+      deren Artikelbild zeigt irgendeine Art, beim Löwenzahn *T. albidum*), Klammer-Epitheton
+      als Zweitweg (»Rubus fruticosus« → Brombeeren); `commonsScore` zählt den Sektionsnamen wie
+      ein Epitheton; `pageFitsCard` kommt mit Hybridgattungen klar (»× Hesperotropsis« steht im
+      Artikel mit Leerzeichen); `looksDamage` kennt Missbildung/Fasziation (Realdatei
+      »Missbildung Loewenzahn«). Deep-Links bei Sektionen auf die Gattung (NaturaDB/iNaturalist).
+      Die Seeds bleiben unverändert (»sec.«, »supsp.« sind Quellform). Verifiziert gegen die
+      echte Dateiliste der Kategorie (Live-API, 12 Dateien: Sektionsname gewinnt das Ranking,
+      Rost-/Missbildungsfotos fliegen raus). `tests/learn.mjs`: Suchwege für Sektion/Hybride/
+      Brombeere, Kette mit echter Dateiliste → »Taraxacum sect. Ruderalia 01.JPG«,
+      `binomEpithet`-Fälle, Filter; `tests/smoke.mjs`: `taxonName`/`binomEpithet` im
+      Prüfungswerkzeug.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.

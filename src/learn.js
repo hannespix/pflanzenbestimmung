@@ -2315,11 +2315,28 @@ function stripCultivar(a){                            // botanischer Name ohne S
   const re = new RegExp("\\(?'?"+cv.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"'?\\)?");
   return norm(a.replace(re," "));
 }
+/* Rang-Kürzel und Verbinder, die kein Namensbestandteil sind. »sect.«/»sec.« (Sektion:
+   Taraxacum sect. Ruderalia), »nothof.« und der Quell-Tippfehler »supsp.« fehlten hier
+   bisher – das Kürzel wurde so zum »Art-Epitheton« (»Taraxacum sect.«), und die Bildsuche
+   verwarf jedes Löwenzahn-Foto als »andere Art« (Realfall: nie ein Bild im Bilder-Quiz). */
+const RANK_TOKEN = /^([×x]|var\.|subsp\.|ssp\.|supsp\.|f\.|cv\.|convar\.|nothof\.|sect\.|sec\.|subg\.|agg\.)$/i;
 function binomEpithet(a){
   const s = stripCultivar(a);                          // sonst wäre bei »Weigela 'Bristol Ruby'« »'Bristol« das Epitheton
-  return (s.split(" ").filter(w=> w && !/^([×x]|var\.|subsp\.|ssp\.|f\.|cv\.|convar\.)$/i.test(w))[0]) || "";
+  const w = (s.split(" ").filter(w=> w && !RANK_TOKEN.test(w))[0] || "").replace(/[,;:]+$/,"");   // »vulgaris, A. Cultivars« → vulgaris
+  return /^[a-zäöüß]/.test(w) ? w : "";                // großgeschrieben = Sektion/Gruppe (»Ruderalia«, »Cultivars«) – kein Art-Epitheton
 }
 function searchName(c){ return norm(c.g+" "+binomEpithet(c.a)); }
+/* Sektion (»sect. Ruderalia«, auch der Quell-Tippfehler »sec.«) → ihr Name, sonst "". */
+function sectName(a){ const m = /\b(?:sect|sec|subg)\.\s*([A-ZÄÖÜ][\wäöüß-]*)/.exec(norm(a||"")); return m ? m[1] : ""; }
+/* Name des Taxons für Suchen – in der Form, die Wikipedia und Commons führen: Hybriden mit
+   »×« (die Commons-Kategorie »Syringa × chinensis« hat 18 Dateien, die mit Buchstaben-x
+   keine), Sektionen als »Gattung sect. Name«, sonst das reine Binom (= searchName). */
+function taxonName(c){
+  const sec = sectName(c.a); if(sec) return norm(c.g+" sect. "+sec);
+  const ep = binomEpithet(c.a);
+  if(ep && /(^|\s)[×x](\s|$)/i.test(norm(c.a||""))) return norm(c.g+" × "+ep);
+  return searchName(c);
+}
 /* ---------- Botanische Namensherleitung (Merkhilfe, offline & kuratiert) ----------
    Latein/Griechisch → Deutsch: kurze Bedeutung von Gattung und Art-Epitheton, damit
    sich die botanischen Namen leichter merken lassen. Ganzwort-Wörterbuch plus
@@ -3179,6 +3196,7 @@ function deepLinks(c){
   // (nur CH-Wildflora, keine GET-Suche).
 }
 const wikiCache = new Map();   // card.key -> {title,extract,thumb,url} | null (nicht gefunden)
+const WP_NONE = "Kein deutscher Wikipedia-Artikel gefunden – auch nicht zur Gattung. Die Links oben führen dich weiter.";
 let __wpN = 0;
 /* Generischer JSONP-Aufruf (dynamisches <script>, kein fetch/XHR): hängt den
    Callback-Namen an die übergebene URL an. Wird von der Text-Anreicherung UND
@@ -3200,13 +3218,15 @@ function jsonpGet(url){
   });
 }
 function wikiJSONP(title){
-  return jsonp("https://de.wikipedia.org/w/api.php?action=query&format=json&prop=extracts%7Cpageimages"+
+  return jsonp("https://de.wikipedia.org/w/api.php?action=query&format=json&prop=extracts%7Cpageimages%7Cpageprops&ppprop=disambiguation"+   // pageprops: Begriffsklärungen erkennen
     "&exintro=1&explaintext=1&piprop=thumbnail&pithumbsize=320&redirects=1&titles="+encodeURIComponent(title));
 }
 function wikiFirstPage(d){
   const pg = d && d.query && d.query.pages; if(!pg) return null;
   const k = Object.keys(pg)[0]; if(!k || k==="-1") return null;
-  const p = pg[k]; return (p && p.missing===undefined && p.extract) ? p : null;
+  const p = pg[k];
+  if(p && p.pageprops && p.pageprops.disambiguation!==undefined) return null;   // Begriffsklärung (»Iris steht für …«) ist kein Artikel
+  return (p && p.missing===undefined && p.extract) ? p : null;
 }
 function shortenExtract(t){
   t = norm(t); if(t.length<=520) return t;
@@ -3217,7 +3237,7 @@ function renderWiki(host, d){
   const credit = d.photo ? [d.photo.artist, d.photo.license].filter(Boolean).join(", ") : "";
   host.innerHTML =
     (d.note ? `<div class="wp-taxon">${d.note}</div>` : "")+                       // Sorte/Varietät: Artikel nur zur Art (gekennzeichnet)
-    (d.thumb ? `<img src="${esc(d.thumb)}" alt="${esc(d.photo ? "Bild der Sorte" : d.title)}" loading="lazy">` : "")+
+    (d.thumb ? `<img src="${esc(d.thumb)}" alt="${esc(d.photo ? (d.photo.alt||"Bild der Sorte") : d.title)}" loading="lazy">` : "")+
     `<div class="wp-text">${esc(d.extract)}</div>`+
     `<div class="wp-src">Quelle: <a href="${esc(d.url)}" target="_blank" rel="noopener">Wikipedia – ${esc(d.title)}</a> · Text unter CC BY-SA`+
     (d.photo ? ` · Bild: <a href="${esc(d.photo.url||"https://commons.wikimedia.org/")}" target="_blank" rel="noopener">Wikimedia Commons</a>${credit ? " ("+esc(credit)+")" : ""}` : "")+
@@ -3481,8 +3501,8 @@ function deArticleTitles(card){
 // "Beta vulgaris Conditiva-Grp." (echtes Epitheton »vulgaris« → Binom findet die Art).
 const GROUP_WORD = /^(cultivars?|hybriden?|sorten|grp\.?|gruppe|group|hort\.?)$/i;
 function pureGroupName(a){
-  const ep = binomEpithet(a);
-  return !ep || GROUP_WORD.test(ep) || !/^[a-zäöü]/.test(ep);   // kein kleingeschriebenes Art-Epitheton
+  const ep = binomEpithet(a);                          // "" bei Gruppen-/Sektionswort (großgeschrieben) – eine Sektion ist aber ein Taxon
+  return (!ep || GROUP_WORD.test(ep)) && !sectName(a);
 }
 function wikiCandidates(card){
   const cands=[], seen=new Set();
@@ -3490,7 +3510,10 @@ function wikiCandidates(card){
   const de = deArticleTitles(card);
   const inf = infraEpithet(card.a);
   const autonym = inf && inf===binomEpithet(card.a);   // »Cornus kousa subsp. kousa« = die Art selbst
-  add(card.g+" "+card.a);                               // voller Name (z. B. mit Sorte/Gruppe)
+  const full = norm(card.g+" "+card.a);
+  add(full);                                            // voller Name (z. B. mit Sorte/Gruppe)
+  const hyb = full.replace(/(^|\s)[x×](?=\s)/i, m=>m.replace(/[x×]/i, c=>c==="×" ? "x" : "×"));
+  if(hyb!==full) add(hyb);                              // Hybrid-Zeichen in der anderen Schreibweise (»Forsythia × intermedia« ↔ »x«)
   if(pureGroupName(card.a)){                            // Sammel-/Sorteneintrag: keine Art → Gattung ist das beste Ziel
     de.forEach(add);                                    // deutscher (Sammel-)Name, z. B. »Goldrute«
     add(card.g);                                        // bloße Gattung – dt. Wikipedia löst »Solidago« → »Goldruten« auf
@@ -3499,11 +3522,45 @@ function wikiCandidates(card){
     add(searchName(card));                              // Notnagel ganz am Ende: findet der deutsche Name nichts (»Garten-Dill«
                                                         // hat keinen Artikel), ist die Elternart (»Dill«) besser als gar nichts;
                                                         // die Steckrübe erreicht ihn nie, ihr deutscher Titel trifft vorher
-  }else{                                                // Art oder Autonym: Binom ist dieselbe Pflanze (unverändert)
-    add(searchName(card));                              // reines Binom zuerst (eindeutig)
+  }else{                                                // Art, Sektion oder Autonym: das Taxon ist dieselbe Pflanze (unverändert)
+    add(taxonName(card));                               // Hybride mit »×«, Sektion »Gattung sect. Name«, sonst reines Binom (eindeutig)
+    add(searchName(card));                              // Hybride auch ohne Zeichen (»Amelanchier lamarckii« leitet weiter)
     de.forEach(add);
   }
   return cands;
+}
+/* ---------- Gattungs-Notnagel (gekennzeichnet) ----------
+   Findet keine Kandidatin einen Artikel (Realfall »Syringa x chinensis · Chinesischer
+   Flieder«: weder die Hybride noch der deutsche Name haben einen), ist der Artikel zur
+   GATTUNG besser als die Sackgasse »nicht gefunden« – aber nur mit deutlicher Kennzeichnung,
+   denn Text und Bild beschreiben dann die Gattung (Flieder), nicht diese Art. Kandidatinnen:
+   die lateinische Gattung (die deutsche Wikipedia leitet »Syringa« → »Flieder« weiter) und das
+   Grundwort der deutschen Namen (»Chinesischer Flieder« → »Flieder«, »Hänge-Birke« → »Birke«).
+   Angenommen wird nur ein ECHTER Gattungsartikel (genusArticleOk): keine Begriffsklärung
+   (»Iris steht für …«, »Rosa«, »Vinca«), kein Fremdartikel (»Beta« = griechischer Buchstabe),
+   kein Artartikel einer anderen Art (»Rosskastanie« leitet auf die Gewöhnliche Rosskastanie).
+   Reine Sammel-/Sorteneinträge führen die Gattung schon in der Hauptliste – dort ist sie das
+   richtige Ziel und braucht keinen Hinweis. */
+function wikiGenusCandidates(card){
+  if(pureGroupName(card.a)) return [];
+  const main = new Set(wikiCandidates(card).map(s=>s.toLowerCase())), out=[], seen=new Set();
+  const add=s=>{ s=norm(s); const k=s.toLowerCase(); if(s && !main.has(k) && !seen.has(k)){ seen.add(k); out.push(s); } };
+  add(norm(card.g||"").replace(/^×\s*/,""));           // lateinische Gattung (Hybridgattung ohne ×)
+  deArticleTitles(card).forEach(t=>{                    // Grundwort des deutschen Namens
+    const w = t.split(/[\s-]+/).pop();
+    if(w && w.length>=4 && /^[A-ZÄÖÜ]/.test(w)) add(w);
+  });
+  return out;
+}
+function genusArticleOk(p, card){                      // ein ECHTER Gattungsartikel zu dieser Gattung?
+  if(!p || (p.pageprops && p.pageprops.disambiguation!==undefined)) return false;   // Begriffsklärung
+  const txt = ((p.title||"")+" "+(p.extract||"")).toLowerCase();
+  if(/\b(steht für|bezeichnet|kann bedeuten|mehrere bedeutungen)\b/.test(txt)) return false;   // Begriffsklärung ohne pageprops
+  const gen = norm(card.g||"").toLowerCase().replace(/^×\s*/,"");
+  if(!gen || txt.indexOf(gen)<0) return false;         // der Artikel muss die Gattung nennen (»Flieder (Syringa) ist …«)
+  const satz = txt.split(/\.\s/)[0];                   // erster Satz
+  if(/\b(pflanzen|unter)?art\b/.test(satz)) return false;   // Artartikel (»… ist eine Pflanzenart aus der Gattung …«)
+  return /\b(ist|sind|bilden|bildet)\s+(eine|die)\s+(pflanzen)?gattung\b/.test(txt) || /\bpflanzengattung\b/.test(satz);
 }
 /* ---------- Sorte/Varietät, aber nur der Artikel der Art? ----------
    Für Sorten gibt es keinen eigenen Wikipedia-Artikel – die Kandidatenkette landet
@@ -3538,20 +3595,45 @@ async function taxonNote(card, pg, data){
     data.note = `${lab} – das Artikelbild zeigt die ${rang} und ist hier weggelassen; ein Bild von ${was.replace(/^die /,"der ")} liegt nicht vor.`;
   }
 }
+/* Gattungs-Notnagel kennzeichnen. Wie bei den Sorten: Gibt es aus der Bildsuche des
+   Bilder-Quiz ein Foto DIESER Art (Cache oder Netz – »Syringa × chinensis« hat eine eigene
+   Commons-Kategorie), ersetzt es das Gattungsbild; sonst bleibt das Gattungsbild, und der
+   Hinweis sagt, dass es die Gattung zeigt. */
+async function genusNote(card, pg, data){
+  const full = norm(card.g+" "+card.a), gen = norm(card.g||"");
+  const titel = pg.title && pg.title.toLowerCase()!==gen.toLowerCase() ? ` (${esc(pg.title)})` : "";
+  const lab = `<b>Kein eigener Wikipedia-Artikel</b> zu <i>${esc(full)}</i> – stattdessen der Artikel zur <b>Gattung</b> <i>${esc(gen)}</i>${titel}.`;
+  let hit = null; try{ hit = await photoFor(card); }catch(e){ hit = null; }
+  if(hit && hit.thumb){
+    data.thumb = hit.thumb;
+    data.photo = { file:hit.file||"", url:hit.url||"", artist:hit.artist||"", license:hit.license||"", alt:"Bild der Art" };
+    const urls = (hit.gal && hit.gal.length>1) ? hit.gal : [hit.thumb];
+    data.gallery = urls.map((u,i)=>({ src:u, label:`Bild ${i+1} – ${full}`, w:(hit.galInfo && hit.galInfo[i] && hit.galInfo[i].w)||0 }));
+    data.note = `${lab} Der Text beschreibt die Gattung; das Bild zeigt diese Art.`;
+  }else{
+    data.note = `${lab} Text und Bild beschreiben die Gattung – nicht unbedingt diese Art.`;
+  }
+}
 async function loadWiki(card, host, btn){
   if(navigator.onLine===false){
     host.innerHTML='<div class="wp-note">Offline – für Online-Infos ist Internet nötig. Die Links oben funktionieren, sobald du online bist.</div>'; return;
   }
   btn.disabled=true; btn.textContent="lädt …";
-  let pg=null, hadResponse=false;
+  let pg=null, hadResponse=false, gattung=false;
   for(const t of wikiCandidates(card)){
     try{ const d=await wikiJSONP(t); hadResponse=true; pg=wikiFirstPage(d); if(pg) break; }
     catch(e){ /* Netzfehler/Timeout – nächster Versuch (hadResponse ggf. false) */ }
   }
+  if(!pg){                                              // Gattungs-Notnagel: nur ein echter Gattungsartikel, deutlich gekennzeichnet
+    for(const t of wikiGenusCandidates(card)){
+      try{ const d=await wikiJSONP(t); hadResponse=true; const p=wikiFirstPage(d); if(p && genusArticleOk(p, card)){ pg=p; gattung=true; break; } }
+      catch(e){ /* s. o. */ }
+    }
+  }
   if(!pg){
     if(hadResponse){                                    // echte „nicht gefunden" – cachen, Knopf weg
       wikiCache.set(card.key, null);
-      host.innerHTML='<div class="wp-note">Kein deutscher Wikipedia-Artikel gefunden. Die Links oben führen dich weiter.</div>';
+      host.innerHTML='<div class="wp-note">'+WP_NONE+'</div>';
       if(btn.parentNode) btn.remove();
     } else {                                            // offline/blockiert – nicht cachen, Wiederholung anbieten
       host.innerHTML='<div class="wp-note">Online-Infos konnten nicht geladen werden (offline oder blockiert). Die Links oben funktionieren weiterhin.</div>';
@@ -3562,7 +3644,8 @@ async function loadWiki(card, host, btn){
   const data = { title:pg.title, extract:shortenExtract(pg.extract),
     thumb: pg.thumbnail && pg.thumbnail.source,
     url: "https://de.wikipedia.org/wiki/"+encodeURIComponent(pg.title.replace(/ /g,"_")) };
-  await taxonNote(card, pg, data);                      // Sorte/Varietät, aber nur Artikel der Art? → kennzeichnen, ggf. Sortenfoto
+  if(gattung) await genusNote(card, pg, data);          // Gattungs-Notnagel → kennzeichnen, ggf. Foto dieser Art
+  else await taxonNote(card, pg, data);                 // Sorte/Varietät, aber nur Artikel der Art? → kennzeichnen, ggf. Sortenfoto
   wikiCache.set(card.key, data); renderWiki(host, data); if(btn.parentNode) btn.remove();
   // Weitere Bilder des Artikels nachladen – sie machen die Vollbild-Ansicht zur
   // kleinen Galerie. Schlägt es fehl, bleibt es beim einen Vorschaubild. Zeigt die
@@ -3683,7 +3766,7 @@ function looksIllustration(file){                     // alte Tafeln/Sammelbilde
    Blumenkohl), Gallen nur englisch/als Kompositum (»St. Gallen«-Fotos bleiben). */
 function looksDamage(file){
   const f = deacc(String(file||"").toLowerCase()).replace(/[_\-.]+/g," ");
-  return /(telia|teliospor|uredini|aecidi|\brusts?\b|\brost\b|mildew|mehltau|blight|leaf ?spot|blattfleck|disease|krankheit|infect|infest|\bdamaged?\b|\bschaden\b|befall|\bgalls?\b|gallmilbe|gallwespe|pflanzengalle|leaf ?miner|blattminier|\blarvae?\b|\blarven?\b|\braupen?\b|caterpillar|aphid|blattlaus|\bpests?\b|pathogen|\bfungus\b|\bfungi\b|pilzbefall|\bvirus\b|chlorosis|chlorose|necrosis|nekrose|deficiency|uromyces|puccinia|erysiphe|peronospora|phytophthora|fusarium|septoria|colletotrichum|alternaria|sclerotinia|monilinia|venturia)/.test(f);
+  return /(telia|teliospor|uredini|aecidi|\brusts?\b|\brost\b|mildew|mehltau|blight|leaf ?spot|blattfleck|disease|krankheit|infect|infest|\bdamaged?\b|\bschaden\b|befall|\bgalls?\b|gallmilbe|gallwespe|pflanzengalle|leaf ?miner|blattminier|\blarvae?\b|\blarven?\b|\braupen?\b|caterpillar|aphid|blattlaus|\bpests?\b|pathogen|\bfungus\b|\bfungi\b|pilzbefall|\bvirus\b|chlorosis|chlorose|necrosis|nekrose|deficiency|uromyces|puccinia|erysiphe|peronospora|phytophthora|fusarium|septoria|colletotrichum|alternaria|sclerotinia|monilinia|venturia|missbildung|fasciation|fasziation|verb(ae|a)nderung)/.test(f);
 }
 /* ---------- Zeichnungen, Tafeln, Herbarbelege, Buchscans: raus ----------
    Rückmeldung mit Screenshot: Im Bilder-Quiz erschien eine Tafel aus einem
@@ -3729,12 +3812,12 @@ function fileMentionsOther(file, card){               // Dateiname nennt eine an
   for(let i=0;i<w.length-1;i++){
     const a = w[i].toLowerCase(), b = w[i+1].toLowerCase().replace(/\d+$/,"");
     if(a!==gen || !/^[a-zäöüß]{4,}$/.test(b)) continue;
-    if(b!==epi && b!==inf && b!==cv && b!=="var" && b!=="subsp" && b!=="ssp") return true;
+    if(b!==epi && b!==inf && b!==cv && b!=="var" && b!=="subsp" && b!=="ssp" && b!=="sect" && b!=="nothof") return true;
   }
   return false;
 }
 function pageFitsCard(p, card){                       // Artikel muss die Pflanze meinen, nicht ein Homonym
-  const gen = norm(card.g||"").toLowerCase(); if(!gen) return true;
+  const gen = norm(card.g||"").toLowerCase().replace(/^×\s*/,""); if(!gen) return true;   // Hybridgattung ohne × (im Artikel steht »× Hesperotropsis« mit Leerzeichen)
   return (((p.title||"")+" "+(p.extract||"")).toLowerCase()).indexOf(gen) >= 0;
 }
 let binomCount = new Map();                           // Binom → Zahl der Arten im Profil (Sorten-Geschwister)
@@ -3762,11 +3845,16 @@ function photoSteps(card){                            // Suchwege, vom genaueste
     steps.push({k:"cm", q:`${binom} ${subQ}`});                          // Volltext, alle Wörter müssen vorkommen
     // grob (Artniveau) – nur wenn das für diese Karte zulässig ist (artLevelOk)
     if(artLevelOk(card)){ steps.push({k:"wp", q:binom}); steps.push({k:"cm", q:`incategory:"${binom}"`}); }
-  }else{                                              // reine Art oder Platzhalter-Sorte: direkt die Art
-    steps.push({k:"wp", q:binom});
-    steps.push({k:"cm", q:`incategory:"${binom}"`});
+  }else{                                              // reine Art, Sektion oder Platzhalter-Sorte: direkt das Taxon
+    const taxon = taxonName(card);                     // Hybride mit »×«, Sektion »Gattung sect. Name« – so heißen Artikel und Kategorien
+    steps.push({k:"wp", q:taxon});
+    if(taxon!==binom && !sectName(card.a)) steps.push({k:"wp", q:binom});   // Hybride auch ohne Zeichen (»Amelanchier lamarckii« leitet weiter);
+                                                                          // bei Sektionen NICHT die Gattung (ihr Artikelbild zeigt irgendeine Art)
+    steps.push({k:"cm", q:`incategory:"${taxon}"`});                      // Commons-Kategorie des Taxons (Löwenzahn: 157 Dateien)
+    const alt = /\(([a-zäöüß-]{3,})\)/.exec(norm(card.a||""));            // »Rubus sect. Rubus (fruticosus)« → Rubus fruticosus
+    if(alt) steps.push({k:"wp", q:norm(card.g+" "+alt[1])});
     if(de) steps.push({k:"wp", q:de});
-    steps.push({k:"cm", q:binom});                                       // z. B. »Osmanthus burkwoodii« (Kategorie heißt »× burkwoodii«)
+    steps.push({k:"cm", q:taxon});                                        // Volltext, z. B. »Osmanthus burkwoodii« (Kategorie heißt »× burkwoodii«)
   }
   return steps;
 }
@@ -3785,7 +3873,8 @@ function commonsQuery(q){                             // Dateien auf Commons suc
    besser als ein beliebiges Bild aus derselben Kategorie (»Hortus Haren … 24.jpg«). */
 function commonsScore(file, card){
   const f = deacc(String(file||"").toLowerCase());
-  const gen = deacc(norm(card.g||"").toLowerCase()), epi = deacc(binomEpithet(card.a||"").toLowerCase());
+  const gen = deacc(norm(card.g||"").toLowerCase().replace(/^×\s*/,""));
+  const epi = deacc((binomEpithet(card.a||"") || sectName(card.a||"")).toLowerCase());   // Sektion zählt wie ein Epitheton (»Taraxacum sect. Ruderalia 01.JPG«)
   const de = deacc(((card.de||"").split(/[,;/]/)[0]||"").toLowerCase().trim());
   let s = 0;
   if(gen && f.indexOf(gen)>=0) s += (epi && f.indexOf(epi)>=0) ? 4 : 2;
@@ -4380,7 +4469,7 @@ function openInfo(card){
   const host = scrim.querySelector("#wpHost"), btn = scrim.querySelector("#wpLoad");
   const cached = wikiCache.get(card.key);
   if(cached){ renderWiki(host, cached); btn.remove(); }
-  else if(cached===null){ host.innerHTML='<div class="wp-note">Kein deutscher Wikipedia-Artikel gefunden. Die Links oben führen dich weiter.</div>'; btn.remove(); }
+  else if(cached===null){ host.innerHTML='<div class="wp-note">'+WP_NONE+'</div>'; btn.remove(); }
   else btn.onclick = ()=>loadWiki(card, host, btn);
   document.addEventListener("keydown", infoKey);
   infoReturnFocus = document.activeElement;                       // Fokus nach dem Schließen zurückgeben
@@ -4933,6 +5022,11 @@ window.deMain=deMain;
 window.nameEtymology=nameEtymology;   // für Tests: botanische Namensherleitung
 window.examFieldList=examFieldList;
 window.wikiPhoto=wikiPhoto;
+window.wikiGenusCandidates=wikiGenusCandidates;   // für Tests: Gattungs-Notnagel der Info-Karte, Sektionen/Hybriden in der Bildsuche
+window.genusArticleOk=genusArticleOk;
+window.taxonName=taxonName;
+window.sectName=sectName;
+window.pureGroupName=pureGroupName;
 /* Bild-Quelle austauschbar + Bild-Cache leerbar: Die Tests laufen ohne Netz. */
 window.__setPhotoSource=fn=>{ photoSource = fn || wikiPhoto; };
 window.__setPhotoWait=ms=>{ phWaitMs = ms || 6000; };   // für Tests: Takt des Wartebildschirms
