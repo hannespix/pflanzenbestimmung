@@ -3846,7 +3846,7 @@ function looksIllustration(file){                     // alte Tafeln/Sammelbilde
    Blumenkohl), Gallen nur englisch/als Kompositum (»St. Gallen«-Fotos bleiben). */
 function looksDamage(file){
   const f = deacc(String(file||"").toLowerCase()).replace(/[_\-.]+/g," ");
-  return /(telia|teliospor|uredini|aecidi|\brusts?\b|\brost\b|mildew|mehltau|blight|leaf ?spot|blattfleck|disease|krankheit|infect|infest|\bdamaged?\b|\bschaden\b|befall|\bgalls?\b|gallmilbe|gallwespe|pflanzengalle|leaf ?miner|blattminier|\blarvae?\b|\blarven?\b|\braupen?\b|caterpillar|aphid|blattlaus|\bpests?\b|pathogen|\bfungus\b|\bfungi\b|pilzbefall|\bvirus\b|chlorosis|chlorose|necrosis|nekrose|deficiency|uromyces|puccinia|erysiphe|peronospora|phytophthora|fusarium|septoria|colletotrichum|alternaria|sclerotinia|monilinia|venturia|missbildung|fasciation|fasziation|verb(ae|a)nderung)/.test(f);
+  return /(telia|teliospor|uredini|aecidi|\brusts?\b|\brost\b|mildew|mehltau|blight|leaf ?spot|blattfleck|disease|krankheit|infect|infest|\bdamaged?\b|\bschaden\b|befall|\bgalls?\b|gallmilbe|gallwespe|pflanzengalle|leaf ?miner|blattminier|\blarvae?\b|\blarven?\b|\braupen?\b|caterpillar|aphid|blattlaus|\bpests?\b|pathogen|\bfungus\b|\bfungi\b|pilzbefall|\bvirus\b|chlorosis|chlorose|necrosis|nekrose|deficiency|uromyces|puccinia|erysiphe|peronospora|phytophthora|fusarium|septoria|colletotrichum|alternaria|sclerotinia|monilinia|venturia|missbildung|fasciation|fasziation|verb(ae|a)nderung|erwinia|carotovora|pectobacter|xanthomonas|pseudomonas|agrobacter|ralstonia|clavibacter|bacterial|bakteri|soft ?rot|(weich|nass|braun|grau|stengel|stangel|wurzel|frucht|kraut|knollen|herz|zwiebel)faule|faeulnis|\bfaulnis|grauschimmel|schimmelpilz|schimmelrasen|\bmou?lds?\b|\bscab\b|\bschorf\b|apfelschorf|\bcankers?\b|obstbaumkrebs|\bsmut\b|mosaic ?virus|mosaikvirus|nematod|\bthrips\b|\bmites?\b|spinnmilbe|spider ?mites?|weevil|ruesselkaefer|russelkafer)/.test(f);
 }
 /* ---------- Zeichnungen, Tafeln, Herbarbelege, Buchscans: raus ----------
    Rückmeldung mit Screenshot: Im Bilder-Quiz erschien eine Tafel aus einem
@@ -4036,7 +4036,12 @@ function nameWords(file){ return String(file||"").replace(/\.[a-z0-9]{2,5}$/i,""
 const CAP_WORD = /^[A-ZÄÖÜ][a-zäöüß]{2,}$/;
 const GENERIC_CAP = new Set(("plants plant flowers flower flores fleurs fiori blossom bloom blooms garden gardens garten park "+
   "botanical botanic botanischer jardin giardino tuin leaves leaf bud buds detail close macro image photo foto img dsc "+
-  "cultivar cultivars hybrid hybrids hybride hybriden in at").split(" "));
+  "cultivar cultivars hybrid hybrids hybride hybriden in at "+
+  // Monatsnamen sind keine Sortennamen (Bildcheck-Lauf 7: »Phalaenopsis July 2020-2« galt als Sorte 'July')
+  "january february march april may june july august september october november december januar februar märz maerz "+
+  "mai juni juli oktober dezember januari februari maart mei augustus enero febrero marzo abril mayo junio julio agosto "+
+  "septiembre octubre noviembre diciembre gennaio febbraio aprile maggio giugno luglio settembre ottobre dicembre "+
+  "janvier avril juin juillet septembre octobre novembre").split(" "));
 /* Zeigt die Datei erkennbar eine GARTENFORM? Sortenname in Anführungszeichen, »cultivar«/Hybride/×,
    oder ein großgeschriebener Name direkt hinter der Gattung (»Canna Roma«, »Begonia Nonstop« – so
    benennt Commons Sorten oft ohne Anführungszeichen). lenient (nur Treffer der Sortensuche): auch
@@ -4072,7 +4077,9 @@ function namesOtherTaxon(file, card){                    // Sammelkarte: nennt d
 function onPlantPhoto(file, card){
   const G = norm(genusOf(card)||""); if(!G) return false;
   const g = G.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
-  return new RegExp("(^|[^a-z])(on|auf|sur|op|su|sobre|visiting)\\s+(?:(?:a|an|the|der|die|das|den|einer|einem|la|le|les|un|une|een|de|het|una|uno)\\s+)?"+
+  // auch »en una Dahlia« (spanisch – Bildcheck-Lauf 7: »Abeja (Bombus) en una Dahlia x hortensis«), »em« (pt),
+  // »sul/sulla« (it), »na« (pl/cz); niederländisch »en« = »und« – ein Mischbild »Rozen en Dahlia's« fällt dann eben auch raus
+  return new RegExp("(^|[^a-z])(on|auf|sur|op|su|sobre|visiting|en|em|sul|sulla|na)\\s+(?:(?:a|an|the|der|die|das|den|einer|einem|la|le|les|un|une|een|de|het|una|uno|um|uma|il|lo)\\s+)?"+
     "(?:(?:flowers?|blossoms?|leaf|leaves|bl(?:ü|ue)ten?|blatt|fleurs?|bloem(?:en)?)\\s+(?:of|von|der|de|des|du|van)\\s+)?"+g+"([^a-z]|$)","i")
     .test(String(file||"").replace(/_/g," "));
 }

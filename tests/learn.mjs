@@ -2092,6 +2092,57 @@ async function main() {
     lauf6.p3.file === null && !lauf6.p3.err && lauf6.p3.cultivarSchritt,
     "»Prunus 'Sorte'«: 'Accolade' sofort; sonst 'Kanzan' ohne die eigens gelistete P. serrulata im Namen; die Sortensuche allein liefert nur Arten der Liste (alle verworfen): " + JSON.stringify(lauf6));
 
+  // Bildcheck-Lauf 7 durchgesehen (echte Dateinamen): ein Monatsname ist kein Sortenname (»Phalaenopsis
+  // July 2020-2« schlug die Gartensorte), »Abeja (Bombus) en una Dahlia x hortensis« ist ein Tierfoto
+  // (spanisch »en« = auf), »Allium cepa with Erwinia carotovora« zeigt Bakterienfäule (Lauf 6: Küchen-Zwiebel)
+  const lauf7 = await page.evaluate(async () => {
+    __setPhotoSource(null);
+    const prev = $("#frSelect").value + "|" + $("#nivSelect").value;
+    const prof = (fr, niv) => { $("#frSelect").value = fr; $("#nivSelect").value = niv; applyProfile(); };
+    prof("zierpflanzenbau", "gaertner");
+    const ph = allCards.find((c) => c.g === "Phalaenopsis" && c.a === "Cultivars");
+    const cmP = (i, file) => ({ index: i, title: "File:" + file, imageinfo: [{ thumburl: "https://x/" + encodeURIComponent(file), mime: "image/jpeg", width: 1200,
+      descriptionurl: "https://commons/" + file, extmetadata: { Categories: { value: "Photos" }, Artist: { value: "Hp" }, LicenseShortName: { value: "CC BY-SA 4.0" } } }] });
+    const leer = { query: { pages: {} } };
+    const PH = ["Phalaenopsis Cultivar White 01.jpg", "Phalaenopsis Cultivar Mini 01.jpg", "Phalaenopsis Cultivar Yellow 01.jpg", "Phalaenopsis (aka).jpg",
+      "Phalaenopsis cultivar FR 2012.jpg", "Phalaenopsis July 2020-2.jpg", "Phalaenopsis white cultivar 2.jpg", "Phalaenopsis purple cultivar 2.jpg",
+      "Phalaenopsis cultivar 01.jpg", "Phalaenopsis cultivar 04 double spike full.jpg", "Orchiedeenlüte 2019-05-21 12-03-31 (C)-PSD.jpg", "Phalaenopsis cultivar (Moth orchid).jpg"];
+    __clearPhotoCache(); photoTried.clear();
+    __setJsonp((url) => {
+      if (/api\.inaturalist\.org/.test(url)) return Promise.resolve({ results: [] });
+      if (/commons/.test(url) && !/titles=File/.test(url)) {
+        const q = decodeURIComponent((url.match(/gsrsearch=([^&]+)/) || [])[1] || "");
+        return Promise.resolve(q === "Phalaenopsis cultivar" ? { query: { pages: Object.fromEntries(PH.map((f, i) => ["p" + i, cmP(i + 1, f)])) } } : leer);
+      }
+      return Promise.resolve(leer); });
+    let phFile = null; try { const r = await wikiPhoto(ph); phFile = r && r.file; } catch (e) { phFile = "Fehler: " + e; }
+    const dah = { g: "Dahlia", a: "x hortensis" }, lav = { g: "Lavandula", a: "angustifolia" }, sal = { g: "Salvia", a: "nemorosa" };
+    const out = { phFile,
+      monat: [gardenEvident("Phalaenopsis July 2020-2.jpg", ph, false), gardenEvident("Hosta 'June' 01.jpg", { g: "Hosta", a: "Cultivars" }, false),
+        gardenEvident("Tulipa Juliette - April 2023.jpg", { g: "Tulipa", a: "Cultivars" }, false)],
+      score: [commonsScore("Phalaenopsis July 2020-2.jpg", ph), commonsScore("Phalaenopsis Cultivar White 01.jpg", ph)],
+      tier: [onPlantPhoto("Abeja (Bombus) en una Dahlia x hortensis, jardín botánico de Tallin, Estonia, 2012-08-12, DD 02.jpg", dah),
+        onPlantPhoto("Abelha em Lavandula angustifolia.jpg", lav), onPlantPhoto("Ape sulla Salvia nemorosa.jpg", sal),
+        onPlantPhoto("Dahlia en fleur 2019.jpg", dah), onPlantPhoto("Dahlia x hortensis 'Bishop of Llandaff'.jpg", dah)],
+      schaden: [looksDamage("Allium cepa with Erwinia carotovora subsp. carotovora (10).jpg"), looksDamage("Apfelschorf an Malus domestica.jpg"),
+        looksDamage("Weichfäule an Kartoffel.jpg"), looksDamage("Tetranychus urticae spider mites on bean.jpg"), looksDamage("Grauschimmel an Erdbeere.jpg")],
+      bleibt: ["Allium cepa (Amaryllidaceae).jpg", "Dracocephalum moldavica 1.jpg", "Deutzia_scabra_A.jpg", "Scabiosa caucasica-IMG 0709.jpg",
+        "Juniperus horizontalis Wiltonii 2020-06-23 0840.jpg", "Russels_Brandkraut.jpg", "Blauer_Eisenhut_Dolomiten.jpg", "Nematanthus gregarius 1.jpg",
+        "Frangula alnus Faulbaum 2.jpg", "Picea glauca Schimmel-Fichte 1.jpg"].filter((f) => looksDamage(f)),
+      // über alle Listen: kein botanischer und kein deutscher Name sieht nach Schadbild oder Tierfoto aus
+      listen: Object.values(SEEDS).flat().filter((r) => looksDamage(r[0] + " " + r[1]) || looksDamage(r[3] || "") || onPlantPhoto(r[0] + " " + r[1], { g: r[0], a: r[1] }))
+        .map((r) => r[0] + " " + r[1]) };
+    __setJsonp(window.__offlineJsonp); __clearPhotoCache(); photoTried.clear();
+    const [fr, niv] = prev.split("|"); prof(fr, niv);
+    return out;
+  });
+  assert(lauf7.phFile === "Phalaenopsis Cultivar White 01.jpg" && JSON.stringify(lauf7.monat) === "[false,true,true]" && lauf7.score[0] < lauf7.score[1],
+    "Monatsname ist kein Sortenname (»Phalaenopsis July 2020-2« verliert gegen »Phalaenopsis Cultivar White 01«; 'June' in Anführungszeichen bleibt Sorte): " + JSON.stringify(lauf7));
+  assert(JSON.stringify(lauf7.tier) === "[true,true,true,false,false]",
+    "onPlantPhoto: Tier auf der Pflanze auch spanisch/portugiesisch/italienisch (en una / em / sulla); »Dahlia en fleur« und Sortenfoto bleiben: " + JSON.stringify(lauf7.tier));
+  assert(JSON.stringify(lauf7.schaden) === "[true,true,true,true,true]" && lauf7.bleibt.length === 0 && lauf7.listen.length === 0,
+    "looksDamage: Bakterienfäule (Erwinia), Schorf, Weichfäule, Spinnmilben, Grauschimmel raus; Pflanzennamen wie moldavica/scabra/Scabiosa/Wiltonii/Brandkraut/Faulbaum/Schimmel-Fichte und alle Listen-Namen bleiben: " + JSON.stringify(lauf7));
+
   // Anführungszeichen ˋ (U+02CB): Neun Sorten der Friedhofsgärtnerei-Gärtner-Liste standen so in der
   // Excel (»helix ˋGlacierˋ«) – keine Sorten-Erkennung, und eine richtige Eingabe zählte nur »fast«.
   const anfzSonder = await page.evaluate(() => {

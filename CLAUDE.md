@@ -2755,7 +2755,18 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Art – ein anderes Bild bekam). Geprüft mit den echten Trefferlisten (`Verbena cultivar`, `Tulipa
       cultivar`, `Prunus cultivar`, `Prunus Accolade`, `Prunus Kanzan`, wörtlich in `tests/learn.mjs`).
       Die Bartiris-Sorte 'Skylark's Song' ist laut Commons-Kategorie eine Bartiris (»Bearded Iris
-      cultivars«) – passt.
+      cultivars«) – passt. **Lauf 7** (2105 · 1 · 8 · 0): Prunus 'Accolade', Malus 'Evereste', Weigela
+      'Bristol Ruby', Tulipa 'Juliette', Verbena 'Tukana Scarlet', Belladonna-Rittersporn 'Völkerfrieden'.
+      Dabei noch drei Lücken geschlossen: **Monatsnamen** sind keine Sortennamen (`GENERIC_CAP`:
+      »Phalaenopsis July 2020-2« schlug die Gartensorte), `onPlantPhoto` kennt auch spanisch/portugiesisch/
+      italienisch/polnisch »auf« (`en`/`em`/`sul(la)`/`na` – »Abeja (Bombus) en una Dahlia x hortensis«
+      stand in allen Läufen bei der Dahlie), `looksDamage` kennt **Bakterien und Fäulen** (Erwinia/
+      Pectobacterium/Xanthomonas …, Weich-/Braunfäule, Grauschimmel, Schorf, Obstbaumkrebs, Spinnmilben,
+      Thripse – Lauf 6 zeigte für Küchen-Zwiebel und Schalotte »Allium cepa with Erwinia carotovora«);
+      bewusst **nicht** »schimmel« allein (*Picea glauca* heißt »Schimmel-Fichte«), nicht »rot«, »brand«,
+      »scab« (Rot-Buche, Brandkraut, *Deutzia scabra*). Offline-Gegenprobe über alle 2114 in Lauf 7
+      gewählten Dateien: der neue Filter verwirft genau das Dahlien-Hummelfoto. `tests/learn.mjs` prüft
+      die Realfälle und dass **kein Listen-Name** (botanisch oder deutsch) als Schadbild/Tierfoto gilt.
 
 ## Offene Aufgaben (TODO)
 
