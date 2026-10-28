@@ -1101,8 +1101,9 @@ async function main() {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
       ["Nr.", "Botanischer Name", "Familie", "Deutscher Name", "ZP"],
       ["1", "Prunus cerasifera `Nigra´", "Rosaceae", "Blutpflaume", ""],
+      ["2", "Hedera helix ˋGlacierˋ", "Araliaceae", "Weißgrüner Efeu", ""],   // Modifikator-Zeichen ˋ wie in der Friedhofsgärtnerei-Gärtner-Liste
       ["Bei-, Wild- oder Unkräuter", "", "", "", ""],                 // Rubrik-Zeile wie in den amtlichen Listen (nur Spalte A)
-      ["2", "Taraxacum officinale", "Asteraceae", "Löwenzahn", "ZP"]]), "Liste");
+      ["3", "Taraxacum officinale", "Asteraceae", "Löwenzahn", "ZP"]]), "Liste");
     const recs = parseWorkbook(XLSX.write(wb, { type: "array", bookType: "xlsx" }));
     out.recs = recs.map(r => [r.gattung, r.art, r.kategorie, r.zp]);
     let err = null;
@@ -1135,8 +1136,8 @@ async function main() {
   assert(p4.neg === p4.soll && p4.nul === p4.soll && p4.drei === 3, "Anzahl-Feld: negativ/0 → Profil-Soll, 3 → 3: " + JSON.stringify(p4));
   assert(p4.lin0 === 95 && p4.linSaved, "Notengrenzen editieren muss übernehmen und speichern: " + JSON.stringify(p4));
   assert(p4.xlsxBefore === "undefined" && p4.ensure && p4.xlsxAfter !== "undefined", "SheetJS darf erst beim Import ausgewertet werden: " + JSON.stringify(p4));
-  assert(JSON.stringify(p4.recs) === JSON.stringify([["Prunus", "cerasifera 'Nigra'", "", 0], ["Taraxacum", "officinale", "Wild- & Beikräuter", 1]]),
-    "Excel-Import muss wie der Konverter normalisieren (Apostrophe, Beikraut-Kategorie): " + JSON.stringify(p4.recs));
+  assert(JSON.stringify(p4.recs) === JSON.stringify([["Prunus", "cerasifera 'Nigra'", "", 0], ["Hedera", "helix 'Glacier'", "", 0], ["Taraxacum", "officinale", "Wild- & Beikräuter", 1]]),
+    "Excel-Import muss wie der Konverter normalisieren (Apostrophe auch aus ˋ, Beikraut-Kategorie): " + JSON.stringify(p4.recs));
   assert(p4.backupErr === null && p4.schemaCols === "gattung,art,familie,deutscher_name" && p4.schemaAnzahl === 20 && p4.lin === "90,70,50,30,10" && p4.examsDedup === 1 && p4.restored,
     "Sicherung mit defektem Schema: kein Fehler, Standard greift, doppelte Prüfungen raus: " + JSON.stringify(p4));
   assert(p4.q1 === false && p4.q2 === true && p4.qPersistent && p4.qValue === "b", "Quota-Fallback: ein voller Speicher darf localStorage nicht dauerhaft abschalten: " + JSON.stringify(p4));

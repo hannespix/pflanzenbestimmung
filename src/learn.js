@@ -540,9 +540,14 @@ const KEY_RENAMES = {
   "amaranthus|retoflexus|zurückgekr. fuchsschwanz, amarant": "amaranthus|retroflexus|zurückgekr. fuchsschwanz, amarant",
   "petunie|x atkinsiana|garten-petunie": "petunia|x atkinsiana|garten-petunie"
 };
+/* Neun Sorten der Friedhofsgärtnerei-Gärtner-Liste standen bis zum Neubau mit ˋ statt ' im Seed
+   (»helix ˋGlacierˋ«) – ihr Schlüssel enthielt das Zeichen. Wie der Konverter auf gerade Apostrophe. */
+const ODD_QUOTE = /[ˋˊ′‵ʹʻʼʽ]/, ODD_QUOTES = /[ˋˊ′‵ʹʻʼʽ]/g;
 function migrateKeys(p){
   let n = 0;
-  Object.keys(KEY_RENAMES).forEach(a=>{ if(p && p[a]){ const b = KEY_RENAMES[a]; if(!p[b]) p[b] = p[a]; delete p[a]; n++; } });
+  if(!p) return 0;
+  Object.keys(KEY_RENAMES).forEach(a=>{ if(p[a]){ const b = KEY_RENAMES[a]; if(!p[b]) p[b] = p[a]; delete p[a]; n++; } });
+  Object.keys(p).forEach(a=>{ if(!ODD_QUOTE.test(a)) return; const b = a.replace(ODD_QUOTES,"'"); if(!p[b]) p[b] = p[a]; delete p[a]; n++; });
   return n;
 }
 function loadProgress(){ try{ const raw=store.get(progKey()); progress=raw?JSON.parse(raw):{}; if(typeof progress!=="object"||!progress) progress={}; }catch(e){ progress={}; } if(migrateKeys(progress)) saveProgress(); masteryReset(); }
@@ -967,8 +972,13 @@ function distractors(c, n){
   // Im Bilder-Quiz keine Geschwister derselben Art anbieten (Tomate ↔ Kirschtomate):
   // Auf einem Foto wäre die Frage sonst auch mit perfektem Bild kaum zu entscheiden.
   const binom = searchName(c).toLowerCase();
+  // Ebenso bei der Gattungsebene (»Rosa Cultivars«, »Hemerocallis Cultivars«): Zeigt das Foto eine
+  // Art der Gattung, wäre neben der Sammelkarte auch diese Art eine vertretbare Antwort – also keine
+  // Ablenker derselben Gattung, in beide Richtungen (auch nicht die drei Bartiris-Gruppen untereinander).
+  const gen = genusOf(c), cGen = genusLevel(c);
   const ok = x => x.key!==c.key && answerTextMemo(x).toLowerCase()!==want
-                  && (mode!=="photo" || searchName(x).toLowerCase()!==binom);
+                  && (mode!=="photo" || (searchName(x).toLowerCase()!==binom
+                       && !((cGen || genusLevel(x)) && genusOf(x)===gen)));
   const same = allCards.filter(x=>ok(x) && x.thema===c.thema);
   const rest = allCards.filter(ok);
   const picks=[]; const seen=new Set([want]);
@@ -984,12 +994,12 @@ function lev(a,b){ a=a||""; b=b||""; const m=a.length,n=b.length; if(!m)return n
   for(let i=1;i<=m;i++) for(let j=1;j<=n;j++){ const cost=a[i-1]===b[j-1]?0:1;
     d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+cost); } return d[m][n]; }
 /* Eingaben normalisieren: Groß/Klein, Satzzeichen, Klammern und ALLE Varianten von
-   Anführungszeichen (' ` ´ ‘ ’ „ “ ” ") sind egal – wer »Weigela x „Bristol Ruby“«
+   Anführungszeichen (' ` ´ ‘ ’ „ “ ” " ˋ) sind egal – wer »Weigela x „Bristol Ruby“«
    tippt, meint Weigela 'Bristol Ruby'. Ebenso das Hybrid-Zeichen (× bzw. ein
    freistehendes x): ob jemand »Petunia × atkinsiana« oder »Petunia atkinsiana«
    schreibt, ist keine Frage der Pflanzenkenntnis. (Realfall: »x „Bristol Ruby“« gab
    Abzug, weil die Anführungszeichen und das x als Teil des Namens verglichen wurden.) */
-const clean = s => norm(s).toLowerCase().replace(/×/g," ").replace(/[.,;:’'`´‘‚“”„"«»()\[\]]/g," ")
+const clean = s => norm(s).toLowerCase().replace(/×/g," ").replace(/[.,;:’'`´‘‚“”„"«»()\[\]ˋˊ′‵ʹʻʼʽ]/g," ")
   .replace(/(^|\s)x(?=\s|$)/g," ")
   .replace(/\bin sorten\b|\bsorten?\b/g," ")                     // Platzhalter »'Sorte'« / »in Sorten« zählt nicht (Salvia nemorosa 'Sorte' = Salvia nemorosa)
   .replace(/\s+/g," ").trim();
@@ -2328,7 +2338,7 @@ function applyMode(){
    Apostrophe; zur Sicherheit werden hier trotzdem alle Varianten angenommen. */
 const CV_RE = /'([^']*(?:'s [^']*)?)'/;
 function cultivarName(a){
-  a = norm(a||"").replace(/[`´‘’‚“”„"]/g,"'");
+  a = norm(a||"").replace(/[`´‘’‚“”„"ˋˊ′‵ʹʻʼʽ]/g,"'");
   const m = CV_RE.exec(a); if(m) return norm(m[1]);
   // Ein einzelnes (vergessenes) Anführungszeichen in der Quellliste – sechs Zeilen: »abies 'Nidiformis«
   // (Ende fehlt) bzw. »fortunei Emerald Gold'« (Anfang fehlt). Sortenname = Rest hinter dem ' bzw.
@@ -2340,7 +2350,7 @@ function cultivarName(a){
   return vor ? norm(vor[1]).replace(/^(cultivars?|sorten?)\s+/i,"") : "";
 }
 function stripCultivar(a){                            // botanischer Name ohne Sortenzusatz
-  a = norm(a||"").replace(/[`´‘’‚“”„"]/g,"'");
+  a = norm(a||"").replace(/[`´‘’‚“”„"ˋˊ′‵ʹʻʼʽ]/g,"'");
   const cv = cultivarName(a); if(!cv) return a;
   const re = new RegExp("\\(?'?"+cv.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"'?\\)?");
   return norm(a.replace(re," "));
@@ -3801,7 +3811,7 @@ function isCultivarName(a){ return cultivarKind(a) !== ""; }
    wenn keine Geschwister in der Liste stehen – dort ist die Abweichung selten
    bildentscheidend, und oft gibt es gar kein eigenes Sortenbild. Gegen alle
    Sortennamen der 14 Listen durchgesehen (s. tests/learn.mjs). */
-const CV_DESC_RE = /(nigr|purpur|atro|rubr|rubens|\bros[ea]|\baure|\blute|\bflav|\balb[au]|variegat|marginat|argent|glauc|caerul|blue|gold|silver|silber|\bred\b|\brot\b|yellow|gelb|white|weiss|purple|pink|contort|tortuos|pendul|fastigiat|column|\bnan[au]s?\b|compact|globos|conic|pyramid|erect|repand|horizontal|prostrat|procumb|tristis|youngii|weeping|dwarf|zwerg|crisp|dissect|lacinia|squarros|echinif|teppich|carpet|gracil|smaragd|emerald|sunburst|\bsun ?spot|evergold|hibernic|hibernik|\bmops\b|danica|elegantissim|punice|nidiform|minim)/;
+const CV_DESC_RE = /(nigr|purpur|atro|rubr|rubens|\bros[ea]|\baure|\blute|\bflav|\balb[au]|variegat|marginat|argent|glauc|caerul|blue|gold|silver|silber|\bred\b|\brot\b|yellow|gelb|white|weiss|purple|pink|contort|tortuos|pendul|fastigiat|column|\bnan[au]s?\b|compact|globos|conic|pyramid|erect|repand|horizontal|prostrat|procumb|tristis|youngii|weeping|dwarf|zwerg|crisp|dissect|lacinia|squarros|echinif|teppich|carpet|gracil|smaragd|emerald|sunburst|\bsun ?spot|evergold|hibernic|hibernik|\bmops\b|danica|elegantissim|punice|coccine|\bgnom|glacier|nidiform|minim)/;
 function descriptiveCultivar(name){
   const n = deacc(String(name||"").toLowerCase()).replace(/[_\-]+/g," ");
   return !!n && CV_DESC_RE.test(n);
@@ -3874,7 +3884,7 @@ async function fileMeta(file){                          // → {art, kind, mime,
 function fileMentionsOther(file, card){               // Dateiname nennt eine andere Art derselben Gattung
   const gen = norm(card.g||"").toLowerCase(); if(!gen) return false;
   const epi = binomEpithet(card.a||"").toLowerCase(), inf = infraEpithet(card.a||"");
-  if(!epi) return false;                              // gattungsreine Karte (»Weigela 'Bristol Ruby'«): jede Art der Gattung darf sie vertreten
+  if(!epi) return namesListSpecies(file, card);       // gattungsreine Karte (»Weigela 'Bristol Ruby'«): jede Art der Gattung darf sie vertreten – außer einer, die in dieser Liste eigens steht
   const cv = cultivarName(card.a||"").toLowerCase().split(" ")[0];   // »Prunus cerasifera Nigra 01.jpg« nennt keine andere Art
   const ok = new Set([epi, inf, cv, "var","subsp","ssp","sect","nothof"].filter(Boolean));
   synCards(card).forEach(s=>{ const e=binomEpithet(s.a).toLowerCase(), i=infraEpithet(s.a); if(e) ok.add(e); if(i) ok.add(i); });   // Synonym-Epitheta (»ligustrina«, »yunnanensis«) = dieselbe Pflanze
@@ -3916,6 +3926,54 @@ function photoCard(card){
   const m = /^(×?\s*[A-ZÄÖÜ][a-zäöüß]+)\s*-\s*(hybriden?|cultivars?|sorten)$/i.exec(norm((card && card.g)||""));
   return (m && !norm(card.a||"")) ? Object.assign({}, card, { g:m[1], a:"Hybriden" }) : card;
 }
+/* Gattungsebene: Karte ohne Art-Epitheton – Sammel- und Platzhalterkarten (»Rosa Cultivars«,
+   »Fuchsia-Hybriden«, »Prunus 'Sorte'«), Gattung + Sorte (»Weigela 'Bristol Ruby'«) und
+   Sektionen (»Taraxacum sect. Ruderalia«). */
+function genusOf(card){ return norm(photoCard(card||{}).g||"").replace(/^×\s*/,"").split(" ")[0]; }
+function genusLevel(card){ return !!genusOf(card) && !binomEpithet(photoCard(card).a||""); }
+/* Die Commons-Kategorie der GATTUNG ist oft eine Sammelschublade: Die Fotos stecken in
+   Unterkategorien (»Rosa (cultivars)«, »Rosa (flowers)« …), direkt darin liegt Beifang.
+   Realfall »Rosa«: Fotos aus dem Ort Rosà, ein Hotelzimmer, eine Fahne »rosa'« – das Quiz
+   zeigte für »Rosa Cultivars« einen Radweg. Sucht eine Karte der Gattungsebene nach der
+   bloßen Gattung, zählt deshalb nur eine Datei, die die Gattung selbst nennt: großgeschrieben,
+   als ganzes Wort, ohne Akzent-Faltung (»Rosà« ≠ »Rosa«). In der Volltextsuche spricht ein
+   großgeschriebenes Folgewort ohne Anführungszeichen zudem für einen Personennamen
+   (»Rosa Parks«, »Iris Berben«). */
+function genusNamed(file, card, volltext){
+  const G = genusOf(card); if(!G) return true;
+  const w = String(file||"").replace(/\.[a-z0-9]{2,5}$/i,"").split(/[\s_,;()\[\]–-]+/).filter(Boolean);
+  return w.some((x,i)=> x===G && !(volltext && /^[A-ZÄÖÜ][a-zäöüß]/.test(w[i+1]||"")));
+}
+/* Gattungsebene: Das Bild darf keine Art zeigen, die in DIESER Liste eigens steht. Sonst sieht
+   man für »Hemerocallis Cultivars« die Bahnwärter-Taglilie (H. fulva), und wer sie richtig
+   erkennt, liegt »falsch« (Bildcheck: außerdem Schlehe für »Prunus 'Sorte'«, Hoher Rittersporn
+   für die Belladonna-Gruppe, Weigela florida, Agastache rugosa). Erkannt am lateinischen Namen,
+   am Sortennamen oder an einem deutschen Namen dieser Art – nicht an einem, den die Sammelkarte
+   selbst trägt (»Prunus 'Sorte'« und »Prunus serrulata« heißen beide Zier-Kirsche). */
+let listSpeciesMemo = { cards:null, map:new Map() };
+const flatKey = s => deacc(String(s||"").toLowerCase()).replace(/[^a-zäöüß0-9]+/g,"");   // nur Buchstaben/Ziffern, akzentfrei
+function listSpeciesPatterns(card){
+  if(listSpeciesMemo.cards!==allCards) listSpeciesMemo = { cards:allCards, map:new Map() };
+  const G = genusOf(card), k = G+"|"+card.key;
+  if(listSpeciesMemo.map.has(k)) return listSpeciesMemo.map.get(k);
+  const own = new Set((card.de||"").split(/[,;/]/).map(flatKey));
+  const lat = [], z = [];
+  (allCards||[]).forEach(x=>{
+    if(x.key===card.key || genusOf(x)!==G) return;
+    const e = binomEpithet(x.a||""), cv = cultivarName(x.a||"");
+    if(!e && !cv) return;                                         // eine andere Sammelkarte derselben Gattung
+    if(e) lat.push(deacc((G+" "+e).toLowerCase()));
+    if(cv && !/^sorten?$/i.test(cv) && flatKey(cv).length>=4) z.push(flatKey(cv));   // »Rosa 'The Fairy' 01.jpg« für »Rosa Cultivars«
+    (x.de||"").split(/[,;/]/).map(flatKey).forEach(n=>{ if(n.length>=6 && !own.has(n)) z.push(n); });   // »Hoher_Rittersporn«, »Schlehen«
+  });
+  const r = { lat, z }; listSpeciesMemo.map.set(k, r); return r;
+}
+function namesListSpecies(file, card){
+  const { lat, z } = listSpeciesPatterns(card); if(!lat.length && !z.length) return false;
+  const words = " "+deacc(String(file||"").toLowerCase()).replace(/[^a-zäöüß0-9]+/g," ").trim()+" ";
+  const flatF = words.replace(/\s+/g,"");
+  return lat.some(n=>words.indexOf(" "+n+" ")>=0) || z.some(n=>flatF.indexOf(n)>=0);
+}
 function photoSteps(card){                            // Suchwege, vom genauesten zum gröbsten
   card = photoCard(card);
   const binom = searchName(card), de = (card.de||"").split(/[,;/]/)[0].trim();
@@ -3937,6 +3995,9 @@ function photoSteps(card){                            // Suchwege, vom genaueste
     if(taxon!==binom && !sectName(card.a)) steps.push({k:"wp", q:binom});   // Hybride auch ohne Zeichen (»Amelanchier lamarckii« leitet weiter);
                                                                           // bei Sektionen NICHT die Gattung (ihr Artikelbild zeigt irgendeine Art)
     steps.push({k:"cm", q:`incategory:"${taxon}"`});                      // Commons-Kategorie des Taxons (Löwenzahn: 157 Dateien)
+    // Gattungsebene: Die Gattungskategorie ist oft eine Sammelschublade (genusNamed) – die geprüften
+    // »Quality images of Rosa« dagegen zeigen die Pflanze, oft eine benannte Gartensorte
+    if(genusLevel(card) && !sectName(card.a||"")) steps.push({k:"cm", q:`incategory:"Quality images of ${taxon}"`});
     const alt = /\(([a-zäöüß-]{3,})\)/.exec(norm(card.a||""));            // »Rubus sect. Rubus (fruticosus)« → Rubus fruticosus
     if(alt) steps.push({k:"wp", q:norm(card.g+" "+alt[1])});
     if(de) steps.push({k:"wp", q:de});
@@ -3974,10 +4035,15 @@ function commonsScore(file, card){
   const synEpi = synCards(card).some(x=>{ const e=deacc(binomEpithet(x.a).toLowerCase()); return e && f.indexOf(e)>=0; });
   if(gen && f.indexOf(gen)>=0) s += ((epi && f.indexOf(epi)>=0) || synEpi) ? 4 : 2;
   if(de && de.length>4 && f.indexOf(de)>=0) s += 3;
+  // Sammelkarte (»Rosa Cultivars«, »Fuchsia-Hybriden«): eine benannte Gartensorte (»Rosa 'Gloria Dei'«)
+  // zeigt die Gartenform – besser als eine Wildart der Gattung
+  if(!epi && gen && cultivarKind(card.a||"")==="placeholder" && new RegExp("(^|[^a-z])"+gen+"\\s*['‘’`´\"“”„]").test(f)) s += 2;
   return s;
 }
-function pickCommons(d, card, artOut){                // bester Treffer der Commons-Suche; artOut: Sammelliste für Zeichnungen/Belege (Notnagel)
+function pickCommons(d, card, artOut, q){             // bester Treffer der Commons-Suche; artOut: Sammelliste für Zeichnungen/Belege (Notnagel); q: Suchweg
   const pg = (d && d.query && d.query.pages) || null; if(!pg) return null;
+  const G = genusOf(card), bare = !!q && genusLevel(card) && !sectName(card.a||"") && (q===`incategory:"${G}"` || q===G);   // Suche nach der bloßen Gattung
+  const volltext = bare && q===G;
   const list = Object.keys(pg).map(k=>pg[k]).sort((a,b)=>(a.index||0)-(b.index||0));
   const ok = [];
   list.forEach((p, i)=>{
@@ -3985,6 +4051,7 @@ function pickCommons(d, card, artOut){                // bester Treffer der Comm
     const ii = p.imageinfo && p.imageinfo[0]; if(!ii || !(ii.thumburl||ii.url)) return;
     if(ii.mime && (!/^image\//i.test(ii.mime) || /djvu/i.test(ii.mime))) return;   // PDF/DjVu-Buchscans: Vorschau = Buchdeckel
     if(!usablePhoto(file) || looksDamage(file) || fileMentionsOther(file, card)) return;
+    if(bare && !genusNamed(file, card, volltext)) return;   // Beifang der Gattungskategorie (Rosà, Hotelzimmer, »Rosa Parks«)
     const meta = ii.extmetadata || null;
     const cand = { thumb: ii.thumburl || ii.url, file, i, w: ii.width||0, sc: commonsScore(file, card), credit: metaCredit(meta),
               url: ii.descriptionurl || ("https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(file)) };
@@ -4035,7 +4102,7 @@ async function wikiPhoto(card){                        // → {thumb,title,file,
   for(const st of photoSteps(card)){
     try{
       if(st.k==="cm"){
-        const hit = pickCommons(await commonsQuery(st.q), card, art);
+        const hit = pickCommons(await commonsQuery(st.q), card, art, st.q);
         answered = true;
         if(hit) return mark(hit);
       }else{
@@ -4080,16 +4147,19 @@ let photoSource = wikiPhoto;                           // austauschbar (Tests la
    einen frischen Versuch; gefundene Bilder bleiben wie bisher dauerhaft gemerkt. */
 const photoTried = new Set(), photoTmp = new Map();  // photoTmp: Treffer, bei denen ein feinerer Suchweg nicht durchkam – nur für diese Sitzung
 const ART_TTL = 30*86400e3;                            // gemerkte Zeichnung: nach 30 Tagen erneut nach einem Foto suchen (Commons wächst)
+const GEN_V = 1;   // Gattungsebene neu geprüft (Sammelschublade, Art derselben Liste): ältere Treffer dieser Karten einmal neu suchen
 async function photoFor(card){
   const known = photoStoreLoad()[card.key];
+  const genAlt = !!(known && genusLevel(card) && (known.gv||0) < GEN_V);       // vielleicht der Radweg aus Rosà – nicht als Rückfall zeigen
   const alt = !!(known && known.art && Date.now() - (known.t||0) > ART_TTL);   // Notnagel gealtert → neue Suche, die alte bleibt als Rückfall
-  if(known && !alt) return known;                      // gemerktes Bild – sofort da
+  if(known && !alt && !genAlt) return known;           // gemerktes Bild – sofort da
   if(photoTmp.has(card.key)) return photoTmp.get(card.key);
   if(photoTried.has(card.key)) return known || null;   // in dieser Sitzung schon erfolglos gesucht
   let p;
   try{ p = await photoSource(card); }                  // wirft bei Netzfehler (dann KEIN Merken → später erneut)
-  catch(e){ if(known){ photoTried.add(card.key); return known; } throw e; }   // alte Zeichnung bleibt, solange die neue Suche nicht durchkommt
+  catch(e){ if(known && !genAlt){ photoTried.add(card.key); return known; } throw e; }   // alte Zeichnung bleibt, solange die neue Suche nicht durchkommt
   if(p && p.art) p.t = Date.now();
+  if(p && genusLevel(card)) p.gv = GEN_V;
   if(p && p.tmp){ photoTmp.set(card.key, p); return p; }   // nicht dauerhaft merken: beim nächsten Start wird wieder fein gesucht
   photoRemember(card.key, p);
   if(!p) photoTried.add(card.key);
@@ -5132,6 +5202,9 @@ window.descriptiveCultivar=descriptiveCultivar;
 window.looksArtwork=looksArtwork;
 window.artKind=artKind; window.bestArt=bestArt;   // Notnagel-Zeichnung (für Tests)
 window.photoCard=photoCard; window.KEY_RENAMES=KEY_RENAMES;   // Sammelgruppen-Gattung, Schlüssel berichtigter Zeilen (für Tests)
+window.migrateKeys=migrateKeys;
+window.genusOf=genusOf; window.genusLevel=genusLevel; window.genusNamed=genusNamed; window.namesListSpecies=namesListSpecies;   // Gattungsebene (für Tests)
+window.__distractorsIn=(m,c,n)=>{ const o=mode; mode=m; try{ return distractors(c,n); }finally{ mode=o; } };   // Ablenker in einem bestimmten Modus (für Tests)
 window.binomEpithet=binomEpithet;
 window.clean=clean;
 window.checkTyped=checkTyped;

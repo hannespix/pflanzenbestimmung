@@ -401,7 +401,7 @@ function mapCols(h){ const m={}; h.forEach((c,i)=>{ const v=norm(c); for(const k
 /* Wie der Konverter (tools/xlsx_to_seed.mjs): gerade Apostrophe um Sortennamen und die drei
    Beikraut-Schreibweisen der Quelllisten vereinheitlicht – sonst behielt eine im Werkzeug
    importierte Excel `Nigra´ und »Bei-, Wild- oder Unkräuter« (Audit). */
-const quotesQ = s => norm(s).replace(/[`´‘’‚“”„"]/g, "'");
+const quotesQ = s => norm(s).replace(/[`´‘’‚“”„"ˋˊ′‵ʹʻʼʽ]/g, "'");   // wie der Konverter (auch ˋGlacierˋ)
 const KAT_ALIAS = { "Wildkräuter":"Wild- & Beikräuter", "Bei-, Wild- oder Unkräuter":"Wild- & Beikräuter", "Unkräuter, Wildkräuter":"Wild- & Beikräuter" };
 const katName = k => KAT_ALIAS[k] || k;
 /* SheetJS (624 KB) steckt als text/plain-Block in der Seite und wird erst beim ersten
@@ -1077,7 +1077,7 @@ function infoCard(p){
    Zeichen-Varianten werden angenommen (wie im Lern-Tool). */
 const CV_RE = /'([^']*(?:'s [^']*)?)'/;
 function cultivarName(a){
-  a = norm(a||"").replace(/[`´‘’‚“”„"]/g,"'");
+  a = norm(a||"").replace(/[`´‘’‚“”„"ˋˊ′‵ʹʻʼʽ]/g,"'");
   const m = CV_RE.exec(a); if(m) return norm(m[1]);
   const i = a.indexOf("'"); if(i < 0) return "";                                 // vergessenes Anführungszeichen (Quellliste)
   const rest = norm(a.slice(i+1).replace(/[()]/g,"")); if(rest) return rest;
@@ -1085,7 +1085,7 @@ function cultivarName(a){
   return vor ? norm(vor[1]).replace(/^(cultivars?|sorten?)\s+/i,"") : "";
 }
 function stripCultivar(a){                            // botanischer Name ohne Sortenzusatz
-  a = norm(a||"").replace(/[`´‘’‚“”„"]/g,"'");
+  a = norm(a||"").replace(/[`´‘’‚“”„"ˋˊ′‵ʹʻʼʽ]/g,"'");
   const cv = cultivarName(a); if(!cv) return a;
   const re = new RegExp("\\(?'?"+cv.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"'?\\)?");
   return norm(a.replace(re," "));
