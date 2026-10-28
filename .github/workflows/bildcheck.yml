@@ -27,9 +27,11 @@ on:
 permissions:
   contents: read
 
+# Ein laufender Bildcheck wird NICHT abgebrochen (er braucht lange und kostet viele Anfragen);
+# ein neuer Push wartet dahinter, und von mehreren wartenden bleibt nur der neueste.
 concurrency:
   group: bildcheck-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   bildcheck:
