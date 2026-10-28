@@ -295,11 +295,12 @@ function markdown(b) {
   }
   const z = zaehle(b.ergebnisse);
   L.push(`| **gesamt** | **${b.ergebnisse.length}** | **${z.foto}** | **${z.zeichnung}** | **${z.herbar}** | **${z.kein}** | **${z.netz}** | **${z.tmp}** |`, ``);
-  // je Taxon zusammenfassen (dieselbe Art steht oft in mehreren Listen)
-  const gruppe = status => {
+  // je Taxon zusammenfassen (dieselbe Art steht oft in mehreren Listen); mitDatei: nur Einträge mit derselben
+  // Datei – das Bild kann je Liste verschieden sein (Art derselben Liste ausgeschlossen, z. B. Hemerocallis fulva)
+  const gruppe = (status, mitDatei) => {
     const m = new Map();
     b.ergebnisse.filter(r => status.includes(r.status)).forEach(r => {
-      const k = (r.g + " " + r.a + " | " + r.de).toLowerCase();
+      const k = (r.g + " " + r.a + " | " + r.de + (mitDatei ? " | " + (r.file || "") : "")).toLowerCase();
       if (!m.has(k)) m.set(k, Object.assign({}, r, { profile: [] }));
       m.get(k).profile.push(r.profil);
     });
@@ -314,12 +315,12 @@ function markdown(b) {
   abschnitt("Foto von iNaturalist (Ersatzquelle)", gruppe(["foto"]).filter(r => r.src === "inat"), r => ` · ${r.lizenz || ""} · ${r.urheber || ""}`);
   // Sammeleinträge (»Fuchsia Cultivars«): Der Bildcheck zählt nur, ob ein Bild kommt – ob es die Gartenform
   // zeigt, sieht man nur am Dateinamen. Deshalb alle gewählten Dateien, die Rückfälle eigens.
-  abschnitt("Sammeleinträge: nur eine Wildart gefunden (keine Gartenform)", gruppe(["foto"]).filter(r => r.rueckfall === "wild"), r => ` · ${r.file}`);
-  abschnitt("Sammeleinträge ohne erkennbare Gartenform bzw. Gruppe nicht gefunden (Rückfall)", gruppe(["foto"]).filter(r => r.rueckfall === "form"), r => ` · ${r.file}`);
-  abschnitt("Sammeleinträge – gewähltes Bild", gruppe(["foto", "zeichnung", "herbar", "kein"]).filter(r => r.sammel), r => ` · ${r.file || "–"}${r.src === "wp" ? " (Artikel " + r.titel + ")" : ""}`);
+  abschnitt("Sammeleinträge: nur eine Wildart gefunden (keine Gartenform)", gruppe(["foto"], true).filter(r => r.rueckfall === "wild"), r => ` · ${r.file}`);
+  abschnitt("Sammeleinträge ohne erkennbare Gartenform bzw. Gruppe nicht gefunden (Rückfall)", gruppe(["foto"], true).filter(r => r.rueckfall === "form"), r => ` · ${r.file}`);
+  abschnitt("Sammeleinträge – gewähltes Bild", gruppe(["foto", "zeichnung", "herbar", "kein"], true).filter(r => r.sammel), r => ` · ${r.file || "–"}${r.src === "wp" ? " (Artikel " + r.titel + ")" : ""}`);
   abschnitt("Kein Bild", gruppe(["kein"]));
-  abschnitt("Nur Zeichnung", gruppe(["zeichnung"]), r => ` · ${r.file}`);
-  abschnitt("Nur Herbarbeleg", gruppe(["herbar"]), r => ` · ${r.file}`);
+  abschnitt("Nur Zeichnung", gruppe(["zeichnung"], true), r => ` · ${r.file}`);
+  abschnitt("Nur Herbarbeleg", gruppe(["herbar"], true), r => ` · ${r.file}`);
   abschnitt("Netzfehler (Prüfung nicht aussagekräftig)", gruppe(["netz"]), r => ` · ${r.fehler || ""}`);
   return L.join("\n");
 }

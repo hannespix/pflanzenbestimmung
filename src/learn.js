@@ -4114,7 +4114,10 @@ function photoSteps(card){                            // Suchwege, vom genaueste
   }else if(sammelCard(card)){                         // Sammelkarte: Gartenform zuerst (siehe sammelCard)
     const G = genusOf(card);
     sammelGroup(card).forEach(w=>steps.push({k:"cm", q:`${G} ${/\s/.test(w) ? '"'+w+'"' : w}`}));   // genannte Gruppe (»Begonia elatior«, »Impatiens "new guinea"«)
-    steps.push({k:"cm", q:`${G} cultivar`});                             // Volltext: fast nur Gartensorten (»Fuchsia 'Twinny'«, »Lilium 'Nochka'«)
+    // typische Gartensorten, die auch die Info-Karte nennt (»Prunus 'Sorte'« = Zier-Kirsche: 'Accolade' –
+    // die Sortensuche lieferte dort nur Arten der Liste, am Ende eine Mandel-Pfirsich-Hybride)
+    (SORTEN_BEISPIELE[G] || []).slice(0,2).forEach(s=>steps.push({k:"cm", q:`${G} ${/\s/.test(s) ? '"'+s+'"' : s}`}));
+    steps.push({k:"cm", q:`${G} cultivar`});                            // Volltext: fast nur Gartensorten (»Fuchsia 'Twinny'«, »Lilium 'Nochka'«)
     steps.push({k:"cm", q:`incategory:"Quality images of ${G}"`});      // geprüfte Bilder – oft aber Wildarten (Türkenbund, Goldrute am See)
     if(de) steps.push({k:"wp", q:de});                                   // deutscher Sammelname (»Edelrose«, »Knollenbegonie«)
     steps.push({k:"cm", q:`incategory:"${G}"`});                         // Gattungskategorie – Sammelschublade (genusNamed)
@@ -4167,10 +4170,15 @@ function commonsScore(file, card){
   if(gen && f.indexOf(gen)>=0) s += ((epi && f.indexOf(epi)>=0) || synEpi) ? 4 : 2;
   if(de && de.length>4 && f.indexOf(de)>=0) s += 3;
   // Sammelkarte (»Rosa Cultivars«, »Fuchsia-Hybriden«): eine benannte Gartensorte (»Rosa 'Gloria Dei'«)
-  // zeigt die Gartenform – besser als eine Wildart der Gattung
+  // zeigt die Gartenform – besser als eine Wildart der Gattung. Zählt nur DIREKT hinter der Gattung
+  // (auch ohne Anführungszeichen: »Verbena Tukana Scarlet«, »Tulipa Juliette«); eine Sorte hinter einem
+  // Art-Epitheton ist meist eine Wildart in Sortenform (Bildcheck-Lauf 6: »Verbena hastata 'Rosea'« für
+  // die Garten-Verbene, »Tulipa aleppensis cultivar« für die Gartentulpe)
   if(!epi && gen && cultivarKind(card.a||"")==="placeholder"){
-    if(new RegExp("(^|[^a-z])"+gen+"\\s*['‘’`´\"“”„]").test(f)) s += 2;
-    else if(f.indexOf(gen)>=0 && GARDEN_RE.test(f)) s += 1;           // »Canna cultivar (2)«, »Begonia × tuberhybrida« – Gartenform ohne Sortennamen
+    const w = nameWords(file), i = w.findIndex(x=>deacc(x.toLowerCase())===gen), nx = i>=0 ? (w[i+1]||"") : "";
+    const epiNext = /^[a-z][a-z-]{2,}$/.test(nx) && !NOT_EPI.has(nx);
+    if(new RegExp("(^|[^a-z])"+gen+"\\s*['‘’`´\"“”„]").test(f) || (CAP_WORD.test(nx) && !GENERIC_CAP.has(nx.toLowerCase()))) s += 2;
+    else if(f.indexOf(gen)>=0 && GARDEN_RE.test(f) && !epiNext) s += 1;   // »Canna cultivar (2)«, »Begonia × tuberhybrida« – Gartenform ohne Sortennamen
   }
   return s;
 }
@@ -4859,7 +4867,7 @@ const SORTEN_BEISPIELE = {
   "Phlox paniculata":            ["Bright Eyes", "Orange Perfection", "Düsterlohe", "Pax", "Starfire", "Blue Paradise"],
   "Phlox subulata":              ["Emerald Cushion Blue", "Candy Stripe", "McDaniel's Cushion", "Scarlet Flame", "White Delight"],
   "Primula denticulata":         ["Alba", "Rubin", "Lilac", "Cashmeriana"],
-  "Prunus":                      ["Kanzan", "Accolade", "Amanogawa", "Shirotae", "Autumnalis", "Royal Burgundy"],
+  "Prunus":                      ["Accolade", "Kanzan", "Amanogawa", "Shirotae", "Autumnalis", "Royal Burgundy"],   // 'Accolade' zuerst: keine Sorte der eigens gelisteten P. serrulata (Bildsuche)
   "Rhododendron forrestii":      ["Scarlet Wonder", "Baden-Baden", "Elisabeth Hobbie", "Bad Eilsen"],
   "Salvia nemorosa":             ["Caradonna", "Ostfriesland", "Mainacht", "Schneehügel", "Blauhügel"],
   "Saxifraga arendsii":          ["Peter Pan", "Purpurteppich", "Schneeteppich", "Blütenteppich", "Pixie"],

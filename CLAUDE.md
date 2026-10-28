@@ -2738,6 +2738,24 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Sammeleinträge (Gartensorte statt Wildart, späte Gartensorte schlägt frühe Wildart, Insel Canna nie,
       Gruppen, Rückfall-Reihenfolge, Cache-Auffrischung, die vier Realfälle aus Lauf 5 mit den echten
       Dateinamen); `tests/smoke.mjs` `plantArticle` im Prüfungswerkzeug.
+      **Feinschliff nach Bildcheck-Lauf 6** (2105 Fotos · 1 Zeichnung · 8 ohne Bild · 0 Netzfehler, keine
+      Sammelkarte mehr mit Wildart-Rückfall; die gewählten Dateien durchgesehen): Drei Sammeleinträge zeigten
+      zwar eine Sorte, aber die **Sortenform einer Wildart** – »Verbena hastata 'Rosea'« für die
+      Garten-Verbene, »Tulipa aleppensis cultivar« für die Gartentulpe – bzw. bei »Prunus 'Sorte'«
+      (Zier-Kirsche) eine Mandel-Pfirsich-Hybride, weil die Sortensuche dort nur Arten der Liste lieferte
+      (*P. serrulata*, *P. cerasifera*). `commonsScore` gibt den Sorten-Bonus (+2) jetzt nur noch für eine
+      Gartensorte **direkt hinter der Gattung** – mit Anführungszeichen oder als großgeschriebener Name ohne
+      (»Verbena Tukana Scarlet«, »Tulipa Juliette«, »Canna Roma«) –, und +1 für »Gattung cultivar« nur, wenn
+      kein Art-Epitheton folgt. Platzhalter-Sammelkarten suchen außerdem zuerst nach den **typischen
+      Gartensorten, die auch die Info-Karte nennt** (`SORTEN_BEISPIELE`, die ersten zwei: »Prunus Accolade«,
+      »Malus Evereste«, »Weigela "Bristol Ruby"«); für *Prunus* steht 'Accolade' jetzt vor 'Kanzan' (keine
+      Sorte der eigens gelisteten *P. serrulata*). Im Bildcheck-Bericht fasst »Sammeleinträge – gewähltes
+      Bild« nur noch Einträge **mit derselben Datei** zusammen (Lauf 6 zeigte bei *Hemerocallis Cultivars*
+      eine Zeile für zwei Listen, obwohl die Staudengärtnerei-Gärtner-Liste – mit *H. fulva* als eigener
+      Art – ein anderes Bild bekam). Geprüft mit den echten Trefferlisten (`Verbena cultivar`, `Tulipa
+      cultivar`, `Prunus cultivar`, `Prunus Accolade`, `Prunus Kanzan`, wörtlich in `tests/learn.mjs`).
+      Die Bartiris-Sorte 'Skylark's Song' ist laut Commons-Kategorie eine Bartiris (»Bearded Iris
+      cultivars«) – passt.
 
 ## Offene Aufgaben (TODO)
 

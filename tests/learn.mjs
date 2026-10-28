@@ -1988,8 +1988,9 @@ async function main() {
   assert(sg.b && sg.b.file === "Gladiolus italicus 01.jpg" && sg.b.src === "cm" && sg.b.gal === 3 && sg.b.rf === "wild" && sg.b.wege[sg.b.wege.length - 1] === "cm:Gladiolus" && sg.a.rf === "",
     "»Gladiolus Cultivars« ohne Gartensorte: erst alle Wege, dann die erste Wildart als Rückfall (Foto vor Zeichnung): " + JSON.stringify(sg.b));
   assert(sg.c && sg.c.file === "Gladiolus 'Priscilla' 3.jpg", "Eine spätere Gartensorte schlägt die frühere Wildart: " + JSON.stringify(sg.c));
-  assert(sg.d === null && sg.e && sg.e.file === "Canna cultivar (2).jpg" && !sg.e.wege.includes("wp:Canna"),
-    "»Canna Cultivars«: der Artikel »Canna« (Hebriden-Insel) wird nie genommen; »Canna cultivar« → Gartenform vor »Canna sp.«: " + JSON.stringify({ d: sg.d, e: sg.e }));
+  assert(sg.d === null && sg.e && sg.e.file === "Canna Roma FR 2012.jpg" && !sg.e.wege.includes("wp:Canna"),
+    "»Canna Cultivars«: der Artikel »Canna« (Hebriden-Insel) wird nie genommen; »Canna cultivar« → Gartenform vor »Canna sp.«, " +
+    "die benannte Sorte direkt hinter der Gattung ('Roma') vor dem namenlosen »Canna cultivar (2)«: " + JSON.stringify({ d: sg.d, e: sg.e }));
   assert(sg.f && sg.f.file === "Begonia (Begonia elatior) in Athens on May 3, 2023.jpg" && JSON.stringify(sg.f.wege) === JSON.stringify(["cm:Begonia elatior"]) &&
     sg.g && sg.g.file === "Begonia rex 2zz.jpg",
     "Begonien-Gruppen: zuerst die genannte Gruppe (Elatior/Rex), nicht irgendeine Begonie: " + JSON.stringify({ f: sg.f, g: sg.g }));
@@ -2023,6 +2024,73 @@ async function main() {
   assert(sg.units.hilfe, "Hilfe »Bilder« nennt die Gartenform der Sammeleinträge (samt Gruppen wie Elatior)");
   assert(sg.auffr.file === "Fuchsia 'Twinny'.jpg" && sg.auffr.gv === 2 && sg.auffr.suchen === 1 && sg.auffr.nochmalFile === "Fuchsia 'Twinny'.jpg" && sg.auffr.nochmalSuchen === 1,
     "Gemerkte Treffer von Sammelkarten aus der vorigen Prüfung (gv 1) werden einmal neu gesucht, danach gemerkt: " + JSON.stringify(sg.auffr));
+
+  // Bildcheck-Lauf 6 (Realfälle, echte Trefferlisten von Commons, wörtlich): Eine Gartensorte zählt DIREKT
+  // hinter der Gattung – nicht die Sortenform einer Wildart (»Verbena hastata 'Rosea'« für die Garten-Verbene,
+  // »Tulipa aleppensis cultivar« für die Gartentulpe). »Prunus 'Sorte'« (Zier-Kirsche) fand in der
+  // Sortensuche nur Arten der Liste und landete bei einer Mandel-Pfirsich-Hybride – jetzt sucht die Kette
+  // zuerst die typischen Gartensorten, die auch die Info-Karte nennt ('Accolade', 'Kanzan').
+  const lauf6 = await page.evaluate(async () => {
+    __setPhotoSource(null);
+    const prev = $("#frSelect").value + "|" + $("#nivSelect").value;
+    const prof = (fr, niv) => { $("#frSelect").value = fr; $("#nivSelect").value = niv; applyProfile(); };
+    const karte = (g, a) => allCards.find((c) => c.g === g && c.a === a);
+    const cmP = (i, file) => ({ index: i, title: "File:" + file, imageinfo: [{ thumburl: "https://x/" + encodeURIComponent(file), mime: "image/jpeg", width: 1200,
+      descriptionurl: "https://commons/" + file, extmetadata: { Categories: { value: "Photos" }, Artist: { value: "Hp" }, LicenseShortName: { value: "CC BY-SA 4.0" } } }] });
+    const cmA = (files) => ({ query: { pages: Object.fromEntries(files.map((f, i) => ["p" + i, cmP(i + 1, f)])) } });
+    const leer = { query: { pages: {} } }, wege = [];
+    const run = async (card, cmFn) => { __clearPhotoCache(); photoTried.clear(); wege.length = 0;
+      __setJsonp((url) => {
+        if (/api\.inaturalist\.org/.test(url)) { wege.push("inat"); return Promise.resolve({ results: [] }); }
+        if (/commons/.test(url) && /titles=File/.test(url)) return Promise.resolve({ query: { pages: { "7": { title: "File:x.jpg", imageinfo: [{ mime: "image/jpeg", extmetadata: { Categories: { value: "Photos" } } }] } } } });
+        if (/commons/.test(url)) { const q = decodeURIComponent((url.match(/gsrsearch=([^&]+)/) || [])[1] || ""); wege.push("cm:" + q); return Promise.resolve(cmFn(q)); }
+        wege.push("wp"); return Promise.resolve(leer); });
+      try { const r = await wikiPhoto(card); return r ? { file: r.file, rf: r.rf || "", wege: wege.slice() } : { file: null, wege: wege.slice() }; }
+      catch (e) { return { err: String(e), wege: wege.slice() }; } };
+    const VE = ["Verbena hastata 'Rosea'.JPG", "Verbena canadensis Imagination 2zz.jpg", "Verbena Tukana Scarlet 1zz.jpg", "Verbena tenuisecta Edith 0zz.jpg",
+      "Verbena canadensis Imagination 1zz.jpg", "Verbena Superbena Burgundy 0zz.jpg", "Verbena Aztec Coral 1zz.jpg", "Verbena Superbena Burgundy 2zz.jpg",
+      "Verbena ciliata Pink Sunrise 0zz.jpg", "Verbena tenera Sissinghurst 2zz.jpg", "Verbena Tukana Scarlet 2zz.jpg", "Verbena tenera Sissinghurst 3zz.jpg"];
+    const TU = ["Tulipa suaveolens floriade to Canberra.jpg", "Tulipa flower.jpg", "Tulipa sp 2011.jpg", "Tulipa aleppensis cultivar.jpg", "Tulipa qtl1.jpg",
+      "Tulipa Juliette - April 2023.jpg", "Tulipa cultivar Jdp.jpg", "Tulipa cultivar 01.jpg", "Tulipa cultivar 02.jpg", "Tulipa cultivar 03.JPG",
+      "Tulipa (parrot, red cultivar) 02.JPG", "Unidentified Tulipa cultivar (109515021).jpg"];
+    const PC = ["Prunus serrulata cultivar 1DS-II 3-9331.jpg", "Prunus serrulata cultivar 1DS-II 3-9326.jpg", "Prunus cerasifera blossoms.jpg",
+      "Prunus cerasifera rotblättriger Cultivar (Blutpflaume) in Tübingen 05.jpg", "Prunus cerasifera rotblättriger Cultivar (Blutpflaume) in Tübingen 23.jpg"];
+    const PA = ["Prunus 'Accolade' Flowers 3008px.jpg", "Prunus Accolade 2017-04-17 7455.jpg", "Prunus Accolade 2017-04-17 7468.jpg", "Prunus 'Accolade' Flower 2313px.jpg",
+      "Lyon 7e - Prunus 'Accolade' planté place du Commandant Bulard (juin 2022).jpg", "20150305 CityHall Accolade Cutler P1160188 - Flickr - wlcutler.jpg"];
+    const PK = ["Cerisier du Japon Prunus serrulata.jpg", "Prunus 'Kanzan', Christchurch Botanic Gardens, Canterbury, New Zealand 14.jpg",
+      "Prunus serrulata Kanzan blossom Jardin des Plantes 2013-04-21.jpg", "Kanzan cherry blossoms, Rostock.jpg", "Cerasus serrulata ‘Kanzan’ photographed at Nihon Kokkaen.jpg",
+      "Prunus serrulata 'Kanzan' 01.JPG", "Wojsławice, arboretum, Prunus 'Kanzan'.jpg", "Prunus Serrulata ´Kanzan´ - panoramio.jpg"];
+    prof("zierpflanzenbau", "gaertner");
+    const vb = karte("Verbena", "Cultivars"), tl = karte("Tulipa", "Cultivars");
+    const ve = await run(vb, (q) => q === "Verbena cultivar" ? cmA(VE) : leer);
+    const tu = await run(tl, (q) => q === "Tulipa cultivar" ? cmA(TU) : leer);
+    const sc = { ve: ["Verbena hastata 'Rosea'.JPG", "Verbena canadensis Imagination 2zz.jpg", "Verbena Tukana Scarlet 1zz.jpg"].map((f) => commonsScore(f, vb)),
+      tu: ["Tulipa aleppensis cultivar.jpg", "Tulipa cultivar 01.jpg", "Tulipa Juliette - April 2023.jpg", "Tulipa 'Apeldoorn' 2.jpg", "Tulipa flower.jpg"].map((f) => commonsScore(f, tl)) };
+    prof("garten_und_landschaftsbau", "gaertner");
+    const pr = karte("Prunus", "'Sorte'"), ma = karte("Malus", "'Sorte'");
+    const p1 = await run(pr, (q) => q === "Prunus Accolade" ? cmA(PA) : q === "Prunus cultivar" ? cmA(PC) : leer);
+    const p2 = await run(pr, (q) => q === "Prunus Kanzan" ? cmA(PK) : q === "Prunus cultivar" ? cmA(PC) : leer);
+    const p3 = await run(pr, (q) => q === "Prunus cultivar" ? cmA(PC) : leer);
+    const box = document.createElement("div"); box.innerHTML = sortenInfoHTML(pr);
+    const out = { ve, tu, sc, p1, p2, p3: { file: p3.file, err: p3.err, cultivarSchritt: p3.wege.includes("cm:Prunus cultivar") },
+      steps: photoSteps(pr).slice(0, 3).map((s) => s.k + ":" + s.q), malus: photoSteps(ma).slice(0, 3).map((s) => s.k + ":" + s.q),
+      info: /'Accolade', 'Kanzan'/.test(box.textContent) };
+    __setJsonp(window.__offlineJsonp); __clearPhotoCache(); photoTried.clear();
+    const [fr, niv] = prev.split("|"); prof(fr, niv);
+    return out;
+  });
+  assert(lauf6.ve.file === "Verbena Tukana Scarlet 1zz.jpg" && lauf6.tu.file === "Tulipa Juliette - April 2023.jpg",
+    "Garten-Verbene/-Tulpe: Sorte direkt hinter der Gattung statt Sortenform einer Wildart (V. hastata, T. aleppensis): " + JSON.stringify(lauf6));
+  assert(lauf6.sc.ve[2] > lauf6.sc.ve[0] && lauf6.sc.ve[0] === lauf6.sc.ve[1] && lauf6.sc.tu[2] > lauf6.sc.tu[1] && lauf6.sc.tu[1] > lauf6.sc.tu[0] &&
+    lauf6.sc.tu[3] === lauf6.sc.tu[2] && lauf6.sc.tu[4] === lauf6.sc.tu[0],
+    "commonsScore: Sorte direkt hinter der Gattung (mit/ohne Anführungszeichen) > »Gattung cultivar« > Sorte hinter einem Epitheton = namenloses Foto: " + JSON.stringify(lauf6.sc));
+  assert(JSON.stringify(lauf6.steps) === JSON.stringify(["cm:Prunus Accolade", "cm:Prunus Kanzan", "cm:Prunus cultivar"]) &&
+    JSON.stringify(lauf6.malus) === JSON.stringify(["cm:Malus Evereste", 'cm:Malus "Red Sentinel"', "cm:Malus cultivar"]) && lauf6.info,
+    "Platzhalter-Sammelkarten suchen zuerst die typischen Gartensorten der Info-Karte (mehrteilige als Phrase), 'Accolade' vor 'Kanzan': " + JSON.stringify(lauf6));
+  assert(lauf6.p1.file === "Prunus 'Accolade' Flowers 3008px.jpg" && JSON.stringify(lauf6.p1.wege) === JSON.stringify(["cm:Prunus Accolade"]) &&
+    lauf6.p2.file === "Prunus 'Kanzan', Christchurch Botanic Gardens, Canterbury, New Zealand 14.jpg" &&
+    lauf6.p3.file === null && !lauf6.p3.err && lauf6.p3.cultivarSchritt,
+    "»Prunus 'Sorte'«: 'Accolade' sofort; sonst 'Kanzan' ohne die eigens gelistete P. serrulata im Namen; die Sortensuche allein liefert nur Arten der Liste (alle verworfen): " + JSON.stringify(lauf6));
 
   // Anführungszeichen ˋ (U+02CB): Neun Sorten der Friedhofsgärtnerei-Gärtner-Liste standen so in der
   // Excel (»helix ˋGlacierˋ«) – keine Sorten-Erkennung, und eine richtige Eingabe zählte nur »fast«.
