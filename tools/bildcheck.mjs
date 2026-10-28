@@ -72,7 +72,10 @@ function findChromium() {
 
 /* ---------- HTTP: Ratenbremse, Rückzug, Cache ---------- */
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const stat = { netz: 0, wiederholt: 0, http429: 0, http5xx: 0, cacheTreffer: 0 };
+const stat = { netz: 0, wiederholt: 0, http429: 0, http5xx: 0, apiBusy: 0, cacheTreffer: 0 };
+// Überlast kommt bei der MediaWiki-API auch als HTTP 200 mit Fehler-JSON (Lauf 3: »cirrussearch-too-busy-error«
+// bei Hamamelis mollis → Netzfehler im Bericht, 15 Treffer nur vorläufig). Diese Codes wie 429 behandeln.
+const API_BUSY = /^(cirrussearch-too-busy-error|ratelimited|maxlag|readonly|internal_api_error_DBQueryTimeoutError)$/;
 let nextSlot = 0, active = 0;
 const waiters = [];
 async function acquire() {
@@ -107,8 +110,15 @@ async function fetchJson(url) {
         const txt = await res.text();
         if (!res.ok) { lastErr = "HTTP " + res.status; attempt = TRIES; }   // übrige 4xx: nicht wiederholen
         else {
-          try { return JSON.parse(txt); }
+          let j = null;
+          try { j = JSON.parse(txt); }
           catch { lastErr = "keine JSON-Antwort"; wait = backoff(null, attempt); }
+          const code = j && j.error && j.error.code;
+          if (code && API_BUSY.test(code)) {
+            lastErr = "api:" + code; stat.apiBusy++;
+            wait = backoff(null, attempt);
+            nextSlot = Math.max(nextSlot, Date.now() + wait);
+          } else if (j) return j;
         }
       }
     } catch (e) {
@@ -268,7 +278,7 @@ const bot = r => `*${(r.g + " " + r.a).replace(/\s+/g, " ").trim()}*`;
 function markdown(b) {
   const L = [];
   L.push(`# Bildcheck Bilder-Quiz`, ``, `${b.version || ""} · geprüft ${b.stand.slice(0, 16).replace("T", " ")} UTC · ${b.dauer_s} s · ` +
-    `${b.anfragen.netz} Anfragen (${b.anfragen.cacheTreffer} aus dem Cache, ${b.anfragen.wiederholt} wiederholt, 429: ${b.anfragen.http429})${b.mock ? " · **MOCK – keine echten Daten**" : ""}`, ``);
+    `${b.anfragen.netz} Anfragen (${b.anfragen.cacheTreffer} aus dem Cache, ${b.anfragen.wiederholt} wiederholt, 429: ${b.anfragen.http429}, API-Überlast: ${b.anfragen.apiBusy || 0})${b.mock ? " · **MOCK – keine echten Daten**" : ""}`, ``);
   L.push(`| Profil | Arten | Foto | Zeichnung | Herbarbeleg | kein Bild | Netzfehler | vorläufig |`, `|---|---:|---:|---:|---:|---:|---:|---:|`);
   for (const id of b.profile) {
     const z = zaehle(b.ergebnisse.filter(r => r.profil === id)), n = b.ergebnisse.filter(r => r.profil === id).length;

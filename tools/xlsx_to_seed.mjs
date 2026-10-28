@@ -43,7 +43,10 @@ const norm = (s) => (s == null ? "" : String(s)).replace(/\s+/g, " ").trim();
 // desselben Zeichens (»Prunus cerasifera `Nigra´«). Botanisch korrekt (ICNCP) ist 'Nigra'
 // mit geraden Apostrophen; die bekommen alle. Nur die Schreibweise, nie der Name –
 // offengelegt in der Hilfe, im Lern-Tool-Hinweis und auf der Rechtliches-Seite.
-const quotes = (s) => norm(s).replace(/[`´‘’‚“”„"]/g, "'");
+// Anführungszeichen um Sortennamen vereinheitlichen – auch die Modifikator-Zeichen ˋ ˊ ′ ‵ ʹ ʻ ʼ ʽ
+// (die Friedhofsgärtnerei-Gärtner-Liste schreibt neun Sorten als »helix ˋGlacierˋ«; ohne sie galt
+// die Sorte als reine Art, und eine richtig eingegebene Antwort zählte nur als »fast«).
+const quotes = (s) => norm(s).replace(/[`´‘’‚“”„"ˋˊ′‵ʹʻʼʽ]/g, "'");
 const tidy = (s) => {
   s = quotes(s);
   s = s.replace(/\b(var|subsp|ssp|f|cv|convar)\.(?=\S)/g, "$1. ");

@@ -139,10 +139,13 @@ node tools/bildcheck.mjs [--profil id] [--art muster] [--mock]   # Bildcheck: ec
 Bilder-Quiz (`wikiPhoto` aus `dist/pflanzen-lernen.html`) für alle Arten aller Profile gegen die
 Live-APIs aus und berichtet je Art Foto · Zeichnung · Herbarbeleg · kein Bild (mit Diagnose: welcher
 Suchweg, welche Datei, warum verworfen) plus `kontaktbogen.html` zum Durchsehen. Höflich gedrosselt
-(eigener User-Agent, ≤ 3 parallel, 180/min, 429 mit Retry-After). In dieser Entwicklungsumgebung
-bremst Wikimedia stark (429) – der volle Lauf gehört auf den GitHub-Runner (Actions → bildcheck →
-Run workflow); lokal taugen `--art` (einzelne Arten nachprüfen) und `--mock` (Logikprobe ohne Netz:
-eine Datei, die genau die Art nennt, muss überall angenommen werden).
+(eigener User-Agent, ≤ 3 parallel, 180/min, 429 mit Retry-After; Überlastmeldungen der API wie
+`cirrussearch-too-busy-error` kommen als HTTP 200 mit Fehler-JSON und werden ebenso wiederholt). In dieser
+Entwicklungsumgebung bremst Wikimedia stark (429) – der volle Lauf gehört auf den GitHub-Runner (Actions →
+bildcheck → Run workflow); lokal taugen `--art` (einzelne Arten nachprüfen) und `--mock` (Logikprobe ohne
+Netz: eine Datei, die genau die Art nennt, muss überall angenommen werden). **Der Bildcheck zählt nur, ob
+ein Bild kommt, nicht, ob es stimmt** – den Kontaktbogen bzw. die gewählten Dateinamen deshalb durchsehen
+(so fiel der Radweg aus Rosà für »Rosa Cultivars« auf).
 
 **PWA (installierbar + offline):** `build.py` legt zusätzlich `dist/manifest.webmanifest`,
 `dist/sw.js` (Service Worker; Cache-Version = Inhalts-Hash) und die `dist/icon-*.png` ab.
@@ -2616,6 +2619,52 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       hatten – jetzt bewertet er selbst eine Art, prüft genau diesen Eintrag und räumt auf.
       **Workflow:** `cancel-in-progress: false` – ein neuer Push bricht einen laufenden Bildcheck
       nicht mehr ab, sondern wartet dahinter.
+
+- [x] **Bildcheck-Lauf 3 durchgesehen: Rosen-Sammelschublade, Sammeleinträge ohne Bild einer
+      Listen-Art, Anführungszeichen ˋ** (nach dem Merge von #159, Wunsch »alle Pflanzen prüfen«). Die
+      Gegenprobe zählte 2103 Fotos · 2 Zeichnungen · 7 ohne Bild. Beim Durchsehen der gewählten Dateien
+      fielen drei Fehler auf, die der Bildcheck nicht zählen kann – er sieht nur, ob ein Bild kommt.
+      **(1) Sammelschublade:** *Rosa Cultivars* (vier Listen) und *Rosa-Hybriden* zeigten »Rosà
+      ciclabile (4).jpg«, einen Radweg im Ort Rosà. »Rosa« und »Rose« sind auf de.wikipedia
+      Begriffsklärungen; die Suche landete in der Commons-Kategorie »Rosa«, und dort liegt direkt nur
+      Beifang (Rosà-Fotos, ein Hotelzimmer, eine Fahne »rosa'« – die Rosenfotos stecken in
+      Unterkategorien). `genusNamed()`: Sucht eine Karte der **Gattungsebene** (`genusLevel()`: kein
+      Art-Epitheton, Sektionen ausgenommen) nach der bloßen Gattung, zählt nur eine Datei, die die
+      Gattung selbst nennt – großgeschrieben, als ganzes Wort, ohne Akzent-Faltung (»Rosà« ≠ »Rosa«);
+      im Volltext zusätzlich ohne großgeschriebenes Folgewort ohne Anführungszeichen (»Rosa Parks«).
+      `pickCommons` bekommt dafür den Suchweg (`q`). Neuer Suchweg gleich nach der Gattungskategorie:
+      `incategory:"Quality images of <Gattung>"` (geprüfte Bilder; für Rosen vorhanden, fehlt die
+      Kategorie, kostet es eine leere Antwort). `commonsScore` +2 für eine benannte Gartensorte
+      (»Rosa 'Westerland'«) bei Sammelkarten – sie zeigt die Gartenform statt einer Wildart.
+      **(2) Art derselben Liste:** Fünf Sammeleinträge zeigten eine Art, die in derselben Liste eigens
+      steht (*Hemerocallis Cultivars* → *H. fulva*, *Prunus 'Sorte'* → Schlehe, *Delphinium*
+      Belladonna-Gruppe → Hoher Rittersporn, *Agastache Cultivars* → *A. rugosa*, *Weigela Cultivars* →
+      *W. florida*) – wer die Art richtig erkennt, läge »falsch«. `namesListSpecies()` (in
+      `fileMentionsOther` für gattungsreine Karten) verwirft Dateien, die eine Art derselben Gattung
+      aus `allCards` nennen: lateinisch, über ihren Sortennamen (»Rosa 'The Fairy'« für »Rosa
+      Cultivars«) oder einen deutschen Namen (≥ 6 Zeichen, nicht die eigenen – »Prunus 'Sorte'« und
+      *P. serrulata* heißen beide Zier-Kirsche); je Profil memoisiert. Dazu die **Ablenker im
+      Bilder-Modus:** Steht eine der beiden Karten auf Gattungsebene, keine Karte derselben Gattung (in
+      beide Richtungen, auch die drei Bartiris-Gruppen untereinander) – im Text-Quiz bleiben sie.
+      **Bild-Cache:** Treffer von Gattungskarten ohne Marke `gv` werden einmal neu gesucht (`GEN_V`,
+      ohne Rückfall auf den alten Treffer); alle übrigen bleiben – kein Neubeginn des ganzen Caches.
+      **(3) Anführungszeichen ˋ (U+02CB):** Neun Sorten der Friedhofsgärtnerei-Gärtner-Liste stehen in
+      der Excel als »helix ˋGlacierˋ«. Folgen: keine Sorten-Erkennung (Artbild für 'Nana'/'Glacier'),
+      und eine richtige Eingabe zählte nur »fast« (im gebauten Werkzeug nachgeprüft). Konverter
+      `quotes()`, `quotesQ` im Prüfungswerkzeug sowie `cultivarName`/`stripCultivar`/`clean`
+      vereinheitlichen jetzt auch ˋ ˊ ′ ‵ ʹ ʻ ʼ ʽ → Seeds-Neubau = genau diese neun Zeilen, nur
+      Anführungszeichen (durch die offengelegte Vereinheitlichung gedeckt, kein neuer Eingriff);
+      `migrateKeys` zieht Lernstand unter einem ˋ-Schlüssel um; `CV_DESC_RE` kennt `coccine`, `gnom`,
+      `glacier` (Sortennamen-Guard 68/41). **Bildcheck:** `fetchJson` wiederholt API-Überlastmeldungen
+      (`cirrussearch-too-busy-error`, `ratelimited`, `maxlag` …, HTTP 200 mit Fehler-JSON) wie 429 –
+      daher kamen in Lauf 3 die zwei Netzfehler (*Hamamelis mollis*) und 15 vorläufige Treffer. Hilfe
+      »Bilder« erklärt die Sammeleinträge. `tests/learn.mjs`: echte Kategorie »Rosa« (zwölf Dateien
+      wörtlich) ohne Filter Beifang, mit Suchweg nichts; Kette → »Quality images of Rosa« →
+      Gartensorte statt der Hundsrose der Liste; Volltext ohne Personen und Listen-Art; *Prunus 'Sorte'*
+      ohne Schlehe/*serrulata*; Listen-Art lateinisch/deutsch/Sorte erkannt, eigener Name nicht;
+      Ablenker Bilder- vs. Text-Modus; Cache-Auffrischung nur für Gattungskarten; keine
+      Sonder-Anführungszeichen mehr in den Seeds, die neun Sorten erkannt und »richtig«, Schlüssel-Umzug;
+      `tests/smoke.mjs`: Excel-Import normalisiert ˋ.
 
 ## Offene Aufgaben (TODO)
 

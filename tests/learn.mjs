@@ -1597,11 +1597,11 @@ async function main() {
     "Bricht ein feinerer Suchweg ab, gilt der gröbere Treffer nur für diese Sitzung (tmp, nicht im Speicher, kein zweiter Abruf): " + JSON.stringify(sorten));
   assert(sorten.platzKind === "placeholder" && sorten.platzArt && sorten.platzWege[0] === "wp:" + sorten.platzBinom,
     "Platzhalter 'Sorte' meint die Art: direkt der Art-Artikel, keine Sorten-Suche: " + JSON.stringify(sorten));
-  assert(sorten.alleErkannt && sorten.namenZahl === 60 && sorten.descZahl === 37 &&   // 61/38 bis zur Berichtigung 'Hibernika' → 'Hibernica' (stand schon so in der Baumschul-Gärtner-Liste)
+  assert(sorten.alleErkannt && sorten.namenZahl === 68 && sorten.descZahl === 41 &&   // 61/38 bis zur Berichtigung 'Hibernika' → 'Hibernica'; +8/+4 seit ˋ → ' (neun Sorten der Friedhofsgärtnerei-Gärtner-Liste, 'Nana' gab es schon; beschreibend: Glacier, Gnom, Silver Carpet, Coccineus)
     sorten.descJa && sorten.descNein &&
     sorten.frieder === "Frieder's Evergreen" && sorten.klammer === "Nana" && sorten.klammerEpi === "procumbens" &&
     sorten.vergessenEnde === "Nidiformis" && sorten.vergessenAnfang === "Emerald Gold" && sorten.vergessenEpi === "fortunei",
-    "Alle 60 Sortennamen der 14 Listen erkannt (6 Zeilen mit vergessenem Anführungszeichen), 37 davon beschreibend; Referenzfälle: " + JSON.stringify(sorten));
+    "Alle 68 Sortennamen der 14 Listen erkannt (6 Zeilen mit vergessenem Anführungszeichen), 41 davon beschreibend; Referenzfälle: " + JSON.stringify(sorten));
 
   // Zeichnungen, Tafeln, Herbarbelege, Buchscans: Der Dateiname verrät sie oft nicht
   // (Realfall Screenshot: »Bulletin de la Société … de Moscou (1841)« = Buchtafel mit
@@ -1729,6 +1729,119 @@ async function main() {
     "Gemerkte Zeichnung: nach 30 Tagen neue Suche (bei Netzfehler bleibt die alte), frische ohne Suche: " + JSON.stringify(notnagel));
   assert(notnagel.kinds.tafel === "zeichnung" && notnagel.kinds.herbar === "herbar" && notnagel.kinds.karte === "" && notnagel.kinds.foto === "" && notnagel.kinds.koehler === "zeichnung" && notnagel.kinds.label === "",
     "artKind: Tafel/Köhler = Zeichnung, Herbarbeleg = herbar, Karte/Etikett/Foto = nichts: " + JSON.stringify(notnagel.kinds));
+
+  // Gattungsebene (Bildcheck Lauf 3): »Rosa Cultivars« zeigte »Rosà ciclabile« (Radweg im Ort Rosà) –
+  // die Commons-Kategorie »Rosa« ist eine Sammelschublade. Fünf Sammelkarten zeigten eine Art, die in
+  // derselben Liste eigens steht (Hemerocallis fulva, Schlehe, Hoher Rittersporn …). Fixtures nach den
+  // echten Antworten (Kategorie »Rosa«: die ersten zwölf Dateien wörtlich).
+  const gattEbene = await page.evaluate(async () => {
+    __setPhotoSource(null);
+    const prev = $("#frSelect").value + "|" + $("#nivSelect").value;
+    const prof = (fr, niv) => { $("#frSelect").value = fr; $("#nivSelect").value = niv; applyProfile(); };
+    const karte = (g, a) => allCards.find((c) => c.g === g && c.a === a);
+    const cmP = (i, file) => ({ index: i, title: "File:" + file, imageinfo: [{ thumburl: "https://x/" + encodeURIComponent(file), mime: "image/jpeg", width: 1200, descriptionurl: "https://commons/" + file,
+      extmetadata: { Categories: { value: "Rosa" }, Artist: { value: "Hp" }, LicenseShortName: { value: "CC BY-SA 4.0" } } }] });
+    const cmA = (files) => ({ query: { pages: Object.fromEntries(files.map((f, i) => ["p" + i, cmP(i + 1, f)])) } });
+    const leer = { query: { pages: {} } };
+    const ROSA_KAT = ["Rosà ciclabile (4).jpg", "張保仔館房間.JPG", "Agro rosatese (4).jpg", "Magnificent Display of Roses at Exposition Show.jpg",
+      "Florists' review (microform) (1912) (16518689729).jpg", "Agro rosatese.jpg", "Hohlerberg-Solms2.JPG", "Waschgeschirr \"Yuri\".jpg",
+      "Rosà ciclabile.jpg", "Flag rosa'.jpg", "Parcheggio Piscine Comunali delle Rose (Rosà).jpg", "Rosà ciclabile (2).jpg"];
+    const wege = [];
+    const run = async (card, cmFn, wpFn) => { __clearPhotoCache(); photoTried.clear(); wege.length = 0;
+      __setJsonp((url) => {
+        if (/commons/.test(url) && /titles=File/.test(url)) return Promise.resolve({ query: { pages: { "7": { title: "File:x.jpg", imageinfo: [{ mime: "image/jpeg", extmetadata: { Categories: { value: "Photos" } } }] } } } });
+        if (/commons/.test(url)) { const q = decodeURIComponent((url.match(/gsrsearch=([^&]+)/) || [])[1] || ""); wege.push("cm:" + q); return Promise.resolve(cmFn(q)); }
+        const t = decodeURIComponent((url.match(/titles=([^&]+)/) || [])[1] || ""); wege.push("wp:" + t); return Promise.resolve(wpFn(t)); });
+      try { return await wikiPhoto(card); } catch (e) { return { err: String(e) }; } };
+    prof("garten_und_landschaftsbau", "gaertner");
+    const rc = karte("Rosa", "Cultivars"), pr = karte("Prunus", "'Sorte'"), canina = karte("Rosa", "canina");
+    // 1) Sammelschublade: aus der echten Kategorie »Rosa« kommt nichts durch – ohne Suchweg (= ohne Filter) schon
+    const ohneFilter = (pickCommons(cmA(ROSA_KAT), rc, []) || {}).file || null;
+    const mitFilter = pickCommons(cmA(ROSA_KAT), rc, [], 'incategory:"Rosa"');
+    // 2) Kette: Begriffsklärung »Rosa« → Kategorie (Beifang) → »Quality images of Rosa« (Wildart der Liste + Gartensorte)
+    const a = await run(rc, (q) => q === 'incategory:"Rosa"' ? cmA(ROSA_KAT) : q === 'incategory:"Quality images of Rosa"' ? cmA(["Rosa canina 2.jpg", "Rosa 'Westerland' 2019.jpg"]) : leer, () => leer);
+    const aWege = wege.slice();
+    // 3) Volltext »Rosa«: Personennamen raus, Art der Liste raus, Gartensorte gewinnt
+    const b = await run(rc, (q) => q === "Rosa" ? cmA(["Rosa Parks 1955.jpg", "Rosa Luxemburg 1910.jpg", "Rosa canina 3.jpg", "Rosa 'Gloria Dei' 2.jpg"]) : (/incategory:"Rosa"/.test(q) ? cmA(ROSA_KAT) : leer), () => leer);
+    // 4) Prunus 'Sorte' (Zier-Kirsche): Artikelbild »Schlehen.jpg« zeigt Prunus spinosa (steht in der Liste) → weiter zur Gattungskategorie
+    const wpPrunus = { query: { pages: { "1": { title: "Prunus", extract: "Prunus ist eine Pflanzengattung …", pageimage: "Schlehen.jpg", thumbnail: { source: "https://x/Schlehen.jpg" } } } } };
+    const c = await run(pr, (q) => q === 'incategory:"Prunus"' ? cmA(["Prunus serrulata 'Kanzan' 1.jpg", "Zierkirsche im Park.jpg", "Prunus 'Accolade' 2.jpg"]) : leer, (t) => t === "Prunus" ? wpPrunus : leer);
+    // 5) Arten derselben Liste erkennen (lateinisch, Sortenname, deutscher Name; nicht der eigene)
+    const sib = (fr, niv, g, a, files) => { prof(fr, niv); const k = karte(g, a); return files.map((f) => namesListSpecies(f, k)); };
+    const hem = sib("staudengaertnerei", "gaertner", "Hemerocallis", "Cultivars", ["Hemerocallis_fulva_June.jpg", "Bahnwärter-Taglilie.jpg", "Hemerocallis 'Stella de Oro' 01.jpg"]);
+    const del = sib("staudengaertnerei", "gaertner", "Delphinium", "Cultivars (Belladonna-Gruppe)", ["Hoher_Rittersporn.jpg", "Delphinium Belladonna 'Völkerfrieden'.jpg"]);
+    const pru = sib("garten_und_landschaftsbau", "gaertner", "Prunus", "'Sorte'", ["Schlehen.jpg", "Prunus serrulata 'Kanzan'.jpg", "Zier-Kirsche.jpg", "Prunus 'Accolade' 01.jpg"]);
+    const fairy = sib("friedhofsgaertnerei", "gaertner", "Rosa", "Cultivars", ["Rosa 'The Fairy' 01.jpg", "Rosa 'Gloria Dei'.jpg"]);
+    // 6) Ablenker im Bilder-Modus: keine Karte derselben Gattung, wenn eine der beiden auf Gattungsebene steht
+    const ablenker = (fr, niv, g, a, m) => { prof(fr, niv); const k = karte(g, a); const s = new Set(); for (let i = 0; i < 30; i++) __distractorsIn(m, k, 40).forEach((x) => s.add(x)); return [...s]; };
+    const hemFoto = ablenker("staudengaertnerei", "gaertner", "Hemerocallis", "Cultivars", "photo").filter((x) => /Hemerocallis/.test(x));
+    const hemQuiz = ablenker("staudengaertnerei", "gaertner", "Hemerocallis", "Cultivars", "quiz").filter((x) => /Hemerocallis/.test(x));
+    const irisFoto = ablenker("staudengaertnerei", "gaertner", "Iris", "Cultivars", "photo").filter((x) => /Iris/.test(x));
+    const caninaFoto = ablenker("garten_und_landschaftsbau", "gaertner", "Rosa", "canina", "photo").filter((x) => /Rosa/.test(x));
+    // 7) Gemerkte Treffer von Gattungskarten (vor dieser Prüfung) werden einmal neu gesucht – Artkarten nicht
+    prof("garten_und_landschaftsbau", "gaertner");
+    let suchen = 0; __setPhotoSource(() => { suchen++; return Promise.resolve({ thumb: "https://x/neu.jpg", file: "Rosa 'Westerland' 2019.jpg", src: "cm", title: "T", url: "https://x/y" }); });
+    __clearPhotoCache(); photoTried.clear();
+    __rememberPhoto(rc.key, { thumb: "https://x/alt.jpg", file: "Rosà ciclabile (4).jpg", src: "cm", title: "T", url: "https://x/y" });
+    __rememberPhoto(canina.key, { thumb: "https://x/c.jpg", file: "Rosa canina 1.jpg", src: "cm", title: "T", url: "https://x/y" });
+    const neu = await photoFor(rc), nachRc = suchen;
+    const art = await photoFor(canina), nachArt = suchen;
+    const wieder = await photoFor(rc), nachWieder = suchen;
+    __setPhotoSource(null); __setJsonp(window.__offlineJsonp); __clearPhotoCache(); photoTried.clear();
+    const [fr, niv] = prev.split("|"); prof(fr, niv);
+    return { ohneFilter, mitFilter, aFile: a && a.file, aErr: a && a.err, aWege, bFile: b && b.file, cFile: c && c.file, hem, del, pru, fairy,
+      hemFoto, hemQuiz: hemQuiz.length, irisFoto, caninaFoto,
+      neuFile: neu && neu.file, neuGv: neu && neu.gv, nachRc, artFile: art && art.file, nachArt, wiederFile: wieder && wieder.file, nachWieder,
+      named: [genusNamed("Rosà ciclabile (4).jpg", rc, false), genusNamed("Flag rosa'.jpg", rc, false), genusNamed("Rosa 'Gloria Dei' 01.jpg", rc, true),
+        genusNamed("Rosa Parks 1955.jpg", rc, true), genusNamed("Lily (Lilium) in Athens.jpg", { g: "Lilium", a: "cultivars", de: "Lilie", key: "t-li" }, false)],
+      lvl: [genusLevel(rc), genusLevel({ g: "Rosa-Hybriden", a: "", key: "t" }), genusLevel(canina), genusLevel({ g: "Taraxacum", a: "sect. Ruderalia", key: "t2" }), genusOf({ g: "Rosa-Hybriden", a: "" })],
+      qi: photoSteps(rc).map((s) => s.k + ":" + s.q), qiArt: photoSteps(canina).some((s) => /Quality images/.test(s.q)),
+      hilfe: /Sammeleinträgen[\s\S]*nie eine Art, die in\s+deiner Liste eigens steht/.test((document.querySelector("#helpScrim") || {}).textContent || "") };
+  });
+  assert(gattEbene.ohneFilter && /^Rosà|rosa'/.test(gattEbene.ohneFilter) && gattEbene.mitFilter === null,
+    "Sammelschublade »Rosa«: ohne Filter käme Beifang durch (Rosà/Fahne), mit Suchweg keine einzige Datei: " + JSON.stringify(gattEbene));
+  assert(gattEbene.aFile === "Rosa 'Westerland' 2019.jpg" && gattEbene.aWege.indexOf('cm:incategory:"Quality images of Rosa"') === gattEbene.aWege.indexOf('cm:incategory:"Rosa"') + 1,
+    "»Rosa Cultivars«: nach der Sammelschublade die geprüften »Quality images of Rosa«, dort die Gartensorte statt der Hundsrose der Liste: " + JSON.stringify(gattEbene));
+  assert(gattEbene.bFile === "Rosa 'Gloria Dei' 2.jpg",
+    "Volltext »Rosa«: keine Personen (Rosa Parks/Luxemburg), keine Art der Liste (canina) – die Gartensorte: " + JSON.stringify(gattEbene));
+  assert(gattEbene.cFile === "Prunus 'Accolade' 2.jpg",
+    "»Prunus 'Sorte'«: Artikelbild Schlehe (Art der Liste) und Prunus serrulata verworfen, ohne Gattungsnamen kein Treffer – die Sorte 'Accolade': " + JSON.stringify(gattEbene));
+  assert(JSON.stringify(gattEbene.hem) === "[true,true,false]" && JSON.stringify(gattEbene.del) === "[true,false]" &&
+    JSON.stringify(gattEbene.pru) === "[true,true,false,false]" && JSON.stringify(gattEbene.fairy) === "[true,false]",
+    "Art derselben Liste erkannt (lateinisch, deutsch, Sorte), der eigene deutsche Name (Zier-Kirsche) nicht: " + JSON.stringify(gattEbene));
+  assert(gattEbene.hemFoto.length === 0 && gattEbene.hemQuiz > 0 && gattEbene.irisFoto.length === 0 && gattEbene.caninaFoto.every((x) => /rugosa/.test(x)),
+    "Bilder-Modus: keine Ablenker derselben Gattung bei Gattungskarten (in beide Richtungen, auch Bartiris untereinander) – im Text-Quiz schon: " + JSON.stringify(gattEbene));
+  assert(gattEbene.neuFile === "Rosa 'Westerland' 2019.jpg" && gattEbene.neuGv >= 1 && gattEbene.nachRc === 1 && gattEbene.artFile === "Rosa canina 1.jpg" && gattEbene.nachArt === 1 &&
+    gattEbene.wiederFile === "Rosa 'Westerland' 2019.jpg" && gattEbene.nachWieder === 1,
+    "Alter Treffer einer Gattungskarte wird einmal neu gesucht (danach gemerkt), Artkarten behalten ihren: " + JSON.stringify(gattEbene));
+  assert(JSON.stringify(gattEbene.named) === "[false,false,true,false,true]" && JSON.stringify(gattEbene.lvl) === '[true,true,false,true,"Rosa"]' &&
+    !gattEbene.qiArt && gattEbene.qi.includes('cm:incategory:"Quality images of Rosa"'),
+    "genusNamed (Rosà/Fahne/Rosa Parks raus, Sorte/Lilium rein), genusLevel und der Qualitätsbilder-Weg nur für Gattungskarten: " + JSON.stringify(gattEbene));
+  assert(gattEbene.hilfe, "Hilfe »Bilder« erklärt die Sammeleinträge (Gattung, nie eine Art der Liste)");
+
+  // Anführungszeichen ˋ (U+02CB): Neun Sorten der Friedhofsgärtnerei-Gärtner-Liste standen so in der
+  // Excel (»helix ˋGlacierˋ«) – keine Sorten-Erkennung, und eine richtige Eingabe zählte nur »fast«.
+  const anfzSonder = await page.evaluate(() => {
+    const prev = $("#frSelect").value + "|" + $("#nivSelect").value;
+    const odd = /[ˋˊ′‵ʹʻʼʽ]/;
+    const rest = Object.entries(SEEDS).flatMap(([pid, rows]) => rows.filter((r) => r.some((v) => typeof v === "string" && odd.test(v))).map((r) => pid + ": " + r[0] + " " + r[1]));
+    $("#frSelect").value = "friedhofsgaertnerei"; $("#nivSelect").value = "gaertner"; applyProfile();
+    const N = ["Nana", "Bernstein", "Frohnleiten", "Max Frei", "Glacier", "Gnom", "The Fairy", "Silver Carpet", "Coccineus"];
+    const sorten = N.map((n) => allCards.find((c) => cultivarName(c.a) === n && /'/.test(c.a)));
+    const urteile = sorten.map((c) => c ? [cultivarKind(c.a), judgeTyped(c.g + " " + c.a, c).lvl, judgeTyped((c.g + " " + c.a).replace(/'/g, ""), c).lvl] : null);
+    const glacierEingabe = clean("Hedera helix ˋGlacierˋ") === clean("Hedera helix 'Glacier'");
+    // Lernstand mit altem Schlüssel zieht um
+    const p = { "hedera|helix ˋglacierˋ|weißgrüner efeu": { box: 2, due: "2099-01-01", seen: 2, correct: 2, wrong: 0 } };
+    const n = migrateKeys(p);
+    const [fr, niv] = prev.split("|"); $("#frSelect").value = fr; $("#nivSelect").value = niv; applyProfile();
+    return { rest, urteile, glacierEingabe, n, umzug: p["hedera|helix 'glacier'|weißgrüner efeu"], alt: Object.keys(p).some((k) => odd.test(k)),
+      neuIstKarte: cardsFor("friedhofsgaertnerei_gaertner").some((c) => c.key === "hedera|helix 'glacier'|weißgrüner efeu") };
+  });
+  assert(anfzSonder.rest.length === 0, "Kein Seed enthält mehr Sonder-Anführungszeichen (ˋ ˊ ′ …): " + JSON.stringify(anfzSonder.rest));
+  assert(anfzSonder.urteile.every((u) => u && u[0] === "cv" && u[1] === "ok" && u[2] === "ok") && anfzSonder.glacierEingabe,
+    "Die neun Sorten sind Sorten, die richtige Eingabe zählt (mit und ohne Anführungszeichen, auch mit ˋ): " + JSON.stringify(anfzSonder));
+  assert(anfzSonder.n === 1 && anfzSonder.umzug && anfzSonder.umzug.box === 2 && !anfzSonder.alt && anfzSonder.neuIstKarte,
+    "Lernstand unter dem alten Schlüssel mit ˋ zieht auf den neuen um: " + JSON.stringify(anfzSonder));
 
   // Oberfläche: eine Notnagel-Zeichnung ist gekennzeichnet (Pille + alt-Text ohne Namen), der
   // Bildnachweis erscheint wie bei Fotos erst nach der Antwort.
