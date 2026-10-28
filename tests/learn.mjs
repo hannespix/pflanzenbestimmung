@@ -3388,13 +3388,23 @@ async function main() {
     $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
   });
 
-  // Fortschritt-Persistenz über einen Reload
-  await page.waitForFunction("localStorage.getItem('pflanzenlernen.progress.gemuesebau_gaertner')!=null", { timeout: 5000 });
-  const before = await page.evaluate(() => Object.keys(progress).length);
+  // Fortschritt-Persistenz über einen Reload. Der Test legt seinen Fortschritt SELBST an (eine
+  // Bewertung der letzten Art) und stellt den Eintrag danach wieder her – früher hing er an
+  // Bewertungen früherer Testblöcke und kippte in CI gelegentlich (»Waiting failed«), wenn im
+  // Standardprofil gerade nichts gespeichert war.
+  const before = await page.evaluate(() => {
+    const c = allCards[allCards.length - 1];
+    const prev = progress[c.key] ? JSON.stringify(progress[c.key]) : null;
+    grade(c, "good");
+    return { n: Object.keys(progress).length, key: c.key, prev, profil: profileId };
+  });
   await page.reload({ waitUntil: "load" });
-  await page.waitForFunction("window.startSession!=null && typeof progress!=='undefined' && Object.keys(progress).length>0", { timeout: 30000 });
-  const after = await page.evaluate(() => Object.keys(progress).length);
-  assert(after >= before && after > 0, "Lernfortschritt überlebte den Reload nicht: " + before + " -> " + after);
+  await page.waitForFunction("window.startSession!=null && typeof progress!=='undefined'", { timeout: 30000 });
+  const after = await page.evaluate((key) => ({ n: Object.keys(progress).length, hat: !!progress[key], profil: profileId,
+    roh: (localStorage.getItem("pflanzenlernen.progress." + profileId) || "").length }), before.key);
+  assert(before.n > 0 && after.hat && after.n >= before.n && after.profil === before.profil,
+    "Lernfortschritt überlebte den Reload nicht: " + JSON.stringify({ before, after }));
+  await page.evaluate((key, prev) => { if (prev) progress[key] = JSON.parse(prev); else delete progress[key]; saveProgress(); }, before.key, before.prev);
 
   // EIN Options-Akkordeon im Listenmodus: Sitzungs-Optionen ausgeblendet, kein separates
   // Zahnrad/Panel mehr; Ansicht + Filter (ZP-Spiegel) + Drucken (Spaltenauswahl,
