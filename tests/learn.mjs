@@ -4090,12 +4090,23 @@ async function main() {
     const c = allCards[allCards.length - 1];
     const prev = progress[c.key] ? JSON.stringify(progress[c.key]) : null;
     grade(c, "good");
-    return { n: Object.keys(progress).length, key: c.key, prev, profil: profileId };
+    // Diagnose gleich mitnehmen: Ist der Eintrag wirklich im localStorage gelandet (nicht nur im
+    // RAM-Fallback des store-Wrappers), wie groß ist der Speicher insgesamt?
+    const raw = localStorage.getItem("pflanzenlernen.progress." + profileId) || "";
+    return { n: Object.keys(progress).length, key: c.key, prev, profil: profileId,
+      raw: raw.length, drin: raw.indexOf(c.key) >= 0, persistent: store.persistent, total: JSON.stringify(localStorage).length };
   });
+  assert(before.n > 0 && before.drin && before.persistent,
+    "Lernfortschritt wurde nicht in den localStorage geschrieben (RAM-Fallback? Speicher voll?): " + JSON.stringify(before));
+  // Chromium reicht localStorage-Schreibvorgänge asynchron an den Browserprozess weiter – ein sofort
+  // folgender Reload konnte auf einem schnellen CI-Runner das letzte Put überholen (Flake: Speicher nach
+  // dem Reload leer, obwohl die Zeile davor geschrieben hatte). Kurz setzen lassen, nach dem Reload notfalls nachwarten.
+  await new Promise((r) => setTimeout(r, 400));
   await page.reload({ waitUntil: "load" });
   await page.waitForFunction("window.startSession!=null && typeof progress!=='undefined'", { timeout: 30000 });
+  try { await page.waitForFunction((key) => !!(progress && progress[key]), { timeout: 3000 }, before.key); } catch (e) { /* unten bewertet */ }
   const after = await page.evaluate((key) => ({ n: Object.keys(progress).length, hat: !!progress[key], profil: profileId,
-    roh: (localStorage.getItem("pflanzenlernen.progress." + profileId) || "").length }), before.key);
+    roh: (localStorage.getItem("pflanzenlernen.progress." + profileId) || "").length, persistent: store.persistent }), before.key);
   assert(before.n > 0 && after.hat && after.n >= before.n && after.profil === before.profil,
     "Lernfortschritt überlebte den Reload nicht: " + JSON.stringify({ before, after }));
   await page.evaluate((key, prev) => { if (prev) progress[key] = JSON.parse(prev); else delete progress[key]; saveProgress(); }, before.key, before.prev);
