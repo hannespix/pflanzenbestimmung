@@ -2130,8 +2130,11 @@ async function main() {
         "Juniperus horizontalis Wiltonii 2020-06-23 0840.jpg", "Russels_Brandkraut.jpg", "Blauer_Eisenhut_Dolomiten.jpg", "Nematanthus gregarius 1.jpg",
         "Frangula alnus Faulbaum 2.jpg", "Picea glauca Schimmel-Fichte 1.jpg"].filter((f) => looksDamage(f)),
       // über alle Listen: kein botanischer und kein deutscher Name sieht nach Schadbild oder Tierfoto aus
-      listen: Object.values(SEEDS).flat().filter((r) => looksDamage(r[0] + " " + r[1]) || looksDamage(r[3] || "") || onPlantPhoto(r[0] + " " + r[1], { g: r[0], a: r[1] }))
-        .map((r) => r[0] + " " + r[1]) };
+      // Etikett/Pflanzenschild verrät die Lösung (Lauf 7: Goldregen mit Verkaufsetikett); »labellum« bleibt
+      etikett: [usablePhoto("Laburnum × watereri (Goldenchain tree)- invasive plant sold in stores label.jpg"), usablePhoto("Pflanzenetikett Malus Evereste.jpg"),
+        usablePhoto("Phalaenopsis labellum detail.jpg"), usablePhoto("20230503Laburnum × watereri2.jpg")],
+      listen: Object.values(SEEDS).flat().filter((r) => looksDamage(r[0] + " " + r[1]) || looksDamage(r[3] || "") || onPlantPhoto(r[0] + " " + r[1], { g: r[0], a: r[1] }) ||
+        !usablePhoto(r[0] + " " + r[1]) || !usablePhoto(r[3] || "")).map((r) => r[0] + " " + r[1]) };
     __setJsonp(window.__offlineJsonp); __clearPhotoCache(); photoTried.clear();
     const [fr, niv] = prev.split("|"); prof(fr, niv);
     return out;
@@ -2140,8 +2143,10 @@ async function main() {
     "Monatsname ist kein Sortenname (»Phalaenopsis July 2020-2« verliert gegen »Phalaenopsis Cultivar White 01«; 'June' in Anführungszeichen bleibt Sorte): " + JSON.stringify(lauf7));
   assert(JSON.stringify(lauf7.tier) === "[true,true,true,false,false]",
     "onPlantPhoto: Tier auf der Pflanze auch spanisch/portugiesisch/italienisch (en una / em / sulla); »Dahlia en fleur« und Sortenfoto bleiben: " + JSON.stringify(lauf7.tier));
+  assert(JSON.stringify(lauf7.etikett) === "[false,false,true,true]",
+    "usablePhoto: Etikett/Pflanzenschild raus (verrät die Lösung), Orchideen-Labellum und normales Foto bleiben: " + JSON.stringify(lauf7.etikett));
   assert(JSON.stringify(lauf7.schaden) === "[true,true,true,true,true]" && lauf7.bleibt.length === 0 && lauf7.listen.length === 0,
-    "looksDamage: Bakterienfäule (Erwinia), Schorf, Weichfäule, Spinnmilben, Grauschimmel raus; Pflanzennamen wie moldavica/scabra/Scabiosa/Wiltonii/Brandkraut/Faulbaum/Schimmel-Fichte und alle Listen-Namen bleiben: " + JSON.stringify(lauf7));
+    "looksDamage: Bakterienfäule (Erwinia), Schorf, Weichfäule, Spinnmilben, Grauschimmel raus; Pflanzennamen wie moldavica/scabra/Scabiosa/Wiltonii/Brandkraut/Faulbaum/Schimmel-Fichte und alle Listen-Namen bleiben (auch für usablePhoto): " + JSON.stringify(lauf7));
 
   // Anführungszeichen ˋ (U+02CB): Neun Sorten der Friedhofsgärtnerei-Gärtner-Liste standen so in der
   // Excel (»helix ˋGlacierˋ«) – keine Sorten-Erkennung, und eine richtige Eingabe zählte nur »fast«.

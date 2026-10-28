@@ -2767,6 +2767,14 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       »scab« (Rot-Buche, Brandkraut, *Deutzia scabra*). Offline-Gegenprobe über alle 2114 in Lauf 7
       gewählten Dateien: der neue Filter verwirft genau das Dahlien-Hummelfoto. `tests/learn.mjs` prüft
       die Realfälle und dass **kein Listen-Name** (botanisch oder deutsch) als Schadbild/Tierfoto gilt.
+      **Lauf 8** auf dem Endstand (2105 · 1 · 8 · 0, kein einziger Statuswechsel): Dahlie →
+      »Starr 071024-0300 Dahlia x hortensis.jpg«, Phalaenopsis → »Phalaenopsis Cultivar White 01.jpg«; die
+      übrigen Dateiwechsel sind gleich gute Ansichten derselben Art (Commons sortiert gleich bewertete
+      Treffer je Abfrage leicht anders). Zuletzt noch `usablePhoto` ohne **Etiketten/Pflanzenschilder**
+      (`label`, `etikett`, `pflanzenschild`, `plant tag` – ein Etikett verrät die Lösung; Lauf 7 wählte für
+      den Goldregen »… invasive plant sold in stores label.jpg«; »labellum« bleibt). Offline-Gegenprobe über
+      alle 1297 in den Läufen 5–8 gewählten Dateien: die Filter verwerfen genau die bekannten Fehlgriffe
+      (Etikett, vier Insektenfotos, Bakterienfäule) – und keinen einzigen Listen-Namen.
 
 ## Offene Aufgaben (TODO)
 

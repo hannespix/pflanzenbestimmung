@@ -3789,6 +3789,9 @@ function usablePhoto(file){
   // »map« jeden »maple«-Dateinamen und »orange« jede Zitrusfrucht (Audit-Fund). Deutsche
   // Komposita bleiben erfasst (»Verbreitungskarte«: Präfix »verbreitung«, Suffix »karte«).
   if(/(\bmaps?\b|karten?\b|\bdistribution\b|\branges?\b|verbreitung|\blocator\b|\bdiagrams?\b|\bcharts?\b|\bwappen\b|\blogos?\b|\bsignature\b)/i.test(f)) return false;
+  // Etiketten/Pflanzenschilder verraten die Lösung (Bildcheck-Lauf 7: »Laburnum × watereri (Goldenchain tree)-
+  // invasive plant sold in stores label.jpg«) – »labellum« (Orchideen-Lippe) bleibt dank Wortgrenze
+  if(/(\blabels?\b|\blabell?ed\b|etikett|pflanzenschild|namensschild|schildchen|\bplant ?tags?\b)/i.test(f)) return false;
   return !/(\bcover\b|einband|buchdeckel|deckblatt|titelblatt|titelseite|\btitle ?page\b|frontispi[sz]|manuscript|manuskript|handschrift|codex|\bbook\b|\bscans?\b|\bscanned\b)/i.test(f);
 }
 /* ---------- Welches Bild gehört wirklich zu DIESER Art? ----------
