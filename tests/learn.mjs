@@ -427,9 +427,9 @@ async function main() {
     "Brombeere (Klammer-Epitheton) und Hybride (× für Artikel/Kategorie, Binom als Zweitweg): " + JSON.stringify({ rubus: sektion.rubus, hybrid: sektion.hybrid }));
   assert(JSON.stringify(sektion.epis) === JSON.stringify(["vulgaris", "pendulina", "vinifera", "", "", "chinensis", ""]) && JSON.stringify(sektion.gruppe) === JSON.stringify([true, false, false]),
     "binomEpithet: Komma/Rang-Kürzel/Tippfehler/Gruppenwort (auch kleingeschrieben)/Hybrid-x; Sektion ist kein Sammel-Eintrag: " + JSON.stringify({ epis: sektion.epis, gruppe: sektion.gruppe }));
-  assert(JSON.stringify(sektion.lupine) === JSON.stringify(['cm:incategory:"Quality images of Lupinus"', "cm:Lupinus cultivar", "wp:Stauden-Lupine", 'cm:incategory:"Lupinus"', "wp:Lupinus", "cm:Lupinus"]) &&
+  assert(JSON.stringify(sektion.lupine) === JSON.stringify(["cm:Lupinus cultivar", 'cm:incategory:"Quality images of Lupinus"', "wp:Stauden-Lupine", 'cm:incategory:"Lupinus"', "wp:Lupinus", "cm:Lupinus"]) &&
     sektion.lupineAndere === false,
-    "»Lupinus cultivars« (kleingeschrieben, 7 Zeilen): Sammelkarte – Gartenform zuerst (Qualitätsbilder, »Lupinus cultivar«), dann deutscher Name, Gattung; Dateien der Gattung gelten nicht als »andere Art«: " + JSON.stringify({ lupine: sektion.lupine, andere: sektion.lupineAndere }));
+    "»Lupinus cultivars« (kleingeschrieben, 7 Zeilen): Sammelkarte – Gartenform zuerst (»Lupinus cultivar«, dann Qualitätsbilder), dann deutscher Name, Gattung; Dateien der Gattung gelten nicht als »andere Art«: " + JSON.stringify({ lupine: sektion.lupine, andere: sektion.lupineAndere }));
 
   // Synonyme der Liste in der Bildsuche (Realfall Lonicera nitida 'Elegant': auf Commons ist die
   // Kategorie »Lonicera nitida« LEER, die Fotos liegen unter dem akzeptierten Namen »Lonicera
@@ -615,7 +615,7 @@ async function main() {
   });
   assert(sammel.fu.g === "Fuchsia" && sammel.fu.a === "Hybriden" && sammel.ro.g === "Rosa" && sammel.keepG === "Impatiens",
     "Sammelgruppe im Gattungsfeld muss für die Bildsuche zur Gattung werden (nur bei leerer Art): " + JSON.stringify(sammel));
-  assert(JSON.stringify(sammel.steps) === JSON.stringify(['cm:incategory:"Quality images of Fuchsia"', "cm:Fuchsia cultivar"]),
+  assert(JSON.stringify(sammel.steps) === JSON.stringify(["cm:Fuchsia cultivar", 'cm:incategory:"Quality images of Fuchsia"']),
     "Bildsuche für »Fuchsia-Hybriden« sucht wie jede Sammelkarte zuerst die Gartenform der Gattung: " + JSON.stringify(sammel.steps));
   assert(sammel.sphEpi === "fallax" && sammel.sphSearch === "Sphagnum fallax" && sammel.aquilegia === "vulgaris",
     "Abkürzungen wie »z.B:« sind kein Epitheton (Sphagnum fallax), »vulgaris, A. Cultivars« bleibt vulgaris: " + JSON.stringify(sammel));
@@ -1800,7 +1800,7 @@ async function main() {
     // 1) Sammelschublade: aus der echten Kategorie »Rosa« kommt nichts durch – ohne Suchweg (= ohne Filter) schon
     const ohneFilter = (pickCommons(cmA(ROSA_KAT), rc, []) || {}).file || null;
     const mitFilter = pickCommons(cmA(ROSA_KAT), rc, [], 'incategory:"Rosa"');
-    // 2) Kette: Sammelkarte → zuerst »Quality images of Rosa« (Wildart der Liste + Gartensorte), die Sammelschublade erst danach
+    // 2) Kette: Sammelkarte → Sortensuche (hier leer), »Quality images of Rosa« (Wildart der Liste + Gartensorte), die Sammelschublade erst danach
     const a = await run(rc, (q) => q === 'incategory:"Rosa"' ? cmA(ROSA_KAT) : q === 'incategory:"Quality images of Rosa"' ? cmA(["Rosa canina 2.jpg", "Rosa 'Westerland' 2019.jpg"]) : leer, () => leer);
     const aWege = wege.slice();
     // 3) Volltext »Rosa«: Personennamen raus, Art der Liste raus, Gartensorte gewinnt
@@ -1842,8 +1842,8 @@ async function main() {
   });
   assert(gattEbene.ohneFilter && /^Rosà|rosa'/.test(gattEbene.ohneFilter) && gattEbene.mitFilter === null,
     "Sammelschublade »Rosa«: ohne Filter käme Beifang durch (Rosà/Fahne), mit Suchweg keine einzige Datei: " + JSON.stringify(gattEbene));
-  assert(gattEbene.aFile === "Rosa 'Westerland' 2019.jpg" && JSON.stringify(gattEbene.aWege) === JSON.stringify(['cm:incategory:"Quality images of Rosa"']),
-    "»Rosa Cultivars«: Sammelkarte fragt zuerst die geprüften »Quality images of Rosa« (vor der Sammelschublade), dort die Gartensorte statt der Hundsrose der Liste: " + JSON.stringify(gattEbene));
+  assert(gattEbene.aFile === "Rosa 'Westerland' 2019.jpg" && JSON.stringify(gattEbene.aWege) === JSON.stringify(["cm:Rosa cultivar", 'cm:incategory:"Quality images of Rosa"']),
+    "»Rosa Cultivars«: Sammelkarte fragt erst die Sortensuche, dann die geprüften »Quality images of Rosa« (vor der Sammelschublade), dort die Gartensorte statt der Hundsrose der Liste: " + JSON.stringify(gattEbene));
   assert(gattEbene.bFile === "Rosa 'Gloria Dei' 2.jpg",
     "Volltext »Rosa«: keine Personen (Rosa Parks/Luxemburg), keine Art der Liste (canina) – die Gartensorte: " + JSON.stringify(gattEbene));
   assert(gattEbene.cFile === "Prunus 'Accolade' 2.jpg",
@@ -1909,7 +1909,33 @@ async function main() {
     const i = await run(tu, (q) => /Quality images|cultivar/.test(q) ? cmA(["Begonia sp. 3.jpg"]) : leer, (t) => t === "Knollenbegonie" ? wpKnolle : leer);
     // Gruppe nirgends genannt → andere Gartenform als Rückfall (vor der Wildart)
     const j = await run(tu, (q) => /Quality images/.test(q) ? cmA(["Begonia grandis 1.jpg"]) : /cultivar/.test(q) ? cmA(["Begonia 'Bonfire'.jpg", "Begonia sp. 3.jpg"]) : leer, () => leer);
-    const inat = [a, b, c, d, e, f, g, h, i, j].some((x) => x && x.wege && x.wege.includes("inat"));   // Sammelkarten fragen iNaturalist nie
+    // 5) Bildcheck-Lauf 5 (Realfälle): Qualitätsbilder liefen vor der Sortensuche und nahmen jedes Bild sofort an –
+    //    Streptocarpus zeigte die Saintpaulia der Liste, Lilium den wilden Türkenbund, Lupinus die texanische
+    //    Wildlupine, Calibrachoa eine Hummel. Jetzt: Sortensuche zuerst, sofort nur erkennbare Gartenform.
+    const ka = (fr, niv, gg, aa) => { prof(fr, niv); return karte(gg, aa); };
+    const st = ka("zierpflanzenbau", "gaertner", "Streptocarpus", "Cultivars");
+    const k = await run(st, (q) => q === "Streptocarpus cultivar" ? cmA(["Saintpaulia (cultivar) 01.jpg", "Streptocarpus 'Bethan'.jpg"]) : leer, () => leer);
+    const k2 = await run(st, (q) => /Quality images/.test(q) ? cmA(["Saintpaulia20110530 01.jpg", "Streptocarpus sp. (Cape primrose) 3.jpg"]) : leer, () => leer);
+    const li = ka("zierpflanzenbau", "gaertner", "Lilium", "Cultivars");
+    const m = await run(li, (q) => /Quality images/.test(q) ? cmA(["Türkenbund Lilie, Lilium martagon.JPG"]) : q === "Lilium cultivar" ? cmA(["Lilium cultivar 2016 G1.jpg", "Lilium 'Nochka' 02.jpg"]) : leer, () => leer);
+    const cal = ka("friedhofsgaertnerei", "gaertner", "Calibrachoa", "Cultivars");
+    const l = await run(cal, (q) => q === "Calibrachoa cultivar" ? cmA(["(MHNT) Bombus pascuorum on Calibrachoa 'Cabaret Purple'.jpg", "Calibrachoa cultivar A 5Dsr 4024.jpg"]) : leer, () => leer);
+    const lup = ka("garten_und_landschaftsbau", "gaertner", "Lupinus", "cultivars");
+    const n = await run(lup, (q) => q === "Lupinus cultivar" ? cmA(["Lupin 'Persian Slipper' - 2018-05-21 - Andy Mabbett - 01.jpg", "Lupinus polyphyllus Manhattan Lights 2019-05-23 3666.jpg"]) : leer, () => leer);
+    const wpLup = wpA("Vielblättrige Lupine", "Die Vielblättrige Lupine (Lupinus polyphyllus) ist eine Pflanzenart aus der Gattung der Lupinen.", "Lupinus_polyphyllus_01.jpg");
+    const o = await run(lup, (q) => /Quality images/.test(q) ? cmA(["Bluebonnet-8100.jpg"]) : leer, (t) => t === "Stauden-Lupine" ? wpLup : leer);
+    const paph = ka("zierpflanzenbau", "gaertner", "Paphiopedilum", "Cultivars");
+    const neu5 = { st: k && k.file, stWege: k && k.wege, st2: k2 && k2.file, st2rf: k2 && k2.rf, lil: m && m.file, lilWege: m && m.wege, cal: l && l.file,
+      lup: n && n.file, lup2: o && o.file, lup2rf: o && o.rf,
+      wildPaph: wildSpeciesFile("Venusschuh paphiopedilum tranlienianum.jpg", paph), wildMart: wildSpeciesFile("Türkenbund Lilie, Lilium martagon.JPG", li),
+      garten: [gardenEvident("Canna Roma FR 2012.jpg", ca, false), gardenEvident("Lupinus polyphyllus Manhattan Lights 2019.jpg", lup, false),
+        gardenEvident("Lupinus polyphyllus Manhattan Lights 2019.jpg", lup, true), gardenEvident("Rhododendron caucasicum, Plants, Flowers, Caucasus Mountains.jpg", { g: "Rhododendron", a: "Cultivars" }, true),
+        gardenEvident("Lilium Roselily 'Elena'.jpg", li, false)],
+      fremd2: [namesOtherTaxon("Saintpaulia20110530 01.jpg", st), namesOtherTaxon("Streptocarpus 'Bethan'.jpg", st)],
+      auf: [onPlantPhoto("(MHNT) Bombus pascuorum on Calibrachoa 'Cabaret Purple'.jpg", cal), onPlantPhoto("Apis mellifera auf Lavandula angustifolia.jpg", { g: "Lavandula", a: "angustifolia" }),
+        onPlantPhoto("Bee on a flower of Salvia nemorosa.jpg", { g: "Salvia", a: "nemorosa" }), onPlantPhoto("Calibrachoa 'Cabaret Purple'.jpg", cal), onPlantPhoto("Rosa on display at Kew.jpg", { g: "Rosa", a: "Cultivars" })] };
+    prof("zierpflanzenbau", "gaertner");
+    const inat = [a, b, c, d, e, f, g, h, i, j, k, k2, m, l, n, o].some((x) => x && x.wege && x.wege.includes("inat"));   // Sammelkarten fragen iNaturalist nie
     // Info-Karte: Ein-Wort-Titel nur als Pflanzenartikel (»Canna« = Insel → ehrlich »nicht gefunden«)
     const missing = { query: { pages: { "-1": { title: "x", missing: "" } } } };
     const wpI = (title, extract) => ({ query: { pages: { "1": { title, extract, thumbnail: { source: "data:image/gif;base64,R0lGODlhAQABAAAAACw=" } } } } });
@@ -1953,11 +1979,11 @@ async function main() {
     const nochmal = await photoFor(fu), nochmalSuchen = neuSuchen;
     __setPhotoSource(null); __setJsonp(window.__offlineJsonp); __clearPhotoCache(); photoTried.clear();
     const [fr, niv] = prev.split("|"); prof(fr, niv);
-    return { a, b, c, d, e, f, g, h, i, j, inat, infoInsel, infoRohr, units,
+    return { a, b, c, d, e, f, g, h, i, j, inat, infoInsel, infoRohr, units, neu5,
       auffr: { file: auffr && auffr.file, gv: auffr && auffr.gv, suchen: auffrSuchen, nochmalFile: nochmal && nochmal.file, nochmalSuchen } };
   });
   const sg = sammelGarten;
-  assert(sg.a && sg.a.file === "Fuchsia 'Twinny'. Bloeiwijze 01.jpg" && sg.a.src === "cm" && JSON.stringify(sg.a.wege) === JSON.stringify(['cm:incategory:"Quality images of Fuchsia"', "cm:Fuchsia cultivar"]) && sg.a.gal === 4,
+  assert(sg.a && sg.a.file === "Fuchsia 'Twinny'. Bloeiwijze 01.jpg" && sg.a.src === "cm" && JSON.stringify(sg.a.wege) === JSON.stringify(["cm:Fuchsia cultivar"]) && sg.a.gal === 4,
     "»Fuchsia Cultivars«: »Fuchsia cultivar« liefert die benannte Gartensorte; Löwenmaul »… Fuchsia« (Farbe) und die Wildart F. putumayensis sind nicht dabei: " + JSON.stringify(sg.a));
   assert(sg.b && sg.b.file === "Gladiolus italicus 01.jpg" && sg.b.src === "cm" && sg.b.gal === 3 && sg.b.rf === "wild" && sg.b.wege[sg.b.wege.length - 1] === "cm:Gladiolus" && sg.a.rf === "",
     "»Gladiolus Cultivars« ohne Gartensorte: erst alle Wege, dann die erste Wildart als Rückfall (Foto vor Zeichnung): " + JSON.stringify(sg.b));
@@ -1970,6 +1996,18 @@ async function main() {
   assert(sg.h && sg.h.file === "Begonia Nonstop 01.jpg" && sg.i && sg.i.file === "Begonia_Nonstop_Red.jpg" && sg.i.src === "wp" && sg.j && sg.j.file === "Begonia 'Bonfire'.jpg" && sg.j.src === "cm" && sg.j.rf === "form",
     "Knollenbegonie: Gruppe über Kategorie bzw. deutschen Artikel erkannt; nirgends genannt → andere Gartenform vor Wildart: " + JSON.stringify({ h: sg.h, i: sg.i, j: sg.j }));
   assert(!sg.inat, "Sammelkarten fragen iNaturalist nie (dort gäbe es nur Wildarten)");
+  const n5 = sg.neu5;
+  assert(n5.st === "Streptocarpus 'Bethan'.jpg" && JSON.stringify(n5.stWege) === JSON.stringify(["cm:Streptocarpus cultivar"]) &&
+    n5.st2 === "Streptocarpus sp. (Cape primrose) 3.jpg" && n5.st2rf === "form",
+    "Streptocarpus: nie die Saintpaulia der Liste (Sortensuche: Gattung fehlt im Namen; Qualitätsbilder: andere Listen-Gattung); ohne erkennbare Gartenform nur als Rückfall: " + JSON.stringify(n5));
+  assert(n5.lil === "Lilium 'Nochka' 02.jpg" && JSON.stringify(n5.lilWege) === JSON.stringify(["cm:Lilium cultivar"]) && n5.wildMart && n5.wildPaph,
+    "Lilium: Sortensuche vor den Qualitätsbildern (Türkenbund = Wildart, auch ohne lateinische Endung; kleingeschriebene Gattung erkannt): " + JSON.stringify(n5));
+  assert(n5.cal === "Calibrachoa cultivar A 5Dsr 4024.jpg", "Calibrachoa: das Hummel-Foto »… on Calibrachoa« fällt raus, obwohl es Gattung und Sorte nennt: " + JSON.stringify(n5));
+  assert(n5.lup === "Lupinus polyphyllus Manhattan Lights 2019-05-23 3666.jpg" && n5.lup2 === "Lupinus_polyphyllus_01.jpg" && n5.lup2rf === "wild",
+    "Lupinus: Sorte ohne Anführungszeichen aus der Sortensuche gilt als Gartenform (»Lupin« ist nicht die Gattung); ohne Gartenform schlägt die benannte Art das namenlose Bluebonnet-Foto: " + JSON.stringify(n5));
+  assert(JSON.stringify(n5.garten) === JSON.stringify([true, false, true, false, true]) && JSON.stringify(n5.fremd2) === JSON.stringify([true, false]) &&
+    JSON.stringify(n5.auf) === JSON.stringify([true, true, true, false, false]),
+    "gardenEvident (Sortenname ohne Anführungszeichen, hinter dem Epitheton nur in der Sortensuche, »Plants« ist kein Sortenname), namesOtherTaxon (Saintpaulia), onPlantPhoto (Tier auf der Pflanze): " + JSON.stringify(n5));
   assert(/Kein deutscher Wikipedia-Artikel gefunden/.test(sg.infoInsel.none) && !/Hebriden/.test(sg.infoInsel.text) && /Canna indica/.test(sg.infoRohr.text),
     "Info-Karte: der Ein-Wort-Titel »Canna« (Insel) wird übergangen, das Indische Blumenrohr erscheint: " + JSON.stringify({ insel: sg.infoInsel, rohr: sg.infoRohr }));
   assert(JSON.stringify(sg.units.grp) === JSON.stringify([["elatior", "hiemalis"], ["rex"], ["tuberhybrida"], ["new guinea", "hawkeri"], ["new guinea", "hawkeri"], ["belladonna"], ["belladonna"], [], [], []]),
@@ -1980,8 +2018,8 @@ async function main() {
     "namesOtherTaxon: Art einer anderen Gattung (Löwenmaul) ja; Farbwort »Rosa rot«, eigene Sorte, Ortsnamen nein: " + JSON.stringify(sg.units.fremd));
   assert(JSON.stringify(sg.units.pflanze) === JSON.stringify([false, true, false, true]), "plantArticle: Insel und Begriffsklärung nein, Gattungs- und Sortenartikel ja: " + JSON.stringify(sg.units.pflanze));
   assert(JSON.stringify(sg.units.sammel) === JSON.stringify([true, false, false, true, false]), "sammelCard: Sammeleintrag ja; benannte Sorte, Sektion, Art nein: " + JSON.stringify(sg.units.sammel));
-  assert(JSON.stringify(sg.units.stufen.slice(0, 4)) === JSON.stringify(["cm:Begonia elatior", "cm:Begonia hiemalis", 'cm:incategory:"Quality images of Begonia"', "cm:Begonia cultivar"]),
-    "Suchwege einer Gruppen-Sammelkarte: Gruppe (mit Synonym) → Qualitätsbilder → Gartensorten: " + JSON.stringify(sg.units.stufen));
+  assert(JSON.stringify(sg.units.stufen.slice(0, 4)) === JSON.stringify(["cm:Begonia elatior", "cm:Begonia hiemalis", "cm:Begonia cultivar", 'cm:incategory:"Quality images of Begonia"']),
+    "Suchwege einer Gruppen-Sammelkarte: Gruppe (mit Synonym) → Gartensorten → Qualitätsbilder: " + JSON.stringify(sg.units.stufen));
   assert(sg.units.hilfe, "Hilfe »Bilder« nennt die Gartenform der Sammeleinträge (samt Gruppen wie Elatior)");
   assert(sg.auffr.file === "Fuchsia 'Twinny'.jpg" && sg.auffr.gv === 2 && sg.auffr.suchen === 1 && sg.auffr.nochmalFile === "Fuchsia 'Twinny'.jpg" && sg.auffr.nochmalSuchen === 1,
     "Gemerkte Treffer von Sammelkarten aus der vorigen Prüfung (gv 1) werden einmal neu gesucht, danach gemerkt: " + JSON.stringify(sg.auffr));

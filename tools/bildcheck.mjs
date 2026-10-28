@@ -315,7 +315,7 @@ function markdown(b) {
   // Sammeleinträge (»Fuchsia Cultivars«): Der Bildcheck zählt nur, ob ein Bild kommt – ob es die Gartenform
   // zeigt, sieht man nur am Dateinamen. Deshalb alle gewählten Dateien, die Rückfälle eigens.
   abschnitt("Sammeleinträge: nur eine Wildart gefunden (keine Gartenform)", gruppe(["foto"]).filter(r => r.rueckfall === "wild"), r => ` · ${r.file}`);
-  abschnitt("Gruppen-Sammeleinträge: Gruppe nicht gefunden, andere Gartenform", gruppe(["foto"]).filter(r => r.rueckfall === "form"), r => ` · ${r.file}`);
+  abschnitt("Sammeleinträge ohne erkennbare Gartenform bzw. Gruppe nicht gefunden (Rückfall)", gruppe(["foto"]).filter(r => r.rueckfall === "form"), r => ` · ${r.file}`);
   abschnitt("Sammeleinträge – gewähltes Bild", gruppe(["foto", "zeichnung", "herbar", "kein"]).filter(r => r.sammel), r => ` · ${r.file || "–"}${r.src === "wp" ? " (Artikel " + r.titel + ")" : ""}`);
   abschnitt("Kein Bild", gruppe(["kein"]));
   abschnitt("Nur Zeichnung", gruppe(["zeichnung"]), r => ` · ${r.file}`);

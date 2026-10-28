@@ -1594,7 +1594,7 @@ body.stagefull #stage>.sessionbar{
   </p>
 
   <footer class="foot">
-    <span>Pflanzenkenntnis · Lernen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 28.10.2026 · Version f8aa195</span></span>
+    <span>Pflanzenkenntnis · Lernen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 28.10.2026 · Version 0126ae2</span></span>
     <a class="legal" href="rechtliches.html">Impressum &amp; Datenschutz</a>
   </footer>
 </div>
@@ -5640,12 +5640,25 @@ const NOT_EPI = new Set(("flower flowers flor flores flore fleur fleurs fiore fi
   "fruit fruits").split(" "));
 const LATINISH = /(a|ae|i|ii|is|us|um|ens|ans|ex|ix|ax|ale|are|ense|oides)$/;
 function latinEpi(x){ x = String(x||"").replace(/\d+$/,""); return /^[a-z][a-z-]{2,}$/.test(x) && !NOT_EPI.has(x) && LATINISH.test(x); }
-function nameWords(file){ return String(file||"").replace(/\.[a-z0-9]{2,5}$/i,"").split(/[\s_,;()\[\]–-]+/).filter(Boolean); }
+function nameWords(file){ return String(file||"").replace(/\.[a-z0-9]{2,5}$/i,"").split(/[\s_,;()\[\]–-]+/).filter(Boolean).map(x=>x.replace(/\d+$/,"")).filter(Boolean); }
+const CAP_WORD = /^[A-ZÄÖÜ][a-zäöüß]{2,}$/;
+const GENERIC_CAP = new Set(("plants plant flowers flower flores fleurs fiori blossom bloom blooms garden gardens garten park "+
+  "botanical botanic botanischer jardin giardino tuin leaves leaf bud buds detail close macro image photo foto img dsc "+
+  "cultivar cultivars hybrid hybrids hybride hybriden in at").split(" "));
+/* Zeigt die Datei erkennbar eine GARTENFORM? Sortenname in Anführungszeichen, »cultivar«/Hybride/×,
+   oder ein großgeschriebener Name direkt hinter der Gattung (»Canna Roma«, »Begonia Nonstop« – so
+   benennt Commons Sorten oft ohne Anführungszeichen). lenient (nur Treffer der Sortensuche): auch
+   hinter dem Epitheton (»Lupinus polyphyllus Manhattan Lights«) – sonst wäre das oft ein Ortsname. */
+function gardenEvident(file, card, lenient){
+  const f = String(file||""), G = genusOf(card).toLowerCase(); if(!G) return false;
+  if(GARDEN_RE.test(f) || /['‘’`´"“”„]/.test(f)) return true;
+  const w = nameWords(f), cap = x => CAP_WORD.test(x||"") && !GENERIC_CAP.has(String(x).toLowerCase());
+  return w.some((x,i)=> x.toLowerCase()===G && (cap(w[i+1]) || (lenient && /^[a-z][a-z-]{2,}$/.test(w[i+1]||"") && cap(w[i+2]))));
+}
 function wildSpeciesFile(file, card){                    // Sammelkarte: Datei zeigt eine benannte Art der Gattung, keine Gartenform?
-  const G = genusOf(card), f = String(file||""); if(!G) return false;
-  if(GARDEN_RE.test(f) || /['‘’`´"“”„]/.test(f)) return false;
-  const w = nameWords(f);
-  return w.some((x,i)=> x===G && latinEpi(w[i+1]));
+  const G = genusOf(card).toLowerCase(); if(!G || gardenEvident(file, card, false)) return false;
+  const w = nameWords(file);                             // Gattung auch kleingeschrieben (»Venusschuh paphiopedilum tranlienianum«)
+  return w.some((x,i)=> x.toLowerCase()===G && /^[a-z][a-z-]{2,}$/.test(w[i+1]||"") && !NOT_EPI.has(w[i+1]));   // jedes Epitheton (»martagon« endet nicht lateinisch)
 }
 let generaMemo = null;                                   // alle Gattungen aller Listen (kleingeschrieben, akzentfrei)
 function allGenera(){
@@ -5655,9 +5668,21 @@ function allGenera(){
 }
 function namesOtherTaxon(file, card){                    // Sammelkarte: nennt die Datei eine Art einer ANDEREN Gattung der Listen?
   // »Antirrhinum majus Floral Showers Fuchsia« ist ein Löwenmaul in der Farbe Fuchsia, »Helbra, Rudbeckia
-  // laciniata und Solidago canadensis« zeigt zwei Pflanzen
+  // laciniata und Solidago canadensis« zeigt zwei Pflanzen; »Saintpaulia20110530 01« in den Qualitätsbildern
+  // von Streptocarpus ist das Usambaraveilchen – eine eigene Art derselben Liste
   const G = deacc(genusOf(card).toLowerCase()), gen = allGenera(), w = nameWords(file);
-  return w.some((x,i)=> /^[A-ZÄÖÜ][a-zäöüß]+$/.test(x) && deacc(x.toLowerCase())!==G && gen.has(deacc(x.toLowerCase())) && latinEpi(w[i+1]));
+  const other = x => /^[A-ZÄÖÜ][a-zäöüß]+$/.test(x) && deacc(x.toLowerCase())!==G && gen.has(deacc(x.toLowerCase()));
+  if(w.some((x,i)=> other(x) && latinEpi(w[i+1]))) return true;
+  return w.some(other) && !w.some(x=>deacc(x.toLowerCase())===G);   // andere Gattung genannt, die eigene nicht
+}
+/* »Bombus pascuorum on Calibrachoa 'Cabaret Purple'«: Hauptmotiv ist das Tier, die Pflanze nur die
+   Unterlage – mit Gattung und Sortenname gewann das Bild sonst sogar das Ranking. Gilt für alle Karten. */
+function onPlantPhoto(file, card){
+  const G = norm(genusOf(card)||""); if(!G) return false;
+  const g = G.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+  return new RegExp("(^|[^a-z])(on|auf|sur|op|su|sobre|visiting)\\s+(?:(?:a|an|the|der|die|das|den|einer|einem|la|le|les|un|une|een|de|het|una|uno)\\s+)?"+
+    "(?:(?:flowers?|blossoms?|leaf|leaves|bl(?:ü|ue)ten?|blatt|fleurs?|bloem(?:en)?)\\s+(?:of|von|der|de|des|du|van)\\s+)?"+g+"([^a-z]|$)","i")
+    .test(String(file||"").replace(/_/g," "));
 }
 /* Meint der Artikel eine PFLANZE? Für Suchen nach einem einzelnen Wort (bloße Gattung, deutscher
    Sammelname): Der deutsche Artikel »Canna« ist die Hebriden-Insel, die Gattung heißt dort »Blumenrohr«. */
@@ -5675,7 +5700,7 @@ function poolHit(list, rf){                              // bester Rückfall-Tre
   const page = o => o.file ? "https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(o.file) : o.url;
   const cred = o => o.credit || ((o.artist||o.license) ? { artist:o.artist||"", license:o.license||"" } : {});
   const best = list[0], take = list.slice(0,6);
-  return Object.assign({ thumb: best.thumb, file: best.file, title: best.title, url: page(best), src: "cm", rf: rf||"",
+  return Object.assign({ thumb: best.thumb, file: best.file, title: best.title, url: page(best), src: "cm", rf: rf || best.rf || "",
            gal: take.map(o=>o.thumb), top: take.filter(o=>(o.sc||0)===(best.sc||0)).length,
            galInfo: take.map(o=>Object.assign({ file:o.file, url:page(o), w:o.w||0 }, cred(o))) }, cred(best));
 }
@@ -5697,8 +5722,8 @@ function photoSteps(card){                            // Suchwege, vom genaueste
   }else if(sammelCard(card)){                         // Sammelkarte: Gartenform zuerst (siehe sammelCard)
     const G = genusOf(card);
     sammelGroup(card).forEach(w=>steps.push({k:"cm", q:`${G} ${/\s/.test(w) ? '"'+w+'"' : w}`}));   // genannte Gruppe (»Begonia elatior«, »Impatiens "new guinea"«)
-    steps.push({k:"cm", q:`incategory:"Quality images of ${G}"`});      // geprüfte Bilder, oft benannte Gartensorten
-    steps.push({k:"cm", q:`${G} cultivar`});                             // Volltext: fast nur Gartensorten (»Fuchsia 'Twinny'«)
+    steps.push({k:"cm", q:`${G} cultivar`});                             // Volltext: fast nur Gartensorten (»Fuchsia 'Twinny'«, »Lilium 'Nochka'«)
+    steps.push({k:"cm", q:`incategory:"Quality images of ${G}"`});      // geprüfte Bilder – oft aber Wildarten (Türkenbund, Goldrute am See)
     if(de) steps.push({k:"wp", q:de});                                   // deutscher Sammelname (»Edelrose«, »Knollenbegonie«)
     steps.push({k:"cm", q:`incategory:"${G}"`});                         // Gattungskategorie – Sammelschublade (genusNamed)
     steps.push({k:"wp", q:G});                                           // Gattungsartikel – nur, wenn er eine Pflanze meint (plantArticle)
@@ -5769,7 +5794,7 @@ function pickCommons(d, card, artOut, q, pools){      // bester Treffer der Comm
     const file = String(p.title||"").replace(/^File:/i,"").replace(/^Datei:/i,"");
     const ii = p.imageinfo && p.imageinfo[0]; if(!ii || !(ii.thumburl||ii.url)) return;
     if(ii.mime && (!/^image\//i.test(ii.mime) || /djvu/i.test(ii.mime))) return;   // PDF/DjVu-Buchscans: Vorschau = Buchdeckel
-    if(!usablePhoto(file) || looksDamage(file) || fileMentionsOther(file, card)) return;
+    if(!usablePhoto(file) || looksDamage(file) || onPlantPhoto(file, card) || fileMentionsOther(file, card)) return;
     if(bare && !genusNamed(file, card, volltext)) return;   // Beifang der Gattungskategorie (Rosà, Hotelzimmer, »Rosa Parks«)
     if(sam && namesOtherTaxon(file, card)) return;     // andere Gattung mit Art im Namen (Löwenmaul in der Farbe »Fuchsia«)
     const meta = ii.extmetadata || null;
@@ -5780,10 +5805,13 @@ function pickCommons(d, card, artOut, q, pools){      // bester Treffer der Comm
       if(kind && artOut) artOut.push(Object.assign(cand, { kind, src:"cm", title: norm(card.g+" "+card.a) }));
       return;
     }
-    if(sam){                                           // Sammelkarte: genannte Gruppe = genau das Gesuchte; Wildart bzw. andere Gruppe nur als Rückfall
-      const wild = wildSpeciesFile(file, card);
+    if(sam){                                           // Sammelkarte: sofort nur die genannte Gruppe bzw. eine erkennbare Gartenform – sonst Rückfall
+      const cvStep = q===`${G} cultivar`;              // Treffer der Sortensuche gelten als Gartenform, außer sie nennen eine Wildart
       if(grp.length && groupNamed(file+" "+metaValue(meta,"Categories"), grp)) cand.sc += 3;
-      else if(wild || grp.length){ (wild ? pools.wild : pools.plain).push(Object.assign(cand, { title: norm(card.g+" "+card.a), n: pools.n++ })); return; }
+      else {
+        const garden = gardenEvident(file, card, cvStep), wild = !garden && wildSpeciesFile(file, card);
+        if(grp.length || wild || !(garden || cvStep)){ (wild ? pools.wild : pools.plain).push(Object.assign(cand, { title: norm(card.g+" "+card.a), n: pools.n++ })); return; }
+      }
     }
     ok.push(cand);
   });
@@ -5841,7 +5869,7 @@ async function wikiPhoto(card){                        // → {thumb,title,file,
         // Sorte gesucht, aber auf dem Art-Artikel gelandet? Nur zulässig, wenn das Artbild für diese Karte erlaubt ist.
         if(strict && ((p.title||"")+" "+(p.extract||"")).toLowerCase().indexOf(sub) < 0) continue;
         const file = p.pageimage || "";
-        if(!usablePhoto(file) || looksDamage(file) || fileMentionsOther(file, card)) continue;
+        if(!usablePhoto(file) || looksDamage(file) || onPlantPhoto(file, card) || fileMentionsOther(file, card)) continue;
         if(sam && namesOtherTaxon(file, card)) continue;
         const hit = { thumb:p.thumbnail.source, title:p.title, file, src:"wp",
                       url:"https://de.wikipedia.org/wiki/"+encodeURIComponent(String(p.title).replace(/ /g,"_")) };
@@ -5854,12 +5882,14 @@ async function wikiPhoto(card){                        // → {thumb,title,file,
         if(fm && fm.mime && !/^image\//i.test(fm.mime)) continue;
         if(fm && fm.art){ vormerken(fm.kind, fm.credit); continue; }
         if(fm && fm.credit) Object.assign(hit, fm.credit);         // Bildnachweis liegt damit schon vor
-        if(sam){                                                   // Sammelkarte: Artikelbild einer Wildart bzw. anderen Gruppe nur als Rückfall
-          const wild = wildSpeciesFile(file, card);
+        if(sam){                                                   // Sammelkarte: Artikelbild sofort nur bei erkennbarer Gartenform bzw. Gruppe – sonst Rückfall
           const grpHit = grp.length && groupNamed(file+" "+((fm && fm.cats)||"")+" "+p.title+" "+(p.extract||""), grp);
-          if(!grpHit && (wild || grp.length)){
-            (wild ? pools.wild : pools.plain).push(Object.assign({}, hit, { sc: commonsScore(file, card), n: pools.n++ }));
-            continue;
+          if(!grpHit){
+            const garden = gardenEvident(file, card, false), wild = !garden && wildSpeciesFile(file, card);
+            if(grp.length || wild || !garden){
+              (wild ? pools.wild : pools.plain).push(Object.assign({}, hit, { sc: commonsScore(file, card), n: pools.n++ }));
+              continue;
+            }
           }
         }
         return mark(hit);
@@ -5877,8 +5907,11 @@ async function wikiPhoto(card){                        // → {thumb,title,file,
   // der Treffer nur für diese Sitzung (mark → tmp); beim nächsten Start wird Wikimedia neu
   // gefragt. Fällt iNaturalist selbst aus, macht das aus einem sauberen »kein Bild« keinen
   // Netzfehler (sonst wartete eine bildlose Art endlos), die Zeichnung gilt dann nur vorläufig.
-  if(pools && (pools.plain.length || pools.wild.length))   // Sammelkarte ohne Gartenform: andere Gruppe vor Wildart – ein Foto der Gattung vor jeder Zeichnung
-    return mark(pools.plain.length ? poolHit(pools.plain, "form") : poolHit(pools.wild, "wild"));
+  if(pools && (pools.plain.length || pools.wild.length)){  // Sammelkarte ohne erkennbare Gartenform – ein Foto der Gattung geht trotzdem vor jeder Zeichnung
+    if(grp.length) return mark(pools.plain.length ? poolHit(pools.plain, "form") : poolHit(pools.wild, "wild"));   // Gruppe: andere Gartenform vor Wildart
+    pools.plain.forEach(o=>{ o.rf = "form"; }); pools.wild.forEach(o=>{ o.rf = "wild"; });
+    return mark(poolHit(pools.plain.concat(pools.wild)));   // sonst nach Bewertung: Datei, die die Gattung nennt, vor namenlosem Bild
+  }
   let ina = null, inaFehler = false;
   try{ ina = await inatPhoto(card); }catch(e){ inaFehler = true; }
   if(ina) return mark(ina);

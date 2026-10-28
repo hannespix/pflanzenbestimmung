@@ -2707,14 +2707,25 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Hebriden-Insel Canna**, weil der deutsche Artikel »Canna« die Insel ist). Für Sammelkarten
       (`sammelCard`) läuft die Kette jetzt **Gartenform zuerst**: genannte Gruppe (`sammelGroup`/
       `GROUP_ALIAS`: »Begonia elatior«/»hiemalis«, »Begonia rex«, »Begonia tuberhybrida«, »Impatiens "new
-      guinea"«/»hawkeri«, »Delphinium belladonna«) → »Quality images of …« → **»Gattung cultivar«**
-      (Commons-Volltext, liefert fast nur Sorten: »Fuchsia 'Twinny'«, »Solidago 'Goldjunge'«) → deutscher
-      Sammelname → Gattungskategorie → Gattungsartikel → Volltext. Eine **benannte Wildart**
-      (`wildSpeciesFile`: Gattung + lateinisch klingendes Epitheton, keine Sorte/»cultivar«/Hybride) und bei
-      Gruppen eine **andere Form** landen nur in Rückfall-Listen (`pools`, `poolHit` mit `rf` »wild«/»form«);
-      genommen werden sie erst, wenn kein Weg eine Gartenform liefert – ein Foto der Gattung geht trotzdem
-      vor jeder Zeichnung. Dateien, die eine **Art einer anderen Gattung** nennen (`namesOtherTaxon`:
-      »Antirrhinum majus Floral Showers Fuchsia« = Löwenmaul in der Farbe Fuchsia), fallen raus; der
+      guinea"«/»hawkeri«, »Delphinium belladonna«) → **»Gattung cultivar«** (Commons-Volltext, liefert fast
+      nur Sorten: »Fuchsia 'Twinny'«, »Solidago 'Goldjunge'«, »Lilium 'Nochka'«) → »Quality images of …«
+      → deutscher Sammelname → Gattungskategorie → Gattungsartikel → Volltext. **Sofort genommen** wird
+      nur ein Bild, das erkennbar eine Gartenform zeigt (`gardenEvident`: Sortenname in Anführungszeichen,
+      »cultivar«/Hybride/×, ein großgeschriebener Name direkt hinter der Gattung wie »Canna Roma«, in der
+      Sortensuche auch hinter dem Epitheton wie »Lupinus polyphyllus Manhattan Lights«), jeder Treffer der
+      Sortensuche, der keine Wildart nennt, oder die genannte Gruppe. Alles andere landet in
+      Rückfall-Listen (`pools`, `poolHit` mit `rf` »wild«/»form«): eine **benannte Wildart**
+      (`wildSpeciesFile`: Gattung – auch kleingeschrieben – plus Epitheton, auch »martagon«), bei Gruppen eine
+      **andere Form**, sonst ein Bild ohne erkennbare Gartenform (Qualitätsbild einer Goldrute am See);
+      genommen werden sie erst, wenn kein Weg eine Gartenform liefert (Gruppe: andere Form vor Wildart; sonst
+      nach Bewertung, die Gattung im Namen schlägt ein namenloses Foto) – ein Foto der Gattung geht trotzdem
+      vor jeder Zeichnung. **Nachbesserung nach Bildcheck-Lauf 5:** Dort liefen die Qualitätsbilder noch vor
+      der Sortensuche und wurden sofort genommen – Streptocarpus zeigte die **Saintpaulia** derselben Liste,
+      Lilium den wilden Türkenbund, Lupinus die texanische Wildlupine »Bluebonnet«, Calibrachoa eine
+      **Hummel**. Deshalb zusätzlich: `onPlantPhoto` verwirft für **alle** Karten Fotos »Tier on/auf
+      Gattung« (Hauptmotiv ist das Tier). Dateien, die eine **Art einer anderen Gattung** nennen
+      (`namesOtherTaxon`: »Antirrhinum majus Floral Showers Fuchsia« = Löwenmaul in der Farbe Fuchsia) oder
+      eine andere Listen-Gattung ohne die eigene (»Saintpaulia20110530 01«), fallen raus; der
       Gattungsartikel zählt nur als **Pflanzenartikel** (`plantArticle` – auch in der Info-Karte **beider**
       Werkzeuge für Ein-Wort-Titel). Bewertung: +1 für Gartenform ohne Sortennamen (»Canna cultivar (2)«),
       +3 für die genannte Gruppe (Dateiname oder Commons-Kategorien). Gemerkte Treffer von Sammelkarten
@@ -2725,8 +2736,8 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Ausweichfrage, iNaturalist (Kette mit Fixtures nach den echten Antworten, Lizenzfilter, Synonym,
       Rangprüfung, Ausfall, Sammelkarte ohne Abfrage, Nachweis ohne Zweitabruf, Großansicht, CSP) und die
       Sammeleinträge (Gartensorte statt Wildart, späte Gartensorte schlägt frühe Wildart, Insel Canna nie,
-      Gruppen, Rückfall-Reihenfolge, Cache-Auffrischung); `tests/smoke.mjs` `plantArticle` im
-      Prüfungswerkzeug.
+      Gruppen, Rückfall-Reihenfolge, Cache-Auffrischung, die vier Realfälle aus Lauf 5 mit den echten
+      Dateinamen); `tests/smoke.mjs` `plantArticle` im Prüfungswerkzeug.
 
 ## Offene Aufgaben (TODO)
 
