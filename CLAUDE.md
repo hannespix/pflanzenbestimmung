@@ -2544,6 +2544,10 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Artikel-Tafel mit Nachweis, Galerie nur Zeichnungen), Foto auf späterem Weg schlägt frühere Tafel,
       Beleg nur ohne Zeichnung, Karte/PDF/andere Art → null, `tmp` bei Abbruch, Cache-Alterung mit
       Netzfehler-Rückfall, `artKind`-Fälle, Pille/alt/Nachweis in der Oberfläche.
+      **CI-Flake dabei entschärft:** Der Job `build` kippte einmal im Boot-Warten von `tests/learn.mjs`
+      (»Waiting failed: 10000ms exceeded«), während `pruefen` auf demselben Commit grün war – die
+      Boot-Wartezeiten (`window.startSession/startChallenge!=null`) stehen jetzt auf 30 s, und beide
+      Workflows setzen `DEBUG_STACK=1`, damit eine Zeitüberschreitung künftig ihren Wartepunkt nennt.
 
 ## Offene Aufgaben (TODO)
 

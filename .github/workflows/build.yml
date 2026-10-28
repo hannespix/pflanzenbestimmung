@@ -45,6 +45,8 @@ jobs:
         run: node tests/smoke.mjs
       - name: Puppeteer-Smoke-Test Lern-Tool (gegen dist/)
         run: node tests/learn.mjs
+        env:
+          DEBUG_STACK: "1"   # bei einer Zeitüberschreitung den Stack zeigen (welcher Wartepunkt)
       - name: PWA-Test (Manifest, Service Worker, Offline-Cache)
         run: node tests/pwa.mjs
       - name: Artefakte hochladen

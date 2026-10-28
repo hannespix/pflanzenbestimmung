@@ -72,7 +72,7 @@ async function main() {
   page.on("console", (m) => { if (m.type() === "error") errs.push("console.error: " + m.text()); });
 
   await page.goto(FILE, { waitUntil: "load" });
-  await page.waitForFunction("window.startSession!=null", { timeout: 10000 });
+  await page.waitForFunction("window.startSession!=null", { timeout: 30000 });
   assert(errs.length === 0, "Konsolenfehler beim Boot: " + errs.join(" | "));
   // Ohne Netz testen: Wikipedia/Commons-Abrufe (z. B. der Bildnachweis nach einer Antwort)
   // laufen über den austauschbaren jsonp und antworten hier »offline«. Sonst hinge der
@@ -3373,7 +3373,7 @@ async function main() {
   await page.waitForFunction("localStorage.getItem('pflanzenlernen.progress.gemuesebau_gaertner')!=null", { timeout: 5000 });
   const before = await page.evaluate(() => Object.keys(progress).length);
   await page.reload({ waitUntil: "load" });
-  await page.waitForFunction("window.startSession!=null && typeof progress!=='undefined' && Object.keys(progress).length>0", { timeout: 10000 });
+  await page.waitForFunction("window.startSession!=null && typeof progress!=='undefined' && Object.keys(progress).length>0", { timeout: 30000 });
   const after = await page.evaluate(() => Object.keys(progress).length);
   assert(after >= before && after > 0, "Lernfortschritt überlebte den Reload nicht: " + before + " -> " + after);
 
@@ -3762,7 +3762,7 @@ async function main() {
   const b64 = await page.evaluate((idx) => chEncode({ v: 2, p: "gemuesebau_gaertner", m: "quiz", r: "de2bot", i: idx, s: idx.length, t: idx.length, z: 600, n: "Kollege" }), duelShare.dec.i);
   await page.goto("about:blank");                   // erzwingt echten Reload (Hash-Wechsel allein lädt nicht neu)
   await page.goto(FILE + "#c=" + b64, { waitUntil: "load" });
-  await page.waitForFunction("window.startChallenge!=null", { timeout: 10000 });
+  await page.waitForFunction("window.startChallenge!=null", { timeout: 30000 });
   const duelIn = await page.evaluate(() => {
     const banner = document.querySelector("#duelBanner");
     return { shown: banner && !banner.hidden, txt: banner ? banner.textContent : "",
@@ -3806,7 +3806,7 @@ async function main() {
   const kaputtFrag = b64.slice(0, 3) + (b64[3] === "A" ? "B" : "A") + b64.slice(4);
   await page.goto("about:blank");
   await page.goto(FILE + "#c=" + kaputtFrag, { waitUntil: "load" });
-  await page.waitForFunction("window.startSession!=null", { timeout: 10000 });
+  await page.waitForFunction("window.startSession!=null", { timeout: 30000 });
   const kaputtIn = await page.evaluate(() => {
     const b = document.querySelector("#duelBanner");
     return { shown: !!(b && !b.hidden) };
@@ -3848,7 +3848,7 @@ async function main() {
     chEncode({ p: "gemuesebau_gaertner", m: "photo", r: "img2both", a: "mc", i: [1, 2, 3], s: 3, t: 3, z: 30, n: "Kollegin" }));
   await page.goto("about:blank");
   await page.goto(FILE + "#c=" + vollFrag, { waitUntil: "load" });
-  await page.waitForFunction("window.startChallenge!=null", { timeout: 10000 });
+  await page.waitForFunction("window.startChallenge!=null", { timeout: 30000 });
   const vollIn = await page.evaluate(() => ({
     dir: curDir(), antwort: photoAnswer, modus: mode,
     txt: (document.querySelector("#duelBanner") || {}).textContent || "",
@@ -3866,7 +3866,7 @@ async function main() {
     chEncode({ p: "gemuesebau_gaertner", m: "photo", r: "img2bot", a: "type", i: [1, 2, 3], s: 1, t: 3, z: 20, n: "Kollege" }));
   await page.goto("about:blank");
   await page.goto(FILE + "#c=" + altTypFrag, { waitUntil: "load" });
-  await page.waitForFunction("window.startChallenge!=null", { timeout: 10000 });
+  await page.waitForFunction("window.startChallenge!=null", { timeout: 30000 });
   const altTyp = await page.evaluate(async (PX) => {
     window.__offlineJsonp = () => Promise.reject(new Error("offline (Test)"));
     __setJsonp(window.__offlineJsonp); __clearPhotoCache();
@@ -3899,7 +3899,7 @@ async function main() {
     chEncode({ p: "gemuesebau_gaertner", m: "photo", r: "img2de", a: "mc", i: [1, 2, 3], s: 2, t: 3, z: 15, n: "Kollegin" }));
   await page.goto("about:blank");
   await page.goto(FILE + "#c=" + altDeFrag, { waitUntil: "load" });
-  await page.waitForFunction("window.startChallenge!=null", { timeout: 10000 });
+  await page.waitForFunction("window.startChallenge!=null", { timeout: 30000 });
   const altDe = await page.evaluate(async (PX) => {
     window.__offlineJsonp = () => Promise.reject(new Error("offline (Test)"));
     __setJsonp(window.__offlineJsonp); __clearPhotoCache();
@@ -3921,7 +3921,7 @@ async function main() {
       f: ["quiz", "cards", "type"], i: [1, 2, 3], s: 2, t: 2, z: 40, n: "Kollegin" }));
   await page.goto("about:blank");
   await page.goto(FILE + "#c=" + gefFrag, { waitUntil: "load" });
-  await page.waitForFunction("window.startChallenge!=null", { timeout: 10000 });
+  await page.waitForFunction("window.startChallenge!=null", { timeout: 30000 });
   const gefIn = await page.evaluate(() => {
     const txt = (document.querySelector("#duelBanner") || {}).textContent || "";
     document.querySelector("#btnAcceptDuel").click();
@@ -3977,7 +3977,7 @@ async function main() {
   // die erwarteten Block-Meldungen sonst als Konsolenfehler zählen.
   const cp = await browser.newPage();
   await cp.goto(FILE, { waitUntil: "load" });
-  await cp.waitForFunction("window.startSession!=null", { timeout: 10000 });
+  await cp.waitForFunction("window.startSession!=null", { timeout: 30000 });
   const cspL = await cp.evaluate(() => new Promise((resolve) => {
     const viol = [];
     document.addEventListener("securitypolicyviolation", (e) => viol.push(e.blockedURI + " [" + e.effectiveDirective + "]"));
@@ -4000,7 +4000,7 @@ async function main() {
   // Zurück auf sauberen Zustand für die Aufräum-Schritte
   await page.goto("about:blank");
   await page.goto(FILE, { waitUntil: "load" });
-  await page.waitForFunction("window.startSession!=null", { timeout: 10000 });
+  await page.waitForFunction("window.startSession!=null", { timeout: 30000 });
 
   // aufräumen
   await page.evaluate(() => { localStorage.removeItem("pflanzenlernen.progress.gemuesebau_gaertner"); });
