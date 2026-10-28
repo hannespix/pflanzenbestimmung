@@ -247,6 +247,15 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .intro-install .btn{flex:none}
 .intro-install.is-on{border-style:solid; background:var(--green-tint)}
 .install-slot:empty{display:none}
+.installbar{margin:22px 0 0; display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 14px; border-radius:12px;
+  background:var(--green-tint); border:1px solid var(--rule-strong); font-size:13px; line-height:1.45; color:var(--ink)}
+.installbar .ic{flex:none; width:20px; height:20px; color:var(--green-deep)}
+.installbar>div{flex:1 1 200px}
+.installbar .btn{flex:none}
+.inst-ways{display:flex; flex-direction:column; gap:8px; margin:12px 0 0}
+.inst-way{display:flex; flex-direction:column; gap:2px; padding:9px 11px; border-radius:8px; background:var(--surface-2); border:1px solid var(--rule); font-size:13px; line-height:1.45}
+.inst-way.is-you{border-color:var(--green); background:var(--green-tint)}
+.inst-way>b{color:var(--ink)}
 .hreal{margin:0 0 12px; padding:10px 12px; border-left:3px solid var(--green); background:var(--green-tint);
   border-radius:0 8px 8px 0; font-size:13.5px; line-height:1.5; color:var(--ink)}
 .startrow{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
@@ -1532,9 +1541,9 @@ body.stagefull #stage>.sessionbar{
       <li><b>Hell oder dunkel:</b> Das Werkzeug folgt der Einstellung deines Geräts (Systemdesign) – einen eigenen
         Schalter gibt es nicht mehr.</li>
       <li><b>Als App:</b> Pflanze-BW lässt sich auf dem Home-Bildschirm ablegen und startet dann wie eine App – auch
-        ohne Netz. Android/Chrome und Edge zeigen dafür einen Knopf (hier und in der Einführung, sobald der Browser
-        es anbietet; sonst im Browser-Menü »App installieren«), auf dem iPhone geht es über <b>Teilen → Zum
-        Home-Bildschirm</b>.<div class="install-slot"></div></li>
+        ohne Netz. Solange sie nicht installiert ist, steht unten auf der Seite eine Leiste dafür: Android/Chrome und
+        Edge bieten dort (und hier und in der Einführung) einen echten Knopf, sobald der Browser es erlaubt; sonst
+        zeigt <b>»So geht's«</b> den Weg je Gerät – auf dem iPhone über <b>Teilen → Zum Home-Bildschirm</b>.<div class="install-slot"></div></li>
       <li><b>Herbarium · Thema üben:</b> Auf jeder Sammelkarte im Herbarium startet »Thema üben« eine geführte Lektion
         nur mit den Arten dieses Themas (z. B. nur Gräser). Dasselbe erreichst du über Optionen · Lernstoff, wo du
         auch nach Pflanzenfamilie eingrenzen kannst.</li>
@@ -1621,8 +1630,12 @@ body.stagefull #stage>.sessionbar{
     und Vollständigkeit wird keine Gewähr übernommen.
   </p>
 
+  <!-- Als App: dauerhafte Leiste unten, solange die Seite nicht als App läuft – echter Knopf, wenn der
+       Browser die Installation anbietet, sonst »So geht's« mit dem Weg je Gerät (gefüllt aus learn.js) -->
+  <div class="installbar" id="installBar" hidden></div>
+
   <footer class="foot">
-    <span>Pflanzenkenntnis · Lernen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 28.10.2026 · Version b7ee308</span></span>
+    <span>Pflanzenkenntnis · Lernen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 28.10.2026 · Version b559529</span></span>
     <a class="legal" href="rechtliches.html">Impressum &amp; Datenschutz</a>
   </footer>
 </div>
@@ -6988,7 +7001,21 @@ function installEnv(){                                   // für Tests überschr
     : ((window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true);
   const ios = ("ios" in o) ? !!o.ios
     : (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1));
-  return { standalone, ios, canPrompt: !!installEvt };
+  const mobile = ("mobile" in o) ? !!o.mobile
+    : (ios || /Android/i.test(navigator.userAgent) || !!(window.matchMedia && matchMedia("(pointer:coarse)").matches));
+  return { standalone, ios, mobile, canPrompt: !!installEvt };
+}
+/* Leiste unten auf der Seite (#installBar): solange die Seite nicht als App läuft, steht dort
+   der Weg zur App – mit echtem Knopf, wenn der Browser die Installation anbietet, sonst mit
+   »So geht's« (Weg je Gerät). Auf einem Rechner ohne Angebot (Firefox, Safari) bleibt sie weg,
+   denn dort gäbe es nichts zu installieren – ein Knopf ohne Wirkung wäre schlimmer als keiner. */
+function installBarHTML(){
+  const e = installEnv();
+  if(e.standalone || installDone) return "";
+  if(!e.canPrompt && !e.mobile) return "";
+  const btn = e.canPrompt ? `<button class="btn primary btn-install" type="button">App installieren</button>`
+                          : `<button class="btn btn-install-how" type="button">So geht's</button>`;
+  return `${ico("leaf")}<div><b>Pflanze-BW als App aufs Handy</b> – startet vom Home-Bildschirm, auch ohne Netz.</div>${btn}`;
 }
 function installHTML(){                                  // Inhalt der Slots in Einführung und Hilfe
   const e = installEnv();
@@ -6998,14 +7025,49 @@ function installHTML(){                                  // Inhalt der Slots in 
     return `<div class="intro-install">${ico("leaf")}<div><b>Als App aufs Handy?</b> Ein Tipp genügt – danach startet Pflanze-BW vom Home-Bildschirm, auch ohne Netz.</div><button class="btn primary btn-install" type="button">App installieren</button></div>`;
   if(e.ios)
     return `<div class="intro-install">${ico("leaf")}<div><b>Als App aufs iPhone:</b> unten <b>Teilen</b> antippen, dann <b>»Zum Home-Bildschirm«</b>. Danach startet Pflanze-BW wie eine App – auch ohne Netz.</div></div>`;
+  if(e.mobile)
+    return `<div class="intro-install">${ico("leaf")}<div><b>Als App aufs Handy?</b> Über das Browser-Menü – danach startet Pflanze-BW vom Home-Bildschirm, auch ohne Netz.</div><button class="btn btn-install-how" type="button">So geht's</button></div>`;
   return "";
 }
+function wireInstallButtons(root){
+  root.querySelectorAll(".btn-install").forEach(b=>{ b.onclick=installApp; });
+  root.querySelectorAll(".btn-install-how").forEach(b=>{ b.onclick=openInstallHow; });
+}
 function syncInstallUI(){
-  document.querySelectorAll(".install-slot").forEach(sl=>{ sl.innerHTML = installHTML(); const b=sl.querySelector(".btn-install"); if(b) b.onclick=installApp; });
+  document.querySelectorAll(".install-slot").forEach(sl=>{ sl.innerHTML = installHTML(); wireInstallButtons(sl); });
+  const bar=$("#installBar");
+  if(bar){ const h=installBarHTML(); bar.innerHTML=h; bar.hidden=!h; wireInstallButtons(bar); }
+}
+/* Weg je Gerät – für Browser ohne Installations-Ereignis (iPhone/Safari, Firefox) */
+function openInstallHow(){
+  closeInfo();
+  const e = installEnv();
+  const scrim = el("div","scrim"); scrim.id="infoScrim";
+  const way = (you, titel, text) => `<div class="inst-way${you?" is-you":""}"><b>${titel}</b><span>${text}</span></div>`;
+  scrim.innerHTML = `<div class="modal howmodal" role="dialog" aria-modal="true" aria-label="Als App installieren">
+     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <div class="modal-head">
+       <div class="mh-bot fam">Als App installieren</div>
+       <div class="mh-fam">Danach startet Pflanze-BW vom Home-Bildschirm – auch ohne Netz</div>
+     </div>
+     <div class="inst-ways">
+       ${way(e.ios, "iPhone / iPad (Safari)", "Unten das <b>Teilen</b>-Symbol antippen, dann <b>»Zum Home-Bildschirm«</b>.")}
+       ${way(!e.ios && e.mobile, "Android (Chrome, Samsung Internet)", "Menü (drei Punkte oben rechts) → <b>»App installieren«</b> oder <b>»Zum Startbildschirm hinzufügen«</b>.")}
+       ${way(false, "Firefox (Android)", "Menü → <b>»Zum Startbildschirm hinzufügen«</b>.")}
+       ${way(!e.mobile, "Computer (Chrome, Edge)", "Symbol rechts in der Adressleiste oder Menü → <b>»App installieren«</b>.")}
+     </div>
+     <div class="famfoot">Die Installation ist freiwillig – nach dem ersten Aufruf läuft das Werkzeug ohnehin auch ohne Internet.</div>
+   </div>`;
+  document.body.appendChild(scrim); infoEl=scrim;
+  scrim.addEventListener("click", ev=>{ if(ev.target===scrim) closeInfo(); });
+  scrim.querySelector("#infoClose").onclick = closeInfo;
+  document.addEventListener("keydown", infoKey);
+  infoReturnFocus = document.activeElement;
+  try{ scrim.querySelector("#infoClose").focus(); }catch(err){}
 }
 async function installApp(){
   const ev = installEvt;
-  if(!ev){ toast("Gerade nicht möglich – im Browser-Menü steht »App installieren« bzw. »Zum Startbildschirm«.", true); return; }
+  if(!ev){ openInstallHow(); return; }                    // kein Angebot des Browsers: den Weg zeigen statt einer Sackgasse
   try{
     ev.prompt();
     const r = await ev.userChoice;
@@ -7144,6 +7206,7 @@ window.rankOf=rankOf;             // für Tests: Ränge (nur Lernstand), Combo
 window.RANKS=RANKS;
 window.startProbe=startProbe; window.gradeOf=gradeOf; window.probeCount=probeCount;   // Probeprüfung (für Tests)
 window.__installReset=()=>{ installEvt=null; installDone=false; syncInstallUI(); };      // Installations-Zustand (für Tests)
+window.openInstallHow=openInstallHow;
 window.isCultivarName=isCultivarName;
 window.cultivarName=cultivarName;       // für Tests: Sorten-Erkennung, Artbild-Regel, Tafel-Filter
 window.cultivarKind=cultivarKind;
