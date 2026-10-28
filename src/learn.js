@@ -487,8 +487,7 @@ let pendingChallenge = null;  // aus der URL (#c=…) dekodierte, noch nicht ang
 let examOnly = false;         // opt-in: nur Prüfungsstoff (Fachwerker) – Familie/Synonyme ausblenden
 let dirText  = "de2bot";      // Abfragerichtung für Karteikarten/Quiz/Selbst eingeben
 let dirPhoto = "img2both";    // Bilder-Quiz: angeboten wird nur noch »Bild → voller Name«
-let photoAnswer = "mc";       // Antwortart im Bilder-Quiz: mc | type | exam
-let examFields = null;        // Felder im Modus »wie in der Prüfung« (je Profil merkbar)
+let chAns = null;             // Antwortart aus einem angenommenen Duell-Link (auch ältere »type«-Links); sonst entscheidet die Sitzung (sess.ans)
 let printColsOff = null;      // beim Lernlisten-Druck abgewählte Spalten (Set von Schlüsseln: g/a/fam/de/zp/chk)
 
 /* Nur-Prüfungsstoff-Modus: Die Fachwerker-Abschlussprüfung bewertet ausschließlich
@@ -593,15 +592,16 @@ function stepHTML(boxOpt){
 }
 
 /* ---------- Lernserie + Tagesziel (Gewohnheits-Motor) ----------
-   Ein Serientag zählt, sobald das Tagesziel erreicht ist (einstellbar, Standard
-   20 Karten) – denn der Karteikasten wirkt nur bei regelmäßigem Üben; genau das
-   wird belohnt. Global über alle Profile (EIN Lernender, EINE Gewohnheit).
-   Speicher: pflanzenlernen.streak = {d:Datum, n:Karten heute, g:Ziel,
-   s:Serie, b:Rekord, gd:letzter Zieltag}. */
+   Ein Serientag zählt, sobald 20 Karten bearbeitet sind (etwa eine Lektion; fest – das
+   frühere Einstellfeld ist entfallen, weniger ist mehr) – denn der Karteikasten wirkt nur
+   bei regelmäßigem Üben; genau das wird belohnt. Global über alle Profile (EIN Lernender,
+   EINE Gewohnheit). Speicher: pflanzenlernen.streak = {d:Datum, n:Karten heute,
+   s:Serie, b:Rekord, gd:letzter Zieltag}; ein altes Feld g (Ziel) wird ignoriert. */
 const LS_STREAK = LS_PREFIX+"streak";
+const DAY_GOAL = 20;
 function streakLoad(){ try{ const s=JSON.parse(store.get(LS_STREAK)||"{}"); return (s&&typeof s==="object")?s:{}; }catch(e){ return {}; } }
 function streakSave(s){ try{ store.set(LS_STREAK, JSON.stringify(s)); }catch(e){} }
-function streakGoal(){ const g=+(streakLoad().g||0); return g>=5?g:20; }
+function streakGoal(){ return DAY_GOAL; }
 function streakState(){                        // aufgeräumter Blick auf heute (Tageswechsel + gerissene Serie)
   const s=streakLoad(), t=todayISO();
   if(s.d!==t){ s.d=t; s.n=0; }
@@ -624,31 +624,26 @@ function streakBump(){
   }catch(e){ /* Belohnung ist Kür */ }
 }
 
-/* ---------- Erfahrungspunkte + botanische Ränge ----------
-   Didaktisches Prinzip: Je schwerer das Abrufen, desto mehr Punkte – Tippen
-   (freies Erinnern) bringt doppelt so viel wie Ankreuzen, die Selbsteinschätzung
-   der Karteikarte am wenigsten. Teilweise richtig gibt anteilig. Global über
-   alle Profile (Key pflanzenlernen.xp = {x:Punkte, r:zuletzt gefeierter Rang}). */
+/* ---------- Botanische Ränge = Lernstand ----------
+   Der Rang richtet sich ALLEIN nach dem Lernstand (Rückmeldung: die früheren Punkte waren
+   durch die Lernstand-Bedingung ohnehin bedeutungslos – sie wurden immer früher erreicht):
+   erst angefangene Arten, dann Arten, die wirklich »sitzen« (Box 4–5, also mehrere richtige
+   Antworten über Tage; die Intervalle machen das bewusst langsam). Maßgeblich ist das am
+   weitesten gediehene Profil – der Rang ist global, der Lernstand je Profil. Die Stufen
+   kommen nur der Reihe nach. Gespeichert wird nur der zuletzt gefeierte Rang
+   (pflanzenlernen.xp = {r}; das frühere Punktekonto x wird ignoriert). */
 const LS_XP = LS_PREFIX+"xp";
-/* Rang = Punkte UND Lernstand (Rückmeldung: »Prachtexemplar« nach 20 sitzenden Arten und
-   leerem Herbarium). Punkte messen Fleiß, nicht Können – jede Stufe verlangt deshalb
-   zusätzlich, dass der Lernstand mitwächst: erst angefangene Arten, dann Arten, die wirklich
-   »sitzen« (Box 4–5, also mehrere richtige Antworten über Tage; die Intervalle machen das
-   bewusst langsam). Maßgeblich ist das am weitesten gediehene Profil – der Rang ist global,
-   der Lernstand je Profil. Die Stufen werden nur der Reihe nach erreicht. */
 const RANKS = [                                  // Gärtner-Laufbahn statt Level-Zahlen – jede Stufe erklärt sich selbst
-  {n:"Keimling",          x:0,    d:"gerade aufgegangen – die ersten Punkte"},
-  {n:"Sämling",           x:150,  d:"erste Blätter – du bist dabei",          g:{started:10}},
-  {n:"Steckling",         x:500,  d:"schlägt Wurzeln – regelmäßig am Üben",   g:{fest:5}},
-  {n:"Jungpflanze",       x:1200, d:"wächst kräftig – viele Namen sitzen",    g:{share:0.25}},
-  {n:"Prachtexemplar",    x:2500, d:"voll entwickelt – kaum noch Lücken",     g:{share:0.6}},
-  {n:"Meistergärtner/in", x:5000, d:"kennt sie alle – die höchste Stufe",     g:{share:0.9}}
+  {n:"Keimling",          d:"gerade aufgegangen – los geht's"},
+  {n:"Sämling",           d:"erste Blätter – du bist dabei",          g:{started:10}},
+  {n:"Steckling",         d:"schlägt Wurzeln – regelmäßig am Üben",   g:{fest:5}},
+  {n:"Jungpflanze",       d:"wächst kräftig – viele Namen sitzen",    g:{share:0.25}},
+  {n:"Prachtexemplar",    d:"voll entwickelt – kaum noch Lücken",     g:{share:0.6}},
+  {n:"Meistergärtner/in", d:"kennt sie alle – die höchste Stufe",     g:{share:0.9}}
 ];
-const RANK_HOW = "Punkte gibt es für richtige Antworten: Selbst eingeben 10 · Auswahl 5 · Karteikarte 3 – plus Bonus ab drei Treffern in Folge. Höhere Ränge brauchen zusätzlich Arten, die wirklich sitzen – Punkte allein reichen nicht.";
-const XP_BASE = { cards:3, quiz:5, type:10 };    // Karteikarte < Auswahl < freies Tippen
+const RANK_HOW = "Der Rang richtet sich allein nach deinem Lernstand: wie viele Arten du angefangen hast und wie viele sicher sitzen (Stufe 4–5) – im Beruf, in dem du am weitesten bist. Jede Übungsform zählt gleich.";
 function xpLoad(){ try{ const o=JSON.parse(store.get(LS_XP)||"{}"); return (o&&typeof o==="object")?o:{}; }catch(e){ return {}; } }
-function xpSave(o){ try{ store.set(LS_XP, JSON.stringify(o)); }catch(e){} }
-function xpTotal(){ return Math.max(0, +(xpLoad().x||0)); }
+function xpSave(o){ try{ store.set(LS_XP, JSON.stringify({ r: Math.max(0, +(o&&o.r)||0) })); }catch(e){} }
 function gateText(r){                            // Lernstand-Bedingung einer Stufe in Worten
   const g=r.g||{};
   if(g.started) return `${g.started} Arten angefangen`;
@@ -695,33 +690,19 @@ function masteryBest(){                          // das am weitesten gediehene P
   }catch(e){}
   return best;
 }
-function rankOf(xp, m){                          // m: Lernstand (Standard: bestes Profil)
-  m = m || masteryBest();
+function rankOf(m){                              // m: Lernstand (Standard: bestes Profil)
+  m = (m && typeof m==="object") ? m : masteryBest();
   let i=0;
-  for(let k=1;k<RANKS.length;k++){ if(xp>=RANKS[k].x && gateOk(RANKS[k], m)) i=k; else break; }   // nur der Reihe nach
+  for(let k=1;k<RANKS.length;k++){ if(gateOk(RANKS[k], m)) i=k; else break; }   // nur der Reihe nach
   const cur=RANKS[i], next=RANKS[i+1]||null;
-  const spanne = next ? next.x-cur.x : 1;
-  const xpPct = next ? Math.min(100, Math.round(Math.max(0,xp-cur.x)/spanne*100)) : 100;
-  return { i, name:cur.n, next:next?next.n:null, need:next?Math.max(0,next.x-xp):0,
-           needText: next ? gateNeed(next, m) : "",
-           pct: next ? Math.min(xpPct, gatePct(next, m)) : 100 };
+  return { i, name:cur.n, next:next?next.n:null, needText: next ? gateNeed(next, m) : "", pct: next ? gatePct(next, m) : 100 };
 }
-function rankCheck(anchor){                      // Rang neu bestimmen – gestiegen (Punkte ODER Lernstand) → einmalig feiern
+function rankCheck(anchor){                      // Rang neu bestimmen – gestiegen (eine Art mehr sitzt) → einmalig feiern
   try{
-    const o=xpLoad(), i=rankOf(Math.max(0,+o.x||0)).i, r=+o.r||0;
+    const o=xpLoad(), i=rankOf().i, r=+o.r||0;
     if(i>r){ o.r=i; xpSave(o); toast(`Neuer Rang: ${RANKS[i].n} – ${RANKS[i].d}`); celebrate(anchor||$("#stage")||document.body, 2); }
     else if(i<r){ o.r=i; xpSave(o); }           // gesunken (z. B. neue Regel): der nächste Aufstieg wird wieder gefeiert
   }catch(e){}
-}
-function xpAdd(n, anchor){                       // Punkte gutschreiben, Rangaufstieg feiern
-  n = Math.max(0, Math.round(n||0));
-  if(!n) return 0;
-  try{
-    const o=xpLoad(); o.x=(+o.x||0)+n; xpSave(o);
-    rankCheck(anchor);
-    if(sess.active) sess.xp=(sess.xp||0)+n;      // in der Sitzungsleiste mitzählen
-  }catch(e){}
-  return n;
 }
 /* Rangliste als echtes Popover (Top-Layer, Light-Dismiss + Esc kommen von der
    Plattform), am Rang-Namen verankert. Nur wenn Popover UND Anchor-Positioning
@@ -730,21 +711,21 @@ function canPopover(){
   try{ return ("popover" in HTMLElement.prototype) && window.CSS && CSS.supports("anchor-name: --a"); }
   catch(e){ return false; }
 }
-function rankRowsHTML(jetzt){                     // eine Zeile je Rang: Name · ab wie vielen Punkten · was er bedeutet
-  return RANKS.map((r,i)=>{ const gt=gateText(r);
-    return `<div class="rkp-row${i===jetzt?" on":""}"><span class="r-n">${esc(r.n)}</span><span class="r-x">ab ${r.x} P.${gt?` · ${esc(gt)}`:""}</span><span class="r-d">${esc(r.d||"")}</span></div>`; }).join("");
+function rankRowsHTML(jetzt){                     // eine Zeile je Rang: Name · Bedingung am Lernstand · was er bedeutet
+  return RANKS.map((r,i)=>{ const gt=gateText(r)||"Start";
+    return `<div class="rkp-row${i===jetzt?" on":""}"><span class="r-n">${esc(r.n)}</span><span class="r-x">${esc(gt)}</span><span class="r-d">${esc(r.d||"")}</span></div>`; }).join("");
 }
 /* Dieselbe Laufbahn als Dialog – für Browser ohne Popover/Anchor-Positioning (der
    Rang-Knopf bleibt so nie tot; ein Tooltip ist am Handy unsichtbar). */
 function openRankModal(){
   closeInfo();
-  const xp=xpTotal(), m=masteryBest(), r=rankOf(xp, m), jetzt=r.i;
+  const m=masteryBest(), r=rankOf(m), jetzt=r.i;
   const scrim = el("div","scrim"); scrim.id="infoScrim";
   scrim.innerHTML = `<div class="modal rankmodal" role="dialog" aria-modal="true" aria-label="Deine Laufbahn">
      <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
      <div class="modal-head">
        <div class="mh-bot fam">Deine Laufbahn</div>
-       <div class="mh-fam">${xp} Punkte · ${m.fest} von ${m.n} Arten sitzen · Rang: ${esc(RANKS[jetzt].n)}${r.next?` · bis ${esc(r.next)}: ${esc([r.need?`noch ${r.need} P.`:"", r.needText].filter(Boolean).join(" und ") || "gleich geschafft")}`:""}</div>
+       <div class="mh-fam">${m.fest} von ${m.n} Arten sitzen · Rang: ${esc(RANKS[jetzt].n)}${r.next?` · bis ${esc(r.next)}: ${esc(r.needText || "gleich geschafft")}`:""}</div>
      </div>
      <div class="rkp-list">${rankRowsHTML(jetzt)}</div>
      <div class="famfoot">${esc(RANK_HOW)}</div>
@@ -759,7 +740,7 @@ function openRankModal(){
 function wireRankPopover(){
   const chip=$("#rankName"); if(!chip) return;
   if(chip.tagName!=="BUTTON"){ chip.setAttribute("role","button"); chip.tabIndex=0; }
-  chip.setAttribute("aria-label","Laufbahn ansehen: alle Ränge, was sie bedeuten und ihre Punktzahlen");
+  chip.setAttribute("aria-label","Laufbahn ansehen: alle Ränge, was sie bedeuten und welcher Lernstand dafür nötig ist");
   if(!canPopover()){                             // kein Popover/Anchor: Übersicht als Dialog
     chip.onclick=openRankModal;
     chip.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openRankModal(); } };
@@ -770,39 +751,31 @@ function wireRankPopover(){
     pop=el("div"); pop.id="rankPop"; pop.setAttribute("popover","auto");
     document.body.appendChild(pop);
   }
-  const m=masteryBest(), r=rankOf(xpTotal(), m), jetzt=r.i;
+  const m=masteryBest(), r=rankOf(m), jetzt=r.i;
   pop.innerHTML = `<div class="rkp-h">Deine Laufbahn <span class="rkp-m">${m.fest} von ${m.n} Arten sitzen</span></div>`+rankRowsHTML(jetzt)+
-    (r.next?`<div class="rkp-need">Bis ${esc(r.next)}: ${esc([r.need?`noch ${r.need} P.`:"", r.needText].filter(Boolean).join(" und ") || "gleich geschafft")}</div>`:"")+
+    (r.next?`<div class="rkp-need">Bis ${esc(r.next)}: ${esc(r.needText || "gleich geschafft")}</div>`:"")+
     `<div class="rkp-f">${esc(RANK_HOW)}</div>`;
   const zeig=()=>{ try{ pop.togglePopover(); }catch(e){} };
   chip.onclick=zeig;
   chip.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); zeig(); } };
 }
 /* ---------- Sitzungs-Combo (Treffer in Folge) ----------
-   Kein Zeitdruck – nur eine Serie richtiger Antworten innerhalb der Sitzung.
-   Ab 3 in Folge gibt es Bonuspunkte, bei 5/10/15… ein größeres Feuerwerk.
-   Nur in bewerteten Modi (Quiz, Tippen, Bilder) – bei der Karteikarte könnte
-   man sich sonst durch »Gewusst« klicken. */
-function comboBonus(n){ return n>=10 ? 8 : n>=5 ? 4 : n>=3 ? 2 : 0; }
+   Kein Zeitdruck – nur eine Serie richtiger Antworten innerhalb der Sitzung. Ab 3 in
+   Folge sichtbar, bei 5/10/15… ein größeres Feuerwerk. Nur in bewerteten Modi (Quiz,
+   Selbst eingeben, Bilder) – bei der Karteikarte könnte man sich sonst durch »Gewusst«
+   klicken. Punkte gibt es dafür keine mehr: Punkte sind jetzt allein die des Bogens. */
 function comboHit(ok, anchor){
   if(!scoreable()) return 0;                     // Karteikarten: keine Combo
   if(!ok){ sess.combo=0; return 0; }
   sess.combo=(sess.combo||0)+1;
   sess.comboMax=Math.max(sess.comboMax||0, sess.combo);
-  const n=sess.combo, bonus=comboBonus(n);
+  const n=sess.combo;
   if(n>=5 && n%5===0){                           // 5er-Stufen: größere Feier + kräftigere Haptik
     celebrate(anchor||$("#fb")||document.body, 2);
     buzz([14,40,14,40,30]);
-    toast(`${n} richtige in Folge! +${bonus} Punkte`);
+    toast(`${n} richtige in Folge!`);
   }
-  return bonus;
-}
-/* Ein Treffer wird verbucht: Grundpunkte je Übungsform × Anteil + Combo-Bonus. */
-function scoreHit(kind, ok, anteil, anchor){
-  const base = XP_BASE[kind]||XP_BASE.quiz;
-  const teil = Math.max(0, Math.min(1, anteil==null ? (ok?1:0) : anteil));
-  const bonus = comboHit(ok, anchor);
-  return xpAdd(base*teil + (ok?bonus:0), anchor);
+  return n;
 }
 
 /* ---------- Auswahl / Filter ---------- */
@@ -857,9 +830,10 @@ function playableDirs(){                                // was die Engine spiele
   if(mode!=="photo") return DIRS_TEXT;
   return phAns()==="mc" ? DIRS_PHOTO : DIRS_PHOTO.filter(d=>d!=="img2both");  // »voller Name« braucht die 4 Auswahl-Optionen
 }
-/* Antwortart der laufenden Bildfrage: in der geführten Lektion je Karte (nach Lernstand),
-   sonst die gewählte unter »Optionen · Antwort«. */
-function phAns(){ return (sess && sess.active && sess.ans) || photoAnswer; }
+/* Antwortart der laufenden Bildfrage: je Sitzung bzw. Karte (geführt: nach Lernstand,
+   Probeprüfung: eingeben, Modus »Bilder«: Auswahl); ein angenommener Duell-Link kann eine
+   andere vorgeben (chAns) – ein Einstellfeld dafür gibt es nicht mehr. */
+function phAns(){ return (sess && sess.active && sess.ans) || chAns || "mc"; }
 function curDir(){                                 // gültige Richtung für den aktuellen Modus
   const d = mode==="photo" ? dirPhoto : dirText, ok = playableDirs();
   if(ok.includes(d)) return d;
@@ -1040,18 +1014,10 @@ const FIELD_ORDER = ["g","a","fam","de"];
 const examCols  = () => PRINT_COLS[printFamily()];
 const examPts   = k => { const c=examCols().find(x=>x[0]===k); return c?c[3]:1; };
 const examLabel = k => { const c=examCols().find(x=>x[0]===k); return c?c[1]:(FIELD_LABEL[k]||k); };
-function defaultExamFields(){ return examCols().map(c=>c[0]); }        // Standard = Bogen des Profils
-function examFieldsKey(){ return LS_PREFIX+"examfields."+profileId; }
-function loadExamFields(){
-  let v=null;
-  try{ v=JSON.parse(store.get(examFieldsKey())||"null"); }catch(e){ v=null; }
-  examFields = (Array.isArray(v) && v.length && v.every(k=>FIELD_LABEL[k])) ? v : defaultExamFields();
-}
-function saveExamFields(){ try{ store.set(examFieldsKey(), JSON.stringify(examFields)); }catch(e){} }
-function examFieldList(){                                             // Bogen-Reihenfolge, Rest hinten
-  const order = examCols().map(c=>c[0]).concat(FIELD_ORDER);
-  return order.filter((k,i)=> order.indexOf(k)===i && examFields.includes(k));
-}
+/* Gefragt werden immer ALLE bewerteten Felder des Bogens dieser Fachrichtung, in Bogen-
+   Reihenfolge – das frühere Abwählen einzelner Felder (je Profil gespeichert) ist entfallen:
+   weniger Bedienelemente, und die Probeprüfung soll ohnehin den ganzen Bogen stellen. */
+function examFieldList(){ return examCols().map(c=>c[0]); }
 function fieldSolution(k,c){                                          // richtige Antwort zum Anzeigen
   if(k==="fam") return famName(c.fam);
   if(k==="de")  return c.de||"";
@@ -1235,50 +1201,48 @@ function renderProgress(){
   let neu=0,lern=0,fest=0;
   p.forEach(c=>{ const b=pget(c.key).box||0; if(!b) neu++; else if(b>=4) fest++; else lern++; });
   const tot=p.length||1;
+  rankCheck();                                                  // Aufstieg durch den Lernstand (eine Art mehr »sitzt«)
+  const m=masteryBest(), r=rankOf(m), st=streakState(), goal=streakGoal(), done=Math.min(st.n||0, goal);
+  const bis = r.next ? `bis ${r.next}: ${r.needText||"gleich geschafft"}` : "höchste Stufe erreicht";
   $("#progress").hidden = false;
+  // EINE Fortschrittskarte: Rang-Zeile (Lernstand in Worten) · Balken · Legende + Serie + Herbarium
   $("#progress").innerHTML =
-    `<div class="pstat"><span class="n">${p.length}</span><span class="l">Arten</span></div>
+    `<div class="phead">
+       <button class="rankline" id="rankName" title="Dein Rang richtet sich nach dem Lernstand – ${m.fest} von ${m.n} Arten sitzen · ${esc(bis)}. Antippen zeigt alle Stufen.">
+         ${ico("sprout")}<span class="rk-name">${esc(r.name)}</span><span class="rk-sub">${m.fest} von ${m.n} Arten sitzen</span></button>
+     </div>
      <div class="pbar">
        <span class="b-fest" style="width:${fest/tot*100}%"></span>
        <span class="b-lern" style="width:${lern/tot*100}%"></span>
        <span class="b-neu" style="width:${neu/tot*100}%"></span>
      </div>
-     <div class="plegend">
-       <span title="Sicher gemerkt – Box 4–5. Kommt nur noch selten dran.">
-         <i class="b-fest" style="background:var(--green)"></i>${fest} sitzt</span>
-       <span title="In Arbeit – Box 1–3. Wird gerade wiederholt.">
-         <i class="b-lern" style="background:var(--gold)"></i>${lern} am Lernen</span>
-       <span title="Noch nie bewertet.">
-         <i class="b-neu" style="background:var(--rule-strong)"></i>${neu} neu</span>
-       <button class="legend-i" id="btnHow" aria-label="So wächst dein Fortschritt" title="So wächst dein Fortschritt – die fünf Stufen erklärt">${ico("info")}</button>
-     </div>
-     ${(()=>{ const st=streakState(), goal=streakGoal(), done=Math.min(st.n||0, goal);
-       rankCheck();                                                  // Aufstieg auch durch den Lernstand (eine Art mehr »sitzt«)
-       const xp=xpTotal(), r=rankOf(xp);
-       const bis = r.next ? ` · bis ${esc(r.next)}: ${esc([r.need?`noch ${r.need} P.`:"", r.needText].filter(Boolean).join(" und ") || "gleich geschafft")}` : "";
-       // EINE kompakte Chip-Zeile statt drei Textzeilen: Serie · Tagesziel · Rang · Herbarium
-       return `<div class="statusrow" id="streakRow">
-         <span class="chip flamechip${(st.s||0)>0?" on":""}" title="Lernserie: an so vielen Tagen in Folge hast du dein Tagesziel erreicht. Rekord: ${st.b||0} ${(st.b||0)===1?"Tag":"Tage"}.">
-           <span class="sflame${(st.s||0)>0?" on":""}">${ico("flame")}<b>${st.s||0}</b></span></span>
-         <span class="chip goalchip" title="Heute bearbeitete Karten – ab dem Tagesziel (${goal}) zählt der Tag für die Serie. Einstellbar unter Optionen.">
-           <span class="ring" style="--p:${Math.round(done/goal*100)}"></span><span class="sr-n">${done}/${goal} heute</span></span>
-         <button class="chip rankchip" id="rankName" title="Rang aus Punkten und Lernstand – höhere Stufen brauchen Arten, die wirklich sitzen. ${xp} P.${bis}">
-           ${ico("sprout")}<span class="rk-name">${esc(r.name)}</span><i class="rk-mini"><b style="width:${r.pct}%"></b></i></button>
+     <div class="pfoot">
+       <div class="plegend">
+         <span title="Sicher gemerkt – Stufe 4–5. Kommt nur noch selten dran."><i class="b-fest" style="background:var(--green)"></i>${fest} sitzt</span>
+         <span title="In Arbeit – Stufe 1–3. Wird gerade wiederholt."><i class="b-lern" style="background:var(--gold)"></i>${lern} am Lernen</span>
+         <span title="Noch nie bewertet."><i class="b-neu" style="background:var(--rule-strong)"></i>${neu} neu</span>
+         <button class="legend-i" id="btnHow" aria-label="So wächst dein Fortschritt" title="So wächst dein Fortschritt – die fünf Stufen erklärt">${ico("info")}</button>
+       </div>
+       <div class="statusrow" id="streakRow">
+         <span class="chip flamechip${(st.s||0)>0?" on":""}" title="Lernserie: an so vielen Tagen in Folge hast du ${goal} Karten bearbeitet (etwa eine Lektion). Heute: ${done} von ${goal}. Rekord: ${st.b||0} ${(st.b||0)===1?"Tag":"Tage"}.">
+           <span class="sflame${(st.s||0)>0?" on":""}">${ico("flame")}<b>${st.s||0}</b></span><span class="sr-n">· ${done}/${goal} heute</span></span>
          <button class="chip" id="btnHerb" title="Deine Themen-Sammlung: Jedes gemeisterte Thema legt eine gepresste Pflanze ins Herbarium.">${ico("leaf")}Herbarium</button>
-       </div>`; })()}`;
+       </div>
+     </div>`;
   wireRankPopover();
   const hb=$("#btnHerb"); if(hb) hb.onclick=openHerbarium;
   const bh=$("#btnHow"); if(bh) bh.onclick=openHowModal;
   const due = p.filter(c=>{ const pr=pget(c.key); return !pr.box || !pr.due || pr.due<=todayISO(); }).length;
-  const wie = mode==="photo" ? (photoAnswer==="exam" ? "wie in der Prüfung" : DIRS[curDir()].label+" · "+phLabel(photoAnswer))
-                            : DIRS[curDir()].label;
+  const wie = mode==="photo" ? "Bild → voller Name" : DIRS[curDir()].label;
   $("#startHint").textContent = p.length ? `${due} Karten heute dran · ${wie}` : "Keine Arten in der aktuellen Auswahl.";
   $("#btnStart").disabled = !p.length;
   const hasProg = p.some(c=>pget(c.key).box);
-  const go=$("#btnGo");
-  if(go){ go.disabled = !p.length; go.textContent = hasProg ? "Weiter lernen" : "Loslegen"; }
+  const go=$("#btnGo"), gl=$("#goLabel");
+  if(go){ go.disabled = !p.length; if(gl) gl.textContent = hasProg ? "Weiter lernen" : "Loslegen"; }
   const gh=$("#goHint");
-  if(gh) gh.innerHTML = p.length ? `${ico("cards")}<b>${due}</b> heute dran` : "Keine Arten in der aktuellen Auswahl.";
+  if(gh) gh.textContent = p.length ? `${due} Karten heute dran · jede als Bild` : "Keine Arten in der aktuellen Auswahl.";
+  const ex=$("#btnExam"), eh=$("#examHint");
+  if(ex){ ex.disabled = !allCards.length; if(eh) eh.textContent = `${probeCount()} Pflanzen am Bild · alle Felder des Bogens · Note`; }
 }
 
 /* ---------- Kleine Belohnung: Feuerwerk + Haptik bei einem Treffer ----------
@@ -1406,6 +1370,10 @@ const CH_FORMS = ["cards","quiz","photo","type"];
    sich wie bisher nach CH_FORMS. Reihenfolge ebenfalls NICHT ändern. */
 const CH_FORMS_PH = ["cards","quiz","photo","photoExam"];
 const CH_PHOTO_ONLY = 16;
+/* Bit 5 im selben Zusatzbyte: die Lektion war eine Probeprüfung (alle Karten Bild + Eingabe, keine
+   zweite Chance, Note am Ende). Ältere Leser ignorieren das Bit und spielen die Karten als geführte
+   Lektion – dieselbe Aufgabe, nur ohne Notenzeile. */
+const CH_PROBE = 32;
 const CH_VER   = 3;
 
 function vPut(out, n){                     // Varint: kleine Zahlen = ein Byte
@@ -1446,7 +1414,7 @@ function chEncode(o){
   // Antwortart gehört zur Aufgabe; bei der geführten Lektion zusätzlich die
   // Bild-Richtung (sie hat ja Bild- UND Textkarten) – beides in einem Byte.
   if(o.m==="photo") out.push(Math.max(0, CH_PHA.indexOf(o.a||"mc")));
-  else if(o.m==="guided") out.push((o.po ? CH_PHOTO_ONLY : 0) | (Math.max(0, CH_PHA.indexOf(o.a||"mc"))<<2) | Math.max(0, DIRS_PHOTO.indexOf(o.rp||"img2bot")));
+  else if(o.m==="guided") out.push((o.po ? CH_PHOTO_ONLY : 0) | (o.pr ? CH_PROBE : 0) | (Math.max(0, CH_PHA.indexOf(o.a||"mc"))<<2) | Math.max(0, DIRS_PHOTO.indexOf(o.rp||"img2bot")));
   const idx = o.i||[];
   vPut(out, idx.length); idx.forEach(n=>vPut(out,n));
   if(o.m==="guided"){                                   // Übungsform je Karte, 4 Karten pro Byte
@@ -1477,9 +1445,9 @@ function chDecode(s){
         if(pi===15){ const len=vGet(raw,st); let t=""; for(let k=0;k<len;k++) t+=String.fromCharCode(raw[st.i++]); p=decodeURIComponent(escape(t)); }
         else p = CH_PROFILES[pi] || "";
         const m = CH_MODES[(head>>>2)&3] || "quiz";
-        let a = "mc", rp = "img2bot", po = false;
+        let a = "mc", rp = "img2bot", po = false, pr = false;
         if(ver===3 && m==="photo") a = CH_PHA[raw[st.i++]] || "mc";
-        else if(ver===3 && m==="guided"){ const b=raw[st.i++]; a = CH_PHA[(b>>>2)&3]||"mc"; rp = DIRS_PHOTO[b&3]||"img2bot"; po = !!(b & CH_PHOTO_ONLY); }
+        else if(ver===3 && m==="guided"){ const b=raw[st.i++]; a = CH_PHA[(b>>>2)&3]||"mc"; rp = DIRS_PHOTO[b&3]||"img2bot"; po = !!(b & CH_PHOTO_ONLY); pr = !!(b & CH_PROBE); }
         const cnt=vGet(raw,st), i=[];
         for(let k=0;k<cnt;k++) i.push(vGet(raw,st));
         let f = null;
@@ -1493,7 +1461,7 @@ function chDecode(s){
         for(let k=0;k<nl;k++) nm += String.fromCharCode(raw[st.i++]);
         const dirs = CH_DIR3[m] || DIRS_TEXT;
         const r = ver===3 ? (dirs[head&3] || dirs[0]) : (CH_DIRS[head&3] || "de2bot");
-        const o = { v:ver, p, m, r, a, rp, po, f, i, s:sc, t, z, n:decodeURIComponent(escape(nm)) };
+        const o = { v:ver, p, m, r, a, rp, po, pr, f, i, s:sc, t, z, n:decodeURIComponent(escape(nm)) };
         return chPlausible(o) ? o : null;
       }
     }
@@ -1524,7 +1492,7 @@ function challengeURL(){                  // aktuelle Sitzung als Herausforderun
   // Die geführte Lektion wird als eigener Modus geteilt: die Übungsform je Karte
   // fährt mit, gezählt wird über die BEWERTETEN Karten (Karteikarten geben keine Quote).
   const payload = { v:CH_VER, p:profileId, m: auto ? "guided" : mode,
-                    r: auto ? dirText : curDir(), a:photoAnswer, rp: dirPhoto, po: auto && !!sess.photoOnly,
+                    r: auto ? dirText : curDir(), a: sess.ans || chAns || "mc", rp: dirPhoto, po: auto && !!sess.photoOnly, pr: !!sess.probe,
                     f: auto ? (sess.cards||[]).map(c=>(sess.formOf&&sess.formOf.get(c))||"quiz") : null,
                     i:idx, s:sess.correct, t: auto ? (sess.scored||0) : sess.done,
                     z:Math.round((sess.ms||0)/1000), n:duelName() };
@@ -1536,7 +1504,7 @@ function chModeLabel(m){
 function duelMessage(url){
   const who = duelName().trim();
   const auto = !!sess.auto;
-  const modeLabel = chModeLabel(auto ? "guided" : mode);
+  const modeLabel = sess.probe ? "Probeprüfung" : chModeLabel(auto ? "guided" : mode);
   const fr = frNameOf(profileId);
   const zeit = sess.ms ? ` in ${fmtDur(sess.ms)} min` : "";
   const von = auto ? (sess.scored||0) : sess.done;
@@ -1588,9 +1556,9 @@ function showChallengeBanner(ch){
   const b=$("#duelBanner"); if(!b) return;
   const who=(ch.n||"").trim();
   const theirAcc = ch.t ? Math.round(ch.s/ch.t*100) : 0;
-  const modeLabel = chModeLabel(ch.m);
+  const modeLabel = ch.pr ? "Probeprüfung" : chModeLabel(ch.m);
   // Aufgabenstellung mit ansagen – gefragt ist genau dasselbe wie beim Herausforderer
-  const wie = ch.m==="guided" ? (ch.po ? "mit Bildern, Antwort nach Lernstand" : "gemischte Übungsformen")
+  const wie = ch.pr ? "jede Pflanze als Bild · alle Felder des Bogens" : ch.m==="guided" ? (ch.po ? "mit Bildern, Antwort nach Lernstand" : "gemischte Übungsformen")
             : ch.m==="photo" && ch.a==="exam" ? "wie in der Prüfung"
             : (DIRS[ch.r] ? DIRS[ch.r].label : "") + (ch.m==="photo" && ch.a==="type" ? " · Namen eingeben" : "");
   const n=(ch.i||[]).length;
@@ -1626,7 +1594,7 @@ function startChallenge(){                // genau die Karten der Herausforderun
   if(ch.m==="guided" && Array.isArray(ch.f) && ch.f.length===cards.length){
     const formOf = new Map();
     cards.forEach((c,k)=>formOf.set(c, ch.f[k]));
-    sess.auto = true; sess.scored = 0; sess.formOf = formOf; sess.modeBefore = mode; sess.photoOnly = !!ch.po;
+    sess.auto = true; sess.scored = 0; sess.formOf = formOf; sess.modeBefore = mode; sess.photoOnly = !!ch.po; sess.probe = !!ch.pr;
   }
   clockRun(true); stageFull(true);
   nextCard();
@@ -1651,10 +1619,11 @@ function stageFull(on){
     }
   }catch(e){}
 }
-function startSession(){
+function startSession(opts){                // opts.ans: feste Antwortart im Bilder-Modus (»exam« = wie in der Prüfung; intern/Tests)
   endChallengeOverride();                 // eigene Sitzung: eigene Einstellungen
   queue = buildQueue(); qi = 0; photoMisses = 0; qStart = 0;
-  sess = { id:++sessSeq, total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, baseMode:mode, cards:queue.slice(), challenge:null };
+  sess = { id:++sessSeq, total:queue.length, done:0, correct:0, ms:0, pts:null, active:true, baseMode:mode, cards:queue.slice(), challenge:null,
+           fixedAns: (opts && opts.ans) || null };
   if(!queue.length){ toast("Keine Arten im aktuellen Filter",true); return; }
   clockRun(true); stageFull(true);
   nextCard();
@@ -1688,9 +1657,33 @@ function startGuided(){
   clockRun(true); stageFull(true);
   nextCard();
 }
-/* Dieselben Karten als REINES Auswahl-Quiz spielen – z. B. um eine geführte
-   Lektion noch einmal am Stück abzufragen. (Fürs Teilen braucht es das nicht
-   mehr: die geführte Lektion ist seit v3 des Links direkt duellfähig.) */
+/* ---------- Probeprüfung (zweiter Start-Knopf) ----------
+   Wie am Prüfungstag: so viele Pflanzen wie auf dem Bogen (20 Gärtner / 15 Fachwerker),
+   zufällig aus der ganzen Liste (bei »nur ZP-relevant« nur aus diesen), jede als Bild, und zu
+   jeder ALLE bewerteten Felder des Bogens zum Selbst-Eingeben – mit den Punkten der Fachrichtung
+   (PRINT_COLS). Keine zweite Chance je Pflanze (requeueCurrent setzt aus), Schreibfehler halbieren
+   die Punkte des Feldes (wie auf dem amtlichen Bogen). Am Ende Punkte, Prozent und Note nach dem
+   linearen Schlüssel Baden-Württembergs (1 ≥ 90 % · 2 ≥ 70 · 3 ≥ 50 · 4 ≥ 30 · 5 ≥ 10 · sonst 6 –
+   derselbe Standard wie im Prüfungswerkzeug). Technisch eine geführte Sitzung, deren Form für jede
+   Karte »photoExam« ist (sess.probe = true); so zählt sie in den Lernstand und ist über den
+   Duell-Link teilbar (CH_PROBE). */
+const GRADE_EDGES = [90,70,50,30,10];            // Prozent-Untergrenzen der Noten 1..5 (Baden-Württemberg, linear)
+function gradeOf(pct){ for(let i=0;i<GRADE_EDGES.length;i++){ if(pct>=GRADE_EDGES[i]) return i+1; } return 6; }
+function probeCount(){ return isFachwerker() ? 15 : 20; }   // Pflanzen je Bogen (Fachwerker/in 15, Gärtner/in 20)
+function startProbe(){
+  endChallengeOverride();
+  if(navigator.onLine===false){ toast("Für die Probeprüfung brauchst du Internet – jede Pflanze kommt als Bild.", true); return; }
+  const zp = $("#onlyzp") && $("#onlyzp").checked;
+  const p = allCards.filter(c=>!zp||c.zp); shuffle(p);
+  const q = p.slice(0, Math.min(probeCount(), p.length));
+  if(!q.length){ toast("Keine Arten in dieser Liste", true); return; }
+  const formOf = new Map(); q.forEach(c=>formOf.set(c, "photoExam"));
+  queue=q; qi=0; photoMisses=0; qStart=0;
+  sess = { id:++sessSeq, total:q.length, done:0, correct:0, scored:0, ms:0, pts:null, active:true, baseMode:mode,
+           cards:q.slice(), challenge:null, auto:true, formOf, modeBefore:mode, photoOnly:true, probe:true };
+  clockRun(true); stageFull(true);
+  nextCard();
+}
 function sessionBar(){
   const pct = sess.total? Math.round(sess.done/sess.total*100):0;
   return `<div class="sessionbar"><span>${sess.done} / ${sess.total}</span><span class="sbar"><i style="width:${pct}%"></i></span>`+
@@ -1710,6 +1703,7 @@ const GUIDED_WIE = { photo:"am Bild erkennen", photoExam:"am Bild · Namen selbs
                      quiz:"Auswahlfrage am Namen", cards:"selbst abrufen", type:"prüfungsnah eingeben" };
 function guidedNoteHTML(card){
   if(!sess.auto || !card) return "";
+  if(sess.probe && mode!=="quiz") return "";   // Probeprüfung: keine Pille – nur wenn eine Art mangels Bild als Auswahlfrage kommt
   const plan = sess.formOf ? sess.formOf.get(card) : undefined;
   let wie = GUIDED_WIE[plan] || GUIDED_WIE[mode];
   if(mode==="quiz" && (plan==="photo" || plan==="photoExam"))   // Bild war geplant, kommt aber nicht: ehrlich sagen, warum
@@ -1718,7 +1712,9 @@ function guidedNoteHTML(card){
   if(!wie) return "";
   const box = sess.boxOf ? sess.boxOf.get(card) : undefined;
   const stufe = box===undefined ? "" : box ? `Stufe ${box} von 5` : "Neu";
-  const title = sess.photoOnly
+  const title = sess.probe
+    ? `Probeprüfung: jede Pflanze kommt als Bild mit allen Feldern des Bogens – nur zu dieser Art gibt es kein Bild, deshalb eine Auswahlfrage.`
+    : sess.photoOnly
     ? `Die geführte Lektion zeigt jede Pflanze als Bild. Bis Stufe 2 wählst du aus vier Namen, ab Stufe 3 gibst du die Namen selbst ein – wie in der Prüfung. `+
       `Eine Auswahlfrage ohne Bild kommt nur, wenn es zu einer Art kein Bild gibt oder kein Internet da ist.`
     : `Herausforderung aus einer älteren Version: die Übungsform je Karte steht im Link.`;
@@ -1742,7 +1738,7 @@ function nextCard(){
     mode = f==="photoExam" ? "photo" : f;
     sess.ans = f==="photoExam" ? "exam" : (f==="photo" && sess.photoOnly) ? "mc" : null;   // ältere Links: Antwortart aus dem Link
   }
-  else if(sess.baseMode){ mode = sess.baseMode; sess.ans = null; }   // Bilder-Modus: Quiz-Ausweichen der Vorkarte zurücknehmen
+  else if(sess.baseMode){ mode = sess.baseMode; sess.ans = sess.fixedAns || null; }   // Bilder-Modus: Quiz-Ausweichen der Vorkarte zurücknehmen
   if(mode==="cards") renderCard();
   else if(mode==="quiz") renderQuiz();
   else if(mode==="photo") renderPhoto();
@@ -1752,6 +1748,7 @@ function nextCard(){
 }
 function advance(){ if(sess.auto && mode!=="cards") sess.scored=(sess.scored||0)+1; qi++; sess.done++; nextCard(); }
 function requeueCurrent(){ // "Nochmal"/falsch: Karte in dieser Sitzung später erneut zeigen
+  if(sess.probe) return;                        // Probeprüfung: keine zweite Chance – wie am Prüfungstag
   const pos = Math.min(queue.length, qi + 3 + Math.floor(Math.random()*3)); // 3–5 Karten später
   queue.splice(pos, 0, current); sess.total++;
 }
@@ -1771,7 +1768,10 @@ function finishSession(){
   // Quote fürs Vergleichen und Teilen: bei der geführten Lektion zählen nur die
   // BEWERTETEN Karten – Karteikarten geben keine Trefferquote.
   const accEff = auto ? accS : acc, doneEff = auto ? scoredN : sess.done;
-  let extra = "", gewonnen = auto ? (scoredN>0 && accS>=80) : (scoreable() && sess.done>0 && acc>=80);   // ohne Duell: gute Quote reicht
+  const probe = !!sess.probe;
+  const probePct = probe && sess.pts && sess.pts.max ? Math.round(sess.pts.sum/sess.pts.max*100) : null;   // Probeprüfung: Prozent der Bogenpunkte
+  let extra = "", gewonnen = probe ? (!aborted && probePct!=null && probePct>=70)   // Note 2 oder besser
+                           : auto ? (scoredN>0 && accS>=80) : (scoreable() && sess.done>0 && acc>=80);   // ohne Duell: gute Quote reicht
   if(ch){                                        // Vergleich Du ↔ Herausforderer
     const theirAcc = ch.t ? Math.round(ch.s/ch.t*100) : 0;
     const who = (ch.n||"").trim() || "Herausforderer";
@@ -1792,20 +1792,25 @@ function finishSession(){
   // Auswahl-Quiz spielen; die Übungsformen wandern jetzt im Link mit.
   const teilbar = auto ? scoredN>0 : (scoreable() && sess.done>0);
   const share = teilbar ? shareBlockHTML(ch ? "Mein Ergebnis zurückschicken" : "Ergebnis teilen · herausfordern") : "";
+  const noteHTML = (probe && !aborted && probePct!=null)   // Probeprüfung: Note nach dem BW-Schlüssel – nur vollständig gespielt
+    ? `<div class="grade"><span class="g-n">Note ${gradeOf(probePct)}</span><span class="g-sub">${probePct} % · ${nfmt(sess.pts.sum)} von ${nfmt(sess.pts.max)} Punkten</span></div>
+       <p class="g-key">Notenschlüssel Baden-Württemberg (linear): ${GRADE_EDGES.map((e,i)=>`${i+1} ab ${e} %`).join(" · ")} · 6 darunter</p>` : "";
   const stage=$("#stage");
-  stage.innerHTML = `<div class="stage-empty">
+  stage.innerHTML = `<div class="stage-empty${probe?" probe":""}">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6L9 17l-5-5"/></svg>
-    <h2>${aborted?"Sitzung beendet":"Sitzung geschafft"}</h2>
-    <p>${sess.done} Karten gelernt${auto ? (scoredN?` · ${sess.correct} richtig von ${scoredN} bewerteten (${accS} %)`:"") : (mode!=="cards"?` · ${sess.correct} richtig (${acc} %)`:"")}${sess.pts&&(auto||examScoring())?` · <b>${nfmt(sess.pts.sum)} von ${nfmt(sess.pts.max)} Punkten</b>`:""}${(auto?sess.ms:(scoreable()&&sess.ms))?` · Denkzeit ${fmtDur(sess.ms)}`:""}.</p>
-    ${(sess.xp||sess.comboMax>=3)?`<p class="xpline"><b>+${sess.xp||0} Erfahrungspunkte</b>${sess.comboMax>=3?` · beste Serie: ${sess.comboMax}× in Folge`:""} · Rang: ${esc(rankOf(xpTotal()).name)}</p>`:""}
+    <h2>${probe ? (aborted?"Probeprüfung abgebrochen":"Probeprüfung geschafft") : (aborted?"Sitzung beendet":"Sitzung geschafft")}</h2>
+    <p>${probe ? `${sess.done} von ${sess.total} Pflanzen${scoredN?` · ${sess.correct} ganz richtig`:""}`
+               : `${sess.done} Karten gelernt${auto ? (scoredN?` · ${sess.correct} richtig von ${scoredN} bewerteten (${accS} %)`:"") : (mode!=="cards"?` · ${sess.correct} richtig (${acc} %)`:"")}`}${sess.pts&&(auto||examScoring())&&!noteHTML?` · <b>${nfmt(sess.pts.sum)} von ${nfmt(sess.pts.max)} Punkten</b>`:""}${(auto?sess.ms:(scoreable()&&sess.ms))?` · Denkzeit ${fmtDur(sess.ms)}`:""}.</p>
+    ${noteHTML}
+    ${(sess.comboMax>=3 && !probe)?`<p class="xpline">Beste Serie: ${sess.comboMax}× richtig in Folge</p>`:""}
     ${extra}
     ${share}
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px">
-      <button class="btn primary" id="againBtn">Weiter lernen</button>
+      <button class="btn primary" id="againBtn">${probe?"Neue Probeprüfung":"Weiter lernen"}</button>
       <button class="btn ghost" id="btnOverview">Zur Übersicht</button>
     </div></div>`;
   wireShareBlock();
-  const a=$("#againBtn"); if(a) a.onclick = auto ? startGuided : startSession;
+  const a=$("#againBtn"); if(a) a.onclick = probe ? startProbe : (auto ? startGuided : startSession);
   const ov=$("#btnOverview"); if(ov) ov.onclick=exitSession;
   if(gewonnen) celebrate(stage.querySelector("h2"), 2);
   herbCheck();                                 // frisch gemeisterte Themen einmalig feiern
@@ -1865,8 +1870,8 @@ function flipCard(){
   // so sieht man auch hier, wie weit die Karte schon ist.
   rate.insertAdjacentHTML("afterend", stepHTML(cur));
   rate.querySelector(".r-again").onclick=()=>{ grade(c,"again"); requeueCurrent(); advance(); };
-  rate.querySelector(".r-hard").onclick =()=>{ grade(c,"hard"); xpAdd(1); advance(); };   // Teilwissen zählt ein wenig
-  rate.querySelector(".r-good").onclick =()=>{ grade(c,"good"); scoreHit("cards", true, 1); advance(); };
+  rate.querySelector(".r-hard").onclick =()=>{ grade(c,"hard"); advance(); };
+  rate.querySelector(".r-good").onclick =()=>{ grade(c,"good"); advance(); };
   try{ rate.querySelector(".r-again").focus(); }catch(e){}   // Tastatur: direkt bewerten (1/2/3 oder Tab)
 }
 
@@ -1903,7 +1908,7 @@ function answerQuiz(btn, chosen, opts){
   $("#fb").innerHTML = (ok ? `<span class="good">Richtig!</span>` : `<span class="bad">Leider falsch.</span>`)+
     ` <span class="sol">${solutionLine(c)}</span>` + stepHTML();
   if(ok) celebrate(btn, 1);
-  scoreHit("quiz", ok, ok?1:0, btn);                   // Punkte + Combo (Auswahl = mittlere Schwierigkeit)
+  comboHit(ok, btn);                                   // Treffer in Folge
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
 }
@@ -1915,7 +1920,6 @@ function answerQuiz(btn, chosen, opts){
    Schreibfehler) und Punktekonto wie im Bilder-Quiz »wie in der Prüfung«. */
 const TYPE_PH = { g:"z. B. Allium", a:"Art (Epitheton)", fam:"lat. oder deutsch", de:"deutscher Name" };
 function typeFields(c){
-  if(!examFields) loadExamFields();
   const given = wantsDe() ? ["g","a"] : ["de"];           // was der Prompt bereits zeigt
   let keys = examFieldList().filter(k=>!given.includes(k));
   keys = keys.filter(k => k!=="a" || norm(c.a));          // Hybrid-Gruppen: kein leeres Art-Feld
@@ -1972,24 +1976,15 @@ function submitType(ins){
                 : near ? ` · <b>≈</b> Schreibfehler zählen halb – so steht es auf dem Prüfungsbogen` : "")+
     (all?"":" · "+solutionLine(c))+`</span>` + stepHTML();
   if(all) celebrate($("#fb"), 1);
-  scoreHit("type", all, max?got/max:0, $("#fb"));      // freies Tippen zählt doppelt; Teilpunkte anteilig
+  comboHit(all, $("#fb"));                             // Treffer in Folge (nur ganz richtig)
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
 }
 
 function startHintOnly(){
-  // Ruhe-Ansicht: führt immer zum Ein-Knopf-Start; der Internet-Hinweis des
-  // Bilder-Modus erscheint nur als Randnotiz, wenn dieser Modus gewählt ist.
-  const photo = mode==="photo";
-  $("#stage").innerHTML = `<div class="stage-empty">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22V8M12 8C12 8 7 3 4 4c-1 3 4 8 8 8zM12 8c0 0 5-5 8-4 1 3-4 8-8 8z"/></svg>
-    <h2>Bereit zum Lernen</h2>
-    <p><b>»Weiter lernen«</b> startet eine geführte Sitzung – jede Pflanze kommt als Bild, und
-       wie du antwortest, richtet sich nach deinem Lernstand. Unter <b>»Selbst wählen«</b> gibt es
-       jeden Modus einzeln; Details unter <b>Hilfe</b>.</p>
-    ${photo ? `<p class="stage-note">Der Bilder-Modus braucht Internet (die Bilder kommen von
-       Wikipedia); alles andere läuft auch ohne.</p>` : ``}
-  </div>`;
+  // Ruhe-Ansicht: die Bühne bleibt leer – die beiden Start-Knöpfe erklären sich selbst
+  // (die frühere Erklärbox »Bereit zum Lernen« war eine Textwand mehr auf dem Startbildschirm).
+  $("#stage").innerHTML = "";
 }
 
 /* ---------- Liste / Nachschlagen (durchsuchbar, nach Kategorie gruppiert) ---------- */
@@ -2304,7 +2299,7 @@ function syncOptsSummary(){
   if($("#examOnly") && $("#examOnly").checked && $("#examOnlyWrap") && !$("#examOnlyWrap").hidden) bits.push("nur Prüfungsstoff");
   const sl=parseInt($("#sessLen") && $("#sessLen").value)||20; if(sl!==20) bits.push(sl+" Karten");
   sub.textContent = bits.length ? bits.join(" · ")
-    : (mode==="photo" ? "Antwort" : "Abfrage")+" · Lernstoff · ZP · Sitzungslänge";   // im Bilder-Quiz gibt es keine Richtung zu wählen
+    : (mode==="photo" ? "" : "Abfrage · ")+"Lernstoff · ZP · Sitzungslänge";   // im Bilder-Quiz gibt es keine Richtung zu wählen
   sub.classList.toggle("active", bits.length>0);
 }
 function syncModeTabs(){                       // Audit: Tabs tragen aria-pressed (Zustand für Screenreader)
@@ -2316,9 +2311,7 @@ function applyMode(){
   sess.active=false; qStart=0; clockRun(false); phWaitStop(); stageFull(false);   // Moduswechsel bricht die Sitzung ab
   const sr=$("#startRow"), lsr=$("#listSearchRow"), lc=$("#listControls");
   if(sr) sr.hidden = isList;
-  const bg=$("#btnGo"), gh=$("#goHint");                    // Ein-Knopf-Start nur außerhalb der Liste
-  if(bg) bg.hidden = isList;
-  if(gh) gh.hidden = isList;
+  const gr=$("#goRow"); if(gr) gr.hidden = isList;          // die beiden Start-Knöpfe nur außerhalb der Liste
   const bl=$("#btnList");                                   // Schnellzugriff wird zum Rückweg
   if(bl) bl.textContent = isList ? "← Zurück zum Lernen" : "Liste zum Nachschlagen";
   const ln=$("#learnNote"); if(ln) ln.hidden = isList;   // Hinweis gehört zu den Lektionen, nicht zur Liste
@@ -4771,9 +4764,7 @@ function finishPhotoAnswer(ok, g, p, solHTML, full){
     : (ok ? `<span class="good">Richtig!</span>`
       : g==="hard" ? `<span class="near">Teilweise richtig.</span>` : `<span class="bad">Leider falsch.</span>`)+" "+solHTML) + stepHTML();
   if(ok) celebrate($("#fb"), 1);
-  // Punkte + Combo: Auswahl zählt wie Quiz, Tippen/»wie in der Prüfung« wie freies Tippen;
-  // teilweise richtig (»hard«) gibt die Hälfte.
-  scoreHit(phAns()==="mc" ? "quiz" : "type", ok, ok?1:(g==="hard"?0.5:0), $("#fb"));
+  comboHit(ok, $("#fb"));                              // Treffer in Folge
   photoRevealCredit(p);
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
@@ -5130,7 +5121,6 @@ function loadProfile(id){
   refreshKat();
   buildDeIndex();                                    // Grundwörter zählen (für »Rhabarber« statt »Krauser Rhabarber«)
   buildBinomIndex();                                 // Arten je Binom zählen (Sorte + Art beide in der Liste?)
-  loadExamFields();                                  // Prüfungsfelder gelten je Profil (Bogen der Fachrichtung)
   syncExamOnlyUI();                                  // »nur Prüfungsstoff«-Schalter nur bei Fachwerker zeigen
   normalizeSort();                                   // ggf. Familien-Ansicht verlassen, wenn ausgeblendet
   applyMode();                                       // Ansicht passend zum aktuellen Modus (inkl. Liste)
@@ -5149,11 +5139,11 @@ function refreshKat(){   // Auswahl der Lernsitzung: alles · ein Thema · eine 
   const have=[...$("#cat").options].some(o=>o.value===cur);
   $("#cat").value = have ? cur : "";
 }
-/* Antwortarten im Bilder-Quiz – ANGEBOTEN werden zwei: aus vier vollen Namen auswählen oder
-   die Namen selbst eingeben (wie in der Prüfung: ein Feld je bewerteter Spalte, mit Punkten).
-   Das frühere »Namen tippen« (EIN Feld, nur botanisch oder nur deutsch) steckt noch in älteren
-   Duell-Links und bleibt dafür spielbar – zur Wahl steht es nicht mehr. Die Reihenfolge von
-   CH_PHA (mc · type · exam) bleibt davon unberührt. */
+/* Antwortarten im Bilder-Quiz. Zur Wahl steht keine mehr: der Modus »Bilder« fragt aus vier
+   vollen Namen, die geführte Lektion (ab Stufe 3) und die Probeprüfung lassen die Namen selbst
+   eingeben (wie in der Prüfung: ein Feld je bewerteter Spalte, mit Punkten). Die Tabellen bleiben,
+   weil Duell-Links die Antwortart tragen – auch das frühere »Namen tippen« (EIN Feld) bleibt dafür
+   spielbar. Die Reihenfolge von CH_PHA (mc · type · exam) bleibt unberührt. */
 const PH_ANSWER = { mc:"Auswahl (4 Namen)", exam:"Selbst eingeben (wie in der Prüfung)" };
 const PH_ANSWER_LEGACY = { type:"Namen eingeben (älterer Duell-Link)" };
 const own = (o,k)=> Object.prototype.hasOwnProperty.call(o,k);   // Audit: »constructor« aus Link/Speicher ist keine Antwortart/Richtung
@@ -5161,58 +5151,25 @@ function phLabel(k){ return (own(PH_ANSWER,k)&&PH_ANSWER[k]) || (own(PH_ANSWER_L
 function loadPrefs(){                       // gespeicherte Abfrage-Einstellungen – nur noch angebotene Werte
   dirText  = DIRS_TEXT.includes(store.get(LS_PREFIX+"dirtext")) ? store.get(LS_PREFIX+"dirtext") : "de2bot";
   dirPhoto = dirsFor("photo").includes(store.get(LS_PREFIX+"dirphoto")) ? store.get(LS_PREFIX+"dirphoto") : "img2both";
-  const pa = store.get(LS_PREFIX+"phanswer");
-  photoAnswer = own(PH_ANSWER,pa) ? pa : (pa==="type" ? "exam" : "mc");   // früheres »Namen tippen« → Eingabe bleibt Eingabe
 }
 /* Ein Duell-Link gibt Richtung und Antwortart für GENAU diese Aufgabe vor – auch ältere,
    nicht mehr angebotene. Sobald eine eigene Sitzung startet oder man selbst etwas
    umstellt, gelten wieder die eigenen Einstellungen. */
 let chOverride = false;
 function applyChallengePrefs(ch){
-  if(ch.a && phLabel(ch.a)!==ch.a) photoAnswer = ch.a;
+  chAns = (ch.a && phLabel(ch.a)!==ch.a) ? ch.a : null;
   if(ch.r && own(DIRS,ch.r)){ if(DIRS_PHOTO.includes(ch.r)) dirPhoto=ch.r; else dirText=ch.r; }
   if(ch.m==="guided" && ch.rp && DIRS_PHOTO.includes(ch.rp)) dirPhoto = ch.rp;   // Bild-Karten der geführten Lektion
   chOverride = true;
 }
-function endChallengeOverride(){ if(!chOverride) return; chOverride=false; loadPrefs(); syncDirUI(); }
-/* Abfragerichtung + (im Bilder-Quiz) Antwortart und die selbst bestimmten
-   Prüfungsfelder. Nur zeigen, was zum Modus passt. */
+function endChallengeOverride(){ if(!chOverride) return; chOverride=false; chAns=null; loadPrefs(); syncDirUI(); }
+/* Abfragerichtung – nur zeigen, was zum Modus passt (im Bilder-Quiz gibt es nur eine). */
 function syncDirUI(){
   const sel=$("#dir"); if(!sel) return;
-  const isPhoto = mode==="photo", isList = mode==="list";
-  const paw=$("#phAnswerField"); if(paw) paw.hidden = !isPhoto;
-  const pas=$("#phAnswer"); if(pas){
-    const keys = Object.keys(PH_ANSWER).concat(own(PH_ANSWER,photoAnswer) ? [] : [photoAnswer]);   // ältere Antwortart (Duell-Link) sichtbar halten
-    pas.innerHTML = keys.map(k=>`<option value="${k}">${esc(phLabel(k))}</option>`).join("");
-    pas.value = photoAnswer;
-  }
-  // Richtung ist gegenstandslos, wenn es nur eine gibt (Bilder-Quiz: voller Name) oder
-  // ohnehin alle Prüfungsfelder abgefragt werden
-  const dirOff = isList || dirsFor().length<2 || (isPhoto && photoAnswer==="exam");
+  const dirOff = mode==="list" || dirsFor().length<2;
   const wrap=$("#dirField"); if(wrap) wrap.hidden = dirOff;
   sel.innerHTML = dirsFor().map(k=>`<option value="${k}">${esc(DIRS[k].label)}</option>`).join("");
   sel.value = curDir();
-  syncExamFieldsUI();
-}
-function syncExamFieldsUI(){
-  const row=$("#examFieldsRow"); if(!row) return;
-  const show = mode==="type" || (mode==="photo" && photoAnswer==="exam");   // Tippen fragt jetzt den ganzen Bogen ab
-  row.hidden = !show;
-  if(!show) return;
-  if(!examFields) loadExamFields();
-  const std=defaultExamFields();
-  row.innerHTML = `<span class="exf-lab">Felder</span>`+
-    FIELD_ORDER.map(k=>`<label class="exf${examFields.includes(k)?" on":""}">
-      <input type="checkbox" data-k="${k}"${examFields.includes(k)?" checked":""}>
-      ${esc(FIELD_LABEL[k])}${std.includes(k)?`<span class="exf-p">${nfmt(examPts(k))}</span>`:""}</label>`).join("")+
-    `<span class="exf-hint">Standard = Bogen dieser Fachrichtung</span>`;
-  row.querySelectorAll("input[type=checkbox]").forEach(cb=>cb.onchange=()=>{
-    const k=cb.dataset.k;
-    const next = cb.checked ? examFields.concat([k]) : examFields.filter(x=>x!==k);
-    if(!next.length){ cb.checked=true; toast("Mindestens ein Feld muss abgefragt werden",true); return; }
-    examFields = FIELD_ORDER.filter(x=>next.includes(x));
-    saveExamFields(); syncExamFieldsUI();
-  });
 }
 function profilLabel(){                                   // »Gemüsebau · Gärtner/in« (Chip, Listen-Quelle)
   const fr=$("#frSelect"), nv=$("#nivSelect");
@@ -5249,20 +5206,12 @@ function applyProfile(){
 /* ---------- Verdrahtung ---------- */
 function wire(){
   const refreshView = ()=>{ syncOptsSummary(); vt(()=>{ if(mode==="list"){ renderListControls(); renderList(); } else renderProgress(); }); };
-  const dgl=$("#dayGoal");                       // Tagesziel der Lernserie (global, Standard 20)
-  if(dgl){ dgl.value=String(streakGoal());
-    dgl.onchange=()=>{ const s=streakLoad(); s.g=+dgl.value||20; streakSave(s); renderProgress(); }; }
   const lsr=$("#listSearchRow");   // Listen-Suche klebt beim Scrollen oben; »stuck« nur, wenn wirklich angepinnt (dezenter Schatten)
   if(lsr){ const upd=()=>lsr.classList.toggle("stuck", !lsr.hidden && lsr.getBoundingClientRect().top<=0.5);
     window.addEventListener("scroll", upd, {passive:true}); window.addEventListener("resize", upd, {passive:true}); }
   $("#frSelect").onchange=applyProfile;
   $("#nivSelect").onchange=applyProfile;
   $("#cat").onchange=refreshView;
-  if($("#phAnswer")) $("#phAnswer").onchange=()=>{
-    const v=$("#phAnswer").value; endChallengeOverride();     // Wert VOR dem Zurücksetzen lesen
-    photoAnswer=v; store.set(LS_PREFIX+"phanswer",photoAnswer);
-    syncDirUI(); refreshView();
-  };
   if($("#dir")) $("#dir").onchange=()=>{
     const v=$("#dir").value; endChallengeOverride();
     if(mode==="photo"){ dirPhoto=v; store.set(LS_PREFIX+"dirphoto",dirPhoto); }
@@ -5287,6 +5236,7 @@ function wire(){
   });
   $("#btnStart").onclick=startSession;
   if($("#btnGo")) $("#btnGo").onclick=startGuided;
+  if($("#btnExam")) $("#btnExam").onclick=startProbe;
   if($("#btnList")) $("#btnList").onclick=()=>{             // Liste rein/raus ohne die Klappe zu öffnen
     const target = mode==="list" ? (lastLearnMode||"photo") : "list";
     if(mode!=="list") lastLearnMode=mode;
@@ -5352,16 +5302,17 @@ function openIntro(auto, onClose){
   scrim.innerHTML = `<div class="modal intro" role="dialog" aria-modal="true" aria-labelledby="introTtl">
     <button class="modal-x" id="introClose" aria-label="Schließen" title="Schließen">×</button>
     <h2 class="intro-h" id="introTtl">So wirst du prüfungsreif</h2>
-    <p class="intro-lead">Am einfachsten: <b>»Weiter lernen«</b> – jede Pflanze kommt als Bild, und wie du antwortest, richtet sich nach deinem Lernstand. Wer selbst wählt: die Stufen sind nach Schwierigkeit sortiert, vom Erkennen bis zum freien Schreiben:</p>
+    <p class="intro-lead">Am einfachsten: <b>»Weiter lernen«</b> – jede Pflanze kommt als Bild, und wie du antwortest, richtet sich nach deinem Lernstand. <b>»Probeprüfung«</b> stellt dich wie am Prüfungstag: Bild, alle Felder des Bogens, am Ende die Note. Wer selbst wählt: die Stufen sind nach Schwierigkeit sortiert, vom Erkennen bis zum freien Schreiben:</p>
     <ol class="intro-steps">
       <li>${ico("image","is-ic")}<div><b>Bilder</b><span class="is-tag">leicht</span><br>Pflanze am Foto erkennen und den richtigen Namen wählen.</div></li>
       <li>${ico("check","is-ic")}<div><b>Quiz</b><span class="is-tag">leicht</span><br>Zum deutschen Namen den richtigen botanischen aus vier Optionen wählen.</div></li>
       <li>${ico("cards","is-ic")}<div><b>Karteikarten</b><span class="is-tag">mittel</span><br>Selbst abrufen und ehrlich bewerten – Wiederholung nach Plan (Spaced Repetition).</div></li>
       <li>${ico("keys","is-ic")}<div><b>Selbst eingeben</b><span class="is-tag">prüfungsnah</span><br>Die Namen per Tastatur selbst schreiben – ein Feld je bewerteter Spalte (Gattung, Art, Familie), mit Punkten wie in der Prüfungstabelle.</div></li>
     </ol>
-    <p class="intro-tip">${ico("sliders")} Jede Stufe kannst du unter <b>»Optionen«</b> feiner einstellen: was gefragt wird – vom <b>deutschen Namen</b> allein bis zur prüfungsechten Abfrage von <b>Gattung, Art und Familie</b> (Felder einzeln wählbar) – dazu Lernstoff, ZP-Filter und Sitzungslänge.</p>
+    <p class="intro-tip">${ico("sliders")} Unter <b>»Selbst wählen · Optionen«</b> grenzt du den Lernstoff ein (Thema, Familie, nur ZP), drehst die Abfrage um (botanischer Name → <b>deutscher Name</b>) oder änderst die Sitzungslänge. Gefragt sind sonst immer <b>Gattung, Art und Familie</b> – wie auf dem Bogen.</p>
     <p class="intro-tip">${ico("sprout")} <b>Fortschritt:</b> Jede richtige Antwort bringt eine Pflanze eine Stufe weiter –
-      ab Stufe 4 »sitzt« sie. <button class="linklike" id="introHow">Die fünf Stufen ansehen</button></p>
+      ab Stufe 4 »sitzt« sie; mit den Arten, die sitzen, wächst dein <b>Rang</b> (Keimling bis Meistergärtner/in).
+      <button class="linklike" id="introHow">Die fünf Stufen ansehen</button></p>
     <p class="intro-foot"><b>Ziel:</b> Du benennst Gattung, Art und Familie sicher. Diese Einführung findest du jederzeit über <b>»So funktioniert der Lernpfad«</b> wieder.</p>
     <div class="intro-real">${ico("leaf")}<div><b>Ehrlich gesagt:</b> Pflanzen lernt man draußen – mit Erde unter den Fingernägeln,
       nicht mit dem Daumen auf dem Display. Das ersetzt diese App nicht, und das will sie auch nicht. Sie hilft dir, die
@@ -5390,6 +5341,7 @@ function openIntro(auto, onClose){
     if(!SORT_LABEL[listSort]) listSort="thema";
     examOnly = store.get(LS_PREFIX+"examonly")==="1";
     loadPrefs();
+    try{ localStorage.removeItem("pbw.theme"); }catch(e){}   // Design folgt nur noch dem System – eine alte gespeicherte Wahl entfernen
     mode = store.get(LS_PREFIX+"mode") || "photo";   // neue Nutzer starten beim leichtesten Modus (Bilder)
     let pid = store.get(LS_PREFIX+"profile");
     const hadProfile = !!pid;                          // vor loadProfile lesen – das setzt den Store
@@ -5463,11 +5415,9 @@ window.streakGoal=streakGoal;
 window.herbCheck=herbCheck;       // für Tests: Sammel-Herbarium
 window.herbData=herbData;
 window.openHerbarium=openHerbarium;
-window.xpTotal=xpTotal;           // für Tests: XP, Ränge, Combo
-window.xpAdd=xpAdd;
-window.rankOf=rankOf;
-window.comboBonus=comboBonus;
+window.rankOf=rankOf;             // für Tests: Ränge (nur Lernstand), Combo
 window.RANKS=RANKS;
+window.startProbe=startProbe; window.gradeOf=gradeOf; window.probeCount=probeCount;   // Probeprüfung (für Tests)
 window.isCultivarName=isCultivarName;
 window.cultivarName=cultivarName;       // für Tests: Sorten-Erkennung, Artbild-Regel, Tafel-Filter
 window.cultivarKind=cultivarKind;

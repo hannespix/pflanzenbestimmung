@@ -94,6 +94,15 @@ auf das Prüfungswerkzeug (Einbahnstraße – Azubis sollen es nicht sehen).
   **vier Namen wählen**, ab Stufe 3 die Namen **selbst eingeben wie in der Prüfung**. Eine
   Auswahlfrage ohne Bild kommt nur für eine **einzelne** Art, zu der es gar kein Bild gibt
   (oder ohne Internet). Die fünf Modi bleiben unter »Selbst wählen« erreichbar.
+- **Probeprüfung (zweiter Knopf):** wie am Prüfungstag – so viele Pflanzen wie auf dem Bogen
+  (Gärtner 20, Fachwerker 15), zufällig aus der ganzen Liste, jede als Bild, zu jeder alle
+  bewerteten Felder des Bogens zum Eingeben (Punkte der Fachrichtung, Schreibfehler halb,
+  keine zweite Chance). Am Ende Punkte, Prozent und **Note nach dem linearen Schlüssel
+  Baden-Württembergs** (1 ab 90 % … 5 ab 10 %). Zählt in den Lernstand, teilbar als Duell.
+- **Fortschritt statt Punktekonto:** Die Gärtner-Laufbahn (Keimling → … → Meistergärtner/in)
+  richtet sich allein nach dem Lernstand (angefangene Arten, dann der Anteil, der »sitzt«);
+  Erfahrungspunkte gibt es nicht mehr. Eine Lernserie zählt Tage mit mindestens 20 Karten.
+  Hell/Dunkel folgt der Systemeinstellung (kein eigener Schalter).
 - **Feste, prüfungsnahe Lernrichtung:** Wie in der Abschlussprüfung erkennt man die
   Pflanze (der greifbarste bildlose Anker ist ihr **deutscher Name**) und nennt die
   **botanische Identität**: **Gattung, Art, Familie**. Genau diese Richtung üben alle
@@ -119,13 +128,12 @@ auf das Prüfungswerkzeug (Einbahnstraße – Azubis sollen es nicht sehen).
     keine zweite Art mit diesem Grundwort führt (bei *Birke* oder *Ahorn* also nicht).
     Ein blankes Adjektiv (»Krauser«) zählt nie.
   - **Bilder** (zusätzlicher Modus, **braucht Internet**) – **die Pflanze am Bild
-    erkennen:** zu sehen ist nur ein Bild, sonst nichts. **Zwei Antwortarten** (»Optionen ·
-    Antwort«): aus **vier Namen auswählen** oder die Namen **selbst eingeben – »wie in der
-    Prüfung«** – dann steht unter dem Bild für jede bewertete Spalte ein eigenes Feld
-    (Gattung, Art, Familie, Deutscher Name) mit den **Punkten der Fachrichtung**, es gibt
-    **Teilpunkte** und feldweise Rückmeldung; welche Felder abgefragt werden, ist je Profil
-    frei einstellbar. Das ist am nächsten an der Prüfung, wo die Pflanze vor einem
-    steht. Nach der Antwort erscheinen der deutsche Name und der **Bildnachweis**
+    erkennen:** zu sehen ist nur ein Bild, sonst nichts. Im Modus »Bilder« wählt man aus
+    **vier Namen**; die Namen zum Bild **selbst eingeben – »wie in der Prüfung«** – übt die
+    geführte Lektion (ab Stufe 3) und die **Probeprüfung**: dann steht unter dem Bild für jede
+    bewertete Spalte ein eigenes Feld (Gattung, Art, Familie, Deutscher Name) mit den
+    **Punkten der Fachrichtung**, es gibt **Teilpunkte** und feldweise Rückmeldung. Das ist am
+    nächsten an der Prüfung, wo die Pflanze vor einem steht. Nach der Antwort erscheinen der deutsche Name und der **Bildnachweis**
     (Urheber + Lizenz). Die Bilder kommen von **Wikimedia Commons und Wikipedia**,
     ersatzweise von **iNaturalist** (nur Beobachtungsfotos mit freier Lizenz, mit Nachweis);
     geladen wird **erst beim Start des Modus**. Ohne Netz sagt der Modus das klar –

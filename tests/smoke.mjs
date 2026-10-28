@@ -204,31 +204,23 @@ async function main() {
   assert(modalA11y.focusInside, "Beim Öffnen muss der Fokus ins Modal wandern: " + JSON.stringify(modalA11y));
   assert(modalA11y.toastLive === "polite", "Toast muss eine aria-live-Region sein: " + JSON.stringify(modalA11y));
 
-  // Hell/Dunkel-Umschalter setzt data-theme und merkt die Wahl. Sitzt als runder Knopf im
-  // Kopf (ein Ort auf allen drei Seiten – Audit) – Delegation auf .themetoggle.
+  // Hell/Dunkel folgt allein der Systemeinstellung (kein Schalter mehr); Kopf: Link zur Lernversion, Hilfe dezent.
   const themeT = await page.evaluate(() => {
-    const b = document.querySelector(".themetoggle");
-    if (!b) return { has: false };
-    b.click();
-    const afterOne = document.documentElement.dataset.theme, saved = localStorage.getItem("pbw.theme");
-    b.click();
-    const afterTwo = document.documentElement.dataset.theme;
-    // Kopf: Link zur Lernversion (es gibt keine Startseite mehr), Hilfe dezent, kein Theme-Knopf im Kopf
     const home = document.querySelector(".mast-right .homelink");
-    return {
-      has: true, afterOne, saved, afterTwo,
+    return { toggle: !!document.querySelector(".themetoggle, #btnTheme"), attr: document.documentElement.dataset.theme || null, saved: localStorage.getItem("pbw.theme"),
+      paper: getComputedStyle(document.documentElement).getPropertyValue("--paper").trim(),
       homeHref: home ? home.getAttribute("href") : null,
       lernHref: (document.querySelector('.mast-right a[href="pflanzen-lernen.html"]') || {}).textContent || null,
-      helpDezent: !!document.querySelector(".mast-right .helplink#btnHelp"),
-      toggleInHead: !!document.querySelector(".mast-right .themetoggle, .mast-right #btnTheme")
-    };
+      helpDezent: !!document.querySelector(".mast-right .helplink#btnHelp") };
   });
-  assert(themeT.has && themeT.afterOne === "dark" && themeT.saved === "dark" && themeT.afterTwo === "light",
-    "Theme-Umschalter muss dunkel/hell wechseln und die Wahl speichern: " + JSON.stringify(themeT));
+  await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: "dark" }]);
+  const themeDark = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--paper").trim());
+  await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: "light" }]);
+  assert(!themeT.toggle && themeT.attr === null && themeT.saved === null && themeDark && themeDark !== themeT.paper,
+    "Kein Design-Schalter, keine gespeicherte Wahl; Dunkelpalette allein über prefers-color-scheme: " + JSON.stringify({ themeT, themeDark }));
   assert(themeT.homeHref === "pflanzen-lernen.html" && /Lernversion/.test(themeT.lernHref || ""),
     "Kopf muss zur Lernversion verlinken (pflanzen-lernen.html): " + JSON.stringify(themeT));
-  assert(themeT.helpDezent && themeT.toggleInHead,
-    "»Hilfe« dezent im Kopf, Design-Umschalter als runder Knopf im Kopf (ein Ort auf allen Seiten – Audit): " + JSON.stringify(themeT));
+  assert(themeT.helpDezent, "»Hilfe« dezent im Kopf: " + JSON.stringify(themeT));
 
   // 1c) Hilfe-Modal öffnet mit Inhalt und markiert seinen Button; Tooltips vorhanden
   const help = await page.evaluate(() => {
@@ -1134,7 +1126,7 @@ async function main() {
     exams.unshift({ id: "kop1", date: "2026-01-01", label: "Test (Kopie)", plants: [], schema: {}, fr: "", niveau: "" });
     copyExam("kop1"); out.kopie = exams[0].label; exams = []; saveExams();
     out.esc = esc("a'b\"c");
-    out.toggleHead = !!document.querySelector(".mast-right .themetoggle"); out.toggleAdmin = !!document.querySelector("#adminBar .themetoggle");
+    out.noToggle = !document.querySelector(".themetoggle, #btnTheme");
     out.h1 = /\u00a0·/.test(document.querySelector(".masthead h1").textContent);
     out.csp = !!document.querySelector('meta[http-equiv="Content-Security-Policy"]');
     return out;
@@ -1149,7 +1141,7 @@ async function main() {
   assert(p4.q1 === false && p4.q2 === true && p4.qPersistent && p4.qValue === "b", "Quota-Fallback: ein voller Speicher darf localStorage nicht dauerhaft abschalten: " + JSON.stringify(p4));
   assert(p4.flushed, "flushPersist: Änderung vor dem Profilwechsel muss gespeichert sein: " + JSON.stringify(p4));
   assert(p4.kopie === "Test (Kopie)" && p4.esc === "a&#39;b&quot;c", "Kopie-Suffix nur einmal, esc maskiert ': " + JSON.stringify(p4));
-  assert(p4.toggleHead && !p4.toggleAdmin && p4.h1 && p4.csp, "Kopf-Umschalter, <h1> mit geschütztem Leerzeichen, CSP-Meta: " + JSON.stringify(p4));
+  assert(p4.noToggle && p4.h1 && p4.csp, "Kopf-Umschalter, <h1> mit geschütztem Leerzeichen, CSP-Meta: " + JSON.stringify(p4));
 
   // 9f) CSP wirkt: fremde Skripte/Bilder werden geblockt, Wikipedia/Commons (JSONP + Bilder) nicht.
   const cp = await browser.newPage();                 // eigene Seite: die erwarteten CSP-/Netz-Meldungen gehören nicht in die Konsolenfehler des Hauptlaufs
@@ -1177,8 +1169,8 @@ async function main() {
     "CSP img-src muss *.wikimedia.org/*.wikipedia.org pauschal erlauben (Host-Umzug upload → thumb): " + csp.meta);
 
   // 10) Rechtliches (Audit): <main>, kein Link auf die eingestellte ODR-Plattform, keine »Startseite«,
-  //     Datenschutz nennt pbw.theme, den gespeicherten Duell-Namen und WhatsApp/wa.me;
-  //     Design-Knopf und »zurück« sind ≥44 px (Handy).
+  //     Datenschutz nennt den gespeicherten Duell-Namen und WhatsApp/wa.me, aber kein pbw.theme mehr
+  //     (Design folgt dem System, kein Knopf); »zurück« ist ≥44 px (Handy).
   const rp = await browser.newPage();
   const rerrs = []; rp.on("pageerror", (e) => rerrs.push(e.message));
   await rp.setViewport({ width: 360, height: 720, deviceScaleFactor: 1 });
@@ -1188,13 +1180,13 @@ async function main() {
     return { main: document.querySelectorAll("main").length, inMain: !!document.querySelector("main #datenschutz"),
       odr: /consumers\/odr/.test(document.documentElement.innerHTML), start: /Startseite/.test(t),
       theme: /pbw\.theme/.test(t), name: /pflanzenlernen\.name/.test(t), wa: /WhatsApp/.test(t) && /wa\.me/.test(t),
-      vsbg: /§ 36 VSBG/.test(t), btn: h("#btnTheme"), back: h(".back"), csp: !!document.querySelector('meta[http-equiv="Content-Security-Policy"]') };
+      vsbg: /§ 36 VSBG/.test(t), btn: !!document.querySelector("#btnTheme, .themebtn"), back: h(".back"), csp: !!document.querySelector('meta[http-equiv="Content-Security-Policy"]') };
   });
   await rp.close();
   assert(rerrs.length === 0, "Rechtliches: Konsolenfehler: " + rerrs.join(" | "));
-  assert(recht.main === 1 && recht.inMain && !recht.odr && !recht.start && recht.theme && recht.name && recht.wa && recht.vsbg,
-    "Rechtliches: <main>, ODR raus, keine Startseite, Datenschutz vollständig: " + JSON.stringify(recht));
-  assert(recht.btn >= 43.5 && recht.back >= 43.5 && recht.csp, "Rechtliches: Design-Knopf/»zurück« ≥44 px + CSP-Meta erwartet: " + JSON.stringify(recht));
+  assert(recht.main === 1 && recht.inMain && !recht.odr && !recht.start && !recht.theme && recht.name && recht.wa && recht.vsbg,
+    "Rechtliches: <main>, ODR raus, keine Startseite, Datenschutz ohne pbw.theme, sonst vollständig: " + JSON.stringify(recht));
+  assert(!recht.btn && recht.back >= 43.5 && recht.csp, "Rechtliches: kein Design-Knopf, »zurück« ≥44 px + CSP-Meta erwartet: " + JSON.stringify(recht));
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();

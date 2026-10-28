@@ -63,7 +63,7 @@ Prüfungswerkzeug — der einzige interne Verweis führt auf Impressum/Datenschu
 Durchgängig berücksichtigt und mit automatisierten Messungen abgesichert: vollständige
 Tastaturbedienung, Ansagen für Screenreader (`aria-live`, Fokusführung in Dialogen),
 Bedienflächen ≥ 44 px auf Touchgeräten, Textkontraste ≥ 4,5:1, Rücksicht auf
-„Bewegung reduzieren" und ein Dunkelmodus. Eine **formale BITV-2.0-Prüfung durch eine
+„Bewegung reduzieren" und ein Dunkelmodus, der der Systemeinstellung folgt. Eine **formale BITV-2.0-Prüfung durch eine
 Prüfstelle steht aus** — die Anwendung ist an den Kriterien ausgerichtet, aber nicht
 zertifiziert.
 
