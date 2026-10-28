@@ -2878,6 +2878,34 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Herausforderung (2 von 20, 100 % 2/2, »beendet«, kein Sieg, keine Note), unvollständiger
       Herausforderer, vollständiges Duell bleibt ein Sieg, letzte Karte + beenden = geschafft.
 
+- [x] **Onboarding: Portion statt Berg, Installationsknopf, kürzerer Einführungstext** (Rückmeldung
+      mit Screenshot: »303 Karten heute dran … kann demotivierend sein«, Wunsch nach einem
+      PWA-Install-Knopf beim Onboarding und nach weniger, einfacherem, nettem, aber fundiertem
+      Text). **(1) Hinweiszeile** unter »Weiter lernen«/»Loslegen« (`renderProgress`): bisher die
+      Zahl der fälligen Karten – bei einer neuen Liste die ganze Liste, weil jede neue Art als
+      fällig zählt. Jetzt die **Portion der nächsten Lektion** (`min(Pool, Karten/Sitzung)`:
+      »20 Karten · jede als Bild«); ist nichts fällig: »Heute nichts fällig · 20 Karten zum
+      Vertiefen«. Gleiches für `#startHint` unter »Selbst wählen«. **(2) Als App installieren**
+      (`installEnv`/`installHTML`/`syncInstallUI`/`installApp` in `learn.js`): das Ereignis
+      `beforeinstallprompt` (Chrome/Edge/Samsung, Android wie Desktop) wird festgehalten
+      (`preventDefault`, kein doppelter Browser-Hinweis) und **erst dann** erscheint der Knopf
+      »App installieren« – nie ein toter Knopf. Slots `.install-slot` in der **Einführung** und in
+      der **Hilfe** (»Als App«), gefüllt beim Boot, beim Öffnen und sobald das Ereignis kommt;
+      iPhone (kein Ereignis) bekommt den Weg »Teilen → Zum Home-Bildschirm«; läuft die Seite als
+      App (`display-mode: standalone` bzw. nach `appinstalled`/Annahme): »Läuft als App«. Reine
+      Browser-API, nichts wird geladen; `check_offline.py` bleibt grün. Test-Haken
+      `window.__installEnv` (ios/standalone) und `__installReset()`. **(3) Einführung neu getextet**
+      (`openIntro`): Titel »Kurz erklärt – dann los«, ein Einstiegssatz (»Weiter lernen« reicht,
+      Probeprüfung = Ernstfall zum Üben), vier Stufen in je einer Zeile, Optionen-Tipp, Fortschritt
+      mit der ehrlichen Erwartung (»Das dauert Tage, nicht Minuten: So arbeitet dein Gedächtnis,
+      nicht die App«), die »Ehrlich gesagt«-Box bleibt, dann der Installationsblock; der
+      »Ziel«-Absatz entfällt. ~290 → ~225 Wörter (inkl. Installationsblock). README (PWA-Absatz)
+      ergänzt. `tests/learn.mjs`: Unterzeile nennt die Portion (20 Karten), »nichts fällig«-Variante
+      über einen Familien-Scope mit künftig fälligen Karten; Installations-Slot (ohne Angebot leer,
+      synthetisches `beforeinstallprompt` → Knopf → `prompt()` → »Läuft als App« + Toast, Hilfe-Slot
+      gleicher Zustand, iPhone-Weg ohne Knopf, standalone-Hinweis); Einführung: Titel, Einstieg,
+      höchstens 240 Wörter.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.
