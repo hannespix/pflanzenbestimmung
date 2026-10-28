@@ -124,8 +124,26 @@ async function main() {
     "Ein-Knopf-Start »Weiter lernen/Loslegen« + Listen-Schnellzugriff müssen sofort sichtbar sein: " + JSON.stringify(declutter));
   assert(declutter.chooseClosed && declutter.holdsModes,
     "Modi + »Sitzung starten« stecken in der standardmäßig zugeklappten »Selbst wählen«-Klappe");
-  assert(declutter.examVisible && /20 Pflanzen/.test(declutter.examSub) && /heute dran/.test(declutter.goSub),
-    "Zweiter Start-Knopf »Probeprüfung« (20 Pflanzen) + Unterzeile am »Weiter lernen«-Knopf: " + JSON.stringify(declutter));
+  assert(declutter.examVisible && /20 Pflanzen/.test(declutter.examSub) && /^20 Karten · jede als Bild$/.test(declutter.goSub),
+    "Zweiter Start-Knopf »Probeprüfung« (20 Pflanzen) + Unterzeile am »Weiter lernen«-Knopf nennt die Portion (20 Karten), nicht den Berg: " + JSON.stringify(declutter));
+
+  // Die Unterzeile nennt die Portion der nächsten Lektion, nicht die ganze Liste (»303 Karten heute
+  // dran« war demotivierend – jede neue Art zählt als fällig). Ist nichts fällig, sagt sie das.
+  const portion = await page.evaluate(() => {
+    const sel = $("#cat"), prev = sel.value;
+    const fam = [...sel.options].map((o) => o.value).find((v) => /^f:/.test(v));
+    sel.value = fam; sel.dispatchEvent(new Event("change"));
+    const p = pool(), saved = {};
+    p.forEach((c) => { saved[c.key] = progress[c.key]; progress[c.key] = { box: 2, due: "2999-01-01", seen: 1, correct: 1, wrong: 0 }; });
+    renderProgress();
+    const nichts = $("#goHint").textContent, start = $("#startHint").textContent, n = Math.min(p.length, 20);
+    p.forEach((c) => { if (saved[c.key]) progress[c.key] = saved[c.key]; else delete progress[c.key]; });
+    sel.value = prev; sel.dispatchEvent(new Event("change")); renderProgress();
+    return { fam, nichts, start, n, pLen: p.length, normal: $("#goHint").textContent };
+  });
+  assert(portion.fam && portion.pLen > 0 && new RegExp("^Heute nichts fällig · " + portion.n + " Karten zum Vertiefen · jede als Bild$").test(portion.nichts) && /nichts fällig/.test(portion.start),
+    "Nichts fällig → »Heute nichts fällig · N Karten zum Vertiefen«: " + JSON.stringify(portion));
+  assert(/^20 Karten · jede als Bild$/.test(portion.normal), "Danach wieder die normale Portion: " + JSON.stringify(portion));
   assert(declutter.weg.length === 0 && declutter.stageLeer && declutter.noteNachFortschritt,
     "Entschlackt: kein Antwort-/Tagesziel-/Felder-Feld, kein Design-Schalter, keine Zähler-Chips, leere Bühne, Datenhinweis unter dem Fortschritt: " + JSON.stringify(declutter));
   assert(declutter.isDetails && declutter.closed, "Optionen sollten in einer standardmäßig zugeklappten Klappe stecken");
@@ -294,6 +312,49 @@ async function main() {
     "»Los geht's« muss die Einführung schließen und als gesehen merken: " + JSON.stringify(lp));
   assert(lp.real && lp.helpReal,
     "Einführung und Hilfe müssen sagen: Lernhilfe für die botanischen Namen, kein Ersatz für die echte Pflanze draußen: " + JSON.stringify({ real: lp.real, help: lp.helpReal }));
+
+  // Onboarding: Installationsknopf nur, wenn der Browser ihn anbietet (beforeinstallprompt) – nie ein
+  // toter Knopf; iPhone bekommt den Weg beschrieben; läuft die Seite als App, steht das da. Die Hilfe
+  // hat denselben Slot. Dazu der Text-Deckel der Einführung (»weniger Text«: vorher ~290 Wörter).
+  const inst = await page.evaluate(async () => {
+    const tick = (ms) => new Promise((r) => setTimeout(r, ms));
+    const slotTxt = () => ((document.querySelector("#introScrim .install-slot") || {}).textContent || "").replace(/\s+/g, " ").trim();
+    const out = {};
+    __installReset(); window.__installEnv = { ios: false, standalone: false };
+    openIntro(false);
+    out.ohne = slotTxt(); out.ohneKnopf = !document.querySelector("#introScrim .btn-install");
+    out.h2 = document.querySelector("#introScrim .intro-h").textContent;
+    out.words = document.querySelector("#introScrim .modal").textContent.split(/\s+/).filter(Boolean).length;
+    out.lead = document.querySelector("#introScrim .intro-lead").textContent;
+    document.querySelector("#introGo").click();
+    // Browser meldet Installierbarkeit (synthetisch): Knopf erscheint, prompt() läuft, danach »Läuft als App«
+    let prompted = 0; const ev = new Event("beforeinstallprompt"); ev.prompt = () => { prompted++; }; ev.userChoice = Promise.resolve({ outcome: "accepted" });
+    window.dispatchEvent(ev);
+    openIntro(false);
+    out.mitKnopf = !!document.querySelector("#introScrim .btn-install"); out.mitText = slotTxt();
+    document.querySelector("#introScrim .btn-install").click(); await tick(60);
+    out.prompted = prompted; out.danach = slotTxt(); out.toast = (document.querySelector(".toast") || {}).textContent || "";
+    out.keinKnopfMehr = !document.querySelector("#introScrim .btn-install");
+    document.querySelector("#introGo").click();
+    out.hilfeSlot = !!document.querySelector("#helpPanel .install-slot");
+    out.hilfeTxt = document.querySelector("#helpPanel").textContent.replace(/\s+/g, " ");
+    out.hilfeOn = /Läuft als App/.test((document.querySelector("#helpPanel .install-slot") || {}).textContent || "");
+    __installReset(); window.__installEnv = { ios: true, standalone: false };
+    openIntro(false); out.ios = slotTxt(); out.iosKnopf = !!document.querySelector("#introScrim .btn-install"); document.querySelector("#introGo").click();
+    window.__installEnv = { ios: false, standalone: true };
+    openIntro(false); out.app = slotTxt(); document.querySelector("#introGo").click();
+    delete window.__installEnv; __installReset();
+    return out;
+  });
+  assert(inst.ohne === "" && inst.ohneKnopf, "Ohne Angebot des Browsers darf kein Installationsknopf erscheinen (toter Knopf): " + JSON.stringify(inst));
+  assert(inst.mitKnopf && /Als App aufs Handy/.test(inst.mitText) && inst.prompted === 1 && /Läuft als App/.test(inst.danach) && inst.keinKnopfMehr && /Installiert/.test(inst.toast),
+    "beforeinstallprompt → Knopf, Klick ruft prompt(), danach »Läuft als App« + Toast: " + JSON.stringify(inst));
+  assert(inst.hilfeSlot && /Als App:/.test(inst.hilfeTxt) && /Home-Bildschirm/.test(inst.hilfeTxt) && inst.hilfeOn,
+    "Hilfe hat den Absatz »Als App« samt Slot, der denselben Zustand zeigt: " + JSON.stringify(inst));
+  assert(/Teilen/.test(inst.ios) && /Home-Bildschirm/.test(inst.ios) && !inst.iosKnopf && /Läuft als App/.test(inst.app),
+    "iPhone: Weg statt Knopf; als App gestartet: Hinweis »Läuft als App«: " + JSON.stringify(inst));
+  assert(/Kurz erklärt/.test(inst.h2) && /Weiter lernen/.test(inst.lead) && /Probeprüfung/.test(inst.lead) && inst.words <= 240,
+    "Einführung: kurzer Einstieg (»Weiter lernen« reicht, Probeprüfung genannt) und höchstens 240 Wörter: " + JSON.stringify({ h2: inst.h2, words: inst.words }));
 
   // Listen-Suche klebt beim Scrollen oben (sticky, auf Seitenebene – Konsistenz zum Prüfwerkzeug)
   const listSticky = await page.evaluate(() => {

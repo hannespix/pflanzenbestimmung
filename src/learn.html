@@ -237,6 +237,16 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .intro-real{margin:12px 0 0; display:flex; gap:10px; align-items:flex-start; padding:10px 12px; border-radius:10px;
   background:var(--green-tint); border:1px solid var(--rule-strong); font-size:12.5px; line-height:1.45; color:var(--ink)}
 .intro-real .ic{flex:none; width:18px; height:18px; color:var(--green-deep); margin-top:1px}
+.intro-sub{margin:0 0 8px; font-size:12.5px; color:var(--ink-soft)}
+/* Als App installieren: Knopf nur, wenn der Browser es anbietet (beforeinstallprompt); iPhone: der Weg;
+   läuft die Seite schon als App, steht das da (is-on). Slot in Einführung und Hilfe, gefüllt aus learn.js. */
+.intro-install{margin:12px 0 0; display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:10px 12px; border-radius:10px;
+  background:var(--surface-2); border:1px dashed var(--rule-strong); font-size:12.5px; line-height:1.45; color:var(--ink)}
+.intro-install>div{flex:1 1 180px}
+.intro-install .ic{flex:none; width:18px; height:18px; color:var(--green-deep)}
+.intro-install .btn{flex:none}
+.intro-install.is-on{border-style:solid; background:var(--green-tint)}
+.install-slot:empty{display:none}
 .hreal{margin:0 0 12px; padding:10px 12px; border-left:3px solid var(--green); background:var(--green-tint);
   border-radius:0 8px 8px 0; font-size:13.5px; line-height:1.5; color:var(--ink)}
 .startrow{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
@@ -1521,6 +1531,10 @@ body.stagefull #stage>.sessionbar{
         Karteikasten-Lernen mehr als seltene Marathons.</li>
       <li><b>Hell oder dunkel:</b> Das Werkzeug folgt der Einstellung deines Geräts (Systemdesign) – einen eigenen
         Schalter gibt es nicht mehr.</li>
+      <li><b>Als App:</b> Pflanze-BW lässt sich auf dem Home-Bildschirm ablegen und startet dann wie eine App – auch
+        ohne Netz. Android/Chrome und Edge zeigen dafür einen Knopf (hier und in der Einführung, sobald der Browser
+        es anbietet; sonst im Browser-Menü »App installieren«), auf dem iPhone geht es über <b>Teilen → Zum
+        Home-Bildschirm</b>.<div class="install-slot"></div></li>
       <li><b>Herbarium · Thema üben:</b> Auf jeder Sammelkarte im Herbarium startet »Thema üben« eine geführte Lektion
         nur mit den Arten dieses Themas (z. B. nur Gräser). Dasselbe erreichst du über Optionen · Lernstoff, wo du
         auch nach Pflanzenfamilie eingrenzen kannst.</li>

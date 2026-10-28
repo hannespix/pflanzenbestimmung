@@ -271,10 +271,12 @@ Browser gespeichert.
 Werkzeug **zum Home-Bildschirm hinzufügen** und startet danach wie eine App –
 **auch ohne Internet**. Möglich machen das ein *Web App Manifest* und ein
 *Service Worker*, der die vier Seiten beim ersten Besuch lokal zwischenspeichert
-(reiner Datei-Cache, keine personenbezogenen Daten, nur diese Website). Auf Android/
-Chrome erscheint dazu ein „Installieren“-Hinweis; auf iOS/Safari über *Teilen →
-Zum Home-Bildschirm*. Die Installation ist freiwillig – der Kern funktioniert ohnehin
-offline. Diese Assets (`manifest.webmanifest`, `sw.js`, `icon-*.png`) erzeugt
+(reiner Datei-Cache, keine personenbezogenen Daten, nur diese Website). Die
+Einführung beim ersten Besuch und die Hilfe bieten dafür einen Knopf **»App
+installieren«** an – nur dort, wo der Browser es erlaubt (Android/Chrome, Edge:
+`beforeinstallprompt`); auf iOS/Safari steht stattdessen der Weg *Teilen → Zum
+Home-Bildschirm*, und läuft die Seite schon als App, sagt die Stelle das. Die
+Installation ist freiwillig – der Kern funktioniert ohnehin offline. Diese Assets (`manifest.webmanifest`, `sw.js`, `icon-*.png`) erzeugt
 `build.py` nach `dist/`; beim lokalen `file://`-Aufruf sind sie ohne Belang.
 
 ## Build

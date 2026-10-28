@@ -1242,14 +1242,19 @@ function renderProgress(){
   const hb=$("#btnHerb"); if(hb) hb.onclick=openHerbarium;
   const bh=$("#btnHow"); if(bh) bh.onclick=openHowModal;
   const due = p.filter(c=>{ const pr=pget(c.key); return !pr.box || !pr.due || pr.due<=todayISO(); }).length;
+  // Die Portion, nicht der Berg: »303 Karten heute dran« war die ganze Liste (jede neue Art zählt
+  // als fällig) und wirkte wie eine Drohung. Genannt wird jetzt, was die nächste Lektion umfasst;
+  // ist nichts fällig, sagt die Zeile das – gelernt wird dann zum Vertiefen.
+  const portion = Math.min(p.length, Math.max(1, Math.min(100, parseInt($("#sessLen") && $("#sessLen").value)||20)));
+  const lektion = due ? `${portion} Karten` : `Heute nichts fällig · ${portion} Karten zum Vertiefen`;
   const wie = mode==="photo" ? "Bild → voller Name" : DIRS[curDir()].label;
-  $("#startHint").textContent = p.length ? `${due} Karten heute dran · ${wie}` : "Keine Arten in der aktuellen Auswahl.";
+  $("#startHint").textContent = p.length ? `${lektion} · ${wie}` : "Keine Arten in der aktuellen Auswahl.";
   $("#btnStart").disabled = !p.length;
   const hasProg = p.some(c=>pget(c.key).box);
   const go=$("#btnGo"), gl=$("#goLabel");
   if(go){ go.disabled = !p.length; if(gl) gl.textContent = hasProg ? "Weiter lernen" : "Loslegen"; }
   const gh=$("#goHint");
-  if(gh) gh.textContent = p.length ? `${due} Karten heute dran · jede als Bild` : "Keine Arten in der aktuellen Auswahl.";
+  if(gh) gh.textContent = p.length ? `${lektion} · jede als Bild` : "Keine Arten in der aktuellen Auswahl.";
   const ex=$("#btnExam"), eh=$("#examHint");
   const zpOpt = !!($("#onlyzp") && $("#onlyzp").checked), hasZp = allCards.some(c=>c.zp);
   if(ex){ ex.disabled = !allCards.length; if(eh) eh.textContent = `${probeCount()} Pflanzen am Bild · alle Felder des Bogens · Note${zpOpt?" · nur ZP-Arten":""}`; }
@@ -5332,30 +5337,77 @@ function closeHelp(){
 /* Erst-Einweisung: einmalig beim ersten Besuch (danach über den »So funktioniert
    der Lernpfad«-Link), zeigt den Weg von leicht bis prüfungsreif. Reines Overlay,
    offline; merkt sich »gesehen« im localStorage, damit die Hinweise nicht im Weg sind. */
+/* ---------- Als App installieren (PWA) ----------
+   Chrome/Edge/Samsung-Browser (Android wie Desktop) melden über »beforeinstallprompt«, dass die
+   Seite installierbar ist. Das Ereignis wird festgehalten (preventDefault: kein doppelter Hinweis
+   des Browsers), und erst dann erscheint ein Knopf – ein toter Knopf wäre schlimmer als keiner.
+   iOS/Safari kennt das Ereignis nicht: dort steht der Weg »Teilen → Zum Home-Bildschirm«. Läuft
+   die Seite schon als App (display-mode: standalone), entfällt beides. Reine Browser-API, kein
+   Netz. Slots (.install-slot) sitzen in der Einführung und in der Hilfe; syncInstallUI füllt sie
+   beim Boot, beim Öffnen und sobald das Ereignis kommt. */
+let installEvt = null, installDone = false;
+function installEnv(){                                   // für Tests überschreibbar (window.__installEnv)
+  const o = window.__installEnv || {};
+  const standalone = ("standalone" in o) ? !!o.standalone
+    : ((window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true);
+  const ios = ("ios" in o) ? !!o.ios
+    : (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1));
+  return { standalone, ios, canPrompt: !!installEvt };
+}
+function installHTML(){                                  // Inhalt der Slots in Einführung und Hilfe
+  const e = installEnv();
+  if(e.standalone || installDone)
+    return `<div class="intro-install is-on">${ico("check")}<div><b>Läuft als App.</b> Pflanze-BW liegt auf deinem Home-Bildschirm und startet auch ohne Netz.</div></div>`;
+  if(e.canPrompt)
+    return `<div class="intro-install">${ico("leaf")}<div><b>Als App aufs Handy?</b> Ein Tipp genügt – danach startet Pflanze-BW vom Home-Bildschirm, auch ohne Netz.</div><button class="btn primary btn-install" type="button">App installieren</button></div>`;
+  if(e.ios)
+    return `<div class="intro-install">${ico("leaf")}<div><b>Als App aufs iPhone:</b> unten <b>Teilen</b> antippen, dann <b>»Zum Home-Bildschirm«</b>. Danach startet Pflanze-BW wie eine App – auch ohne Netz.</div></div>`;
+  return "";
+}
+function syncInstallUI(){
+  document.querySelectorAll(".install-slot").forEach(sl=>{ sl.innerHTML = installHTML(); const b=sl.querySelector(".btn-install"); if(b) b.onclick=installApp; });
+}
+async function installApp(){
+  const ev = installEvt;
+  if(!ev){ toast("Gerade nicht möglich – im Browser-Menü steht »App installieren« bzw. »Zum Startbildschirm«.", true); return; }
+  try{
+    ev.prompt();
+    const r = await ev.userChoice;
+    if(r && r.outcome==="accepted"){ installEvt=null; installDone=true; toast("Installiert – Pflanze-BW liegt jetzt auf deinem Home-Bildschirm."); }
+  }catch(e){}
+  syncInstallUI();
+}
+window.addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); installEvt=e; syncInstallUI(); });
+window.addEventListener("appinstalled", ()=>{ installEvt=null; installDone=true; syncInstallUI(); });
+/* ---------- Erst-Einweisung ----------
+   Kurz, freundlich, ehrlich: ein Satz zum Einstieg (»Weiter lernen« reicht), die vier Stufen in
+   je einer Zeile, zwei Tipps (Optionen, Fortschritt – mit der ehrlichen Erwartung, dass »sitzt«
+   Tage braucht), die »Ehrlich gesagt«-Box und der Installationsknopf. Jederzeit wieder über
+   »So funktioniert der Lernpfad«. */
 function openIntro(auto, onClose){
   const prev = document.activeElement;
   const scrim = el("div","scrim"); scrim.id="introScrim";
   scrim.innerHTML = `<div class="modal intro" role="dialog" aria-modal="true" aria-labelledby="introTtl">
     <button class="modal-x" id="introClose" aria-label="Schließen" title="Schließen">×</button>
-    <h2 class="intro-h" id="introTtl">So wirst du prüfungsreif</h2>
-    <p class="intro-lead">Am einfachsten: <b>»Weiter lernen«</b> – jede Pflanze kommt als Bild, und wie du antwortest, richtet sich nach deinem Lernstand. <b>»Probeprüfung«</b> stellt dich wie am Prüfungstag: Bild, alle Felder des Bogens, am Ende die Note. Wer selbst wählt: die Stufen sind nach Schwierigkeit sortiert, vom Erkennen bis zum freien Schreiben:</p>
+    <h2 class="intro-h" id="introTtl">Kurz erklärt – dann los</h2>
+    <p class="intro-lead">Tippe auf <b>»Weiter lernen«</b>, mehr musst du nicht wissen: Jede Pflanze kommt als Bild – erst wählst du den Namen, später schreibst du ihn selbst. <b>»Probeprüfung«</b> ist der Ernstfall zum Üben: alle Felder des Bogens, am Ende die Note.</p>
+    <p class="intro-sub">Lieber selbst wählen? Vier Stufen, von leicht bis prüfungsreif:</p>
     <ol class="intro-steps">
-      <li>${ico("image","is-ic")}<div><b>Bilder</b><span class="is-tag">leicht</span><br>Pflanze am Foto erkennen und den richtigen Namen wählen.</div></li>
-      <li>${ico("check","is-ic")}<div><b>Quiz</b><span class="is-tag">leicht</span><br>Zum deutschen Namen den richtigen botanischen aus vier Optionen wählen.</div></li>
-      <li>${ico("cards","is-ic")}<div><b>Karteikarten</b><span class="is-tag">mittel</span><br>Selbst abrufen und ehrlich bewerten – Wiederholung nach Plan (Spaced Repetition).</div></li>
-      <li>${ico("keys","is-ic")}<div><b>Selbst eingeben</b><span class="is-tag">prüfungsnah</span><br>Die Namen per Tastatur selbst schreiben – ein Feld je bewerteter Spalte (Gattung, Art, Familie), mit Punkten wie in der Prüfungstabelle.</div></li>
+      <li>${ico("image","is-ic")}<div><b>Bilder</b><span class="is-tag">leicht</span><br>Foto sehen, Namen wählen.</div></li>
+      <li>${ico("check","is-ic")}<div><b>Quiz</b><span class="is-tag">leicht</span><br>Deutscher Name – vier botanische zur Wahl.</div></li>
+      <li>${ico("cards","is-ic")}<div><b>Karteikarten</b><span class="is-tag">mittel</span><br>Selbst abrufen, ehrlich bewerten – Wiederholung nach Plan.</div></li>
+      <li>${ico("keys","is-ic")}<div><b>Selbst eingeben</b><span class="is-tag">prüfungsnah</span><br>Gattung, Art, Familie tippen – mit Punkten wie auf dem Bogen.</div></li>
     </ol>
-    <p class="intro-tip">${ico("sliders")} Unter <b>»Selbst wählen · Optionen«</b> grenzt du den Lernstoff ein (Thema, Familie, nur ZP), drehst die Abfrage um (botanischer Name → <b>deutscher Name</b>) oder änderst die Sitzungslänge. Gefragt sind sonst immer <b>Gattung, Art und Familie</b> – wie auf dem Bogen.</p>
-    <p class="intro-tip">${ico("sprout")} <b>Fortschritt:</b> Jede richtige Antwort bringt eine Pflanze eine Stufe weiter –
-      ab Stufe 4 »sitzt« sie; mit den Arten, die sitzen, wächst dein <b>Rang</b> (Keimling bis Meistergärtner/in).
+    <p class="intro-tip">${ico("sliders")} <b>»Selbst wählen · Optionen«:</b> nur ein Thema, eine Familie oder ZP-Arten üben – oder andersherum fragen (botanisch → <b>deutscher Name</b>). Sonst gilt die Prüfungsrichtung: <b>Gattung, Art und Familie</b>.</p>
+    <p class="intro-tip">${ico("sprout")} <b>Fortschritt:</b> Jede richtige Antwort hebt eine Pflanze eine Stufe – ab Stufe 4 »sitzt« sie, und mit jeder sitzenden Art wächst dein Rang. Das dauert Tage, nicht Minuten: So arbeitet dein Gedächtnis, nicht die App.
       <button class="linklike" id="introHow">Die fünf Stufen ansehen</button></p>
-    <p class="intro-foot"><b>Ziel:</b> Du benennst Gattung, Art und Familie sicher. Diese Einführung findest du jederzeit über <b>»So funktioniert der Lernpfad«</b> wieder.</p>
-    <div class="intro-real">${ico("leaf")}<div><b>Ehrlich gesagt:</b> Pflanzen lernt man draußen – mit Erde unter den Fingernägeln,
-      nicht mit dem Daumen auf dem Display. Das ersetzt diese App nicht, und das will sie auch nicht. Sie hilft dir, die
-      <b>botanischen Namen</b> zu wiederholen und schnell nachzuschlagen – damit sie sitzen, wenn du vor der echten Pflanze stehst.</div></div>
+    <div class="intro-real">${ico("leaf")}<div><b>Ehrlich gesagt:</b> Pflanzen lernt man draußen – mit Erde unter den Fingernägeln, nicht mit dem Daumen auf dem Display. Das ersetzt diese App nicht, und das will sie auch nicht: Sie sorgt dafür, dass dir die <b>botanischen Namen</b> einfallen, wenn du vor der echten Pflanze stehst.</div></div>
+    <div class="install-slot"></div>
+    <p class="intro-foot">Diese Einführung findest du jederzeit unter <b>»So funktioniert der Lernpfad«</b>.</p>
     <div class="intro-cta"><button class="btn primary" id="introGo">Los geht's</button></div>
   </div>`;
   document.body.appendChild(scrim);
+  syncInstallUI();
   const close=()=>{ try{ store.set(LS_PREFIX+"introSeen","1"); }catch(e){}
     document.removeEventListener("keydown", key); scrim.remove();
     if(prev && prev.focus){ try{ prev.focus(); }catch(e){} }
@@ -5394,6 +5446,7 @@ function openIntro(auto, onClose){
     const parts = pid.match(/^(.*)_(gaertner|fachwerker)$/);
     if(parts){ $("#frSelect").value=parts[1]; $("#nivSelect").value=parts[2]; }
     wire();
+    syncInstallUI();                                   // Hilfe-Slot »Als App«; die Einführung füllt ihren beim Öffnen
     loadProfile(pid); profSub();
     if(pendingChallenge) showChallengeBanner(pendingChallenge);
     const bi=$("#btnIntro"); if(bi) bi.onclick=()=>openIntro(false);
@@ -5454,6 +5507,7 @@ window.openHerbarium=openHerbarium;
 window.rankOf=rankOf;             // für Tests: Ränge (nur Lernstand), Combo
 window.RANKS=RANKS;
 window.startProbe=startProbe; window.gradeOf=gradeOf; window.probeCount=probeCount;   // Probeprüfung (für Tests)
+window.__installReset=()=>{ installEvt=null; installDone=false; syncInstallUI(); };      // Installations-Zustand (für Tests)
 window.isCultivarName=isCultivarName;
 window.cultivarName=cultivarName;       // für Tests: Sorten-Erkennung, Artbild-Regel, Tafel-Filter
 window.cultivarKind=cultivarKind;
