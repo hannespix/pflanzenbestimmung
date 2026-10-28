@@ -10,7 +10,6 @@
 <title>Pflanzenkenntnis · Lernen (Gärtnerberufe)</title>
 <meta name="theme-color" content="#2b4f38">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121713">
-<script>/* Theme vor dem ersten Rendern setzen (kein Aufblitzen) */(function(){try{var t=localStorage.getItem("pbw.theme");if(t==="dark"||t==="light")document.documentElement.dataset.theme=t;}catch(e){}})();</script>
 <!-- PWA: installierbar + offline (Service Worker), ausschließlich eigene Herkunft -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -144,14 +143,6 @@ input,select{font-family:inherit; color:inherit}
 .ex-ok{color:var(--green); font-weight:700} .ex-no{color:var(--madder); font-weight:700}
 .ex-sol{color:var(--ink-soft); font-size:12px}
 /* Selbst bestimmen, welche Felder abgefragt werden */
-.exfields{display:flex; flex-wrap:wrap; align-items:center; gap:7px; padding:0 13px 12px}
-.exf-lab{font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia)}
-.exf{display:inline-flex; align-items:center; gap:5px; border:1px solid var(--rule-strong); border-radius:999px;
-  padding:4px 10px; font-size:12.5px; background:var(--surface); cursor:pointer}
-.exf.on{background:var(--green-tint); border-color:var(--green); color:var(--green-deep)}
-.exf input{margin:0; accent-color:var(--green)}
-.exf-p{font-family:var(--mono); font-size:10px; color:var(--sepia)}
-.exf-hint{font-size:11.5px; color:var(--ink-soft)}
 @media (max-width:640px){ .exrow{grid-template-columns:1fr; gap:4px} .exlab{gap:8px} }
 
 /* Lernduell: eingehende Herausforderung, Teilen-Block, Vergleich */
@@ -250,7 +241,7 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
   border-radius:0 8px 8px 0; font-size:13.5px; line-height:1.5; color:var(--ink)}
 .startrow{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
 /* Hinweis vor dem Lernen: automatisch/KI-erzeugte Inhalte, keine Gewähr */
-.learnnote{margin:12px 0 0; padding:9px 12px; border-left:3px solid var(--gold); border-radius:0 5px 5px 0;
+.learnnote{margin:14px 0 0; padding:9px 12px; border-left:3px solid var(--gold); border-radius:0 5px 5px 0;
   background:var(--surface-2); color:var(--ink-soft); font-size:11.5px; line-height:1.55; max-width:660px}
 .learnnote b{color:var(--ink)}
 .learnnote>summary{list-style:none; cursor:pointer; user-select:none}
@@ -281,9 +272,15 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .og+.og{margin-top:12px; padding-top:12px; border-top:1px dashed var(--rule)}
 .og-h{font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); margin:0 0 8px}
 /* Ein-Knopf-Start + »Selbst wählen«-Klappe */
-.gorow{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:2px 0 12px}
-.gorow .btn.go{font-size:16.5px; padding:13px 26px}
-.gorow .hint{flex-basis:100%; font-size:12.5px; color:var(--ink-soft)}
+/* Zwei Start-Knöpfe nebeneinander (am Handy untereinander), jeder mit eigener Unterzeile */
+.gorow{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:2px 0 10px}
+.gorow .btn.go{display:flex; flex-direction:column; align-items:flex-start; gap:3px; padding:13px 18px; text-align:left; min-height:64px}
+.gorow .go-l{font-size:16.5px; font-weight:600; line-height:1.2}
+.gorow .go-s{font-family:var(--mono); font-size:10.5px; letter-spacing:.03em; font-weight:400; opacity:.85; line-height:1.3}
+.gorow .btn.go.exam{background:var(--surface-2); color:var(--green-deep); border:1.4px solid var(--green)}
+.gorow .btn.go.exam:hover{background:var(--green-tint)}
+@media (max-width:640px){ .gorow{grid-template-columns:1fr} }
+.quickrow{display:flex; gap:10px; flex-wrap:wrap; margin:0 0 12px}
 .choose{border:1px solid var(--rule); border-radius:6px; background:var(--surface-2); overflow:hidden; margin:0 0 12px}
 .choose>summary{list-style:none; cursor:pointer; display:flex; align-items:center; gap:9px; padding:9px 13px; font-size:13px; color:var(--ink-soft); user-select:none}
 .choose>summary::-webkit-details-marker{display:none}
@@ -303,22 +300,26 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .profmodal .profilerow{margin:10px 0 2px 0}
 .profmodal .profsub{display:block; padding:0; margin:10px 0 0}
 .pm-lead{font-size:13.5px; color:var(--ink-soft); margin:2px 0 4px}
-.stage-empty .stage-note{font-size:12px; color:var(--ink-soft); margin-top:6px}
 .setopts[open]>summary .opts-caret{transform:rotate(180deg)}
 .setopts .setrow{padding:13px}
 
 /* Fortschritt */
-.progress{display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center; margin:16px 0 0; padding:12px 16px; border:1px solid var(--rule); border-radius:4px; background:var(--surface)}
-.pstat{display:flex; align-items:baseline; gap:6px; font-family:var(--serif)}
-.pstat .n{font-size:22px; font-weight:600; color:var(--green-deep); font-variant-numeric:tabular-nums}
-.pstat .l{font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia)}
-.pbar{flex:1; min-width:160px; height:12px; border-radius:7px; background:var(--surface-2); border:1px solid var(--rule); overflow:hidden; display:flex}
+.progress{display:flex; flex-direction:column; gap:9px; margin:16px 0 0; padding:12px 16px; border:1px solid var(--rule); border-radius:4px; background:var(--surface)}
+/* Kopfzeile: der Rang (= Lernstand in Worten) als Knopf, öffnet die Laufbahn */
+.phead{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.rankline{display:inline-flex; align-items:center; gap:7px; border:0; background:none; cursor:pointer; padding:2px 0; font-family:var(--serif); color:var(--green-deep); text-align:left}
+.rankline .ic{width:16px; height:16px; flex:none}
+.rankline .rk-name{font-size:15.5px; font-weight:600; font-style:italic}
+.rankline .rk-sub{font-family:var(--mono); font-size:11px; color:var(--ink-soft); font-style:normal; letter-spacing:.02em}
+.rankline:hover .rk-name{text-decoration:underline; text-underline-offset:3px}
+.pfoot{display:flex; align-items:center; justify-content:space-between; gap:8px 14px; flex-wrap:wrap}
+.pbar{width:100%; height:12px; border-radius:7px; background:var(--surface-2); border:1px solid var(--rule); overflow:hidden; display:flex}
 .pbar span{height:100%}
 .pbar .b-neu{background:var(--rule-strong)} .pbar .b-lern{background:var(--gold)} .pbar .b-fest{background:var(--green)}
 .plegend{display:flex; gap:12px; font-family:var(--mono); font-size:10.5px; color:var(--ink-soft); flex-wrap:wrap}
 .plegend i{display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:5px; vertical-align:middle}
-/* Kompakte Status-Chips (Serie · Tagesziel · Rang · Herbarium) – eine Zeile statt drei */
-.statusrow{display:flex; align-items:center; gap:8px; margin-top:10px; flex-wrap:wrap}
+/* Status-Chips: Lernserie · Herbarium (der Rang steht in der Kopfzeile des Fortschritts) */
+.statusrow{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
 .chip{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--rule-strong);
   background:var(--surface-2); color:var(--ink-soft); border-radius:99px; padding:5px 11px;
   font-family:var(--mono); font-size:11px; cursor:default; min-height:32px}
@@ -330,13 +331,6 @@ button.chip:hover{background:var(--green-tint); border-color:var(--green); color
 .sflame .ic{fill:currentColor; stroke:none}
 .sflame b{font-size:13px; color:var(--ink)}
 .flamechip.on{border-color:#d0862f55}
-/* Tagesziel als kleiner Ring (Konisch-Verlauf) statt Balken + Text */
-.ring{width:15px; height:15px; border-radius:50%; flex:none;
-  background:conic-gradient(var(--gold) calc(var(--p,0)*1%), var(--rule) 0);
-  -webkit-mask:radial-gradient(circle, transparent 45%, #000 47%); mask:radial-gradient(circle, transparent 45%, #000 47%)}
-.rankchip .rk-name{font-family:var(--serif); font-style:italic; font-size:13px; color:var(--green-deep)}
-.rk-mini{display:inline-block; width:26px; height:4px; border-radius:99px; background:var(--rule); overflow:hidden}
-.rk-mini b{display:block; height:100%; background:var(--green); border-radius:99px}
 /* ℹ neben der Legende öffnet die grafische Stufen-Erklärung (kein Erklärabsatz mehr) */
 .legend-i{border:0; background:none; color:var(--sepia); cursor:pointer; padding:2px; line-height:0;
   border-radius:50%; opacity:.8}
@@ -382,15 +376,17 @@ button.chip:hover{background:var(--green-tint); border-color:var(--green); color
 .stepline b{color:var(--green-deep)}
 @media (prefers-reduced-motion: reduce){ .stepline .pips i{transition:none} }
 .rk-name{font-family:var(--serif); font-size:14px; font-style:italic; color:var(--green-deep); letter-spacing:.01em}
-.rk-bar{flex:1; height:6px; background:var(--surface-2); border:1px solid var(--rule); border-radius:99px; overflow:hidden; min-width:70px}
-.rk-bar i{display:block; height:100%; background:linear-gradient(90deg,var(--green),var(--green-deep)); border-radius:99px;
-  transition:width .5s cubic-bezier(.2,.8,.3,1)}
 /* Sitzungs-Combo: Treffer in Folge (ab 3 sichtbar), poppt bei jeder Erhöhung */
 .scombo{font-family:var(--mono); font-size:12px; color:#b5651d; font-weight:700; letter-spacing:.02em;
   animation:comboPop .42s cubic-bezier(.2,.85,.3,1.4)}
 @keyframes comboPop{ 0%{transform:scale(.7); opacity:.2} 55%{transform:scale(1.18)} 100%{transform:scale(1); opacity:1} }
 @media (prefers-reduced-motion: reduce){ .scombo{animation:none} }
 .xpline{font-family:var(--mono); font-size:12.5px; color:var(--green-deep); margin:2px 0 0}
+/* Probeprüfung: Note groß, Schlüssel klein */
+.grade{display:flex; flex-direction:column; align-items:center; gap:2px; margin:10px auto 2px; padding:12px 22px; border:1.5px solid var(--green); border-radius:12px; background:var(--green-tint); width:max-content; max-width:100%}
+.grade .g-n{font-family:var(--serif); font-size:30px; font-weight:600; color:var(--green-deep); line-height:1.1}
+.grade .g-sub{font-family:var(--mono); font-size:12px; color:var(--ink-soft)}
+.g-key{font-size:11.5px; color:var(--ink-soft); margin:6px 0 0}
 /* Sammel-Herbarium: eine Sammelkarte je Thema – Klebestreifen oben, gepresste
    Pflanze (SVG, currentColor), »Gemeistert«-Schrägband; Unfertiges bleibt blass */
 .herbmodal{max-width:740px}
@@ -841,22 +837,9 @@ body{line-height:1.5}
   --gold:#d0aa4f; --rule:#2f3830; --rule-strong:#475147; --shadow:rgba(0,0,0,.55);
   --glass:rgba(18,23,19,.72); --glass-m:rgba(20,26,21,.9);
   --shadow-1:0 1px 2px rgba(0,0,0,.45); --shadow-2:0 18px 44px -20px rgba(0,0,0,.6)}}
-/* Hell/Dunkel-Umschalter – lebt jetzt in den »Optionen« (Sitzung + Liste), nicht mehr im Kopf.
-   Ein Klick übersteuert die System-Einstellung; die Wahl gilt für alle Seiten des Geräts.
-   Das passende Icon/Wort zeigt die zu schaltende Richtung (im Hellen »Dunkles Design«). */
-.themetoggle{display:inline-flex; align-items:center; gap:7px; border:1px solid var(--rule-strong);
-  background:var(--surface-2); color:var(--ink); padding:7px 12px; border-radius:8px; cursor:pointer;
-  font-size:13px; font-family:inherit; transition:background .15s, border-color .15s}
-.themetoggle:hover{background:var(--card); border-color:var(--green)}
-.themetoggle .ic{width:16px; height:16px; flex:none}
-.mast-right .themebtn{width:40px; height:40px; min-height:40px; padding:0; border-radius:50%; justify-content:center; gap:0}   /* ein Ort für alle Seiten: rund im Kopf (Audit) */
-.mast-right .themebtn .ic{width:17px; height:17px}
-.themetoggle .sun,.themetoggle .tt-light{display:none}
-:root[data-theme="dark"] .themetoggle .sun,:root[data-theme="dark"] .themetoggle .tt-light{display:revert}
-:root[data-theme="dark"] .themetoggle .moon,:root[data-theme="dark"] .themetoggle .tt-dark{display:none}
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]) .themetoggle .sun,:root:not([data-theme="light"]) .themetoggle .tt-light{display:revert}
-  :root:not([data-theme="light"]) .themetoggle .moon,:root:not([data-theme="light"]) .themetoggle .tt-dark{display:none}}
+/* Hell/Dunkel folgt allein der Systemeinstellung (prefers-color-scheme) – der eigene Schalter ist auf
+   Nutzerwunsch entfallen. Die [data-theme]-Regeln bleiben stehen (die Tests simulieren damit den
+   Dunkelmodus); gesetzt wird das Attribut nirgends mehr. */
 
 /* Herbarium 2.0 – Lern-Tool: Radien, Tiefe, Glas */
 .masthead{border-radius:18px 18px 0 0}
@@ -1033,11 +1016,10 @@ body.stagefull #stage>.sessionbar{
   .cathead-i{min-width:44px; min-height:44px}
   .helplink{min-height:44px; padding:8px 12px}
   .profchip{min-height:44px}
+  .rankline{min-height:44px}
   .introlink{min-height:44px; display:inline-flex; align-items:center; padding:8px 4px}
-  .themetoggle{min-height:44px}
-  .mast-right .themebtn{min-width:44px; width:44px; height:44px}
   select.mini,input.mini,.listsearch{min-height:44px}
-  .switch,.po-ety,label.exf{min-height:44px; align-items:center}
+  .switch,.po-ety{min-height:44px; align-items:center}
   .setopts>summary,.choose>summary,.etym>summary{min-height:44px; display:flex; align-items:center}
   /* Fließtext-Summary NICHT flexen – sonst stehen die inline-Teile nebeneinander */
   .learnnote>summary{padding-top:11px; padding-bottom:11px}
@@ -1049,7 +1031,6 @@ body.stagefull #stage>.sessionbar{
   .srcgrid{gap:10px}
   .foot a{display:inline-flex; align-items:center; min-height:44px}
   .sp{min-height:48px}
-  .exf{padding-top:6px; padding-bottom:6px}
 }
 /* Große Monitore: mehr Luft und etwas größere Grundelemente – die ruhige
    Lese-Spalte bleibt, wirkt aber nicht verloren auf 1440 px + */
@@ -1237,7 +1218,6 @@ body.stagefull #stage>.sessionbar{
              das Prüfungswerkzeug hat seine eigene Adresse (/pruefung) und geht Azubis
              nichts an. Impressum/Datenschutz bleibt über die Fußzeile erreichbar. -->
         <button class="helplink" id="btnHelp" type="button" aria-pressed="false" title="Kurzanleitung und Erklärung aller Modi und Einstellungen ein- oder ausblenden"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5"/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/></svg>Hilfe</button>
-        <button class="themetoggle themebtn" type="button" aria-label="Helles oder dunkles Design umschalten" title="Zwischen hellem und dunklem Design wechseln – die Wahl gilt für alle Seiten auf diesem Gerät"><svg class="ic moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.5 14.5A8.5 8.5 0 019.5 3.5a8.5 8.5 0 1011 11z"/></svg><svg class="ic sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
       </div>
     </div>
     <!-- Beruf einmal wählen, danach nur noch ein Chip: die beiden Auswahlfelder
@@ -1269,10 +1249,17 @@ body.stagefull #stage>.sessionbar{
     <!-- Ein-Knopf-Start: »Weiter lernen« startet eine GEFÜHRTE Sitzung (jede Pflanze als
          Bild, Antwortart nach Lernstand). Alles Weitere – Modi einzeln + Feineinstellungen –
          steckt dahinter in der zugeklappten »Selbst wählen«-Klappe. Keine Funktion entfällt. -->
+    <!-- Zwei Wege, sonst nichts: »Weiter lernen« (geführt, jede Pflanze als Bild, Antwort nach
+         Lernstand) und »Probeprüfung« (wie am Prüfungstag: 20/15 Pflanzen, alle Bogenfelder, Note).
+         Jeder Knopf trägt seine Unterzeile selbst – keine losen Hinweiszeilen mehr. -->
     <div class="gorow" id="goRow">
-      <button class="btn primary big go" id="btnGo" title="Geführte Sitzung starten: jede Pflanze kommt als Bild – neue wählst du aus vier Namen, ab Stufe 3 gibst du die Namen selbst ein wie in der Prüfung.">Weiter lernen</button>
+      <button class="btn primary big go" id="btnGo" title="Geführte Lektion starten: jede Pflanze kommt als Bild – neue wählst du aus vier Namen, ab Stufe 3 gibst du die Namen selbst ein wie in der Prüfung.">
+        <span class="go-l" id="goLabel">Weiter lernen</span><span class="go-s" id="goHint"></span></button>
+      <button class="btn big go exam" id="btnExam" type="button" title="Probeprüfung wie am Prüfungstag: so viele Pflanzen wie auf dem Bogen, zufällig aus deiner Liste, jede als Bild – zu jeder gibst du alle bewerteten Felder ein. Am Ende Punkte, Prozent und Note (Notenschlüssel Baden-Württemberg). Braucht Internet.">
+        <span class="go-l">Probeprüfung</span><span class="go-s" id="examHint"></span></button>
+    </div>
+    <div class="quickrow">
       <button class="btn ghost" id="btnList" type="button" title="Alle Arten zum Nachschlagen: durchsuchbar, nach Thema/Familie/A–Z, mit Steckbriefen und Quellen">Liste zum Nachschlagen</button>
-      <span class="hint" id="goHint"></span>
     </div>
     <details class="choose" id="chooseWrap">
       <summary title="Modus und Feineinstellungen selbst wählen">
@@ -1307,12 +1294,9 @@ body.stagefull #stage>.sessionbar{
         <div class="og">
           <div class="og-h">Wie üben?</div>
           <div class="setrow">
-            <div class="field" id="phAnswerField" hidden><label for="phAnswer">Antwort</label><select id="phAnswer" class="mini" title="Wie im Bilder-Quiz geantwortet wird: aus vier vollen Namen (botanisch + deutsch) auswählen – oder die Namen selbst eingeben, »wie in der Prüfung« mit einem Feld je bewerteter Spalte (Gattung, Art, Familie, Deutscher Name) samt Punkten."></select></div>
             <div class="field" id="dirField"><label for="dir">Abfrage</label><select id="dir" class="mini" title="Was gefragt wird: deutscher Name → botanischer Name (wie in der Prüfung) oder umgekehrt. Im Bilder-Quiz ist die Aufgabe fest: Bild → voller Name."></select></div>
             <div class="field"><label for="sessLen">Karten/Sitzung</label><input id="sessLen" class="mini" type="number" min="5" max="100" value="20" title="Wie viele Karten (5–100) eine Sitzung umfasst. Neue und fällige Karten kommen zuerst."></div>
-            <div class="field"><label for="dayGoal">Tagesziel</label><select id="dayGoal" class="mini" title="Ab so vielen bearbeiteten Karten zählt der Tag für deine Lernserie. Regelmäßig kleine Portionen wirken beim Karteikasten-Lernen mehr als seltene Marathons."><option>10</option><option selected>20</option><option>30</option><option>50</option></select></div>
           </div>
-          <div class="exfields" id="examFieldsRow" hidden></div>
         </div>
       </div>
     </details>
@@ -1326,43 +1310,6 @@ body.stagefull #stage>.sessionbar{
          blendet sie nur im Listenmodus ein (die Sitzungs-Optionen stecken in der
          »Selbst wählen«-Klappe; ihre listenrelevanten Schalter sind hier gespiegelt). -->
     <div class="listcontrols" id="listControls" hidden></div>
-    <details class="learnnote" id="learnNote">
-      <summary><b>Datenherkunft:</b> Pflanzennamen unverändert aus den <b>amtlichen Prüfungslisten</b>&nbsp;·
-        Lernhilfen teils <b>KI-erzeugt</b> <span class="ln-more">(mehr)</span></summary>
-      <div class="ln-row ln-src">
-        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.2 12.4l2.6 2.6 5-5.4"/></svg>
-        <div><b>Unverändert aus der amtlichen Prüfungsliste</b> deiner Fachrichtung: botanischer Name
-          (Gattung und Art), Familie, deutscher Name, Synonyme und die ZP-Kennzeichnung. Angepasst wird
-          allein die <i>Schreibweise</i> – das Hybrid-Zeichen, Abstände, die Anführungszeichen um
-          Sortennamen (einheitlich 'Nigra') und die Aufteilung des botanischen Namens in Gattung und Art. In der Anzeige schreibt das Lern-Tool zudem
-          Abkürzungen aus (»Gew.« → »Gewöhnlicher«) und berichtigt offensichtliche Tippfehler in
-          Familiennamen (»Malvacea« → »Malvaceae«) und zeigt den Platzhalter »'Sorte'« der GaLaBau-Listen
-          als »in Sorten« (die Info-Karte erklärt ihn und nennt Beispiel-Sorten – erzeugt, ohne Gewähr);
-          beim Eingeben gilt die Form der Liste weiterhin als richtig.</div>
-      </div>
-      <div class="ln-row ln-gen">
-        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg>
-        <div><b>Automatisch erzeugt – teils mithilfe generativer KI</b> und deshalb ohne Gewähr: die
-          thematische Zuordnung, die Namensherkunft, die Familien-Steckbriefe (aus ihnen stammt auch
-          der deutsche Familienname, wo die Liste nur den lateinischen führt), die <b>Bildauswahl</b>
-          (echte Bilder von Wikimedia Commons, nicht KI-erzeugt – automatisch ist nur die Auswahl) und die falschen Antworten im
-          Quiz – letztere stammen ihrerseits aus derselben amtlichen Liste.</div>
-      </div>
-      <p class="ln-foot">Fünf Eingriffe sind offengelegt: bei <i>Chimonanthus praecox</i> war die
-        Familie in der Quellliste leer (ergänzt: Calycanthaceae); die Zeile des Bauernjasmins in der
-        GaLaBau-Gärtner-Liste trug den falschen botanischen Namen »Salvia abrotanoides« (berichtigt:
-        <i>Philadelphus coronarius</i> – so steht er in der Fachwerker-Liste derselben Fachrichtung);
-        zwölf <b>Rechtschreibfehler</b> in botanischen Namen sind berichtigt (z. B. »Antirrinum« →
-        <i>Antirrhinum</i>, »Gypsohila« → <i>Gypsophila</i>, »serphyllum« → <i>serpyllum</i>) – so,
-        wie die Art in den übrigen Listen geschrieben ist;
-        für die zehn Listen ohne eigene Kategorie ist die Wuchsform zugeordnet; und die Kategorie der
-        Beikräuter, die in vier Listen unterschiedlich heißt, trägt einheitlich den Namen
-        »Wild- &amp; Beikräuter«.
-        Ich übernehme keine Gewähr und keine Haftung für
-        Richtigkeit oder Vollständigkeit – <b>verbindlich sind allein die offiziellen Prüfungslisten</b>;
-        im Zweifel bitte dort und in der Fachliteratur nachprüfen.
-        <a href="rechtliches.html#datenquellen">Ausführlich: Datenquellen &amp; Inhalte</a></p>
-    </details>
   </div>
 
   <div class="scrim helpscrim" id="helpScrim" hidden>
@@ -1387,10 +1334,13 @@ body.stagefull #stage>.sessionbar{
         <b>ab Stufe 3 gibst du die Namen selbst ein – wie in der Prüfung</b>. Nur wenn es zu einer
         einzelnen Art kein Bild gibt (oder kein Internet da ist), kommt sie als Auswahlfrage am Namen.
         Die Zeile über der Aufgabe sagt es jeweils an.</li>
-      <li>Oder unter <b>»Selbst wählen«</b> einen <b>Modus</b> wählen und <b>»Sitzung starten«</b>. Feineinstellungen (<b>Abfrage</b>,
-        <b>Lernstoff</b>, „nur ZP-relevant", Sitzungslänge) stecken unter <b>»Optionen«</b> –
-        standardmäßig zugeklappt, damit die Startansicht ruhig bleibt.</li>
-      <li><b>Sitzung starten</b> und losüben. Deine Bewertungen steuern, welche Karten wann wiederkommen.</li>
+      <li><b>»Probeprüfung«</b> stellt dich wie am Prüfungstag: so viele Pflanzen wie auf dem Bogen
+        (20, Fachwerker 15), zufällig aus deiner Liste, jede als Bild – zu jeder gibst du <b>alle
+        bewerteten Felder</b> ein. Am Ende stehen Punkte, Prozent und die <b>Note</b>.</li>
+      <li>Oder unter <b>»Selbst wählen«</b> einen <b>Modus</b> wählen und <b>»Sitzung starten«</b>. Feineinstellungen
+        (<b>Lernstoff</b>, „nur ZP-relevant", <b>Abfrage</b>, Sitzungslänge) stecken unter <b>»Optionen«</b> –
+        standardmäßig zugeklappt, damit die Startansicht ruhig bleibt. Deine Antworten steuern, welche Karten
+        wann wiederkommen.</li>
     </ol>
 
     <p class="hlead" style="margin-top:14px">Standard ist die <b>Prüfungsrichtung</b>: vorne der
@@ -1412,9 +1362,8 @@ body.stagefull #stage>.sessionbar{
         anspruchsvoller und schult den Blick fürs Unterscheiden.</dd>
       <dt>Selbst eingeben</dt><dd><b>Die Namen per Tastatur selbst schreiben – wie in der Prüfung:</b> Für <b>jedes bewertete Feld deiner Fachrichtung</b>
         gibt es ein eigenes Eingabefeld – Gattung, Art, Familie (und je nach Bogen der deutsche Name) –,
-        jeweils mit der <b>Punktzahl vom Prüfungsbogen</b>, genau wie in der Prüfungstabelle. Welche Felder
-        gefragt werden, legst du unter <b>Optionen · Felder</b> fest (Standard = Bogen deiner Fachrichtung).
-        Mit <b>Enter</b> springst du ins nächste Feld. Jedes Feld wird einzeln geprüft und einzeln bepunktet.
+        jeweils mit der <b>Punktzahl vom Prüfungsbogen</b>, genau wie in der Prüfungstabelle – immer alle
+        bewerteten Felder deiner Fachrichtung. Mit <b>Enter</b> springst du ins nächste Feld. Jedes Feld wird einzeln geprüft und einzeln bepunktet.
         <b>Die Schreibweise zählt:</b> erlaubt ist genau
         <b>ein</b> falsches Zeichen und das erst ab fünf Buchstaben – kurze Namen (<i>Acer</i>, <i>Rosa</i>)
         müssen sitzen, und der <b>Anfangsbuchstabe muss stimmen</b> (»Bollensellerie« ist kein
@@ -1453,12 +1402,11 @@ body.stagefull #stage>.sessionbar{
         Gartensorte, bei Gruppen genau diese (»Elatior«, »Neuguinea«); eine Wildart nur, wenn sich keine
         Gartenform findet, und nie eine Art, die in deiner Liste eigens steht. Arten derselben Gattung stehen
         dann auch nicht zur Auswahl.
-        <b>Wie du antwortest, bestimmst du unter »Optionen · Antwort«:</b>
-        aus <b>vier Namen auswählen</b> oder die Namen <b>selbst eingeben – »wie in der Prüfung«</b>:
-        dann erscheint unter dem Bild für jede bewertete Spalte ein eigenes Feld
-        (Gattung, Art, Familie, Deutscher Name) mit den <b>Punkten deiner Fachrichtung</b>; du bekommst
-        <b>Teilpunkte</b> und siehst feldweise, was gestimmt hat. Nach der Antwort erscheinen der deutsche
-        Name und der <b>Bildnachweis</b>.
+        Im Modus <b>Bilder</b> wählst du aus <b>vier Namen</b>. Die Namen zum Bild <b>selbst eingeben – »wie in
+        der Prüfung«</b> – übst du in der geführten Lektion (ab Stufe 3) und in der <b>Probeprüfung</b>: dann
+        erscheint unter dem Bild für jede bewertete Spalte ein eigenes Feld (Gattung, Art, Familie,
+        Deutscher Name) mit den <b>Punkten deiner Fachrichtung</b>; du bekommst <b>Teilpunkte</b> und siehst
+        feldweise, was gestimmt hat. Nach der Antwort erscheinen der deutsche Name und der <b>Bildnachweis</b>.
         <b>Dieser Modus braucht Internet</b>: Die Bilder kommen von Wikimedia Commons und Wikipedia, ersatzweise von iNaturalist; geladen
         wird erst, wenn du den Modus startest. Ohne Netz sagt der Modus das klar – <b>alle anderen Modi laufen
         ohne Internet weiter</b>. Gesucht wird <b>vom Genauen zum Groben</b>: zuerst die Bildkategorie genau
@@ -1491,13 +1439,6 @@ body.stagefull #stage>.sessionbar{
         und der Standard; <b>botanisch → deutscher Name</b> übt den umgekehrten Weg. Im <b>Bilder</b>-Modus
         gibt es nichts zu wählen: Gefragt ist immer <b>Bild → voller Name</b> (botanischer + deutscher Name
         zusammen). Beim Eingeben zählt jede in der Liste geführte Schreibweise (auch ohne Bindestrich).</dd>
-      <dt>Antwort</dt><dd>Nur im <b>Bilder</b>-Modus: <b>Auswahl (4 Namen)</b> oder <b>Selbst eingeben
-        (wie in der Prüfung)</b>. Beim Eingeben wird pro bewerteter Spalte ein Feld abgefragt –
-        die Beschriftungen und Punkte sind die deiner Fachrichtung (Fachwerker: Deutscher Name 3 / Gattung 0,5
-        / Art 0,5 · GaLaBau: Gattung 1 / Art 1 / Deutscher Name 2 · Produktion: Gattung 3 / Art 3 / Familie 1
-        / Deutscher Name 3). Über die <b>Felder</b>-Schalter darunter bestimmst du selbst, was abgefragt wird;
-        die Auswahl wird je Profil gemerkt. Bei der Familie zählt der <b>lateinische oder der deutsche</b>
-        Name, und mit <b>Enter</b> springst du ins nächste Feld.</dd>
       <dt>Lernstoff · nur ZP</dt><dd>Grenzt den Lernstoff ein: <b>alle Arten</b>, ein <b>Thema</b> oder eine
         <b>Pflanzenfamilie</b> (die Zahl in Klammern nennt die Artenzahl) – dazu optional nur die für die
         Zwischenprüfung markierten Arten. Die Themen sind die Lerngruppen aus dem Unterricht: Gehölze nach
@@ -1538,12 +1479,25 @@ body.stagefull #stage>.sessionbar{
       <li><b>Denkzeit:</b> In Quiz, Selbst eingeben und Bilder läuft oben eine Uhr. Sie zählt nur, solange eine
         Frage offen ist – Wartezeit auf ein Bild und das Lesen der Lösung zählen nicht mit. Karteikarten
         laufen ohne Uhr.</li>
-      <li><b>Punkte &amp; Ränge:</b> Jede richtige Antwort bringt Erfahrungspunkte – Selbst eingeben 10, Auswahl 5,
-        Karteikarte 3, dazu Bonus ab drei Treffern in Folge. Die Gärtner-Laufbahn Keimling → Sämling → Steckling →
-        Jungpflanze → Prachtexemplar → Meistergärtner/in verlangt aber beides: Punkte <b>und</b> Lernstand. Jede Stufe
-        hat eine Bedingung am Lernstand – erst angefangene Arten, dann Arten, die wirklich »sitzen« (bis 90 % für die
-        höchste Stufe) –, damit der Rang zeigt, was du kannst, und nicht nur, wie viel du geübt hast. Ein Tipp auf den
-        Rang im Fortschritt zeigt alle Stufen, ihre Bedingungen und was dir noch fehlt.</li>
+      <li><b>Ränge:</b> Die Gärtner-Laufbahn Keimling → Sämling → Steckling → Jungpflanze → Prachtexemplar →
+        Meistergärtner/in richtet sich <b>allein nach deinem Lernstand</b>: erst angefangene Arten (10), dann Arten,
+        die wirklich »sitzen« (5, dann 25 %, 60 % und 90 % deiner Liste für die höchste Stufe) – im Beruf, in dem du
+        am weitesten bist. So zeigt der Rang, was du kannst, nicht, wie viel du geklickt hast. Ein Tipp auf den Rang
+        im Fortschritt zeigt alle Stufen und was dir zur nächsten fehlt. Punkte gibt es nur noch dort, wo sie etwas
+        bedeuten: beim Eingeben die Punkte des Prüfungsbogens – und <b>Treffer in Folge</b> werden gefeiert.</li>
+      <li><b>Probeprüfung:</b> so viele Pflanzen wie auf dem Prüfungsbogen deiner Fachrichtung (Gärtner 20,
+        Fachwerker 15), zufällig aus der ganzen Liste (bei »nur ZP-relevant« nur aus diesen), jede als Bild, und zu
+        jeder alle bewerteten Felder zum Eingeben – Fachwerker: Deutscher Name 3 / Gattung 0,5 / Art 0,5 · GaLaBau:
+        Gattung 1 / Art 1 / Deutscher Name 2 · Produktion: Gattung 3 / Art 3 / Familie 1 / Deutscher Name 3. Bei der
+        Familie zählt der lateinische oder der deutsche Name, mit <b>Enter</b> springst du ins nächste Feld. Keine
+        zweite Chance je Pflanze – wie am Prüfungstag; ein Schreibfehler halbiert die Punkte des Feldes. Am Ende
+        stehen Punkte, Prozent und die <b>Note nach dem Notenschlüssel Baden-Württemberg</b> (1 ab 90 %, 2 ab 70 %,
+        3 ab 50 %, 4 ab 30 %, 5 ab 10 %). Jede Antwort zählt trotzdem in deinen Lernstand. Braucht Internet (Bilder).</li>
+      <li><b>Lernserie:</b> Ein Tag zählt für die Serie, sobald du <b>20 Karten</b> bearbeitet hast – etwa eine
+        Lektion. »Gestern geschafft« hält die Serie, ein Tag Pause reißt sie. Regelmäßig kleine Portionen wirken beim
+        Karteikasten-Lernen mehr als seltene Marathons.</li>
+      <li><b>Hell oder dunkel:</b> Das Werkzeug folgt der Einstellung deines Geräts (Systemdesign) – einen eigenen
+        Schalter gibt es nicht mehr.</li>
       <li><b>Herbarium · Thema üben:</b> Auf jeder Sammelkarte im Herbarium startet »Thema üben« eine geführte Lektion
         nur mit den Arten dieses Themas (z. B. nur Gräser). Dasselbe erreichst du über Optionen · Lernstoff, wo du
         auch nach Pflanzenfamilie eingrenzen kannst.</li>
@@ -1568,6 +1522,43 @@ body.stagefull #stage>.sessionbar{
   </div>
 
   <section class="progress" id="progress" hidden></section>
+  <details class="learnnote" id="learnNote">
+    <summary><b>Datenherkunft:</b> Pflanzennamen unverändert aus den <b>amtlichen Prüfungslisten</b>&nbsp;·
+      Lernhilfen teils <b>KI-erzeugt</b> <span class="ln-more">(mehr)</span></summary>
+    <div class="ln-row ln-src">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.2 12.4l2.6 2.6 5-5.4"/></svg>
+      <div><b>Unverändert aus der amtlichen Prüfungsliste</b> deiner Fachrichtung: botanischer Name
+        (Gattung und Art), Familie, deutscher Name, Synonyme und die ZP-Kennzeichnung. Angepasst wird
+        allein die <i>Schreibweise</i> – das Hybrid-Zeichen, Abstände, die Anführungszeichen um
+        Sortennamen (einheitlich 'Nigra') und die Aufteilung des botanischen Namens in Gattung und Art. In der Anzeige schreibt das Lern-Tool zudem
+        Abkürzungen aus (»Gew.« → »Gewöhnlicher«) und berichtigt offensichtliche Tippfehler in
+        Familiennamen (»Malvacea« → »Malvaceae«) und zeigt den Platzhalter »'Sorte'« der GaLaBau-Listen
+        als »in Sorten« (die Info-Karte erklärt ihn und nennt Beispiel-Sorten – erzeugt, ohne Gewähr);
+        beim Eingeben gilt die Form der Liste weiterhin als richtig.</div>
+    </div>
+    <div class="ln-row ln-gen">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg>
+      <div><b>Automatisch erzeugt – teils mithilfe generativer KI</b> und deshalb ohne Gewähr: die
+        thematische Zuordnung, die Namensherkunft, die Familien-Steckbriefe (aus ihnen stammt auch
+        der deutsche Familienname, wo die Liste nur den lateinischen führt), die <b>Bildauswahl</b>
+        (echte Bilder von Wikimedia Commons, nicht KI-erzeugt – automatisch ist nur die Auswahl) und die falschen Antworten im
+        Quiz – letztere stammen ihrerseits aus derselben amtlichen Liste.</div>
+    </div>
+    <p class="ln-foot">Fünf Eingriffe sind offengelegt: bei <i>Chimonanthus praecox</i> war die
+      Familie in der Quellliste leer (ergänzt: Calycanthaceae); die Zeile des Bauernjasmins in der
+      GaLaBau-Gärtner-Liste trug den falschen botanischen Namen »Salvia abrotanoides« (berichtigt:
+      <i>Philadelphus coronarius</i> – so steht er in der Fachwerker-Liste derselben Fachrichtung);
+      zwölf <b>Rechtschreibfehler</b> in botanischen Namen sind berichtigt (z. B. »Antirrinum« →
+      <i>Antirrhinum</i>, »Gypsohila« → <i>Gypsophila</i>, »serphyllum« → <i>serpyllum</i>) – so,
+      wie die Art in den übrigen Listen geschrieben ist;
+      für die zehn Listen ohne eigene Kategorie ist die Wuchsform zugeordnet; und die Kategorie der
+      Beikräuter, die in vier Listen unterschiedlich heißt, trägt einheitlich den Namen
+      »Wild- &amp; Beikräuter«.
+      Ich übernehme keine Gewähr und keine Haftung für
+      Richtigkeit oder Vollständigkeit – <b>verbindlich sind allein die offiziellen Prüfungslisten</b>;
+      im Zweifel bitte dort und in der Fachliteratur nachprüfen.
+      <a href="rechtliches.html#datenquellen">Ausführlich: Datenquellen &amp; Inhalte</a></p>
+  </details>
 
   <!-- Listen-Suche auf Seitenebene (nicht in der Setup-Karte), damit sie beim
        Scrollen der langen Liste als kleiner sticky Header oben kleben kann. -->
@@ -1608,7 +1599,5 @@ body.stagefull #stage>.sessionbar{
 const SEEDS=/*__SEEDS__*/{};
 /*__APP_JS__*/
 </script>
-<script>/* Hell/Dunkel-Umschalter: übersteuert die System-Einstellung, Wahl wird gespeichert.
-   Delegation auf .themetoggle – der runde Knopf sitzt im Kopf (ein Ort auf allen Seiten). */(function(){document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest(".themetoggle");if(!b)return;var r=document.documentElement,sys=window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light",cur=r.dataset.theme||sys,nx=cur==="dark"?"light":"dark";var ap=function(){r.dataset.theme=nx;try{localStorage.setItem("pbw.theme",nx);}catch(e){}};if(document.startViewTransition&&!window.__noVT&&!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)){document.startViewTransition(ap);}else{ap();}});})();</script>
 </body>
 </html>

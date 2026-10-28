@@ -2776,6 +2776,52 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       alle 1297 in den Läufen 5–8 gewählten Dateien: die Filter verwerfen genau die bekannten Fehlgriffe
       (Etikett, vier Insektenfotos, Bakterienfäule) – und keinen einzigen Listen-Namen.
 
+- [x] **Weniger ist mehr: Ränge = Lernstand · Probeprüfung · entschlackter Start · Design folgt dem
+      System** (Rückmeldung: »Überdenke die Ränge-Mechanik und vereinfache das UI – manchmal ist weniger
+      mehr, es ist noch etwas zu viel auf einmal« sowie »Dark/Light-Mode braucht keinen Schalter«).
+      **(1) Ränge ohne Punkte.** Die Erfahrungspunkte waren durch die Lernstand-Bedingung bedeutungslos
+      (nachgerechnet: bei großen Gärtner-Listen binden die Punkte nie, bei kleinen Fachwerker-Listen
+      sperrten sie trotz 90 % sitzender Arten die obersten Stufen). `RANKS` tragen nur noch die Bedingung
+      am Lernstand (10 angefangen · 5 sitzen · 25 % · 60 % · 90 %, nur der Reihe nach, bestes Profil
+      zählt), `rankOf(m)` nimmt den Lernstand statt einer Punktzahl, `rankCheck` feiert einen Aufstieg
+      einmalig (`pflanzenlernen.xp` hält nur noch `{r}`, ein altes `x` wird ignoriert). `XP_BASE`,
+      `xpAdd`, `xpTotal`, `scoreHit`, `comboBonus` sind gestrichen; die **Combo** bleibt (Treffer in
+      Folge, Feier bei 5er-Stufen, Abschluss »Beste Serie«). Punkte gibt es nur noch dort, wo sie etwas
+      bedeuten: die Bogenpunkte beim Eingeben. **(2) Probeprüfung** (zweiter Start-Knopf `#btnExam`,
+      `startProbe`): wie am Prüfungstag – `probeCount()` = 20 Gärtner / 15 Fachwerker, zufällig aus der
+      ganzen Liste (bei »nur ZP« nur aus diesen), jede Pflanze als Bild mit **allen** Bogenfeldern
+      (`examFieldList()` = `PRINT_COLS` der Fachrichtung), keine zweite Chance (`requeueCurrent` setzt
+      bei `sess.probe` aus), Schreibfehler halb; Abschluss mit Punkten, Prozent und **Note nach dem
+      linearen BW-Schlüssel** (`GRADE_EDGES`/`gradeOf` – derselbe Standard wie im Prüfungswerkzeug;
+      nur vollständig gespielt), `.grade`-Kasten, »Neue Probeprüfung«. Technisch eine geführte Sitzung
+      mit `formOf` = `photoExam` für alle Karten (`sess.probe`; Pille nur, wenn eine Art mangels Bild
+      als Auswahlfrage kommt); im Duell-Link Bit 5 des Zusatzbytes (`CH_PROBE = 32`, ältere Leser
+      ignorieren es), Banner und Nachricht sagen »Probeprüfung«. Braucht Internet (sonst Toast).
+      **(3) Start entschlackt** (390 px: 1793 → 1352 px Höhe, 12 → 9 sichtbare Bedienelemente,
+      177 → 148 Wörter): zwei Knöpfe mit eigener Unterzeile (`#goLabel`/`#goHint`, `#examHint`),
+      »Liste zum Nachschlagen« darunter, die Idle-Box »Bereit zum Lernen« entfällt (`startHintOnly`
+      leert die Bühne), **eine** Fortschrittskarte (`.phead` mit Rang-Zeile `#rankName` »Steckling ·
+      12 von 148 Arten sitzen« → Laufbahn-Popover/Dialog, Balken, Legende + ℹ, Chips nur noch Lernserie
+      und Herbarium – Tagesziel-Ring, Rang-Chip mit Mini-Balken und »148 Arten« entfallen), die
+      Datenherkunft-Klappe rutscht unter den Fortschritt. **Optionen gekürzt:** »Antwort«
+      (Auswahl/Eingeben – die versteckte Doppelbedeutung des Bilder-Modus; jetzt: Bilder = Auswahl,
+      Eingeben = geführt ab Stufe 3 + Probeprüfung), »Tagesziel« (fest 20 = `DAY_GOAL`, ein altes `g`
+      im Speicher wird ignoriert) und die Prüfungsfelder-Wahl (`examFields`, `#examFieldsRow`) sind
+      raus. Duell-Links mit anderer Antwortart (auch alte `type`-Links) bleiben über `chAns` spielbar;
+      `startSession({ans:"exam"})` ist ein interner/Test-Haken, `phAns()` liest Sitzung → Link → »mc«.
+      **(4) Design folgt dem System:** `.themetoggle`/`#btnTheme`, Head-Snippet und Umschalt-Skripte in
+      allen drei Seiten entfernt, `pbw.theme` wird beim Boot beider Werkzeuge gelöscht, Datenschutzseite
+      angepasst; die `[data-theme]`-CSS-Regeln bleiben stehen (die Tests simulieren damit den
+      Dunkelmodus), gesetzt wird das Attribut nirgends mehr. Intro, Hilfe (Schritte, Bilder,
+      Einstellungen, »Ränge«, »Probeprüfung«, »Lernserie«, »Hell oder dunkel«), README und Technik-Doku
+      nachgezogen. Tests: `tests/learn.mjs` (Harnisch-Serie `{d,n:100000,gd}` statt `g:5000`; zwei
+      Knöpfe + Unterzeilen, entfallene Felder/Chips, leere Bühne, Hinweis-Position; Design per
+      `emulateMediaFeatures`; Ränge über `rankOf(m)`/`rankCheck`, kein `xpTotal`; Eingabe über
+      `startSession({ans})`, Bogen immer komplett; Lernserie mit 20; Duell-Links ohne Antwort-Feld;
+      **Probeprüfung** komplett: 20 Pflanzen, vier Felder, keine zweite Chance, 190/200 = Note 1,
+      Link-Bit, `gradeOf`-Kette), `tests/smoke.mjs` (kein Schalter, Dunkelpalette per Media-Query,
+      Rechtliches ohne `pbw.theme`). Screenshots (390 px hell/dunkel, Probeprüfung-Abschluss) verifiziert.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.

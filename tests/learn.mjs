@@ -60,9 +60,11 @@ async function main() {
     // Erst-Einweisung standardmäßig als »gesehen« markieren, damit sie die übrigen
     // Tests nicht überlagert; ein eigener Test setzt sie gezielt zurück.
     try { localStorage.setItem("pflanzenlernen.introSeen", "1"); } catch (e) {}
-    // Tagesziel der Lernserie sehr hoch setzen: die vielen grade()-Aufrufe der Tests
-    // sollen nicht zufällig mitten in einer Assertion das Ziel-Feuerwerk auslösen.
-    try { localStorage.setItem("pflanzenlernen.streak", JSON.stringify({ g: 5000 })); } catch (e) {}
+    // Lernserie: das Tagesziel ist fest 20 – die vielen grade()-Aufrufe der Tests sollen nicht
+    // zufällig mitten in einer Assertion das Ziel-Feuerwerk auslösen: heute gilt als längst über
+    // dem Ziel (n ≫ 20) und als Zieltag (gd = heute), dann feuert streakBump nie.
+    try { const d = new Date(), t = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      localStorage.setItem("pflanzenlernen.streak", JSON.stringify({ d: t, n: 100000, gd: t })); } catch (e) {}
     // View-Transitions deaktivieren: sie rendern asynchron und würden die
     // synchronen Assertions des Tests unzuverlässig machen (vt()-Fallback).
     window.__noVT = 1;
@@ -95,11 +97,16 @@ async function main() {
   // die Optionen darin in den zwei Gruppen »Was üben?« / »Wie üben?«.
   const declutter = await page.evaluate(() => {
     const go = document.querySelector("#btnGo"), ch = document.querySelector("#chooseWrap"),
-      d = document.querySelector("#setOpts");
+      d = document.querySelector("#setOpts"), ex = document.querySelector("#btnExam");
     return {
       goVisible: !!go && !go.hidden && go.offsetParent !== null,
-      goLabel: go ? go.textContent.trim() : "",
+      goLabel: go ? document.querySelector("#goLabel").textContent.trim() : "",
+      goSub: (document.querySelector("#goHint") || {}).textContent || "",
+      examVisible: !!ex && ex.offsetParent !== null, examSub: (document.querySelector("#examHint") || {}).textContent || "",
       listQuick: !!document.querySelector("#btnList"),
+      weg: ["#phAnswer", "#dayGoal", "#examFieldsRow", ".themetoggle", "#btnTheme", ".pstat", ".goalchip", ".rankchip", ".rk-mini"].filter((s) => document.querySelector(s)),
+      stageLeer: (document.querySelector("#stage").textContent || "").trim() === "",
+      noteNachFortschritt: document.querySelector("#progress").nextElementSibling === document.querySelector("#learnNote"),
       chooseClosed: ch && ch.tagName === "DETAILS" && !ch.open,
       holdsModes: ch ? !!ch.querySelector("#modeTabs") && !!ch.querySelector("#startRow") : false,
       isDetails: d && d.tagName === "DETAILS", closed: d && !d.open,
@@ -111,6 +118,10 @@ async function main() {
     "Ein-Knopf-Start »Weiter lernen/Loslegen« + Listen-Schnellzugriff müssen sofort sichtbar sein: " + JSON.stringify(declutter));
   assert(declutter.chooseClosed && declutter.holdsModes,
     "Modi + »Sitzung starten« stecken in der standardmäßig zugeklappten »Selbst wählen«-Klappe");
+  assert(declutter.examVisible && /20 Pflanzen/.test(declutter.examSub) && /heute dran/.test(declutter.goSub),
+    "Zweiter Start-Knopf »Probeprüfung« (20 Pflanzen) + Unterzeile am »Weiter lernen«-Knopf: " + JSON.stringify(declutter));
+  assert(declutter.weg.length === 0 && declutter.stageLeer && declutter.noteNachFortschritt,
+    "Entschlackt: kein Antwort-/Tagesziel-/Felder-Feld, kein Design-Schalter, keine Zähler-Chips, leere Bühne, Datenhinweis unter dem Fortschritt: " + JSON.stringify(declutter));
   assert(declutter.isDetails && declutter.closed, "Optionen sollten in einer standardmäßig zugeklappten Klappe stecken");
   assert(declutter.holdsControls, "Die Optionen-Klappe muss Kategorie, ZP und Sitzungslänge enthalten");
   assert(declutter.groups.join("|") === "Was üben?|Wie üben?",
@@ -136,7 +147,7 @@ async function main() {
     applyProfile();                                     // präparierten Fortschritt laden
     document.querySelector("#cat").value = "t:Zwiebelgemüse";
     document.querySelector("#cat").dispatchEvent(new Event("change"));
-    const goLabel = document.querySelector("#btnGo").textContent.trim();
+    const goLabel = document.querySelector("#goLabel").textContent.trim();
     document.querySelector("#btnGo").click();           // geführte Sitzung starten
     await bis(() => !!document.querySelector("#phImg") && document.querySelectorAll("#opts .opt").length === 4);
     const erste = { bild: !!document.querySelector("#phImg"), opts: document.querySelectorAll("#opts .opt").length,
@@ -235,11 +246,11 @@ async function main() {
   const quickList = await page.evaluate(() => {
     document.querySelector("#btnList").click();
     const inList = document.querySelector("#listControls").hidden === false
-      && document.querySelector("#btnGo").hidden === true;
+      && document.querySelector("#goRow").hidden === true;
     const label = document.querySelector("#btnList").textContent.trim();
     document.querySelector("#btnList").click();
     const back = document.querySelector("#listControls").hidden === true
-      && document.querySelector("#btnGo").hidden === false;
+      && document.querySelector("#goRow").hidden === false;
     return { inList, label, back };
   });
   assert(quickList.inList && /Zurück/.test(quickList.label) && quickList.back,
@@ -254,7 +265,7 @@ async function main() {
     const introOpen = !!document.querySelector("#introScrim .intro");
     const steps = document.querySelectorAll("#introScrim .intro-steps li").length;
     const tipTxt = (document.querySelector("#introScrim .intro-tip") || {}).textContent || "";
-    const optTip = /Optionen/.test(tipTxt) && /deutschen Namen/.test(tipTxt) && /Gattung, Art und Familie/.test(tipTxt);
+    const optTip = /Optionen/.test(tipTxt) && /deutscher Name/.test(tipTxt) && /Gattung, Art und Familie/.test(tipTxt);
     // »Ehrlich gesagt«: Lernhilfe, kein Ersatz für die echte Pflanze – im Onboarding UND in der Hilfe
     const realTxt = (document.querySelector("#introScrim .intro-real") || {}).textContent || "";
     const real = /draußen/.test(realTxt) && /ersetzt diese App nicht/.test(realTxt) && /botanischen Namen/.test(realTxt) && !!document.querySelector("#introScrim .intro-real svg.ic");
@@ -272,7 +283,7 @@ async function main() {
   assert(lp.introOpen && lp.steps === 4,
     "»So funktioniert der Lernpfad« muss die Einführung mit vier Stufen öffnen: " + JSON.stringify(lp));
   assert(lp.optTip,
-    "Die Einführung muss auf die Feineinstellung unter »Optionen« hinweisen (deutscher Name … Gattung/Art/Familie): " + JSON.stringify(lp));
+    "Die Einführung muss auf die Optionen hinweisen (Abfrage umdrehen → deutscher Name; sonst Gattung/Art/Familie): " + JSON.stringify(lp));
   assert(lp.introClosed && lp.seen === "1",
     "»Los geht's« muss die Einführung schließen und als gesehen merken: " + JSON.stringify(lp));
   assert(lp.real && lp.helpReal,
@@ -330,19 +341,19 @@ async function main() {
   assert(a11y.fbLive, "Quiz-/Tipp-Feedback muss aria-live=polite sein (Screenreader-Ansage): " + JSON.stringify(a11y));
   assert(a11y.modalFocus, "Info-Modal muss den Fokus auf den »Schließen«-Knopf setzen: " + JSON.stringify(a11y));
 
-  // Herbarium 2.0: Hell/Dunkel-Umschalter setzt data-theme und merkt die Wahl.
-  // Sitzt als runder Knopf im Kopf (ein Ort auf allen drei Seiten – Audit) – Delegation auf .themetoggle.
-  const theme = await page.evaluate(() => {
-    const b = document.querySelector(".themetoggle");
-    if (!b) return { has: false };
-    b.click();
-    const afterOne = document.documentElement.dataset.theme, saved = localStorage.getItem("pbw.theme");
-    b.click();
-    const afterTwo = document.documentElement.dataset.theme;
-    return { has: true, afterOne, saved, afterTwo };
-  });
-  assert(theme.has && theme.afterOne === "dark" && theme.saved === "dark" && theme.afterTwo === "light",
-    "Theme-Umschalter muss dunkel/hell wechseln und die Wahl speichern: " + JSON.stringify(theme));
+  // Hell/Dunkel folgt allein der Systemeinstellung (Nutzerwunsch: kein Schalter). Ohne Attribut
+  // und ohne gespeicherte Wahl: hell; mit prefers-color-scheme: dark greift die Dunkelpalette.
+  const themeLight = await page.evaluate(() => ({ toggle: !!document.querySelector(".themetoggle, #btnTheme"),
+    attr: document.documentElement.dataset.theme || null, saved: localStorage.getItem("pbw.theme"),
+    paper: getComputedStyle(document.documentElement).getPropertyValue("--paper").trim() }));
+  await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: "dark" }]);
+  const themeDark = await page.evaluate(() => ({ paper: getComputedStyle(document.documentElement).getPropertyValue("--paper").trim(),
+    scheme: matchMedia("(prefers-color-scheme: dark)").matches }));
+  await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: "light" }]);
+  assert(!themeLight.toggle && themeLight.attr === null && themeLight.saved === null,
+    "Kein Design-Schalter mehr, kein data-theme, keine gespeicherte Wahl: " + JSON.stringify(themeLight));
+  assert(themeDark.scheme && themeDark.paper && themeDark.paper !== themeLight.paper,
+    "Dunkelpalette muss allein über prefers-color-scheme greifen: " + JSON.stringify({ hell: themeLight.paper, dunkel: themeDark.paper }));
 
   // Sackgasse für Azubis: Das Lern-Tool ist die Wurzel (pflanze-bw.de) und darf
   // NIRGENDS auf das Prüfungswerkzeug verweisen – weder per Link noch im Text.
@@ -355,8 +366,7 @@ async function main() {
       noExamText: !/Prüfungsversion|Werkzeug für Prüfende/.test(document.body.textContent),
       legalKept: !!document.querySelector('.foot a[href="rechtliches.html"]'),
       helpDezent: !!(help && help.id === "btnHelp"),
-      toggleInHead: !!document.querySelector(".mast-right .themetoggle"),
-      toggleInOpts: !!document.querySelector("#setOpts .themetoggle")
+      noToggle: !document.querySelector(".themetoggle, #btnTheme")
     };
   });
   assert(head.noExamLink && head.noExamText,
@@ -364,8 +374,7 @@ async function main() {
   assert(head.noHomeLink, "Lern-Tool ist selbst die Startseite – kein Startseite-Link im Kopf: " + JSON.stringify(head));
   assert(head.legalKept, "Impressum/Datenschutz muss über die Fußzeile erreichbar bleiben: " + JSON.stringify(head));
   assert(head.helpDezent, "»Hilfe« muss als dezenter .helplink im Kopf stehen: " + JSON.stringify(head));
-  assert(head.toggleInHead && !head.toggleInOpts,
-    "Design-Umschalter sitzt als runder Knopf im Kopf (ein Ort auf allen Seiten – Audit), nicht mehr in den Optionen: " + JSON.stringify(head));
+  assert(head.noToggle, "Kein Design-Schalter mehr – Hell/Dunkel folgt dem System: " + JSON.stringify(head));
 
 
   // Rang-Kürzel »sect.« (Realfall Taraxacum sect. Ruderalia = Gewöhnlicher Löwenzahn, Screenshot:
@@ -968,7 +977,7 @@ async function main() {
       url: "https://de.wikipedia.org/wiki/Test",
     }));
     document.querySelector('#modeTabs button[data-mode="photo"]').click();
-    const hint = document.querySelector("#stage").textContent;
+    const hint = document.querySelector('#modeTabs button[data-mode="photo"]').title;   // die Bühne ist vor der Sitzung leer – der Tab nennt die Voraussetzung
     startSession();
     await new Promise((r) => setTimeout(r, 60));
     const img = document.querySelector("#phImg");
@@ -985,7 +994,7 @@ async function main() {
       good: /Richtig!/.test(fb), scored: sess.correct === before + 1,
       credit: !!document.querySelector("#phSrc"), weiter: !!document.querySelector("#wt") };
   }, PX);
-  assert(photo.hintOnline, "Bilder-Quiz: Startansicht weist nicht auf die Internet-Voraussetzung hin");
+  assert(photo.hintOnline, "Bilder-Quiz: der Modus-Tab muss auf die Internet-Voraussetzung hinweisen");
   assert(photo.hasImg && photo.src === PX, "Bilder-Quiz: kein Bild angezeigt");
   assert(photo.nOpts === 4 && photo.uniq === 4 && photo.hasCorrectOpt,
     "Bilder-Quiz: vier verschiedene Optionen inkl. der richtigen erwartet: " + JSON.stringify(photo));
@@ -1004,7 +1013,6 @@ async function main() {
     __clearPhotoCache();
     __setPhotoSource(() => Promise.resolve({ thumb: A, gal: [A, B, C], src: "cm", file: "A.jpg", title: "T", url: "https://x/y" }));
     document.querySelector('#modeTabs button[data-mode="photo"]').click();
-    setz("#phAnswer", "mc");
     startSession();
     await new Promise((r) => setTimeout(r, 60));
     const badge = (document.querySelector(".ph-more") || {}).textContent || "";
@@ -1084,28 +1092,18 @@ async function main() {
   assert(zaeh.leer === 1,
     "Bilder-Quiz: bleibt die Suche erfolglos, darf sie in derselben Sitzung nicht wiederholt werden: " + JSON.stringify(zaeh));
 
-  // Bilder-Quiz vereinfacht: Gefragt ist immer »Bild → voller Name« – die Richtung ist
-  // nicht wählbar (Feld ausgeblendet); die Antwort bietet genau zwei Wege: Auswahl oder
-  // Selbst eingeben (wie in der Prüfung). Nichts heißt mehr »tippen«.
+  // Bilder-Quiz vereinfacht: Gefragt ist immer »Bild → voller Name« – die Richtung ist nicht
+  // wählbar (Feld ausgeblendet), und es gibt KEIN Antwort-Feld mehr: der Modus »Bilder« fragt aus
+  // vier Namen; selbst eingeben übt man in der geführten Lektion (ab Stufe 3) und der Probeprüfung.
   const phEinfach = await page.evaluate(() => {
     document.querySelector('#modeTabs button[data-mode="photo"]').click();
-    const set = (id, v) => { const e = document.querySelector(id); e.value = v; e.dispatchEvent(new Event("change")); };
-    set("#phAnswer", "mc");
-    const antw = [...document.querySelectorAll("#phAnswer option")].map((o) => [o.value, o.textContent]);
     const dirOpts = [...document.querySelectorAll("#dir option")].map((o) => o.value);
     const tab = document.querySelector('#modeTabs button[data-mode="type"]').textContent.replace(/\s+/g, " ").trim();
-    const subMc = document.querySelector("#setOpts .opts-sub").textContent;
-    set("#phAnswer", "exam");                                 // Prüfungs-Eingabe: keine Richtung – und keine in der Kopfzeile
-    const subExam = document.querySelector("#setOpts .opts-sub").textContent;
-    set("#phAnswer", "mc");
-    return { antw, dirOpts, dirHidden: document.querySelector("#dirField").hidden, dir: curDir(), tab, subMc, subExam };
+    const sub = document.querySelector("#setOpts .opts-sub").textContent;
+    return { antwFeld: !!document.querySelector("#phAnswer"), dirOpts, dirHidden: document.querySelector("#dirField").hidden, dir: curDir(), ans: phAns(), tab, sub };
   });
-  assert(!/→/.test(phEinfach.subMc) && !/→/.test(phEinfach.subExam),
-    "Im Bilder-Quiz darf die Optionen-Kopfzeile keine Richtung nennen (auch nicht bei »wie in der Prüfung«): " + JSON.stringify([phEinfach.subMc, phEinfach.subExam]));
-  assert(phEinfach.antw.map((a) => a[0]).join() === "mc,exam",
-    "Bilder-Quiz: genau zwei Antwortarten (Auswahl · Selbst eingeben), war " + JSON.stringify(phEinfach.antw));
-  assert(/eingeben/i.test(phEinfach.antw[1][1]) && !/tippen/i.test(phEinfach.antw.map((a) => a[1]).join()),
-    "Die Eingabe-Antwort muss »eingeben« heißen, nicht »tippen«: " + JSON.stringify(phEinfach.antw));
+  assert(!/→/.test(phEinfach.sub) && !/Antwort/.test(phEinfach.sub) && !phEinfach.antwFeld && phEinfach.ans === "mc",
+    "Im Bilder-Quiz kein Antwort-Feld und keine Richtung in der Optionen-Kopfzeile; Auswahl ist die Antwortart: " + JSON.stringify(phEinfach));
   assert(phEinfach.dirOpts.join() === "img2both" && phEinfach.dirHidden && phEinfach.dir === "img2both",
     "Bilder-Quiz: einzige Richtung »voller Name«, Feld ausgeblendet: " + JSON.stringify(phEinfach));
   assert(/^Selbst eingeben/.test(phEinfach.tab) && !/Tippen/.test(phEinfach.tab),
@@ -1115,11 +1113,9 @@ async function main() {
   const phExam = await page.evaluate(async (PX) => {
     __clearPhotoCache();
     __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g, file: "T.jpg", url: "https://x/y" }));
-    const set = (id, v) => { const e = document.querySelector(id); e.value = v; e.dispatchEvent(new Event("change")); };
-    set("#phAnswer", "exam");
-    const dirHidden = document.querySelector("#dirField").hidden;   // Richtung dann gegenstandslos
-    const fieldsShown = !document.querySelector("#examFieldsRow").hidden;
-    startSession();
+    const dirHidden = document.querySelector("#dirField").hidden;   // im Bilder-Modus gibt es keine Richtung zu wählen
+    const kein = !document.querySelector("#examFieldsRow") && !document.querySelector("#phAnswer");   // keine Feldwahl, kein Antwort-Feld mehr
+    startSession({ ans: "exam" });                                  // Eingabe »wie in der Prüfung« (geführt ab Stufe 3 / Probeprüfung; hier direkt)
     await new Promise((r) => setTimeout(r, 60));
     const keys = [...document.querySelectorAll("#examForm input")].map((i) => i.dataset.k);
     const labels = [...document.querySelectorAll("#examForm .exlab")].map((e) => e.textContent.replace(/\s+/g, " ").trim());
@@ -1130,11 +1126,11 @@ async function main() {
     document.querySelector("#chk").click();
     const fb = document.querySelector("#fb").textContent;
     const marks = [...document.querySelectorAll("#examForm .exmark")].map((e) => e.textContent.trim().charAt(0));
-    return { dirHidden, fieldsShown, keys, labels, fb, marks, partial: /Teilweise/.test(fb),
+    return { dirHidden, kein, keys, labels, fb, marks, partial: /Teilweise/.test(fb),
       pts: (fb.match(/([\d,]+) von ([\d,]+) Punkten/) || []).slice(1) };
   }, PX);
-  assert(phExam.fieldsShown && phExam.dirHidden,
-    "»wie in der Prüfung«: Feldwahl muss erscheinen, die Abfragerichtung entfallen: " + JSON.stringify(phExam));
+  assert(phExam.kein && phExam.dirHidden,
+    "»wie in der Prüfung«: keine Feldwahl und kein Antwort-Feld mehr, die Abfragerichtung entfällt: " + JSON.stringify(phExam));
   assert(phExam.keys.join() === "g,a,fam,de",
     "Produktions-Profil braucht Gattung, Art, Familie, Deutscher Name (Bogen-Reihenfolge): " + JSON.stringify(phExam.keys));
   assert(phExam.labels.some((l) => /Gattungsname\s*3 P\./.test(l)) && phExam.labels.some((l) => /Familienname\s*1 P\./.test(l)),
@@ -1148,7 +1144,7 @@ async function main() {
   // beim fehlerfreien zweiten Anlauf wird die fehlende Hälfte nachgebucht.
   const halbe = await page.evaluate(async () => {
     __clearPhotoCache();
-    startSession();
+    startSession({ ans: "exam" });
     await new Promise((r) => setTimeout(r, 60));
     const c = current, key = c.key;
     const fill = (k, v) => { const i = document.querySelector("#ex_" + k); if (i) i.value = v; };
@@ -1189,31 +1185,88 @@ async function main() {
     "Fehlerfreie Wiederholung muss die fehlende Hälfte nachbuchen: " + JSON.stringify(halbe) );
   assert(halbe.korrekt === 1, "Nach der fehlerfreien Wiederholung muss die Karte als richtig zählen: " + JSON.stringify(halbe));
 
-  // Prüfungsfelder selbst bestimmen (Familie abwählen) + Fachwerker-Bogen
+  // Prüfungsfelder = immer der ganze Bogen der Fachrichtung (kein Abwählen mehr): Produktion
+  // g/a/fam/de, Fachwerker de/g/a mit 0,5 Punkten
   const phFields = await page.evaluate(async (PX) => {
     __clearPhotoCache();
     __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g, file: "T.jpg", url: "https://x/y" }));
-    const cb = document.querySelector('#examFieldsRow input[data-k="fam"]');
-    cb.checked = false; cb.dispatchEvent(new Event("change"));
-    startSession();
+    startSession({ ans: "exam" });
     await new Promise((r) => setTimeout(r, 60));
-    const without = [...document.querySelectorAll("#examForm input")].map((i) => i.dataset.k);
+    const prod = [...document.querySelectorAll("#examForm input")].map((i) => i.dataset.k);
     // Fachwerker: eigener Bogen (Dt. Name zuerst, Gattung/Art je 0,5 Punkte)
     document.querySelector("#nivSelect").value = "fachwerker";
     document.querySelector("#nivSelect").dispatchEvent(new Event("change"));
-    startSession();
+    startSession({ ans: "exam" });
     await new Promise((r) => setTimeout(r, 60));
     const fwKeys = [...document.querySelectorAll("#examForm input")].map((i) => i.dataset.k);
     const fwLabels = [...document.querySelectorAll("#examForm .exlab")].map((e) => e.textContent.replace(/\s+/g, " ").trim());
     document.querySelector("#nivSelect").value = "gaertner";
     document.querySelector("#nivSelect").dispatchEvent(new Event("change"));
     __setPhotoSource(null);
-    return { without, fwKeys, fwLabels };
+    return { prod, fwKeys, fwLabels, chooser: !!document.querySelector("#examFieldsRow") };
   }, PX);
-  assert(phFields.without.join() === "g,a,de",
-    "Abgewähltes Feld darf nicht mehr abgefragt werden: " + JSON.stringify(phFields.without));
+  assert(phFields.prod.join() === "g,a,fam,de" && !phFields.chooser,
+    "Immer der ganze Bogen (g,a,fam,de), kein Felder-Wähler mehr: " + JSON.stringify(phFields));
   assert(phFields.fwKeys.join() === "de,g,a" && phFields.fwLabels.some((l) => /0,5 P\./.test(l)),
     "Fachwerker-Bogen erwartet (Dt. Name zuerst, 0,5 Punkte): " + JSON.stringify(phFields));
+
+  // Probeprüfung (zweiter Start-Knopf): so viele Pflanzen wie auf dem Bogen (Gemüsebau/Gärtner 20),
+  // zufällig, jede als Bild mit allen Bogenfeldern, keine zweite Chance, am Ende Punkte + Note nach
+  // dem linearen BW-Schlüssel; im Duell-Link als Probeprüfung gekennzeichnet (Bit CH_PROBE).
+  const probe = await page.evaluate(async (PX) => {
+    __clearPhotoCache(); photoTried.clear();
+    __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g, file: "T.jpg", url: "https://x/y" }));
+    const sub = document.querySelector("#examHint").textContent;
+    document.querySelector("#btnExam").click();
+    await new Promise((r) => setTimeout(r, 80));
+    const out = { sub, total: sess.total, probe: !!sess.probe, keys: [...document.querySelectorAll("#examForm input")].map((i) => i.dataset.k),
+      pille: !!document.querySelector(".gnote") };
+    const fill = (k, v) => { const i = document.querySelector("#ex_" + k); if (i) i.value = v; };
+    // 1. Pflanze absichtlich ganz falsch → kommt NICHT wieder (keine zweite Chance)
+    const erste = current.key;
+    fill("g", "Zzz"); fill("a", "zzz"); fill("fam", "zzz"); fill("de", "zzz");
+    document.querySelector("#chk").click();
+    out.erstePunkte = sess.pts.je[erste]; out.wiederInSchlange = queue.slice(qi + 1).some((x) => x.key === erste); out.totalNachFehler = sess.total;
+    document.querySelector("#wt").click();
+    await new Promise((r) => setTimeout(r, 40));
+    out.bar = !!document.querySelector(".sessionbar .spts");          // Bogenpunkte in der Leiste
+    // alle übrigen richtig
+    let guard = 0;
+    while (sess.active && guard++ < 40) {
+      if (!document.querySelector("#ex_g")) { await new Promise((r) => setTimeout(r, 25)); continue; }
+      const c = current;
+      fill("g", c.g); fill("a", c.a); fill("fam", (c.fam || "").split("/")[0]); fill("de", deMain(c));
+      document.querySelector("#chk").click(); const w = document.querySelector("#wt"); if (w) w.click();
+      await new Promise((r) => setTimeout(r, 25));
+    }
+    await new Promise((r) => setTimeout(r, 60));
+    out.done = sess.done; out.aktiv = sess.active;
+    out.titel = (document.querySelector(".stage-empty h2") || {}).textContent || "";
+    out.text = (document.querySelector(".stage-empty p") || {}).textContent || "";
+    out.note = (document.querySelector(".grade") || {}).textContent || "";
+    out.schluessel = (document.querySelector(".g-key") || {}).textContent || "";
+    out.again = (document.querySelector("#againBtn") || {}).textContent || "";
+    out.share = !!document.querySelector("#shareBlock");
+    const dec = chDecode(challengeURL().split("#c=")[1]);
+    out.link = { m: dec.m, pr: dec.pr, po: dec.po, formen: [...new Set(dec.f)].join(), n: dec.i.length };
+    out.nachricht = duelMessage("x").split("\n")[0];
+    out.pct = Math.round(sess.pts.sum / sess.pts.max * 100); out.sum = sess.pts.sum; out.max = sess.pts.max;
+    out.noten = [100, 90, 89, 70, 50, 30, 10, 9, 0].map(gradeOf).join();
+    document.querySelector("#btnOverview").click();
+    __setPhotoSource(null);
+    return out;
+  }, PX);
+  assert(/20 Pflanzen/.test(probe.sub) && probe.total === 20 && probe.probe && probe.keys.join() === "g,a,fam,de" && !probe.pille && probe.bar,
+    "Probeprüfung: 20 Pflanzen, alle vier Bogenfelder, keine Pille, Bogenpunkte in der Leiste: " + JSON.stringify(probe));
+  assert(probe.erstePunkte === 0 && !probe.wiederInSchlange && probe.totalNachFehler === 20,
+    "Probeprüfung: eine falsche Pflanze kommt nicht wieder (keine zweite Chance): " + JSON.stringify(probe));
+  assert(!probe.aktiv && probe.done === 20 && /Probeprüfung geschafft/.test(probe.titel) && /20 von 20 Pflanzen/.test(probe.text) && /19 ganz richtig/.test(probe.text),
+    "Probeprüfung: Abschluss nach 20 Pflanzen mit 19 ganz richtigen: " + JSON.stringify(probe));
+  assert(probe.sum === 190 && probe.max === 200 && probe.pct === 95 && /Note 1/.test(probe.note) && /95 %/.test(probe.note) && /1 ab 90 %/.test(probe.schluessel) && /5 ab 10 %/.test(probe.schluessel),
+    "Probeprüfung: 190 von 200 Punkten = 95 % = Note 1 nach dem BW-Schlüssel: " + JSON.stringify(probe));
+  assert(/Neue Probeprüfung/.test(probe.again) && probe.share && probe.link.m === "guided" && probe.link.pr && probe.link.po && probe.link.formen === "photoExam" && probe.link.n === 20 && /Probeprüfung/.test(probe.nachricht),
+    "Probeprüfung: Neustart-Knopf, teilbar, Link trägt das Probe-Bit und nur photoExam-Formen: " + JSON.stringify(probe));
+  assert(probe.noten === "1,1,2,2,3,4,5,6,6", "Notenschlüssel linear (BW): 1 ≥ 90 … 5 ≥ 10, sonst 6 – war " + probe.noten);
 
   // Feldprüfung: tippfehlertolerant, Familie lateinisch ODER deutsch
   const fchk = await page.evaluate(() => {
@@ -1239,10 +1292,6 @@ async function main() {
   assert(fchk.deSecond && fchk.deNoHyphen && !fchk.empty,
     "Deutscher Name: Zweitname und Schreibung ohne Bindestrich müssen zählen: " + JSON.stringify(fchk));
 
-  // zurück auf Auswahl, damit die folgenden Bilder-Prüfungen unverändert greifen
-  await page.evaluate(() => {
-    const e = document.querySelector("#phAnswer"); e.value = "mc"; e.dispatchEvent(new Event("change"));
-  });
 
   // Bilder-Quiz, Abfrage »voller Name« (botanisch + deutsch): die vier Optionen zeigen
   // BEIDE Namen (botanischer Teil kursiv) – ohne dass man dafür eine Richtung wählen müsste.
@@ -1251,7 +1300,6 @@ async function main() {
     __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g + " " + card.a, file: "T.jpg", url: "https://x/y" }));
     const set = (id, v) => { const e = document.querySelector(id); e.value = v; e.dispatchEvent(new Event("change")); };
     document.querySelector('#modeTabs button[data-mode="photo"]').click();
-    set("#phAnswer", "mc");                                  // Richtung ist fest: Bild → voller Name
     startSession();
     await new Promise((r) => setTimeout(r, 60));
     const c = current, correctFull = answerText(c);          // "Gattung art · Deutscher Name"
@@ -1262,7 +1310,6 @@ async function main() {
     if (btn) btn.click();
     const good = /Richtig!/.test((document.querySelector("#fb") || {}).innerHTML || "");
     const scored = sess.correct === before + 1;
-    set("#phAnswer", "mc");                                  // Zustand für folgende Tests
     return { correctFull, opts, italics, hasCorrect: !!btn, good, scored };
   }, PX);
   assert(/ · /.test(phBoth.correctFull) && phBoth.opts.length === 4 && phBoth.opts.every((o) => / · /.test(o)),
@@ -2180,7 +2227,6 @@ async function main() {
       artist: "Internet Archive Book Images", license: "No restrictions" }));
     __setJsonp(() => Promise.reject(new Error("offline (Test)")));
     document.querySelector('#modeTabs button[data-mode="photo"]').click();
-    const pa = $("#phAnswer"); pa.value = "mc"; pa.dispatchEvent(new Event("change"));
     $("#sessLen").value = "4"; startSession();
     await new Promise((r) => setTimeout(r, 90));
     const pille = (document.querySelector(".ph-kind") || {}).textContent || "";
@@ -2332,7 +2378,6 @@ async function main() {
       url: "https://www.inaturalist.org/photos/40101992", artist: "Jennifer Chandler", license: "CC BY-NC", gal: [PX], top: 1 }));
     let abrufe = 0; __setJsonp(() => { abrufe++; return Promise.reject(new Error("offline (Test)")); });
     document.querySelector('#modeTabs button[data-mode="photo"]').click();
-    const pa = $("#phAnswer"); pa.value = "mc"; pa.dispatchEvent(new Event("change"));
     $("#sessLen").value = "4"; startSession();
     await new Promise((r) => setTimeout(r, 90));
     const correct = answerText(current).toLowerCase();
@@ -2378,7 +2423,6 @@ async function main() {
       artist: "Hanna Test", license: "CC BY-SA 4.0" }));
     let abrufe = 0; __setJsonp(() => { abrufe++; return Promise.reject(new Error("offline (Test)")); });
     document.querySelector('#modeTabs button[data-mode="photo"]').click();
-    const pa = $("#phAnswer"); pa.value = "mc"; pa.dispatchEvent(new Event("change"));
     $("#sessLen").value = "4"; startSession();
     await new Promise((r) => setTimeout(r, 90));
     const correct = answerText(current).toLowerCase();
@@ -2489,7 +2533,6 @@ async function main() {
     __setPhotoSource(() => Promise.resolve({ thumb: A, gal: [A, B, C], top: 3, src: "cm", file: "A.jpg", artist: "UA", title: "T", url: "https://x/y",
       galInfo: [{ file: "A.jpg", artist: "UA" }, { file: "B.jpg", artist: "UB" }, { file: "C.jpg", artist: "UC" }] }));
     document.querySelector('#modeTabs button[data-mode="photo"]').click();
-    const pa = $("#phAnswer"); pa.value = "mc"; pa.dispatchEvent(new Event("change"));
     $("#sessLen").value = "4"; startSession();
     await new Promise((res) => setTimeout(res, 90));
     current = salvia; queue[qi] = salvia;                             // diese Art erzwingen
@@ -2540,7 +2583,6 @@ async function main() {
       return Promise.reject(new Error("offline"));
     });
     document.querySelector('#modeTabs button[data-mode="photo"]').click();
-    const pa = $("#phAnswer"); pa.value = "mc"; pa.dispatchEvent(new Event("change"));
     $("#sessLen").value = "4"; startSession(); await wait(90);
     current = abies; queue[qi] = abies;
     await renderPhoto();
@@ -3067,30 +3109,30 @@ async function main() {
     const shift = (n) => { const d = new Date(); d.setDate(d.getDate() + n);
       return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
     const today = shift(0);
-    localStorage.setItem(K, JSON.stringify({ g: 5 }));          // kleines Ziel nur für diesen Test
-    for (let i = 0; i < 5; i++) streakBump();
+    localStorage.setItem(K, JSON.stringify({}));                  // frischer Stand – das Ziel ist fest 20 Karten
+    for (let i = 0; i < 20; i++) streakBump();
     const s1 = streakState();
-    const reached = s1.s === 1 && s1.gd === today && s1.n === 5 && streakGoal() === 5;
-    localStorage.setItem(K, JSON.stringify({ g: 5, d: shift(-1), n: 7, s: 3, b: 3, gd: shift(-1) }));
+    const reached = s1.s === 1 && s1.gd === today && s1.n === 20 && streakGoal() === 20;
+    localStorage.setItem(K, JSON.stringify({ d: shift(-1), n: 25, s: 3, b: 3, gd: shift(-1) }));
     const s2 = streakState();                                   // Ziel gestern erreicht → Serie lebt, Tageszähler frisch
     const survived = s2.s === 3 && s2.n === 0;
-    localStorage.setItem(K, JSON.stringify({ g: 5, d: shift(-3), n: 9, s: 4, b: 6, gd: shift(-3) }));
+    localStorage.setItem(K, JSON.stringify({ d: shift(-3), n: 9, s: 4, b: 6, gd: shift(-3) }));
     const broken = streakState().s === 0;                       // letzter Zieltag vor 3 Tagen → gerissen
-    localStorage.setItem(K, JSON.stringify({ g: 5, d: today, n: 3, s: 2, b: 6, gd: shift(-1) }));
+    localStorage.setItem(K, JSON.stringify({ d: today, n: 3, s: 2, b: 6, gd: shift(-1) }));
     renderProgress();
     const row = document.querySelector("#streakRow");
-    const ui = !!row && row.querySelector(".sflame b").textContent === "2" && /3\/5 heute/.test(row.textContent) &&
+    const ui = !!row && row.querySelector(".sflame b").textContent === "2" && /3\/20 heute/.test(row.textContent) &&
       row.querySelector(".sflame").classList.contains("on");
     const goalField = !!document.querySelector("#dayGoal");
-    localStorage.setItem(K, JSON.stringify({ g: 5000 }));       // Harnisch-Zustand wiederherstellen
+    localStorage.setItem(K, JSON.stringify({ d: today, n: 100000, gd: today }));   // Harnisch-Zustand wiederherstellen
     renderProgress();
     return { reached, survived, broken, ui, goalField };
   });
   assert(streak.reached, "Lernserie: das Erreichen des Tagesziels muss die Serie starten (s=1, gd=heute): " + JSON.stringify(streak));
   assert(streak.survived && streak.broken,
     "Lernserie: »Ziel gestern erreicht« muss die Nacht überleben, ein Loch muss die Serie reißen: " + JSON.stringify(streak));
-  assert(streak.ui && streak.goalField,
-    "Lernserie-UI: Flammen-Zeile (Serie an, 3/5 heute) im Fortschritt + Tagesziel-Feld in den Optionen: " + JSON.stringify(streak));
+  assert(streak.ui && !streak.goalField,
+    "Lernserie-UI: Flammen-Chip (Serie an, 3/20 heute) im Fortschritt, kein Tagesziel-Feld mehr (fest 20): " + JSON.stringify(streak));
 
   // Sammel-Herbarium: sitzt JEDE Art eines Themas (Box 4–5), gilt es als gemeistert –
   // einmalige Feier, Sammelkarte wird farbig mit »Gemeistert«-Stempel.
@@ -3241,24 +3283,24 @@ async function main() {
   assert(/gemeistert/.test(erklaert.herbHow) && /sitzt/.test(erklaert.herbHow),
     "Im Herbarium muss der Verweis auf die Stufen-Erklärung stehen: " + erklaert.herbHow);
 
-  // XP + botanische Ränge: freies Tippen bringt mehr als Ankreuzen, Rangaufstieg wird
-  // einmalig gefeiert; Combo zählt Treffer in Folge (ab 3 sichtbar, Bonus gestaffelt).
+  // Ränge = Lernstand (keine Erfahrungspunkte mehr): Keimling → Sämling (10 angefangene Arten) …;
+  // ein Aufstieg wird einmalig gefeiert. Combo zählt Treffer in Folge (ab 3 sichtbar), ohne Punkte.
   const xp = await page.evaluate(async () => {
     localStorage.removeItem("pflanzenlernen.xp");
-    // Lernstand für die Rang-Bedingungen: ein anderes Profil mit zehn angefangenen Arten (bestes Profil zählt)
+    // Lernstand für die Rang-Bedingung: ein anderes Profil mit zehn angefangenen Arten (bestes Profil zählt)
     localStorage.setItem("pflanzenlernen.progress.obstbau_fachwerker", JSON.stringify(Object.fromEntries(
       cardsFor("obstbau_fachwerker").slice(0, 10).map((c) => [c.key, { box: 1, due: "2099-01-01", seen: 1, correct: 1, wrong: 0 }]))));
     __masteryReset();
     const VOLL = { started: 100, fest: 100, n: 100, share: 1 };
-    const r0 = rankOf(0), r1 = rankOf(RANKS[1].x), rTop = rankOf(RANKS[RANKS.length - 1].x + 999, VOLL);
-    xpAdd(RANKS[1].x);                                   // Aufstieg Keimling → Sämling (Punkte + zehn angefangene Arten)
-    const nachAufstieg = rankOf(xpTotal()).name;
-    const gefeiert = xpTotal() === RANKS[1].x && xpLoad().r === 1;
+    const r0 = rankOf({ started: 0, fest: 0, n: 100, share: 0 }), r1 = rankOf({ started: 10, fest: 0, n: 100, share: 0 }), rTop = rankOf(VOLL);
+    rankCheck();                                         // Aufstieg Keimling → Sämling (zehn angefangene Arten)
+    const nachAufstieg = rankOf().name;
+    const gefeiert = xpLoad().r === 1 && /Neuer Rang: Sämling/.test(document.querySelector("#toast").textContent);
+    const keinePunkte = typeof xpTotal === "undefined" && typeof xpAdd === "undefined" && typeof scoreHit === "undefined" && typeof XP_BASE === "undefined";
     // Quiz-Sitzung: erst falsch (Combo bleibt 0), dann drei richtige in Folge
     $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
     document.querySelector('#modeTabs button[data-mode="quiz"]').click();
     $("#sessLen").value = "8"; startSession();
-    const vorXP = xpTotal();
     const antworte = (richtig) => {
       const soll = answerText(current);
       const opts = [...document.querySelectorAll("#opts .opt")];
@@ -3272,72 +3314,65 @@ async function main() {
     antworte(true);
     const bar3 = document.querySelector(".scombo");      // ab 3 sichtbar
     const combo3 = sess.combo, comboText = bar3 ? bar3.textContent : "";
-    const xpDelta = xpTotal() - vorXP;
     document.querySelector('#modeTabs button[data-mode="cards"]').click();   // Sitzung beenden
     localStorage.removeItem("pflanzenlernen.xp");
     localStorage.removeItem("pflanzenlernen.progress.obstbau_fachwerker"); __masteryReset();
-    return { r0: r0.name, r1: r1.name, rTopNext: rTop.next, nachAufstieg, gefeiert,
-      comboNachFehler, sichtbarBei2: !!bar2, sichtbarBei3: !!bar3, combo3, comboText, xpDelta,
-      bonus: [comboBonus(2), comboBonus(3), comboBonus(5), comboBonus(10)] };
+    return { r0: r0.name, r1: r1.name, rTopNext: rTop.next, nachAufstieg, gefeiert, keinePunkte,
+      comboNachFehler, sichtbarBei2: !!bar2, sichtbarBei3: !!bar3, combo3, comboText };
   });
   assert(xp.r0 === "Keimling" && xp.r1 === "Sämling" && xp.rTopNext === null,
     "Ränge: Keimling → Sämling → … → höchster Rang ohne »nächsten«: " + JSON.stringify(xp));
   assert(xp.nachAufstieg === "Sämling" && xp.gefeiert,
-    "Rangaufstieg muss beim Erreichen der Punktzahl greifen: " + JSON.stringify(xp));
+    "Rangaufstieg allein durch den Lernstand muss greifen und gefeiert werden: " + JSON.stringify(xp));
+  assert(xp.keinePunkte, "Erfahrungspunkte sind entfallen (xpTotal/xpAdd/scoreHit/XP_BASE gibt es nicht mehr)");
   assert(xp.comboNachFehler === 0 && !xp.sichtbarBei2 && xp.sichtbarBei3 && xp.combo3 === 3 && /3× in Folge/.test(xp.comboText),
     "Combo: Fehler setzt zurück, ab 3 Treffern in Folge sichtbar: " + JSON.stringify(xp));
-  assert(JSON.stringify(xp.bonus) === JSON.stringify([0, 2, 4, 8]),
-    "Combo-Bonus muss gestaffelt sein (0/2/4/8 bei 2/3/5/10): " + JSON.stringify(xp.bonus));
-  assert(xp.xpDelta >= 15, "Drei richtige Quiz-Antworten müssen mindestens 15 Punkte bringen: " + xp.xpDelta);
 
-  // Rang = Punkte UND Lernstand (Rückmeldung: »Prachtexemplar« nach 20 sitzenden Arten und leerem
-  // Herbarium). Jede Stufe hat eine Bedingung am Lernstand; die Stufen kommen nur der Reihe nach;
-  // das am weitesten gediehene Profil zählt; ein Aufstieg durch den Lernstand wird gefeiert, ein
-  // Absinken (neue Regel) senkt still die Feier-Marke.
+  // Rang = Lernstand: jede Stufe hat eine Bedingung (10 angefangen · 5 sitzen · 25 % · 60 % · 90 %); die
+  // Stufen kommen nur der Reihe nach; das am weitesten gediehene Profil zählt; ein Aufstieg durch den
+  // Lernstand wird gefeiert, ein Absinken (neue Regel) senkt still die Feier-Marke. Punkte spielen keine Rolle.
   const gate = await page.evaluate(() => {
     const M = (started, fest, n) => ({ started, fest, n, share: n ? fest / n : 0 });
-    const viel = 99999;
-    const out = { namen: [M(0, 0, 100), M(10, 0, 100), M(30, 5, 100), M(60, 25, 100), M(80, 60, 100), M(100, 90, 100)].map((m) => rankOf(viel, m).name),
-      punkteBinden: rankOf(2000, M(100, 90, 100)).name,
-      reihe: rankOf(viel, M(5, 90, 100)).name,           // Sämling-Bedingung fehlt → trotz 90 % sitzt keine höhere Stufe
+    const out = { namen: [M(0, 0, 100), M(10, 0, 100), M(30, 5, 100), M(60, 25, 100), M(80, 60, 100), M(100, 90, 100)].map((m) => rankOf(m).name),
+      reihe: rankOf(M(5, 90, 100)).name,                 // Sämling-Bedingung fehlt → trotz 90 % sitzt keine höhere Stufe
       fehlt: gateNeed(RANKS[3], M(30, 5, 100)), fehlt2: gateNeed(RANKS[2], M(30, 1, 100)),
-      steck: rankOf(2500, M(30, 5, 100)) };
-    // UI: Punkte reichen für Prachtexemplar, der Lernstand nicht → Rang bleibt Steckling, Tooltip + Laufbahn nennen, was fehlt
-    localStorage.removeItem("pflanzenlernen.xp"); xpSave({ x: 2500, r: 2 });
+      steck: rankOf(M(30, 5, 100)), punkteFeld: RANKS.some((r) => "x" in r) };
+    // UI: 5 von 54 sitzen → Steckling; Rang-Zeile, Tooltip + Laufbahn nennen, was zur Jungpflanze fehlt
+    localStorage.removeItem("pflanzenlernen.xp"); xpSave({ r: 2 });
     const OF = "obstbau_fachwerker", cs = cardsFor(OF), n = cs.length;   // 54 Arten
     const prog = (fest, started) => Object.fromEntries(cs.slice(0, started).map((c, i) => [c.key, { box: i < fest ? 4 : 1, due: "2099-01-01", seen: 3, correct: 3, wrong: 0 }]));
     localStorage.setItem("pflanzenlernen.progress." + OF, JSON.stringify(prog(5, 30))); __masteryReset();
     renderProgress();
     const chip = document.querySelector("#rankName");
-    out.chip = { name: chip.querySelector(".rk-name").textContent, title: chip.title, best: masteryBest().id, fest: masteryBest().fest, n: masteryBest().n };
+    out.chip = { name: chip.querySelector(".rk-name").textContent, sub: chip.querySelector(".rk-sub").textContent, title: chip.title, best: masteryBest().id, fest: masteryBest().fest, n: masteryBest().n };
     openRankModal();
     const m = document.querySelector("#infoScrim .rankmodal");
-    out.modal = { kopf: m.querySelector(".mh-fam").textContent, bedingungen: [...m.querySelectorAll(".rkp-row .r-x")].map((e) => e.textContent) };
+    out.modal = { kopf: m.querySelector(".mh-fam").textContent, bedingungen: [...m.querySelectorAll(".rkp-row .r-x")].map((e) => e.textContent), punkte: /\bP\./.test(m.textContent) };
     document.querySelector("#infoClose").click();
-    // Aufstieg durch den Lernstand: 25 % sitzen (14 von 54) → Jungpflanze, gefeiert; ohne neue Punkte
+    // Aufstieg durch den Lernstand: 25 % sitzen (14 von 54) → Jungpflanze, gefeiert
     const toastVor = document.querySelector("#toast").textContent;
     localStorage.setItem("pflanzenlernen.progress." + OF, JSON.stringify(prog(14, 30))); __masteryReset();
     rankCheck();
-    out.auf = { rang: rankOf(xpTotal()).name, gefeiert: xpLoad().r === 3, toast: document.querySelector("#toast").textContent, toastVor };
+    out.auf = { rang: rankOf().name, gefeiert: xpLoad().r === 3, toast: document.querySelector("#toast").textContent, toastVor };
     // Absinken (z. B. Regel geändert): still, Feier-Marke folgt nach unten
     localStorage.removeItem("pflanzenlernen.progress." + OF); __masteryReset();
     rankCheck();
-    out.ab = { rang: rankOf(xpTotal()).name, marke: xpLoad().r };
+    out.ab = { rang: rankOf().name, marke: xpLoad().r };
     localStorage.removeItem("pflanzenlernen.xp"); __masteryReset(); renderProgress();
     return out;
   });
   assert(JSON.stringify(gate.namen) === JSON.stringify(["Keimling", "Sämling", "Steckling", "Jungpflanze", "Prachtexemplar", "Meistergärtner/in"]),
     "Rang-Bedingungen am Lernstand (10 angefangen · 5 sitzen · 25 % · 60 % · 90 %): " + JSON.stringify(gate.namen));
-  assert(gate.punkteBinden === "Jungpflanze" && gate.reihe === "Keimling",
-    "Punkte binden weiterhin (2000 P. = Jungpflanze), Stufen nur der Reihe nach: " + JSON.stringify({ p: gate.punkteBinden, r: gate.reihe }));
-  assert(/noch 20 Arten müssen sitzen \(25 %\)/.test(gate.fehlt) && /noch 4 Arten müssen sitzen/.test(gate.fehlt2) && gate.steck.name === "Steckling" && gate.steck.need === 0 && /20 Arten/.test(gate.steck.needText),
+  assert(gate.reihe === "Keimling" && !gate.punkteFeld,
+    "Stufen nur der Reihe nach, keine Punktschwellen mehr: " + JSON.stringify({ r: gate.reihe, p: gate.punkteFeld }));
+  assert(/noch 20 Arten müssen sitzen \(25 %\)/.test(gate.fehlt) && /noch 4 Arten müssen sitzen/.test(gate.fehlt2) && gate.steck.name === "Steckling" && /20 Arten/.test(gate.steck.needText),
     "Was fehlt, wird in Worten genannt: " + JSON.stringify({ f: gate.fehlt, f2: gate.fehlt2, s: gate.steck }));
-  assert(gate.chip.name === "Steckling" && /sitzen/.test(gate.chip.title) && /Jungpflanze/.test(gate.chip.title) && gate.chip.best === "obstbau_fachwerker" && gate.chip.fest === 5,
-    "Chip: Punkte reichen, Lernstand nicht → Steckling, Tooltip nennt die fehlenden Arten; bestes Profil zählt: " + JSON.stringify(gate.chip));
-  assert(/5 von 54 Arten sitzen/.test(gate.modal.kopf) && /Jungpflanze/.test(gate.modal.kopf) && gate.modal.bedingungen.filter((t) => /Arten (angefangen|sitzen)/.test(t)).length === 5,
-    "Laufbahn-Dialog nennt Lernstand, nächste Stufe und je Stufe die Bedingung: " + JSON.stringify(gate.modal));
+  assert(gate.chip.name === "Steckling" && /5 von 54 Arten sitzen/.test(gate.chip.sub) && /Jungpflanze/.test(gate.chip.title) && gate.chip.best === "obstbau_fachwerker" && gate.chip.fest === 5,
+    "Rang-Zeile: Steckling · 5 von 54 Arten sitzen, Tooltip nennt die nächste Stufe; bestes Profil zählt: " + JSON.stringify(gate.chip));
+  assert(/5 von 54 Arten sitzen/.test(gate.modal.kopf) && /Jungpflanze/.test(gate.modal.kopf) && gate.modal.bedingungen.filter((t) => /Arten (angefangen|sitzen)/.test(t)).length === 5 && !gate.modal.punkte,
+    "Laufbahn-Dialog nennt Lernstand, nächste Stufe und je Stufe die Bedingung – ohne Punkte: " + JSON.stringify(gate.modal));
   assert(gate.auf.rang === "Jungpflanze" && gate.auf.gefeiert && /Neuer Rang: Jungpflanze/.test(gate.auf.toast),
-    "Aufstieg allein durch den Lernstand (25 % sitzen) muss gefeiert werden: " + JSON.stringify(gate.auf));
+    "Aufstieg durch den Lernstand (25 % sitzen) muss gefeiert werden: " + JSON.stringify(gate.auf));
   assert(gate.ab.rang === "Keimling" && gate.ab.marke === 0,
     "Absinken: Rang fällt still, die Feier-Marke folgt (nächster Aufstieg wird wieder gefeiert): " + JSON.stringify(gate.ab));
 
@@ -3401,18 +3436,18 @@ async function main() {
     const m = document.querySelector("#infoScrim .rankmodal");
     const zeilen = m ? m.querySelectorAll(".rkp-row").length : 0;
     const on = m ? m.querySelector(".rkp-row.on .r-n") : null;
-    const how = m ? /Selbst eingeben 10/.test(m.textContent) : false;
+    const how = m ? /Lernstand/.test(m.textContent) : false;
     document.querySelector("#infoClose").click();
     const zu = !document.querySelector("#infoScrim");
     const hilfe = document.querySelector("#helpPanel").textContent.replace(/\s+/g, " ");
     return { namen, erkl, zeilen, aktiv: on ? on.textContent : "", how, zu,
-      hilfe: /Punkte & Ränge/.test(hilfe) && /Prachtexemplar/.test(hilfe) };
+      hilfe: /Ränge:/.test(hilfe) && /Prachtexemplar/.test(hilfe) && /Probeprüfung:/.test(hilfe) && !/Punkte & Ränge/.test(hilfe) };
   });
   assert(!laufbahn.namen.includes("Stockmutter") && laufbahn.namen[4] === "Prachtexemplar" && laufbahn.erkl,
     "Ränge müssen allgemeinverständlich heißen und jeder eine Erklärung tragen: " + JSON.stringify(laufbahn));
   assert(laufbahn.zeilen === 6 && laufbahn.aktiv === "Keimling" && laufbahn.how && laufbahn.zu,
-    "Laufbahn-Dialog (Fallback ohne Popover) muss sechs erklärte Ränge, den aktuellen und die Punkteregel zeigen: " + JSON.stringify(laufbahn));
-  assert(laufbahn.hilfe, "Die Hilfe muss Punkte & Ränge samt Laufbahn erklären: " + JSON.stringify(laufbahn));
+    "Laufbahn-Dialog (Fallback ohne Popover) muss sechs erklärte Ränge, den aktuellen und die Lernstand-Regel zeigen: " + JSON.stringify(laufbahn));
+  assert(laufbahn.hilfe, "Die Hilfe muss Ränge (Lernstand) und Probeprüfung erklären: " + JSON.stringify(laufbahn));
   assert(stufe5.ct === "inline-size",
     "Container Queries: das Herbarium-Raster muss ein Inline-Size-Container sein: " + JSON.stringify(stufe5));
 
@@ -3542,7 +3577,6 @@ async function main() {
     document.querySelector('#modeTabs button[data-mode="cards"]').click();
     const textOpts = [...document.querySelectorAll("#dir option")].map((o) => o.value);
     document.querySelector('#modeTabs button[data-mode="photo"]').click();
-    set("#phAnswer", "mc");
     const photoOpts = [...document.querySelectorAll("#dir option")].map((o) => o.value);
     const hiddenInPhoto = document.querySelector("#dirField").hidden;
     document.querySelector('#modeTabs button[data-mode="list"]').click();
@@ -4263,7 +4297,7 @@ async function main() {
     out.neu = /Neu/.test(stepHTML(0)) && !/Stufe 0/.test(stepHTML(0)) && /3×/.test(stepHTML(0)); out.stufe2 = /Stufe 2 von 5/.test(stepHTML(2));
     out.dead = typeof promptSub === "undefined" && typeof startQuizWith === "undefined" && typeof printColOn === "undefined";
     out.esc = esc("a'b");
-    out.toggleHead = !!document.querySelector(".mast-right .themetoggle"); out.toggleOpts = !!document.querySelector("#setOpts .themetoggle");
+    out.noToggle = !document.querySelector(".themetoggle, #btnTheme");
     out.h1 = /\u00a0·/.test(document.querySelector(".masthead h1").textContent);
     out.csp = !!document.querySelector('meta[http-equiv="Content-Security-Policy"]');
     const vorher = profileId, ziel = vorher === "baumschule_gaertner" ? "gemuesebau_gaertner" : "baumschule_gaertner";
@@ -4288,7 +4322,7 @@ async function main() {
   });
   assert(p4.q1 === false && p4.q2 === true && p4.qPersistent && p4.qValue === "b", "Quota-Fallback (Lern-Tool): " + JSON.stringify(p4));
   assert(p4.cap <= 400 && p4.neu && p4.stufe2 && p4.dead && p4.esc === "a&#39;b", "Bild-Cache-Deckel 400, »Neu« statt »Stufe 0«, toter Code weg, esc('): " + JSON.stringify(p4));
-  assert(p4.toggleHead && !p4.toggleOpts && p4.h1 && p4.csp, "Kopf-Umschalter, <h1>, CSP (Lern-Tool): " + JSON.stringify(p4));
+  assert(p4.noToggle && p4.h1 && p4.csp, "Kein Design-Schalter, <h1>, CSP (Lern-Tool): " + JSON.stringify(p4));
   assert(p4.chProfile !== p4.back && p4.chCards === 3 && p4.chFirst && p4.back,
     "Herausforderung muss das Profil des Links erzwingen (und danach zurück): " + JSON.stringify(p4));
   assert(p4.wasActive && p4.endedOnSwitch, "Profilwechsel während einer Sitzung muss sie sauber beenden: " + JSON.stringify(p4));
@@ -4300,7 +4334,6 @@ async function main() {
     __clearPhotoCache(); photoTried.clear();
     __setPhotoSource(() => Promise.resolve({ thumb: PX, src: "cm", title: "T", file: "T.jpg", url: "https://x/y", artist: "A", license: "CC" }));
     document.querySelector('#modeTabs button[data-mode="photo"]').click();
-    const pa = document.querySelector("#phAnswer"); pa.value = "mc"; pa.dispatchEvent(new Event("change"));
     document.querySelector("#sessLen").value = "3"; startSession();
     for (let t = 0; t < 60 && !document.querySelector("#phImg"); t++) await tick(50);
     await tick(120);
@@ -4539,7 +4572,7 @@ async function main() {
   await page.goto(FILE + "#c=" + vollFrag, { waitUntil: "load" });
   await page.waitForFunction("window.startChallenge!=null", { timeout: 30000 });
   const vollIn = await page.evaluate(() => ({
-    dir: curDir(), antwort: photoAnswer, modus: mode,
+    dir: curDir(), antwort: phAns(), modus: mode,
     txt: (document.querySelector("#duelBanner") || {}).textContent || "",
     imSelect: (document.querySelector("#dir") || {}).value,
   }));
@@ -4560,28 +4593,23 @@ async function main() {
     window.__offlineJsonp = () => Promise.reject(new Error("offline (Test)"));
     __setJsonp(window.__offlineJsonp); __clearPhotoCache();
     __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g, file: "T.jpg", url: "https://x/y" }));
-    try { localStorage.setItem("pflanzenlernen.phanswer", "mc"); } catch (e) {}
     const banner = (document.querySelector("#duelBanner") || {}).textContent || "";
-    const antwOpts = [...document.querySelectorAll("#phAnswer option")].map((o) => o.value);
     document.querySelector("#btnAcceptDuel").click();
     await new Promise((r) => setTimeout(r, 80));
     const einFeld = !!document.querySelector("#typeIn"), keineAuswahl = !document.querySelector("#opts .opt");
-    const dirImSpiel = curDir(), antwImSpiel = photoAnswer;
+    const dirImSpiel = curDir(), antwImSpiel = phAns();
     document.querySelector("#btnStop").click();
     startSession();                                            // eigene Sitzung → eigene Einstellungen
     await new Promise((r) => setTimeout(r, 80));
-    const danach = { dir: curDir(), antw: photoAnswer, opts: document.querySelectorAll("#opts .opt").length,
-      antwOpts: [...document.querySelectorAll("#phAnswer option")].map((o) => o.value) };
+    const danach = { dir: curDir(), antw: phAns(), opts: document.querySelectorAll("#opts .opt").length, feld: !!document.querySelector("#phAnswer") };
     document.querySelector("#btnStop").click();
-    return { banner, antwOpts, einFeld, keineAuswahl, dirImSpiel, antwImSpiel, danach };
+    return { banner, einFeld, keineAuswahl, dirImSpiel, antwImSpiel, danach };
   }, PX);
   assert(/botanischer Name/.test(altTyp.banner) && /Namen eingeben/.test(altTyp.banner),
     "Banner eines älteren Links muss dessen Aufgabe nennen: " + altTyp.banner);
-  assert(altTyp.antwOpts.includes("type") && altTyp.einFeld && altTyp.keineAuswahl
-    && altTyp.dirImSpiel === "img2bot" && altTyp.antwImSpiel === "type",
+  assert(altTyp.einFeld && altTyp.keineAuswahl && altTyp.dirImSpiel === "img2bot" && altTyp.antwImSpiel === "type",
     "Älterer Duell-Link muss weiterhin EIN Eingabefeld (Bild → botanisch) stellen: " + JSON.stringify(altTyp));
-  assert(altTyp.danach.dir === "img2both" && altTyp.danach.antw === "mc" && altTyp.danach.opts === 4
-    && altTyp.danach.antwOpts.join() === "mc,exam",
+  assert(altTyp.danach.dir === "img2both" && altTyp.danach.antw === "mc" && altTyp.danach.opts === 4 && !altTyp.danach.feld,
     "Nach dem Duell müssen wieder die eigenen Einstellungen gelten (voller Name · Auswahl): " + JSON.stringify(altTyp.danach));
 
   const altDeFrag = await page.evaluate(() =>

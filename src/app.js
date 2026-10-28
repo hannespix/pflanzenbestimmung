@@ -2891,6 +2891,7 @@ function updateSchema(){
   try{
     populateSelectors();
     loadSettings();
+    try{ localStorage.removeItem("pbw.theme"); }catch(e){}   // Design folgt nur noch dem System – eine alte gespeicherte Wahl entfernen
     loadExams();
     const pid=store.get(LS_PREFIX+"profile");
     loadProfile(pid&&PROFILE_DEFS[pid]?pid:"gemuesebau_gaertner");
