@@ -276,7 +276,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--green)}
       Quellcode (<code>tools/xlsx_to_seed.mjs</code>). Ein automatischer Test erzeugt die Daten
       bei jeder Änderung neu aus den Original-Dateien und prüft, dass sie <b>Zeichen für Zeichen</b>
       mit dem übereinstimmen, was hier ausgeliefert wird.</p>
-    <p><b>Vier Eingriffe sind offengelegt</b> und als nachvollziehbare Skripte hinterlegt, nicht
+    <p><b>Fünf Eingriffe sind offengelegt</b> und als nachvollziehbare Skripte hinterlegt, nicht
       von Hand im Datenbestand:</p>
     <ul>
       <li>Bei <i>Chimonanthus praecox</i> (Garten- und Landschaftsbau, Gärtner/in) ist die
@@ -293,6 +293,19 @@ input[type=checkbox],input[type=radio]{accent-color:var(--green)}
         coronarius</i> berichtigt; Nummer, ZP-Kennzeichnung und alle übrigen Angaben der Zeile
         bleiben erhalten (<code>tools/fix_source_gaps.py</code>). Das gilt in beiden
         Werkzeugen, auch auf Prüfungsbogen und Musterlösung.</li>
+      <li>Zwölf <b>Rechtschreibfehler in botanischen Namen</b> sind berichtigt – jeweils so, wie die
+        Art in den übrigen Listen geschrieben ist bzw. wie der Name botanisch lautet. Baumschule:
+        »Lagererstroemia indica« → <i>Lagerstroemia indica</i>, »Olea europea« → <i>Olea
+        europaea</i>, »Juniperus communis 'Hibernika'« → <i>Juniperus communis</i> 'Hibernica'
+        (Fachwerker/in). Friedhofsgärtnerei: »Antirrinum majus« → <i>Antirrhinum majus</i>,
+        »Gypsohila paniculata« → <i>Gypsophila paniculata</i>, »Urtica dioca« → <i>Urtica
+        dioica</i>, »Thymus serphyllum« → <i>Thymus serpyllum</i>, »Chameacyparis«/»Chameacypris«
+        → <i>Chamaecyparis</i> (alle Fachwerker/in) sowie »Hosta … Fortuei Aurea'« → <i>Hosta</i>
+        'Fortunei Aurea' (Gärtner/in). Gemüsebau: »Amaranthus retoflexus« → <i>Amaranthus
+        retroflexus</i>. Zierpflanzenbau: »Petunie x atkinsiana« → <i>Petunia</i> × <i>atkinsiana</i>
+        (»Petunie« ist der deutsche Name). Familie, deutsche Namen und alle übrigen Angaben bleiben
+        erhalten (<code>tools/fix_source_gaps.py</code>); das gilt in beiden Werkzeugen, auch auf
+        Prüfungsbogen und Musterlösung.</li>
       <li>Zehn der 14 Quelllisten enthalten keine Kategorie. Für diese ist die <b>Wuchsform</b>
         zugeordnet (Laubgehölz, Nadelgehölz, Staude, Gras …), ausschließlich zur Gliederung der
         Lernansicht (<code>tools/categorize_seeds.py</code>). Die vier Listen mit eigener

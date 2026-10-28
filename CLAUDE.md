@@ -132,7 +132,17 @@ node tests/smoke.mjs                    # Puppeteer-Smoke Prüfungswerkzeug (npm
 node tests/learn.mjs                    # Puppeteer-Smoke Lern-Tool
 node tests/pwa.mjs                      # PWA: Manifest + Service Worker + Offline-Cache
 node tools/make_icons.mjs               # PWA-Icons einmalig neu erzeugen (Ergebnis committen)
+node tools/bildcheck.mjs [--profil id] [--art muster] [--mock]   # Bildcheck: echte Quiz-Bildsuche für alle Arten
 ```
+
+**Bildcheck** (`tools/bildcheck.mjs`, Workflow `bildcheck.yml`): führt die **echte** Bildsuche des
+Bilder-Quiz (`wikiPhoto` aus `dist/pflanzen-lernen.html`) für alle Arten aller Profile gegen die
+Live-APIs aus und berichtet je Art Foto · Zeichnung · Herbarbeleg · kein Bild (mit Diagnose: welcher
+Suchweg, welche Datei, warum verworfen) plus `kontaktbogen.html` zum Durchsehen. Höflich gedrosselt
+(eigener User-Agent, ≤ 3 parallel, 180/min, 429 mit Retry-After). In dieser Entwicklungsumgebung
+bremst Wikimedia stark (429) – der volle Lauf gehört auf den GitHub-Runner (Actions → bildcheck →
+Run workflow); lokal taugen `--art` (einzelne Arten nachprüfen) und `--mock` (Logikprobe ohne Netz:
+eine Datei, die genau die Art nennt, muss überall angenommen werden).
 
 **PWA (installierbar + offline):** `build.py` legt zusätzlich `dist/manifest.webmanifest`,
 `dist/sw.js` (Service Worker; Cache-Version = Inhalts-Hash) und die `dist/icon-*.png` ab.
@@ -2549,12 +2559,72 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Boot-Wartezeiten (`window.startSession/startChallenge!=null`) stehen jetzt auf 30 s, und beide
       Workflows setzen `DEBUG_STACK=1`, damit eine Zeitüberschreitung künftig ihren Wartepunkt nennt.
 
+- [x] **Bildcheck: findet das Bilder-Quiz für jede Art ein Bild?** (Nutzerwunsch: »alle Pflanzen
+      direkt prüfen … ob für das Quiz für jede Pflanze jetzt ein Bild verfügbar ist«). Neues Werkzeug
+      `tools/bildcheck.mjs`: lädt `dist/pflanzen-lernen.html` in Puppeteer und führt für **jede Art jedes
+      Profils** die **echte** Suchkette `wikiPhoto` aus (kein Nachbau – nur der JSONP-Abruf wird über
+      `__setJsonp` auf einen Node-Abruf umgelegt). Höflich nach Wikimedia-Regeln (eigener User-Agent mit
+      Kontakt-URL, ≤ 3 parallel, 180/min, 429/503 mit Retry-After bzw. exponentiellem Rückzug, jede URL
+      nur einmal). Bericht: `bildcheck.json` (je Art Status Foto/Zeichnung/Herbarbeleg/kein Bild/Netz,
+      Datei, Quelle, vorläufig; für alles ohne Foto eine **Diagnose** je Suchweg: Artikel, Dateien und
+      warum verworfen), `bildcheck.md` (Zahlen je Profil, Listen je Taxon) und `kontaktbogen.html` (alle
+      Quiz-Bilder als Vorschau zum Durchsehen). Optionen `--profil`, `--art` (Regex), `--max`, `--mock`
+      (Logikprobe ohne Netz: jede Kategorie-Suche liefert eine Datei, die genau das Taxon nennt – die muss
+      überall angenommen werden). Workflow `.github/workflows/bildcheck.yml` (workflow_dispatch mit
+      Eingaben profil/art + pull_request nur bei Änderungen am Prüfskript), Ergebnis in der
+      Step-Summary und als Artefakt. **Erster Fund (schon die Logikprobe):** Bindestrich-Epitheta
+      (*Vaccinium vitis-idaea*, *Dryopteris filix-mas*, *Athyrium filix-femina*, *Capsella
+      bursa-pastoris*, *Echinochloa crus-galli*, *Alisma plantago-aquatica*, *Hibiscus rosa-sinensis*,
+      *Gentiana sino-ornata*, *Blechnum penna-marina*, *Arabis ferdinandi-coburgi* – 12 Taxa, 21 Einträge)
+      bekamen kein eigenes Bild: `fileMentionsOther` zerlegte den Dateinamen am Bindestrich, auf die
+      Gattung folgte »vitis« statt »vitis-idaea« → jede Datei der Art galt als »andere Art« (auch das
+      Artikelbild). Jetzt gelten auch die Teile eines Bindestrich-Epithetons als eigene Art.
+      `tests/learn.mjs` prüft über **alle 2114 Einträge**, dass ein Dateiname mit dem eigenen Artnamen
+      (Leerzeichen-, Unterstrich- und Taxon-Form) nie als »andere Art« gilt – eine andere Art schon.
+      **Erster echter Lauf (GitHub-Runner, 14 min, 2543 Anfragen, kein 429):** 2092 Fotos · 4 Zeichnungen
+      · 18 ohne Bild · 0 Netzfehler. Die Diagnose der 22 ohne Foto ergab drei Ursachen, alle behoben:
+      **(1) Zwölf Rechtschreibfehler in den amtlichen Listen** (Bildsuche fand mit dem falschen Namen
+      nichts, und Lernende hätten die falsche Schreibweise gelernt): »Antirrinum«, »Gypsohila«,
+      »Chameacyparis«/»Chameacypris«, »Lagererstroemia«, »Petunie« (deutscher Name im Gattungsfeld),
+      »retoflexus«, »serphyllum«, »europea«, »dioca«, »'Hibernika'«, »Fortuei«. Gefunden zusätzlich
+      über einen Ähnlichkeitsscan aller Gattungen/Epitheta (Levenshtein 1–2 gegen dieselbe Art in
+      anderen Listen). Berichtigt **reproduzierbar** über eine `TYPOS`-Tabelle in
+      `tools/fix_source_gaps.py` (dieselbe Mechanik wie `REPLACEMENTS`: alle vier Textfelder müssen
+      passen, nur Gattung/Art ändern sich, Wuchsform unverändert), Seeds-Neubau = genau diese zwölf
+      Felder in sechs Dateien, zweiter Lauf »Offen: 0«. **Offengelegt als fünfter Eingriff** (»Fünf
+      Eingriffe«) in `.learnnote`, Prüfwerkzeug-Hilfe »Datenherkunft«, `recht.html#datenquellen`
+      (vollständige Liste je Fachrichtung) und Technik-Doku. **Lernstand zieht mit:** `KEY_RENAMES`
+      + `migrateKeys()` in `loadProgress` verschieben gespeicherten Fortschritt alter Schlüssel
+      (Gattung|Art|dt. Name) auf den berichtigten – auch für die frühere Salvia→Philadelphus-Zeile.
+      Namensherleitung kennt jetzt auch *Lagerstroemia*. Der Sortennamen-Guard sinkt auf 60/37
+      (»'Hibernika'« war neben »'Hibernica'« doppelt gezählt). **(2) Sammelgruppe im Gattungsfeld**
+      (»Fuchsia-/Freesia-/Hippeastrum-/Rosa-Hybriden« mit leerer Art): `photoCard()` macht daraus
+      für die Bildsuche Gattung + Platzhalter »Hybriden« (in `photoSteps` und `wikiPhoto`).
+      **(3) Notiz statt Epitheton** (»Sphagnum z.B: fallax ca. 35 Arten …«): `binomEpithet`
+      überspringt Wörter mit Punkt (Epitheta haben nie einen) → *Sphagnum fallax* (beide Werkzeuge).
+      **Bewusst ohne Bild bleiben** Sorten mit beschreibendem Namen bzw. Geschwistern in der Liste,
+      zu denen Commons kein Sortenbild hat (*Arabis ferdinandi-coburgi* 'Variegata', *Cotoneaster
+      dammeri* 'Frieder's Evergreen'/'Streib's Findling', *Euonymus fortunei* 'Sürth'/'Sun Spot',
+      *Picea abies* 'Echiniformis') – ein Artfoto wäre dort falsch – sowie *Scaevola saligna*
+      (Handelsname; die Wikipedia zeigt *S. aemula*). `tests/learn.mjs`: zwölf berichtigte Zeilen
+      (keine falsche Form mehr, richtige genau einmal), Schlüssel-Umzug (alle neuen Schlüssel sind
+      Karten, Lernstand zieht um und wird gespeichert), `photoCard` (nur bei leerer Art),
+      »Fuchsia-Hybriden« beginnt beim Gattungsartikel, »z.B:« ist kein Epitheton;
+      `tests/smoke.mjs`: Hilfe nennt fünf Eingriffe samt Rechtschreibfehlern.
+      **CI-Flake behoben:** Der Persistenz-Test im Lern-Test (Warten auf nicht leeren Fortschritt
+      nach dem Reload) setzte voraus, dass frühere Testblöcke im Standardprofil etwas gespeichert
+      hatten – jetzt bewertet er selbst eine Art, prüft genau diesen Eintrag und räumt auf.
+      **Workflow:** `cancel-in-progress: false` – ein neuer Push bricht einen laufenden Bildcheck
+      nicht mehr ab, sondern wartet dahinter.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.
       **Stand:** ein Vollscan (2114 Arten) fand nur die inzwischen geschlossene
       Familien-Lücke zu *Chimonanthus praecox*; dazu kam der aus einer Rückmeldung bekannte
-      Übertragungsfehler »Salvia abrotanoides · Bauernjasmin« (berichtigt, siehe Erledigt).
+      Übertragungsfehler »Salvia abrotanoides · Bauernjasmin« (berichtigt, siehe Erledigt), und der
+      Bildcheck förderte zwölf Rechtschreibfehler in botanischen Namen zutage (berichtigt über
+      `TYPOS`). Die Liste der berichtigten Fehler sollte der Betreiber an die zuständige Stelle melden.
       Künftige Lücken über die `CORRECTIONS`-Tabelle, nachweislich falsche Felder über die
       `REPLACEMENTS`-Tabelle in `tools/fix_source_gaps.py` (nicht direkt im Seed – die CI
       lehnt Hand-Edits in `seeds/` ab). Jeder neue Eingriff gehört zusätzlich in die
