@@ -2904,7 +2904,16 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       über einen Familien-Scope mit künftig fälligen Karten; Installations-Slot (ohne Angebot leer,
       synthetisches `beforeinstallprompt` → Knopf → `prompt()` → »Läuft als App« + Toast, Hilfe-Slot
       gleicher Zustand, iPhone-Weg ohne Knopf, standalone-Hinweis); Einführung: Titel, Einstieg,
-      höchstens 240 Wörter.
+      höchstens 240 Wörter. **Nachtrag (Wunsch: »Install-Button immer unten anzeigen, wenn nicht
+      installiert«):** dauerhafte Leiste `#installBar` über der Fußzeile (`installBarHTML`), solange
+      die Seite nicht als App läuft – auf dem Handy immer (`installEnv().mobile`: iOS/Android/
+      `pointer:coarse`), am Rechner nur mit Angebot des Browsers (Firefox/Safari-Desktop könnten
+      nichts installieren – kein toter Knopf). Mit Angebot »App installieren« (nativer Prompt),
+      sonst **»So geht's«** → `openInstallHow()` (Modal im `#infoScrim`-Muster: iPhone/Safari ·
+      Android · Firefox Android · Computer, das eigene Gerät hervorgehoben); `installApp()` ohne
+      Ereignis öffnet dasselbe Modal statt eines Toasts. Tests: Leiste auf dem iPhone mit »So
+      geht's« → Modal (Teilen, Home-Bildschirm, iPhone markiert) → schließen; mit Angebot echter
+      Knopf; als App weg; am Rechner ohne Angebot weg.
 
 ## Offene Aufgaben (TODO)
 

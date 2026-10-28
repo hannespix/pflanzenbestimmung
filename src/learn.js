@@ -5352,7 +5352,21 @@ function installEnv(){                                   // für Tests überschr
     : ((window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true);
   const ios = ("ios" in o) ? !!o.ios
     : (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1));
-  return { standalone, ios, canPrompt: !!installEvt };
+  const mobile = ("mobile" in o) ? !!o.mobile
+    : (ios || /Android/i.test(navigator.userAgent) || !!(window.matchMedia && matchMedia("(pointer:coarse)").matches));
+  return { standalone, ios, mobile, canPrompt: !!installEvt };
+}
+/* Leiste unten auf der Seite (#installBar): solange die Seite nicht als App läuft, steht dort
+   der Weg zur App – mit echtem Knopf, wenn der Browser die Installation anbietet, sonst mit
+   »So geht's« (Weg je Gerät). Auf einem Rechner ohne Angebot (Firefox, Safari) bleibt sie weg,
+   denn dort gäbe es nichts zu installieren – ein Knopf ohne Wirkung wäre schlimmer als keiner. */
+function installBarHTML(){
+  const e = installEnv();
+  if(e.standalone || installDone) return "";
+  if(!e.canPrompt && !e.mobile) return "";
+  const btn = e.canPrompt ? `<button class="btn primary btn-install" type="button">App installieren</button>`
+                          : `<button class="btn btn-install-how" type="button">So geht's</button>`;
+  return `${ico("leaf")}<div><b>Pflanze-BW als App aufs Handy</b> – startet vom Home-Bildschirm, auch ohne Netz.</div>${btn}`;
 }
 function installHTML(){                                  // Inhalt der Slots in Einführung und Hilfe
   const e = installEnv();
@@ -5362,14 +5376,49 @@ function installHTML(){                                  // Inhalt der Slots in 
     return `<div class="intro-install">${ico("leaf")}<div><b>Als App aufs Handy?</b> Ein Tipp genügt – danach startet Pflanze-BW vom Home-Bildschirm, auch ohne Netz.</div><button class="btn primary btn-install" type="button">App installieren</button></div>`;
   if(e.ios)
     return `<div class="intro-install">${ico("leaf")}<div><b>Als App aufs iPhone:</b> unten <b>Teilen</b> antippen, dann <b>»Zum Home-Bildschirm«</b>. Danach startet Pflanze-BW wie eine App – auch ohne Netz.</div></div>`;
+  if(e.mobile)
+    return `<div class="intro-install">${ico("leaf")}<div><b>Als App aufs Handy?</b> Über das Browser-Menü – danach startet Pflanze-BW vom Home-Bildschirm, auch ohne Netz.</div><button class="btn btn-install-how" type="button">So geht's</button></div>`;
   return "";
 }
+function wireInstallButtons(root){
+  root.querySelectorAll(".btn-install").forEach(b=>{ b.onclick=installApp; });
+  root.querySelectorAll(".btn-install-how").forEach(b=>{ b.onclick=openInstallHow; });
+}
 function syncInstallUI(){
-  document.querySelectorAll(".install-slot").forEach(sl=>{ sl.innerHTML = installHTML(); const b=sl.querySelector(".btn-install"); if(b) b.onclick=installApp; });
+  document.querySelectorAll(".install-slot").forEach(sl=>{ sl.innerHTML = installHTML(); wireInstallButtons(sl); });
+  const bar=$("#installBar");
+  if(bar){ const h=installBarHTML(); bar.innerHTML=h; bar.hidden=!h; wireInstallButtons(bar); }
+}
+/* Weg je Gerät – für Browser ohne Installations-Ereignis (iPhone/Safari, Firefox) */
+function openInstallHow(){
+  closeInfo();
+  const e = installEnv();
+  const scrim = el("div","scrim"); scrim.id="infoScrim";
+  const way = (you, titel, text) => `<div class="inst-way${you?" is-you":""}"><b>${titel}</b><span>${text}</span></div>`;
+  scrim.innerHTML = `<div class="modal howmodal" role="dialog" aria-modal="true" aria-label="Als App installieren">
+     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <div class="modal-head">
+       <div class="mh-bot fam">Als App installieren</div>
+       <div class="mh-fam">Danach startet Pflanze-BW vom Home-Bildschirm – auch ohne Netz</div>
+     </div>
+     <div class="inst-ways">
+       ${way(e.ios, "iPhone / iPad (Safari)", "Unten das <b>Teilen</b>-Symbol antippen, dann <b>»Zum Home-Bildschirm«</b>.")}
+       ${way(!e.ios && e.mobile, "Android (Chrome, Samsung Internet)", "Menü (drei Punkte oben rechts) → <b>»App installieren«</b> oder <b>»Zum Startbildschirm hinzufügen«</b>.")}
+       ${way(false, "Firefox (Android)", "Menü → <b>»Zum Startbildschirm hinzufügen«</b>.")}
+       ${way(!e.mobile, "Computer (Chrome, Edge)", "Symbol rechts in der Adressleiste oder Menü → <b>»App installieren«</b>.")}
+     </div>
+     <div class="famfoot">Die Installation ist freiwillig – nach dem ersten Aufruf läuft das Werkzeug ohnehin auch ohne Internet.</div>
+   </div>`;
+  document.body.appendChild(scrim); infoEl=scrim;
+  scrim.addEventListener("click", ev=>{ if(ev.target===scrim) closeInfo(); });
+  scrim.querySelector("#infoClose").onclick = closeInfo;
+  document.addEventListener("keydown", infoKey);
+  infoReturnFocus = document.activeElement;
+  try{ scrim.querySelector("#infoClose").focus(); }catch(err){}
 }
 async function installApp(){
   const ev = installEvt;
-  if(!ev){ toast("Gerade nicht möglich – im Browser-Menü steht »App installieren« bzw. »Zum Startbildschirm«.", true); return; }
+  if(!ev){ openInstallHow(); return; }                    // kein Angebot des Browsers: den Weg zeigen statt einer Sackgasse
   try{
     ev.prompt();
     const r = await ev.userChoice;
@@ -5508,6 +5557,7 @@ window.rankOf=rankOf;             // für Tests: Ränge (nur Lernstand), Combo
 window.RANKS=RANKS;
 window.startProbe=startProbe; window.gradeOf=gradeOf; window.probeCount=probeCount;   // Probeprüfung (für Tests)
 window.__installReset=()=>{ installEvt=null; installDone=false; syncInstallUI(); };      // Installations-Zustand (für Tests)
+window.openInstallHow=openInstallHow;
 window.isCultivarName=isCultivarName;
 window.cultivarName=cultivarName;       // für Tests: Sorten-Erkennung, Artbild-Regel, Tafel-Filter
 window.cultivarKind=cultivarKind;

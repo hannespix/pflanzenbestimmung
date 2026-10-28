@@ -343,9 +343,33 @@ async function main() {
     openIntro(false); out.ios = slotTxt(); out.iosKnopf = !!document.querySelector("#introScrim .btn-install"); document.querySelector("#introGo").click();
     window.__installEnv = { ios: false, standalone: true };
     openIntro(false); out.app = slotTxt(); document.querySelector("#introGo").click();
+    // Leiste unten (#installBar): auf dem Handy immer, solange nicht installiert – ohne Angebot des
+    // Browsers mit »So geht's« (Weg je Gerät), mit Angebot mit echtem Knopf; als App oder auf einem
+    // Rechner ohne Angebot bleibt sie weg.
+    const bar = document.querySelector("#installBar");
+    const barTxt = () => (bar.textContent || "").replace(/\s+/g, " ").trim();
+    __installReset(); window.__installEnv = { ios: true, standalone: false, mobile: true }; __installReset();
+    out.barIos = { da: !bar.hidden, txt: barTxt(), how: !!bar.querySelector(".btn-install-how"), install: !!bar.querySelector(".btn-install") };
+    bar.querySelector(".btn-install-how").click();
+    const m = document.querySelector("#infoScrim .howmodal");
+    out.howModal = { da: !!m, txt: m ? m.textContent.replace(/\s+/g, " ") : "", you: m ? (m.querySelector(".inst-way.is-you b") || {}).textContent : "" };
+    document.querySelector("#infoClose").click(); out.howZu = !document.querySelector("#infoScrim");
+    const ev2 = new Event("beforeinstallprompt"); ev2.prompt = () => { prompted++; }; ev2.userChoice = Promise.resolve({ outcome: "dismissed" });
+    window.dispatchEvent(ev2);
+    out.barPrompt = { da: !bar.hidden, install: !!bar.querySelector(".btn-install"), how: !!bar.querySelector(".btn-install-how") };
+    window.__installEnv = { ios: false, standalone: true, mobile: true }; __installReset();
+    out.barApp = bar.hidden;
+    window.__installEnv = { ios: false, standalone: false, mobile: false }; __installReset();
+    out.barDesktopOhne = bar.hidden;
     delete window.__installEnv; __installReset();
     return out;
   });
+  assert(inst.barIos.da && /als App aufs Handy/.test(inst.barIos.txt) && inst.barIos.how && !inst.barIos.install,
+    "Leiste unten: auf dem iPhone sichtbar mit »So geht's« (kein toter Installationsknopf): " + JSON.stringify(inst.barIos));
+  assert(inst.howModal.da && /Teilen/.test(inst.howModal.txt) && /Zum Home-Bildschirm/.test(inst.howModal.txt) && /App installieren/.test(inst.howModal.txt) && /iPhone/.test(inst.howModal.you) && inst.howZu,
+    "»So geht's« öffnet den Weg je Gerät (iPhone hervorgehoben) und lässt sich schließen: " + JSON.stringify(inst.howModal));
+  assert(inst.barPrompt.da && inst.barPrompt.install && !inst.barPrompt.how && inst.barApp && inst.barDesktopOhne,
+    "Leiste: mit Angebot echter Knopf, als App weg, am Rechner ohne Angebot weg: " + JSON.stringify({ p: inst.barPrompt, app: inst.barApp, desk: inst.barDesktopOhne }));
   assert(inst.ohne === "" && inst.ohneKnopf, "Ohne Angebot des Browsers darf kein Installationsknopf erscheinen (toter Knopf): " + JSON.stringify(inst));
   assert(inst.mitKnopf && /Als App aufs Handy/.test(inst.mitText) && inst.prompted === 1 && /Läuft als App/.test(inst.danach) && inst.keinKnopfMehr && /Installiert/.test(inst.toast),
     "beforeinstallprompt → Knopf, Klick ruft prompt(), danach »Läuft als App« + Toast: " + JSON.stringify(inst));

@@ -272,11 +272,14 @@ Werkzeug **zum Home-Bildschirm hinzufügen** und startet danach wie eine App –
 **auch ohne Internet**. Möglich machen das ein *Web App Manifest* und ein
 *Service Worker*, der die vier Seiten beim ersten Besuch lokal zwischenspeichert
 (reiner Datei-Cache, keine personenbezogenen Daten, nur diese Website). Die
-Einführung beim ersten Besuch und die Hilfe bieten dafür einen Knopf **»App
-installieren«** an – nur dort, wo der Browser es erlaubt (Android/Chrome, Edge:
-`beforeinstallprompt`); auf iOS/Safari steht stattdessen der Weg *Teilen → Zum
-Home-Bildschirm*, und läuft die Seite schon als App, sagt die Stelle das. Die
-Installation ist freiwillig – der Kern funktioniert ohnehin offline. Diese Assets (`manifest.webmanifest`, `sw.js`, `icon-*.png`) erzeugt
+Lern-Tool zeigt dafür unten auf der Seite eine **Leiste »Pflanze-BW als App aufs
+Handy«**, solange es nicht als App läuft – mit echtem Knopf **»App installieren«**,
+wo der Browser es erlaubt (Android/Chrome, Edge: `beforeinstallprompt`), sonst mit
+**»So geht's«** (Weg je Gerät; iOS/Safari: *Teilen → Zum Home-Bildschirm*). Dieselbe
+Stelle gibt es in der Einführung beim ersten Besuch und in der Hilfe; läuft die
+Seite schon als App, sagt sie das. Auf einem Rechner ohne Angebot (Firefox, Safari)
+bleibt die Leiste weg. Die Installation ist freiwillig – der Kern funktioniert
+ohnehin offline. Diese Assets (`manifest.webmanifest`, `sw.js`, `icon-*.png`) erzeugt
 `build.py` nach `dist/`; beim lokalen `file://`-Aufruf sind sie ohne Belang.
 
 ## Build
