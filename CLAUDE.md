@@ -2481,6 +2481,39 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       `tests/learn.mjs`: vier Pillen-Varianten (Stufe 2, Bild, Ausfall, Wunsch), `binomEpithet
       ("cultivars")===""`, Suchwege für »Lupinus cultivars« auf Gattungsniveau.
 
+- [x] **Synonyme der Liste in Bildsuche und Info-Karte + Ausfall ≠ »nicht gefunden«** (zwei
+      Screenshots: Info-Karte zu *Lonicera nitida 'Elegant'* »Kein deutscher Wikipedia-Artikel
+      gefunden – auch nicht zur Gattung«, und die geführte Lektion endete »ohne Bild – auf deinen
+      Wunsch«, weil die Art kein Foto bekam). **Befund (Live-API):** Auf Commons ist die Kategorie
+      »Lonicera nitida« **leer** (0 Dateien), die Fotos liegen unter dem akzeptierten Namen
+      »Lonicera ligustrina var. yunnanensis« (6 Dateien) – **genau dem Synonym, das die
+      Prüfungsliste in Feld 7 führt**; der Volltext »Lonicera nitida Elegant« liefert nur
+      Buchscans (zu Recht verworfen). Die Bildsuche und die Wikipedia-Kette nutzten die Synonyme
+      der Liste bisher gar nicht (383 Zeilen tragen welche: Mahonia→Berberis, Potentilla→Dasiphora,
+      Mespilus→Crataegus, Lonicera pileata ↔ ligustrina var. pileata …). Und: »Lonicera« →
+      »Heckenkirschen« existiert sehr wohl – die Karte sagte trotzdem »auch nicht zur Gattung«,
+      weil `loadWiki` eine abgebrochene Anfrage (Zeitüberschreitung/Drosselung) wie »beantwortet,
+      nichts gefunden« behandelte, sobald irgendeine frühere Anfrage geantwortet hatte, und das
+      Ergebnis als `null` cachte. **Fix:** (1) `synCards(card)` (beide Werkzeuge) macht aus Feld 7
+      Hilfskarten; `photoSteps` hängt je Synonym Artikel · Commons-Kategorie · Volltext **ans Ende**
+      (bei Sorten/Varietäten nur, wenn `artLevelOk`); `fileMentionsOther` erlaubt Synonym-Epitheta
+      (»ligustrina«, »yunnanensis« sind dieselbe Pflanze), `pageFitsCard` akzeptiert die
+      Synonym-Gattung (»Mahonia« für *Berberis aquifolium*), `commonsScore` zählt das
+      Synonym-Epitheton wie das eigene; `wikiCandidates` führt Synonyme nach den deutschen Namen
+      (bei Unterarten **vor** der Elternart, bei Sammel-Einträgen vor der Gattung). (2) `loadWiki`
+      zählt `antworten`/`fehler`: »nicht gefunden« nur, wenn **jede** Anfrage beantwortet wurde;
+      sonst »Online-Infos konnten nicht geladen werden – 2 von 6 Anfragen an Wikipedia blieben
+      ohne Antwort (offline, langsam oder gedrosselt)« mit **»Erneut versuchen«** und ohne
+      `null`-Cache. (3) `apiOk`: eine **API-Fehlerantwort** (`{error:{code:"ratelimited"}}` –
+      kommt per JSONP als normale Antwort an) gilt in `wikiJSONP`, `wikiArticleQuery`,
+      `commonsQuery` und `fileMetaQuery` als Ausfall – im Bilder-Quiz damit »Warte auf die
+      Bilder« statt »kein Bild«. `tests/learn.mjs`: Synonym-Wege am Ende, Löwenzahn-artige
+      Kette mit **echter Commons-Lage** (leere Kategorie, Buchscan-Volltext, Synonym-Kategorie →
+      Foto), Synonym-Epitheta/-Gattung, beschreibende Sorte ohne Synonym-Wege, API-Fehler =
+      `network`; Info-Karte: abgebrochene Gattungs-Anfragen → Verbindungsproblem + Knopf, kein
+      Cache; `ratelimited` ebenso; danach mit Verbindung → Heckenkirschen. `tests/smoke.mjs`:
+      Synonym-Kandidatin + Ausfall-Zustand im Prüfungswerkzeug.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.

@@ -389,8 +389,9 @@ async function main() {
   });
   assert(sektion.epi === "" && sektion.such === "Taraxacum" && sektion.taxon === "Taraxacum sect. Ruderalia" && sektion.typo === "Taraxacum sect. Ruderalia",
     "»sect.« ist ein Rang-Kürzel, kein Epitheton: Suchname = Gattung (Deep-Links), Taxon = »Taraxacum sect. Ruderalia« (auch beim Quell-Tippfehler »sec.«): " + JSON.stringify(sektion));
-  assert(JSON.stringify(sektion.wege) === JSON.stringify(["wp:Taraxacum sect. Ruderalia", 'cm:incategory:"Taraxacum sect. Ruderalia"', "wp:Wiesen-Löwenzähne", "cm:Taraxacum sect. Ruderalia"]),
-    "Suchwege der Sektion: Artikel + Commons-Kategorie des Taxons, deutscher Name, Volltext – NICHT die Gattung allein: " + JSON.stringify(sektion.wege));
+  assert(JSON.stringify(sektion.wege.slice(0, 4)) === JSON.stringify(["wp:Taraxacum sect. Ruderalia", 'cm:incategory:"Taraxacum sect. Ruderalia"', "wp:Wiesen-Löwenzähne", "cm:Taraxacum sect. Ruderalia"]) &&
+    sektion.wege.slice(4).every((w) => /Taraxacum sect\. Taraxacum/.test(w)) && !sektion.wege.some((w) => /^wp:Taraxacum$/.test(w)),
+    "Suchwege der Sektion: Artikel + Commons-Kategorie des Taxons, deutscher Name, Volltext – NICHT die Gattung allein; danach nur Synonym-Wege der Liste: " + JSON.stringify(sektion.wege));
   assert(sektion.file === "Taraxacum sect. Ruderalia 01.JPG" && sektion.src === "cm" && sektion.abrufe.length === 2 && sektion.gal.length >= 4,
     "Löwenzahn bekommt ein Foto aus der Sektions-Kategorie (Köhler-Tafel verworfen, Sektionsname gewinnt das Ranking, Rost-/Missbildungs-Fotos raus): " + JSON.stringify({ file: sektion.file, src: sektion.src, abrufe: sektion.abrufe, gal: sektion.gal.length }));
   assert(!sektion.andere && !sektion.eigene && sektion.koehler && sektion.missbildung && sektion.leyland,
@@ -402,6 +403,53 @@ async function main() {
     "binomEpithet: Komma/Rang-Kürzel/Tippfehler/Gruppenwort (auch kleingeschrieben)/Hybrid-x; Sektion ist kein Sammel-Eintrag: " + JSON.stringify({ epis: sektion.epis, gruppe: sektion.gruppe }));
   assert(sektion.lupine[0] === "wp:Lupinus" && sektion.lupine.includes('cm:incategory:"Lupinus"') && sektion.lupineAndere === false,
     "»Lupinus cultivars« (kleingeschrieben, 7 Zeilen): Bildsuche auf Gattungsniveau, Dateien der Gattung gelten nicht als »andere Art«: " + JSON.stringify({ lupine: sektion.lupine, andere: sektion.lupineAndere }));
+
+  // Synonyme der Liste in der Bildsuche (Realfall Lonicera nitida 'Elegant': auf Commons ist die
+  // Kategorie »Lonicera nitida« LEER, die Fotos liegen unter dem akzeptierten Namen »Lonicera
+  // ligustrina var. yunnanensis« – genau dem Synonym der Liste; der Volltext liefert nur Buchscans).
+  // Dazu: eine API-Fehlerantwort (Drosselung) ist ein Ausfall, kein »kein Bild«.
+  const synonym = await page.evaluate(async () => {
+    const prev = [$("#frSelect").value, $("#nivSelect").value];
+    $("#frSelect").value = "garten_und_landschaftsbau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    const lon = allCards.find((c) => c.g === "Lonicera" && /Elegant/.test(c.a));
+    const wege = photoSteps(lon).map((s) => s.k + ":" + s.q);
+    const cmPage = (i, file, mime) => ({ index: i, title: "File:" + file, imageinfo: [{ thumburl: "https://x/" + file, mime: mime || "image/jpeg", width: 2000, descriptionurl: "https://commons/" + file }] });
+    const cmAnswer = (files, mime) => ({ query: { pages: Object.fromEntries(files.map((f, i) => ["p" + i, cmPage(i + 1, f, mime)])) } });
+    const abrufe = [];
+    __clearPhotoCache(); photoTried.clear();
+    __setJsonp((url) => {
+      const q = decodeURIComponent((url.match(/(?:gsrsearch|titles)=([^&]+)/) || [])[1] || ""); abrufe.push(q);
+      if (/commons/.test(url) && /^File:/.test(q)) return Promise.resolve({ query: { pages: { "1": { title: q, imageinfo: [{ mime: "image/jpeg", extmetadata: {} }] } } } });
+      if (/commons/.test(url)) {
+        if (/incategory:"Lonicera ligustrina var\. yunnanensis"/.test(q)) return Promise.resolve(cmAnswer(["Lonicera ligustrina var. yunnanensis 2.jpg", "Lonicera ligustrina var. yunnanensis 1.jpg"]));
+        if (/^Lonicera nitida Elegant$/.test(q)) return Promise.resolve(cmAnswer(["Elmwood Nurseries - 1931-1932 (IA CAT31338015).pdf"], "application/pdf"));   // echte Antwort: nur Buchscans
+        return Promise.resolve({ query: { pages: {} } });   // »Lonicera nitida«: leere Kategorie (echt)
+      }
+      return Promise.resolve({ query: { pages: { "-1": { title: q, missing: "" } } } });
+    });
+    const hit = await wikiPhoto(lon);
+    __clearPhotoCache(); photoTried.clear();
+    __setJsonp(() => Promise.resolve({ error: { code: "ratelimited", info: "…" } }));
+    let apiErr = "";
+    try { await wikiPhoto(lon); apiErr = "kein Fehler"; } catch (e) { apiErr = e.message; }
+    __setJsonp(window.__offlineJsonp); __clearPhotoCache(); photoTried.clear();
+    const res = { wege, abrufe, file: hit && hit.file, src: hit && hit.src, apiErr,
+      syn: synCards(lon).map((s) => s.g + " " + s.a),
+      andere: fileMentionsOther("Lonicera ligustrina var. yunnanensis 2.jpg", lon), fremd: fileMentionsOther("Lonicera pileata 2.jpg", lon),
+      cands: wikiCandidates(lon),
+      mahonia: pageFitsCard({ title: "Gewöhnliche Mahonie", extract: "Die Gewöhnliche Mahonie (Mahonia aquifolium) ist eine Pflanzenart." }, { g: "Berberis", a: "aquifolium", syn: "Mahonia aquifolium" }),
+      nigra: photoSteps({ g: "Prunus", a: "cerasifera 'Nigra'", de: "Blutpflaume", syn: "Prunus cerasifera var. atropurpurea" }).map((s) => s.k + ":" + s.q) };
+    $("#frSelect").value = prev[0]; $("#nivSelect").value = prev[1]; applyProfile();
+    return res;
+  });
+  assert(JSON.stringify(synonym.syn) === JSON.stringify(["Lonicera ligustrina var. yunnanensis"]) &&
+    synonym.wege.slice(-3).join("|") === 'wp:Lonicera ligustrina var. yunnanensis|cm:incategory:"Lonicera ligustrina var. yunnanensis"|cm:Lonicera ligustrina var. yunnanensis' &&
+    synonym.wege.indexOf('cm:incategory:"Lonicera nitida"') < synonym.wege.indexOf('cm:incategory:"Lonicera ligustrina var. yunnanensis"'),
+    "Bildsuche: Synonyme der Liste kommen als letzte Wege (Artikel, Kategorie, Volltext) nach den eigenen: " + JSON.stringify({ syn: synonym.syn, wege: synonym.wege }));
+  assert(synonym.file === "Lonicera ligustrina var. yunnanensis 2.jpg" && synonym.src === "cm" && !synonym.andere && synonym.fremd && synonym.mahonia,
+    "Lonicera nitida 'Elegant' bekommt das Foto aus der Synonym-Kategorie; Synonym-Epitheta gelten nicht als »andere Art«, fremde schon; Synonym-Gattung passt zum Artikel: " + JSON.stringify({ file: synonym.file, src: synonym.src, andere: synonym.andere, fremd: synonym.fremd, mahonia: synonym.mahonia, abrufe: synonym.abrufe }));
+  assert(synonym.apiErr === "network" && synonym.cands.includes("Lonicera ligustrina var. yunnanensis") && !synonym.nigra.some((w) => /atropurpurea/.test(w)),
+    "API-Fehlerantwort = Verbindungsproblem (kein »kein Bild«); Synonym auch als Wikipedia-Kandidatin; beschreibende Sorte bekommt keine Synonym-Wege (Artniveau): " + JSON.stringify({ apiErr: synonym.apiErr, cands: synonym.cands, nigra: synonym.nigra }));
 
   // Bilder-Quiz: Buchdeckel/Titelseiten/Scans digitalisierter Werke werden verworfen
   // (Praxisfall: Buchdeckel statt Majoran-Foto); Herbarbelege gelten als Tafel.
@@ -1859,8 +1907,8 @@ async function main() {
   assert(/Kein eigener Wikipedia-Artikel/.test(gattung.ohne.note) && /Gattung/.test(gattung.ohne.note) && /Syringa/.test(gattung.ohne.note) && /Flieder/.test(gattung.ohne.note) &&
     /beschreiben die Gattung/.test(gattung.ohne.note) && gattung.ohne.img === gattung.GATT && /Flieder \(Syringa\) ist eine Pflanzengattung/.test(gattung.ohne.text) && /Wikipedia – Flieder/.test(gattung.ohne.src),
     "Info-Karte: ohne eigenen Artikel erscheint der Gattungsartikel (Flieder) mit deutlichem Hinweis und Gattungsbild: " + JSON.stringify(gattung.ohne));
-  assert(JSON.stringify(gattung.reihe) === JSON.stringify(["Syringa x chinensis", "Syringa × chinensis", "Syringa chinensis", "Chinesischer Flieder", "Syringa"]),
-    "Kandidaten-Reihenfolge: voller Name → Hybrid-Zeichen × → Binom → deutscher Name → erst dann die Gattung: " + JSON.stringify(gattung.reihe));
+  assert(JSON.stringify(gattung.reihe) === JSON.stringify(["Syringa x chinensis", "Syringa × chinensis", "Syringa chinensis", "Chinesischer Flieder", "Syringa oblata subsp. oblata", "Syringa"]),
+    "Kandidaten-Reihenfolge: voller Name → Hybrid-Zeichen × → Binom → deutscher Name → Synonym der Liste → erst dann die Gattung: " + JSON.stringify(gattung.reihe));
   assert(gattung.mitFoto.img === gattung.ART && /zeigt diese Art/.test(gattung.mitFoto.note) && /Wikimedia Commons/.test(gattung.mitFoto.src) && gattung.mitFoto.alt === "Bild der Art",
     "Info-Karte: gibt es ein Foto DIESER Art aus der Bildsuche, ersetzt es das Gattungsbild (mit Nachweis): " + JSON.stringify(gattung.mitFoto));
   assert(gattung.bkl.note === "" && /auch nicht zur Gattung/.test(gattung.bkl.none) && gattung.bkl.btn === false && gattung.bklReihe.includes("Abies") && gattung.bklReihe.includes("Tanne"),
@@ -1869,6 +1917,48 @@ async function main() {
     "Gattungs-Kandidatinnen (lateinische Gattung + deutsches Grundwort) stehen getrennt von der Hauptliste: " + JSON.stringify({ cands: gattung.cands, gcands: gattung.gcands }));
   assert(gattung.ok.flieder && gattung.ok.weigela && gattung.ok.loewenzahn && !gattung.ok.iris && !gattung.ok.rose && !gattung.ok.beta && !gattung.ok.artikelArt && !gattung.ok.fremd,
     "genusArticleOk: echte Gattungsartikel ja; Begriffsklärung (pageprops/»steht für«), Fremdartikel (Beta), Artartikel (Rosskastanie), falsche Gattung nein: " + JSON.stringify(gattung.ok));
+
+  // Ausfall ≠ »nicht gefunden« (Realfall Lonicera nitida 'Elegant': »kein Artikel – auch nicht zur
+  // Gattung«, obwohl »Lonicera« → Heckenkirschen existiert – die Gattungs-Anfragen waren nur nicht
+  // durchgekommen). Bleibt eine Anfrage ohne Antwort oder liefert die API eine Fehlerantwort, zeigt
+  // die Karte ein Verbindungsproblem mit »Erneut versuchen« und cacht KEIN »null«.
+  const wpFail = await page.evaluate(async () => {
+    const prev = [$("#frSelect").value, $("#nivSelect").value];
+    $("#frSelect").value = "garten_und_landschaftsbau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    const lon = allCards.find((c) => c.g === "Lonicera" && /Elegant/.test(c.a));
+    const px = "data:image/svg+xml," + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'/>");
+    const missing = { query: { pages: { "-1": { title: "x", missing: "" } } } };
+    const heck = { query: { pages: { "1": { title: "Heckenkirschen", extract: "Die Heckenkirschen bzw. Geißblätter (Lonicera) sind eine Pflanzengattung in der Familie der Geißblattgewächse (Caprifoliaceae).", thumbnail: { source: px } } } } };
+    const titel = (url) => decodeURIComponent((url.match(/titles=([^&]+)/) || [])[1] || "");
+    const laden = async () => {
+      wikiCache.delete(lon.key); openInfo(lon); document.querySelector("#wpLoad").click();
+      for (let i = 0; i < 80 && !document.querySelector("#wpHost .wp-text, #wpHost .wp-note"); i++) await new Promise((r) => setTimeout(r, 25));
+      const h = document.querySelector("#wpHost");
+      const r = { note: (h.querySelector(".wp-note") || {}).textContent || "", taxon: (h.querySelector(".wp-taxon") || {}).textContent || "",
+        text: (h.querySelector(".wp-text") || {}).textContent || "", btn: ((document.querySelector("#wpLoad") || {}).textContent || "").trim(),
+        cached: wikiCache.has(lon.key) ? String(wikiCache.get(lon.key)) : "nicht gecacht" };
+      closeInfo(); return r;
+    };
+    __setPhotoSource(() => Promise.resolve(null));
+    __setJsonp((url) => { if (/generator=images/.test(url)) return Promise.resolve({ query: { pages: {} } });
+      const t = titel(url); if (t === "Lonicera" || t === "Heckenkirsche") return Promise.reject(new Error("timeout")); return Promise.resolve(missing); });
+    const ausfall = await laden();                        // Art-Kandidatinnen beantwortet, Gattungs-Anfragen brechen ab
+    __setJsonp((url) => { if (/generator=images/.test(url)) return Promise.resolve({ query: { pages: {} } });
+      const t = titel(url); if (t === "Lonicera") return Promise.resolve({ error: { code: "ratelimited", info: "…" } }); return Promise.resolve(missing); });
+    const apiFehler = await laden();                      // API-Fehlerantwort zählt ebenfalls als Ausfall
+    __setJsonp((url) => { if (/generator=images/.test(url)) return Promise.resolve({ query: { pages: {} } });
+      const t = titel(url); if (t === "Lonicera" || t === "Heckenkirsche") return Promise.resolve(heck); return Promise.resolve(missing); });
+    const danach = await laden();                         // Verbindung wieder da → Gattungsartikel
+    __setPhotoSource(null); __setJsonp(window.__offlineJsonp); __clearPhotoCache(); photoTried.clear();
+    $("#frSelect").value = prev[0]; $("#nivSelect").value = prev[1]; applyProfile();
+    return { ausfall, apiFehler, danach };
+  });
+  assert(/konnten nicht geladen/.test(wpFail.ausfall.note) && /2 von 6 Anfragen/.test(wpFail.ausfall.note) && /Erneut versuchen/.test(wpFail.ausfall.btn) && wpFail.ausfall.cached === "nicht gecacht",
+    "Info-Karte: brechen Anfragen ab, heißt es NICHT »nicht gefunden«, sondern Verbindungsproblem + »Erneut versuchen«, nichts gecacht: " + JSON.stringify(wpFail.ausfall));
+  assert(/1 von 6 Anfragen/.test(wpFail.apiFehler.note) && /Erneut versuchen/.test(wpFail.apiFehler.btn) && wpFail.apiFehler.cached === "nicht gecacht",
+    "Info-Karte: eine API-Fehlerantwort (ratelimited) zählt als Ausfall: " + JSON.stringify(wpFail.apiFehler));
+  assert(/Gattung/.test(wpFail.danach.taxon) && /Lonicera/.test(wpFail.danach.taxon) && /Heckenkirschen/.test(wpFail.danach.text) && wpFail.danach.cached === "[object Object]",
+    "Info-Karte: nach »Erneut versuchen« mit Verbindung erscheint der Gattungsartikel Heckenkirschen: " + JSON.stringify(wpFail.danach));
 
   // Bild-Lightbox: das Quiz-Foto ist klick- UND tastaturbedienbar (role=button) und
   // öffnet die Großansicht (größeres Commons-Derivat); Esc schließt, Fokus kehrt zurück.
@@ -3817,4 +3907,4 @@ async function main() {
   console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Sitzung mischt Übungsformen nach Lernstand und sagt sie an, direkt teilbar, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON- und v2-Links lesbar, Richtung inkl. »voller Name«, Antwortart und die Übungsformen der geführten Lektion wandern mit, Banner übernimmt Profil/Modus/Aufgabenstellung, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art oder beschreibender Sorte, Tafeln/Herbarbelege/Buchscans über Commons-Metadaten raus, Bildnachweis ohne Zweitabruf, abgebrochener feiner Weg → Treffer nur je Sitzung), Eingabe ohne Anführungszeichen-/Hybrid-Zwang, Abfragerichtungen (Text de↔bot; Bilder fest »voller Name«, ältere Duell-Links spielen ihre Aufgabe weiter), Auswahl nach Thema/Familie, Quiz, Selbst eingeben, Bilder-Quiz (Bild + 4 volle Namen, »Selbst eingeben (wie in der Prüfung)« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, wartet bei schwacher Verbindung sichtbar und heilt sich selbst statt in Textfragen zu wechseln, Galerie mit mehreren Ansichten – Commons-Kandidaten sofort, Artikelbilder nachgeladen, Wischen, Vorladen der Galerie, Commons-Standardgrößen mit Ausweich-Kette und sichtbarer Meldung, stille Wiederholung bei Aussetzern, neuer Versuch je Sitzung), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast, Lernserie/Tagesziel, Herbarium, XP-Ränge + Combo, Stufe 5 (Rang-Popover, Container Queries), Versionskennung + »Neue Version« (Leerlauf: neu laden, Sitzung: Hinweis).");
 }
 
-main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });
+main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message + (process.env.DEBUG_STACK ? "\n" + e.stack : "")); process.exit(1); });

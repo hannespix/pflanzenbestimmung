@@ -748,11 +748,38 @@ async function main() {
   });
   assert(gatt.ok && /Kein eigener Wikipedia-Artikel/.test(gatt.note) && /Gattung/.test(gatt.note) && /Flieder/.test(gatt.note) && gatt.img && /Flieder \(Syringa\)/.test(gatt.text),
     "Prüfungswerkzeug-Info-Karte: ohne eigenen Artikel erscheint der Gattungsartikel mit Hinweis (Bild = Gattung): " + JSON.stringify(gatt));
-  assert(JSON.stringify(gatt.reihe) === JSON.stringify(["Syringa x chinensis", "Syringa × chinensis", "Syringa chinensis", "Chinesischer Flieder", "Syringa"]) &&
+  assert(JSON.stringify(gatt.reihe) === JSON.stringify(["Syringa x chinensis", "Syringa × chinensis", "Syringa chinensis", "Chinesischer Flieder", "Syringa oblata subsp. oblata", "Syringa"]) &&
     JSON.stringify(gatt.gcands) === JSON.stringify(["Syringa", "Flieder"]) && !gatt.cands.some((t) => /^syringa$/i.test(t)) && gatt.bkl === false,
     "Kandidaten-Reihenfolge (Hybrid-Zeichen ×, Gattung zuletzt, Begriffsklärung abgelehnt): " + JSON.stringify({ reihe: gatt.reihe, cands: gatt.cands, gcands: gatt.gcands, bkl: gatt.bkl }));
   assert(gatt.taxon === "Taraxacum sect. Ruderalia" && gatt.epi === "" && gatt.epi2 === "vulgaris",
     "Rang-Kürzel »sect.« ist kein Epitheton (Deep-Links auf die Gattung), Komma wird gestrichen: " + JSON.stringify({ taxon: gatt.taxon, epi: gatt.epi, epi2: gatt.epi2 }));
+
+  // Synonyme der Liste als Kandidatinnen + Ausfall ≠ »nicht gefunden« (wie im Lern-Tool)
+  const synFail = await page.evaluate(async () => {
+    const cands = wikiCandidates({ g: "Berberis", a: "aquifolium", de: "Gewöhnliche Mahonie", syn: "Mahonia aquifolium" });
+    window.__setJsonp((url) => {
+      if (/generator=images/.test(url)) return Promise.resolve({ query: { pages: {} } });
+      const t = decodeURIComponent((url.match(/titles=([^&]+)/) || [])[1] || "");
+      if (t === "Syringa" || t === "Flieder") return Promise.reject(new Error("timeout"));
+      return Promise.resolve({ query: { pages: { "-1": { title: t, missing: "" } } } });
+    });
+    wikiCache.delete("Syringa x chinensis");
+    const row = [...document.querySelectorAll("#list .row")].find((r) => /Syringa/.test(r.textContent) && /chinensis/.test(r.textContent));
+    const btn = row && [...row.querySelectorAll(".rowacts .iconbtn")].find((b) => /Mehr zur Pflanze/.test(b.title));
+    if (!btn) return { ok: false };
+    btn.click();
+    document.querySelector(".infoscrim #wpLoad").click();
+    for (let i = 0; i < 80 && !document.querySelector(".infoscrim .wphost .wp-text, .infoscrim .wphost .wp-note"); i++) await new Promise((r) => setTimeout(r, 25));
+    const h = document.querySelector(".infoscrim .wphost");
+    const res = { ok: true, cands, note: (h.querySelector(".wp-note") || {}).textContent || "",
+      btn: ((document.querySelector(".infoscrim #wpLoad") || {}).textContent || "").trim(), cached: wikiCache.has("Syringa x chinensis") };
+    const x = document.querySelector(".infoscrim .infobox-x"); if (x) x.click();
+    window.__setJsonp(null);
+    return res;
+  });
+  assert(synFail.ok && synFail.cands.indexOf("Mahonia aquifolium") > synFail.cands.indexOf("Gewöhnliche Mahonie") && /konnten nicht geladen/.test(synFail.note) &&
+    /2 von 7 Anfragen/.test(synFail.note) && /Erneut versuchen/.test(synFail.btn) && synFail.cached === false,
+    "Prüfungswerkzeug-Info-Karte: Synonym der Liste als Kandidatin; abgebrochene Anfragen = Verbindungsproblem mit »Erneut versuchen«, nichts gecacht: " + JSON.stringify(synFail));
   await page.select("#frSelect", prevProfile[0]); await page.select("#nivSelect", prevProfile[1]);
   await page.$eval("#nivSelect", (e) => e.dispatchEvent(new Event("change")));
   await page.waitForFunction("document.querySelectorAll('#list .row').length>0", { timeout: 10000 });
