@@ -742,7 +742,11 @@ async function main() {
       bkl: genusArticleOk({ title: "Iris", extract: "Iris steht für: Schwertlilien (Iris), eine Pflanzengattung", pageprops: { disambiguation: "" } }, { g: "Iris", a: "sibirica" }),
       cands: wikiCandidates({ g: "Syringa", a: "x chinensis", de: "Chinesischer Flieder" }),
       gcands: wikiGenusCandidates({ g: "Syringa", a: "x chinensis", de: "Chinesischer Flieder" }),
-      taxon: taxonName({ g: "Taraxacum", a: "sect. Ruderalia" }), epi: binomEpithet("sect. Ruderalia"), epi2: binomEpithet("vulgaris, A. Cultivars") };
+      taxon: taxonName({ g: "Taraxacum", a: "sect. Ruderalia" }), epi: binomEpithet("sect. Ruderalia"), epi2: binomEpithet("vulgaris, A. Cultivars"),
+      // Ein-Wort-Titel nur als Pflanzenartikel: der deutsche Artikel »Canna« ist die Hebriden-Insel (wie im Lern-Tool)
+      pflanze: [plantArticle({ title: "Canna", extract: "Canna (schottisch-gälisch Canaigh) ist die westlichste der Small Isles, die zu den Inneren Hebriden in Schottland gehören." }),
+        plantArticle({ title: "Blumenrohr", extract: "Die Blumenrohre (Canna) bilden die einzige Pflanzengattung der Familie der Blumenrohrgewächse." }),
+        plantArticle({ title: "Iris", extract: "Iris steht für: Schwertlilien (Iris), eine Pflanzengattung" })] };
     const x = document.querySelector(".infoscrim .infobox-x"); if (x) x.click();
     window.__setJsonp(null);
     return res;
@@ -752,6 +756,8 @@ async function main() {
   assert(JSON.stringify(gatt.reihe) === JSON.stringify(["Syringa x chinensis", "Syringa × chinensis", "Syringa chinensis", "Chinesischer Flieder", "Syringa oblata subsp. oblata", "Syringa"]) &&
     JSON.stringify(gatt.gcands) === JSON.stringify(["Syringa", "Flieder"]) && !gatt.cands.some((t) => /^syringa$/i.test(t)) && gatt.bkl === false,
     "Kandidaten-Reihenfolge (Hybrid-Zeichen ×, Gattung zuletzt, Begriffsklärung abgelehnt): " + JSON.stringify({ reihe: gatt.reihe, cands: gatt.cands, gcands: gatt.gcands, bkl: gatt.bkl }));
+  assert(JSON.stringify(gatt.pflanze) === JSON.stringify([false, true, false]),
+    "Prüfungswerkzeug: plantArticle lehnt Fremdartikel (Insel Canna) und Begriffsklärungen ab, Gattungsartikel nicht: " + JSON.stringify(gatt.pflanze));
   assert(gatt.taxon === "Taraxacum sect. Ruderalia" && gatt.epi === "" && gatt.epi2 === "vulgaris",
     "Rang-Kürzel »sect.« ist kein Epitheton (Deep-Links auf die Gattung), Komma wird gestrichen: " + JSON.stringify({ taxon: gatt.taxon, epi: gatt.epi, epi2: gatt.epi2 }));
 

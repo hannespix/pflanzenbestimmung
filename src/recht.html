@@ -325,8 +325,8 @@ input[type=checkbox],input[type=radio]{accent-color:var(--green)}
     <ul>
       <li>die <b>thematische Zuordnung</b> der Arten (z. B. »Große Laubbäume«, »Beerenobst«),</li>
       <li>die <b>Bildauswahl</b> im Bilder-Quiz – die Bilder selbst stammen von Wikimedia Commons
-        (Fotos, selten historische Pflanzentafeln) und sind <b>nicht KI-erzeugt</b>; automatisch ist
-        nur, welches Bild gezeigt wird,</li>
+        (Fotos, selten historische Pflanzentafeln), ersatzweise von iNaturalist (Beobachtungsfotos mit
+        freier Lizenz), und sind <b>nicht KI-erzeugt</b>; automatisch ist nur, welches Bild gezeigt wird,</li>
       <li>die <b>Namensherkunft</b> (Kurzherleitung Latein/Griechisch → Deutsch),</li>
       <li>die <b>Familien-Steckbriefe</b> – und damit auch der deutsche Familienname, den das
         Lern-Tool ergänzt, wo die Liste nur den lateinischen führt,</li>
@@ -348,7 +348,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--green)}
 
   <section class="doc" id="datenschutz">
     <h2>Datenschutzerklärung</h2>
-    <p class="hint">Stand: Juli 2026 · Verantwortlicher: siehe Impressum</p>
+    <p class="hint">Stand: Oktober 2026 · Verantwortlicher: siehe Impressum</p>
 
     <h3>Das Wichtigste zuerst</h3>
     <ul>
@@ -401,7 +401,8 @@ input[type=checkbox],input[type=radio]{accent-color:var(--green)}
 
     <h3>Optionale Online-Funktionen</h3>
     <p>Es gibt Stellen, an denen auf deine ausdrückliche Handlung hin Daten von der
-      <b>Wikimedia Foundation</b> (USA) abgerufen werden. Dabei wird jeweils deine IP-Adresse an Wikimedia
+      <b>Wikimedia Foundation</b> (USA) abgerufen werden – im Lernmodus »Bilder« ersatzweise auch von
+      <b>iNaturalist</b> (USA, siehe unten). Dabei wird jeweils deine IP-Adresse an den Anbieter
       übermittelt. Ohne diese Handlungen findet <b>kein</b> automatischer Abruf statt; alle übrigen Funktionen
       kommen ohne Internet aus. Es gilt die
       <a href="https://foundation.wikimedia.org/wiki/Policy:Privacy_policy" target="_blank" rel="noreferrer">Datenschutzerklärung der Wikimedia Foundation</a>.</p>
@@ -410,11 +411,20 @@ input[type=checkbox],input[type=radio]{accent-color:var(--green)}
         <b>Prüfungswerkzeug</b>): Erst auf Knopfdruck wird ein Kurztext samt Vorschaubild von der deutschen
         Wikipedia geladen. Bei Sorten, zu denen es nur den Artikel der Art gibt, zeigt das Lern-Tool statt des
         Artikelbilds ein Sortenfoto von Wikimedia Commons (Bild-Adresse und Bildnachweis), damit das Bild zur
-        Sorte passt. Der eigentliche Prüfungsbogen bleibt davon unberührt und kommt ohne Internet aus.</li>
-      <li><b>Lernmodus »Bilder«</b> (nur im Lern-Tool): Startest du eine Sitzung in diesem Modus, werden zu den
-        abgefragten Arten Bilder von Wikipedia bzw. Wikimedia Commons geladen (Bild-Adresse und Bildnachweis).
-        Solange du den Modus nicht startest, passiert nichts. Die vier anderen Lernmodi (Karteikarten, Quiz,
-        Selbst eingeben, Liste) kommen ohne Internet aus.</li>
+        Sorte passt; hat eine Art keinen eigenen Artikel, zeigt es ein Foto dieser Art – von Wikimedia Commons,
+        ersatzweise von iNaturalist. Der eigentliche Prüfungsbogen bleibt davon unberührt und kommt ohne Internet aus.</li>
+      <li><b>Lernmodus »Bilder«</b> (nur im Lern-Tool, auch in der geführten Lektion »Weiter lernen«): Startest
+        du eine Sitzung, werden zu den abgefragten Arten Bilder von Wikipedia bzw. Wikimedia Commons geladen
+        (Bild-Adresse und Bildnachweis). Solange du keine Sitzung mit Bildern startest, passiert nichts. Die
+        übrigen Lernmodi (Karteikarten, Quiz, Selbst eingeben, Liste) kommen ohne Internet aus.</li>
+      <li><b>iNaturalist als Ersatzquelle</b> (nur im Lern-Tool: Bilder-Quiz und Info-Karte): Findet sich auf Wikimedia
+        Commons für eine Art kein Foto, fragt das Lern-Tool die Datenbank von <b>iNaturalist</b> – einer
+        unabhängigen gemeinnützigen Organisation mit Sitz in Kalifornien (USA) – nach einem Beobachtungsfoto
+        dieser Art. Übertragen werden dabei der botanische Name der Art und deine IP-Adresse; das Foto selbst
+        liegt bei <b>Amazon Web Services</b> (USA, Programm »AWS Open Data«), beim Laden wird deine
+        IP-Adresse auch dorthin übermittelt. Gezeigt werden nur Fotos mit freier Lizenz (CC0, CC BY,
+        CC BY-SA, CC BY-NC, CC BY-NC-SA), stets mit Urheber, Lizenz und Link auf die Fotoseite. Es gilt die
+        <a href="https://www.inaturalist.org/pages/privacy" target="_blank" rel="noreferrer">Datenschutzerklärung von iNaturalist</a>.</li>
     </ul>
 
     <h3>Links zu externen Datenbanken</h3>

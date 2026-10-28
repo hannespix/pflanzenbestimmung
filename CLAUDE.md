@@ -24,8 +24,10 @@ Bitte alle Antworten und Commit-/PR-Texte **auf Deutsch**.
   Wikipedia, nur auf Knopfdruck) – **in beiden Werkzeugen** (Lern-Tool und
   Prüfungswerkzeug; die Info-Karte ist identisch, im Prüfungswerkzeug über die
   ℹ-Knöpfe in der Auswahl-Liste und in der »Aktuellen Prüfung«). (2) Der **Lernmodus
-  »Bilder«** lädt Bilder von Wikipedia/Wikimedia Commons – aber erst, wenn der Modus
-  gestartet wird (**nur im Lern-Tool**).
+  »Bilder«** lädt Bilder von Wikipedia/Wikimedia Commons, **ersatzweise von iNaturalist**
+  (Beobachtungsfotos mit freier Lizenz, wenn Commons zu einer Art kein Foto hat) – aber erst,
+  wenn eine Sitzung mit Bildern startet (Modus »Bilder« oder die geführte Lektion »Weiter
+  lernen«; **nur im Lern-Tool**).
   Beide laden **nichts beim Seitenaufbau** und nutzen **JSONP** (zur Laufzeit
   erzeugtes `<script>`) statt `fetch`/`XHR` – dadurch bleibt `check_offline.py` grün.
   Der Kern (**Karteikarten/Quiz/Selbst eingeben/Liste** bzw. Ziehen/Bogen/Musterlösung/Noten)
@@ -145,7 +147,9 @@ Entwicklungsumgebung bremst Wikimedia stark (429) – der volle Lauf gehört auf
 bildcheck → Run workflow); lokal taugen `--art` (einzelne Arten nachprüfen) und `--mock` (Logikprobe ohne
 Netz: eine Datei, die genau die Art nennt, muss überall angenommen werden). **Der Bildcheck zählt nur, ob
 ein Bild kommt, nicht, ob es stimmt** – den Kontaktbogen bzw. die gewählten Dateinamen deshalb durchsehen
-(so fiel der Radweg aus Rosà für »Rosa Cultivars« auf).
+(so fiel der Radweg aus Rosà für »Rosa Cultivars« auf, später die Hebriden-Insel Canna für »Canna Cultivars«).
+iNaturalist (Ersatzquelle) bekommt höchstens eine Anfrage je Sekunde; der Bericht listet die iNaturalist-Treffer
+und die Sammeleinträge (nur Wildart gefunden · Gruppe nicht gefunden · gewähltes Bild je Eintrag) eigens.
 
 **PWA (installierbar + offline):** `build.py` legt zusätzlich `dist/manifest.webmanifest`,
 `dist/sw.js` (Service Worker; Cache-Version = Inhalts-Hash) und die `dist/icon-*.png` ab.
@@ -2665,6 +2669,64 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Ablenker Bilder- vs. Text-Modus; Cache-Auffrischung nur für Gattungskarten; keine
       Sonder-Anführungszeichen mehr in den Seeds, die neun Sorten erkannt und »richtig«, Schlüssel-Umzug;
       `tests/smoke.mjs`: Excel-Import normalisiert ˋ.
+
+- [x] **Geführte Lektion immer mit Bild · iNaturalist als Ersatzquelle · Sammeleinträge mit Gartenform**
+      (Rückmeldung: »Bild und Namensfragen nicht extra mischen! Nur wenn überhaupt kein Bild verfügbar
+      ist (einzelne!). Ja, Bildquelle iNaturalist hinzufügen, falls Wikimedia nicht ausreicht – alles
+      korrigieren«). **(1) Geführte Lektion:** Bisher wählte `guidedForm` die Übungsform je Karte nach der
+      Leitner-Stufe (Stufe 2 = Auswahlfrage ohne Bild, 3 = Karteikarte, 4–5 = Tippen) – mit Netz kam das
+      einer zufälligen Mischung gleich. Jetzt ist **jede Karte eine Bildkarte**; die Stufe bestimmt nur die
+      **Antwortart** (`photo` = vier Namen bis Stufe 2, `photoExam` = »wie in der Prüfung« ab Stufe 3; ohne
+      Internet beim Start `quiz`). Die Antwortart je Karte hält `sess.ans`, gelesen über `phAns()` (Auswahl,
+      Wertung, Punkte). **Nur eine einzelne Art ohne jedes Bild** (alle Suchwege sauber leer) kommt als
+      Auswahlfrage mit Hinweis `.ph-fallback`/Pille (»zu dieser Art kein Bild – deshalb Auswahlfrage«); ein
+      Netzproblem lässt den Warte-Bildschirm stehen, der jetzt auch »Ohne Bilder weiterlernen« anbietet.
+      **Duell-Link:** Bit 4 im Zusatzbyte der geführten Lektion (`CH_PHOTO_ONLY=16`) markiert Bild-Lektionen,
+      deren Formen dann über die neue feste Tabelle `CH_FORMS_PH = ["cards","quiz","photo","photoExam"]`
+      laufen; alte Links (ohne Bit) lesen weiter `CH_FORMS`. **Reihenfolge von `CH_FORMS_PH` nicht ändern.**
+      Pille/Intro/Hilfe/Idle-Text sagen es so. **(2) iNaturalist** (`inatPhoto` in `learn.js`): Findet
+      Wikimedia für eine Art kein Foto (gar nichts, nur eine Zeichnung oder ein Weg kam nicht durch), fragt
+      das Lern-Tool die **iNaturalist-API** per **JSONP** (`api.inaturalist.org/v1/taxa?…&callback=` – kein
+      `fetch`, `check_offline.py` bleibt grün). Regeln: nur Art/Hybride/Unterart (`inatTaxon`; nie Gattung,
+      Sammeleintrag, Sektion, beschreibende Sorte; Varietäten genau als Trinom, tiefer gestaffelte wie
+      *var. capitata f. rubra* gar nicht – das Kopfkohl-Foto wäre für Rotkohl falsch); Treffer nur bei
+      **exaktem Namen samt Rang** oder als **Synonym** (`matched_term`, Realfall »Perovskia abrotanoides« →
+      *Salvia abrotanoides*, `inatPick`); **Lizenzen** nur CC0, CC BY, CC BY-SA, CC BY-NC, CC BY-NC-SA
+      (`INAT_LIC`, nie »alle Rechte vorbehalten« oder ND); bis zu sechs Taxon-Fotos als Galerie, Nachweis
+      Urheber + Lizenz + Link auf die Fotoseite (`Foto: iNaturalist · …`), Großansicht über die
+      `original`-Größe im Pfad (`lbBig`). Ein Foto geht vor der Zeichnung; fällt iNaturalist aus, wird aus
+      einem sauberen »kein Bild« kein Netzfehler (die Zeichnung gilt dann nur vorläufig, `tmp`). **CSP**:
+      `script-src` + `https://api.inaturalist.org`, `img-src` + `inaturalist-open-data.s3.amazonaws.com` und
+      `static.inaturalist.org`. **Datenschutzseite** (eigener Absatz: gemeinnützige Organisation in
+      Kalifornien, Name + IP, Fotos bei AWS Open Data, Lizenzen, Link auf deren Datenschutzerklärung),
+      Hilfe, README, Technik-Doku. Gemerkte Zeichnungen werden einmal sofort neu gesucht (`ART_V`), damit
+      ein iNaturalist-Foto sie ersetzt. Bildcheck: iNaturalist ≤ 1 Anfrage/s, eigener Berichtsabschnitt.
+      **(3) Sammeleinträge** (Bildcheck-Lauf 4: »Fuchsia Cultivars« zeigte die kolumbianische Wildart
+      *F. putumayensis*, Aquilegia eine Wildakelei aus Montenegro, Gladiolus *G. illyricus*, Solidago die
+      Riesen-Goldrute, die drei Begonien-Gruppen dasselbe Bild – und **»Canna Cultivars« ein Luftbild der
+      Hebriden-Insel Canna**, weil der deutsche Artikel »Canna« die Insel ist). Für Sammelkarten
+      (`sammelCard`) läuft die Kette jetzt **Gartenform zuerst**: genannte Gruppe (`sammelGroup`/
+      `GROUP_ALIAS`: »Begonia elatior«/»hiemalis«, »Begonia rex«, »Begonia tuberhybrida«, »Impatiens "new
+      guinea"«/»hawkeri«, »Delphinium belladonna«) → »Quality images of …« → **»Gattung cultivar«**
+      (Commons-Volltext, liefert fast nur Sorten: »Fuchsia 'Twinny'«, »Solidago 'Goldjunge'«) → deutscher
+      Sammelname → Gattungskategorie → Gattungsartikel → Volltext. Eine **benannte Wildart**
+      (`wildSpeciesFile`: Gattung + lateinisch klingendes Epitheton, keine Sorte/»cultivar«/Hybride) und bei
+      Gruppen eine **andere Form** landen nur in Rückfall-Listen (`pools`, `poolHit` mit `rf` »wild«/»form«);
+      genommen werden sie erst, wenn kein Weg eine Gartenform liefert – ein Foto der Gattung geht trotzdem
+      vor jeder Zeichnung. Dateien, die eine **Art einer anderen Gattung** nennen (`namesOtherTaxon`:
+      »Antirrhinum majus Floral Showers Fuchsia« = Löwenmaul in der Farbe Fuchsia), fallen raus; der
+      Gattungsartikel zählt nur als **Pflanzenartikel** (`plantArticle` – auch in der Info-Karte **beider**
+      Werkzeuge für Ein-Wort-Titel). Bewertung: +1 für Gartenform ohne Sortennamen (»Canna cultivar (2)«),
+      +3 für die genannte Gruppe (Dateiname oder Commons-Kategorien). Gemerkte Treffer von Sammelkarten
+      werden einmal neu gesucht (`GEN_V = 2`). Sammelkarten fragen iNaturalist nie. Vorab mit den echten
+      Commons-Suchen geprüft (`Fuchsia cultivar`, `Solidago cultivar`, `Canna cultivar`, `Aquilegia
+      cultivar`, `Begonia Elatior/Rex/tuberhybrida`, `Impatiens "New Guinea"`). Tests: `tests/learn.mjs`
+      prüft die geführte Lektion (nur Bildkarten, Antwortart je Stufe, Duell-Bit, alte Links), die Einzel-
+      Ausweichfrage, iNaturalist (Kette mit Fixtures nach den echten Antworten, Lizenzfilter, Synonym,
+      Rangprüfung, Ausfall, Sammelkarte ohne Abfrage, Nachweis ohne Zweitabruf, Großansicht, CSP) und die
+      Sammeleinträge (Gartensorte statt Wildart, späte Gartensorte schlägt frühe Wildart, Insel Canna nie,
+      Gruppen, Rückfall-Reihenfolge, Cache-Auffrischung); `tests/smoke.mjs` `plantArticle` im
+      Prüfungswerkzeug.
 
 ## Offene Aufgaben (TODO)
 

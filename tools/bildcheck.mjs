@@ -92,7 +92,15 @@ function backoff(res, attempt) {
   if (h) { const s = Number(h); ms = Number.isFinite(s) ? s * 1000 : Math.max(0, Date.parse(h) - Date.now()); }
   return Math.min(180000, Math.max(ms, 5000 * 2 ** attempt));
 }
+// iNaturalist (Ersatzquelle des Bilder-Quiz) bittet um höchstens eine Anfrage je Sekunde
+let inatNext = 0;
+async function inatSlot() {
+  const now = Date.now(), t = Math.max(now, inatNext);
+  inatNext = t + 1100;
+  if (t > now) await sleep(t - now);
+}
 async function fetchJson(url) {
+  if (/^https:\/\/api\.inaturalist\.org\//.test(url)) { stat.inat = (stat.inat || 0) + 1; await inatSlot(); }
   let lastErr = "";
   for (let attempt = 0; attempt < TRIES; attempt++) {
     await acquire();
@@ -131,6 +139,7 @@ async function fetchJson(url) {
 }
 function mockAnswer(url) {                                    // --mock: feste Antworten, nur Mechanik
   const u = decodeURIComponent(url);
+  if (/api\.inaturalist\.org/.test(u)) return Promise.resolve({ total_results: 0, results: [] });   // Mock: iNaturalist ohne Treffer
   if (/commons\.wikimedia\.org/.test(u) && /titles=File:/.test(u))
     return Promise.resolve({ query: { pages: { "1": { title: "File:x.jpg", imageinfo: [{ mime: "image/jpeg",
       extmetadata: { Categories: { value: "Mock" }, Artist: { value: "Mock" }, LicenseShortName: { value: "CC0" } } }] } } } });
@@ -196,13 +205,13 @@ async function main() {
         const j = next++, i = idx[j];
         res[j] = await page.evaluate(async i => {
           const c = allCards[i];
-          const base = { g: c.g, a: c.a, de: c.de, syn: c.syn, thema: c.thema, key: c.key, kind: cultivarKind(c.a), artOk: artLevelOk(c) };
+          const base = { g: c.g, a: c.a, de: c.de, syn: c.syn, thema: c.thema, key: c.key, kind: cultivarKind(c.a), artOk: artLevelOk(c), sammel: sammelCard(c) };
           try {
             const p = await wikiPhoto(c);
             if (!p) return Object.assign(base, { status: "kein" });
             return Object.assign(base, { status: p.art || "foto", src: p.src, file: p.file || "", thumb: p.thumb || "",
               titel: p.title || "", tmp: !!p.tmp, ansichten: (p.gal || []).length || 1,
-              w: (p.galInfo && p.galInfo[0] && p.galInfo[0].w) || 0, urheber: p.artist || "", lizenz: p.license || "" });
+              w: (p.galInfo && p.galInfo[0] && p.galInfo[0].w) || 0, urheber: p.artist || "", lizenz: p.license || "", rueckfall: p.rf || "" });
           } catch (e) { return Object.assign(base, { status: "netz", fehler: String((e && e.message) || e) }); }
         }, i);
         res[j].profil = id; res[j].i = i;
@@ -278,7 +287,7 @@ const bot = r => `*${(r.g + " " + r.a).replace(/\s+/g, " ").trim()}*`;
 function markdown(b) {
   const L = [];
   L.push(`# Bildcheck Bilder-Quiz`, ``, `${b.version || ""} · geprüft ${b.stand.slice(0, 16).replace("T", " ")} UTC · ${b.dauer_s} s · ` +
-    `${b.anfragen.netz} Anfragen (${b.anfragen.cacheTreffer} aus dem Cache, ${b.anfragen.wiederholt} wiederholt, 429: ${b.anfragen.http429}, API-Überlast: ${b.anfragen.apiBusy || 0})${b.mock ? " · **MOCK – keine echten Daten**" : ""}`, ``);
+    `${b.anfragen.netz} Anfragen (${b.anfragen.cacheTreffer} aus dem Cache, ${b.anfragen.wiederholt} wiederholt, 429: ${b.anfragen.http429}, API-Überlast: ${b.anfragen.apiBusy || 0}, davon iNaturalist: ${b.anfragen.inat || 0})${b.mock ? " · **MOCK – keine echten Daten**" : ""}`, ``);
   L.push(`| Profil | Arten | Foto | Zeichnung | Herbarbeleg | kein Bild | Netzfehler | vorläufig |`, `|---|---:|---:|---:|---:|---:|---:|---:|`);
   for (const id of b.profile) {
     const z = zaehle(b.ergebnisse.filter(r => r.profil === id)), n = b.ergebnisse.filter(r => r.profil === id).length;
@@ -302,6 +311,12 @@ function markdown(b) {
     list.forEach(r => L.push(`- ${bot(r)} · ${r.de}${extra ? extra(r) : ""} — ${r.profile.join(", ")}`));
     L.push(``);
   };
+  abschnitt("Foto von iNaturalist (Ersatzquelle)", gruppe(["foto"]).filter(r => r.src === "inat"), r => ` · ${r.lizenz || ""} · ${r.urheber || ""}`);
+  // Sammeleinträge (»Fuchsia Cultivars«): Der Bildcheck zählt nur, ob ein Bild kommt – ob es die Gartenform
+  // zeigt, sieht man nur am Dateinamen. Deshalb alle gewählten Dateien, die Rückfälle eigens.
+  abschnitt("Sammeleinträge: nur eine Wildart gefunden (keine Gartenform)", gruppe(["foto"]).filter(r => r.rueckfall === "wild"), r => ` · ${r.file}`);
+  abschnitt("Gruppen-Sammeleinträge: Gruppe nicht gefunden, andere Gartenform", gruppe(["foto"]).filter(r => r.rueckfall === "form"), r => ` · ${r.file}`);
+  abschnitt("Sammeleinträge – gewähltes Bild", gruppe(["foto", "zeichnung", "herbar", "kein"]).filter(r => r.sammel), r => ` · ${r.file || "–"}${r.src === "wp" ? " (Artikel " + r.titel + ")" : ""}`);
   abschnitt("Kein Bild", gruppe(["kein"]));
   abschnitt("Nur Zeichnung", gruppe(["zeichnung"]), r => ` · ${r.file}`);
   abschnitt("Nur Herbarbeleg", gruppe(["herbar"]), r => ` · ${r.file}`);
@@ -322,7 +337,7 @@ function kontaktbogen(b) {
       const commons = r.file ? "https://commons.wikimedia.org/wiki/File:" + encodeURIComponent(r.file) : "";
       const bild = r.thumb ? `<img loading="lazy" referrerpolicy="no-referrer" src="${esc(klein(r.thumb, r.w))}" data-orig="${esc(r.thumb)}" alt="" onerror="if(this.dataset.orig&&this.src!==this.dataset.orig){this.src=this.dataset.orig}">` : `<div class="leer">${esc(lab[r.status])}</div>`;
       return `<figure class="k ${esc(r.status)}${r.tmp ? " tmp" : ""}">${commons ? `<a href="${esc(commons)}" target="_blank" rel="noopener">${bild}</a>` : bild}` +
-        `<figcaption><i>${esc((r.g + " " + r.a).trim())}</i><br>${esc(r.de)}<br><span class="s">${esc(lab[r.status])}${r.src ? " · " + esc(r.src === "wp" ? "Artikel " + r.titel : "Commons") : ""}${r.tmp ? " · vorläufig" : ""}</span></figcaption></figure>`;
+        `<figcaption><i>${esc((r.g + " " + r.a).trim())}</i><br>${esc(r.de)}<br><span class="s">${esc(lab[r.status])}${r.src ? " · " + esc(r.src === "wp" ? "Artikel " + r.titel : r.src === "inat" ? "iNaturalist" : "Commons") : ""}${r.tmp ? " · vorläufig" : ""}</span></figcaption></figure>`;
     }).join("");
     const z = zaehle(list);
     return `<section><h2>${esc(id)} <small>${list.length} Arten · Foto ${z.foto} · Zeichnung ${z.zeichnung} · Beleg ${z.herbar} · kein Bild ${z.kein}${z.netz ? " · Netzfehler " + z.netz : ""}</small></h2><div class="raster">${kacheln}</div></section>`;
