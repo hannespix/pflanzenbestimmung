@@ -89,6 +89,11 @@ Erstellung und ohne Noten. Fachrichtung und Ausbildung werden oben gewählt (die
 14 Profile und Listen wie im Prüfungswerkzeug). Das Lern-Tool verlinkt bewusst **nicht**
 auf das Prüfungswerkzeug (Einbahnstraße – Azubis sollen es nicht sehen).
 
+- **Ein-Knopf-Start (»Weiter lernen«):** Die geführte Lektion zeigt **jede Pflanze als
+  Bild**; wie man antwortet, richtet sich nach dem Lernstand der Art – bis Stufe 2 aus
+  **vier Namen wählen**, ab Stufe 3 die Namen **selbst eingeben wie in der Prüfung**. Eine
+  Auswahlfrage ohne Bild kommt nur für eine **einzelne** Art, zu der es gar kein Bild gibt
+  (oder ohne Internet). Die fünf Modi bleiben unter »Selbst wählen« erreichbar.
 - **Feste, prüfungsnahe Lernrichtung:** Wie in der Abschlussprüfung erkennt man die
   Pflanze (der greifbarste bildlose Anker ist ihr **deutscher Name**) und nennt die
   **botanische Identität**: **Gattung, Art, Familie**. Genau diese Richtung üben alle
@@ -114,14 +119,15 @@ auf das Prüfungswerkzeug (Einbahnstraße – Azubis sollen es nicht sehen).
     keine zweite Art mit diesem Grundwort führt (bei *Birke* oder *Ahorn* also nicht).
     Ein blankes Adjektiv (»Krauser«) zählt nie.
   - **Bilder** (zusätzlicher Modus, **braucht Internet**) – **die Pflanze am Bild
-    erkennen:** zu sehen ist nur ein Bild, sonst nichts. **Drei Antwortarten** (»Optionen ·
-    Antwort«): aus **vier Namen auswählen**, den Namen **selbst tippen** oder **»wie in der
+    erkennen:** zu sehen ist nur ein Bild, sonst nichts. **Zwei Antwortarten** (»Optionen ·
+    Antwort«): aus **vier Namen auswählen** oder die Namen **selbst eingeben – »wie in der
     Prüfung«** – dann steht unter dem Bild für jede bewertete Spalte ein eigenes Feld
     (Gattung, Art, Familie, Deutscher Name) mit den **Punkten der Fachrichtung**, es gibt
     **Teilpunkte** und feldweise Rückmeldung; welche Felder abgefragt werden, ist je Profil
     frei einstellbar. Das ist am nächsten an der Prüfung, wo die Pflanze vor einem
     steht. Nach der Antwort erscheinen der deutsche Name und der **Bildnachweis**
-    (Urheber + Lizenz). Die Bilder kommen von **Wikimedia Commons und Wikipedia**;
+    (Urheber + Lizenz). Die Bilder kommen von **Wikimedia Commons und Wikipedia**,
+    ersatzweise von **iNaturalist** (nur Beobachtungsfotos mit freier Lizenz, mit Nachweis);
     geladen wird **erst beim Start des Modus**. Ohne Netz sagt der Modus das klar –
     **die vier anderen Modi laufen ohne Internet weiter**. Gesucht wird **vom Genauen
     zum Groben** (Taxon-Kategorie der Art bzw. Sorte zuerst); Bilder, die eine **andere
@@ -129,7 +135,10 @@ auf das Prüfungswerkzeug (Einbahnstraße – Azubis sollen es nicht sehen).
     alte Tafeln und Herbarbelege nur, solange es ein Foto gibt – sonst sind sie der
     gekennzeichnete Notnagel (»Zeichnung · kein Foto verfügbar«). Steht neben einer Sorte auch die Art selbst in der Liste (Tomate ↔
     Kirschtomate), wird **kein Bild auf Artniveau** angeboten; findet sich nichts
-    Passendes, wird die Art übersprungen statt ein falsches Bild zu zeigen.
+    Passendes, kommt nur diese eine Art als Auswahlfrage am Namen statt eines falschen
+    Bildes. **Sammeleinträge** (»Fuchsia Cultivars«, »Begonia Elatior-Gruppe«) zeigen die
+    Gattung in einer **Gartenform** – bei Gruppen genau diese –, eine Wildart nur, wenn sich
+    keine Gartenform findet.
 - **Liste / Nachschlagen:** ein vierter Tab zeigt **alle** Arten des Profils –
   wahlweise **A–Z** (botanisch/deutsch), nach **Thema** oder nach botanischer
   **Familie** – und **durchsuchbar** (Name, Familie, Synonym; akzent-tolerant). Ein Klick auf eine Art öffnet direkt das Info-Modal

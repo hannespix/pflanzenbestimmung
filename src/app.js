@@ -2368,6 +2368,15 @@ function genusArticleOk(p, card){                      // ein ECHTER Gattungsart
   if(/\b(pflanzen|unter)?art\b/.test(satz)) return false;   // Artartikel (»… ist eine Pflanzenart aus der Gattung …«)
   return /\b(ist|sind|bilden|bildet)\s+(eine|die)\s+(pflanzen)?gattung\b/.test(txt) || /\bpflanzengattung\b/.test(satz);
 }
+/* Meint der Artikel eine PFLANZE? Für Ein-Wort-Titel (bloße Gattung, deutscher Sammelname): Der
+   deutsche Artikel »Canna« ist die Hebriden-Insel, die Gattung heißt dort »Blumenrohr« (wie im Lern-Tool). */
+const PLANT_WORD_RE = /(gattung|pflanze|gewächs|familie|\bart(en)?\b|unterart|varietät|sorte|hybride|kreuzung|kulturform|gemüse|obst|kraut|kräuter|baum|bäume|strauch|sträucher|staude|gras|gräser|farn|orchidee|blume|blüte|liane|kletter|zwiebel|knolle|kakte|sukkulent|botani|taxon|beere|getreide|wurz)/i;
+function plantArticle(p){
+  const t = norm(String((p && p.title) || "")), x = norm(String((p && p.extract) || ""));
+  if(/(steht für|bezeichnet:|kann bedeuten|mehrere bedeutungen)/i.test(x)) return false;   // Begriffsklärung
+  const satz = x.split(/[.!?]\s+(?=[A-ZÄÖÜ])/)[0] || "";
+  return PLANT_WORD_RE.test(satz) || PLANT_WORD_RE.test(t);
+}
 /* Gattungs-Notnagel kennzeichnen: Text UND Bild beschreiben die Gattung (eine Bildsuche
    hat das Prüfungswerkzeug nicht – das Lern-Tool zeigt dort das Foto der Art). */
 function genusNote(card, pg, data){
@@ -2386,7 +2395,11 @@ async function loadWiki(card, host, btn){
   // nicht zur Gattung« für Lonicera nitida 'Elegant', obwohl »Lonicera« → Heckenkirschen existiert.)
   let pg=null, antworten=0, fehler=0, gattung=false;
   const frag = async t=>{ try{ const d=await wikiJSONP(t); antworten++; return wikiFirstPage(d); }catch(e){ fehler++; return null; } };
-  for(const t of wikiCandidates(card)){ pg = await frag(t); if(pg) break; }
+  for(const t of wikiCandidates(card)){
+    pg = await frag(t);
+    if(pg && !/\s/.test(t) && !plantArticle(pg)) pg = null;   // Ein-Wort-Titel: nur ein Pflanzenartikel (»Canna« ist die Hebriden-Insel)
+    if(pg) break;
+  }
   if(!pg){                                              // Gattungs-Notnagel: nur ein echter Gattungsartikel, deutlich gekennzeichnet
     for(const t of wikiGenusCandidates(card)){
       const p = await frag(t); if(p && genusArticleOk(p, card)){ pg=p; gattung=true; break; }
@@ -2907,4 +2920,4 @@ window.__swUpdate=swUpdate; window.__swReloadHook=fn=>{ swReload = fn || (()=>{ 
 window.__setJsonp=fn=>{ jsonp = fn || ((...a)=>jsonpGet(...a)); };   // Smoke-Test: Wikipedia-Antworten ohne Netz vorgeben
 window.wikiCache=wikiCache;
 window.wikiCandidates=wikiCandidates; window.wikiGenusCandidates=wikiGenusCandidates;   // Smoke-Test: Gattungs-Notnagel, Rang-Kürzel
-window.genusArticleOk=genusArticleOk; window.taxonName=taxonName; window.binomEpithet=binomEpithet; window.synCards=synCards;
+window.genusArticleOk=genusArticleOk; window.taxonName=taxonName; window.binomEpithet=binomEpithet; window.synCards=synCards; window.plantArticle=plantArticle;

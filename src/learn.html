@@ -2,8 +2,9 @@
 <html lang="de">
 <head>
 <!-- CSP: Bilder pauschal von *.wikimedia.org/*.wikipedia.org – Wikimedia zieht Vorschaubilder von upload. nach
-     thumb.wikimedia.org um (Tech News 2026/36); fest eingetragene Hosts ließen den Bilder-Quiz leer (#151). -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://de.wikipedia.org https://commons.wikimedia.org; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.wikimedia.org https://*.wikipedia.org; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+     thumb.wikimedia.org um (Tech News 2026/36); fest eingetragene Hosts ließen den Bilder-Quiz leer (#151).
+     iNaturalist ist Ersatzquelle des Bilder-Quiz: JSONP von api.inaturalist.org, Fotos von den beiden iNat-Hosts. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://de.wikipedia.org https://commons.wikimedia.org https://api.inaturalist.org; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.wikimedia.org https://*.wikipedia.org https://inaturalist-open-data.s3.amazonaws.com https://static.inaturalist.org; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pflanzenkenntnis · Lernen (Gärtnerberufe)</title>
@@ -104,8 +105,8 @@ input,select{font-family:inherit; color:inherit}
 .ph-kind{position:absolute; left:8px; top:8px; pointer-events:none;
   padding:3px 8px; border-radius:999px; font-family:var(--mono); font-size:10.5px; letter-spacing:.04em;
   color:#fff; background:rgba(96,64,20,.74); backdrop-filter:blur(3px)}
-/* Geführte Lektion: Lernstand + Übungsform über der Aufgabe – der Formwechsel
-   soll als Fortschritt lesbar sein, nicht wie ein zufällig eingemischtes Quiz. */
+/* Geführte Lektion: Lernstand + Antwortart über der Aufgabe (auch: »zu dieser Art kein
+   Bild – deshalb Auswahlfrage«), damit nichts wie ein zufällig eingemischtes Quiz wirkt. */
 .gnote{margin:10px auto 0; width:max-content; max-width:100%; align-self:center; text-align:center;
   padding:3px 11px; border-radius:999px;
   border:1px solid var(--rule); background:var(--surface-2);
@@ -1265,11 +1266,11 @@ body.stagefull #stage>.sessionbar{
 
   <main>
   <div class="setup">
-    <!-- Ein-Knopf-Start: »Weiter lernen« startet eine GEFÜHRTE Sitzung (Übungsform je
-         Karte nach Lernstand). Alles Weitere – Modi einzeln + Feineinstellungen – steckt
-         dahinter in der zugeklappten »Selbst wählen«-Klappe. Keine Funktion entfällt. -->
+    <!-- Ein-Knopf-Start: »Weiter lernen« startet eine GEFÜHRTE Sitzung (jede Pflanze als
+         Bild, Antwortart nach Lernstand). Alles Weitere – Modi einzeln + Feineinstellungen –
+         steckt dahinter in der zugeklappten »Selbst wählen«-Klappe. Keine Funktion entfällt. -->
     <div class="gorow" id="goRow">
-      <button class="btn primary big go" id="btnGo" title="Geführte Sitzung starten: die Übungsform (Bilder, Quiz, Karteikarte, Selbst eingeben) richtet sich je Pflanze automatisch nach deinem Lernstand – vom Erkennen zum sicheren Benennen.">Weiter lernen</button>
+      <button class="btn primary big go" id="btnGo" title="Geführte Sitzung starten: jede Pflanze kommt als Bild – neue wählst du aus vier Namen, ab Stufe 3 gibst du die Namen selbst ein wie in der Prüfung.">Weiter lernen</button>
       <button class="btn ghost" id="btnList" type="button" title="Alle Arten zum Nachschlagen: durchsuchbar, nach Thema/Familie/A–Z, mit Steckbriefen und Quellen">Liste zum Nachschlagen</button>
       <span class="hint" id="goHint"></span>
     </div>
@@ -1281,7 +1282,7 @@ body.stagefull #stage>.sessionbar{
       </summary>
       <div class="chbody">
     <div class="modes" id="modeTabs">
-      <button data-mode="photo" class="on" title="Bilder-Quiz: die Pflanze am Bild erkennen und den richtigen botanischen Namen wählen. Braucht Internet – die Bilder kommen von Wikipedia."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.6"/><path d="M4 17.5l4.5-4.5 3 3 3-3 5 5"/></svg>Bilder<small class="mdiff">leicht</small></button>
+      <button data-mode="photo" class="on" title="Bilder-Quiz: die Pflanze am Bild erkennen und den richtigen Namen wählen. Braucht Internet – die Bilder kommen von Wikimedia Commons, ersatzweise von iNaturalist."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.6"/><path d="M4 17.5l4.5-4.5 3 3 3-3 5 5"/></svg>Bilder<small class="mdiff">leicht</small></button>
       <button data-mode="quiz" title="Multiple-Choice-Quiz: zum deutschen Namen den richtigen botanischen aus vier Optionen wählen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5M12 17h.01"/></svg>Quiz<small class="mdiff">leicht</small></button>
       <button data-mode="cards" title="Karteikarten mit Selbsteinschätzung und verteiltem Wiederholen (Leitner/Spaced Repetition)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="14" height="12" rx="2"/><path d="M7 9h6M7 13h4M21 8v9a2 2 0 01-2 2H8"/></svg>Karteikarten<small class="mdiff">mittel</small></button>
       <button data-mode="type" title="Selbst eingeben: die Namen per Tastatur selbst schreiben – ein Feld je bewerteter Spalte, tippfehler-tolerant, mit Punkten wie in der Prüfung."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8"/></svg>Selbst eingeben<small class="mdiff">prüfungsnah</small></button>
@@ -1381,12 +1382,11 @@ body.stagefull #stage>.sessionbar{
       Wochen hängen bleiben) und beim schnellen Nachschlagen. Also: hier üben, draußen anschauen, wieder üben.</p>
     <ol class="hsteps">
       <li><b>Fachrichtung &amp; Ausbildung</b> oben wählen – das bestimmt deinen Lernstoff.</li>
-      <li>Am einfachsten: <b>»Weiter lernen«</b> – die Übungsform (Bilder, Quiz, Karteikarte,
-        Selbst eingeben) richtet sich je Pflanze automatisch nach deinem Lernstand: neu → am Bild
-        erkennen, <b>ab Stufe 2 am Namen statt am Bild</b> (gewollt – kein Fehler des Bilder-Quiz),
-        Stufe 3 selbst abrufen, ab Stufe 4 selbst eingeben wie in der Prüfung. Die Zeile über der
-        Aufgabe sagt es jeweils an. Wer durchgehend Bilder will, nimmt unter <b>»Selbst wählen«</b>
-        den Modus <b>Bilder</b>.</li>
+      <li>Am einfachsten: <b>»Weiter lernen«</b> – <b>jede Pflanze kommt als Bild</b>. Wie du
+        antwortest, richtet sich nach deinem Lernstand: neu bis Stufe 2 wählst du aus vier Namen,
+        <b>ab Stufe 3 gibst du die Namen selbst ein – wie in der Prüfung</b>. Nur wenn es zu einer
+        einzelnen Art kein Bild gibt (oder kein Internet da ist), kommt sie als Auswahlfrage am Namen.
+        Die Zeile über der Aufgabe sagt es jeweils an.</li>
       <li>Oder unter <b>»Selbst wählen«</b> einen <b>Modus</b> wählen und <b>»Sitzung starten«</b>. Feineinstellungen (<b>Abfrage</b>,
         <b>Lernstoff</b>, „nur ZP-relevant", Sitzungslänge) stecken unter <b>»Optionen«</b> –
         standardmäßig zugeklappt, damit die Startansicht ruhig bleibt.</li>
@@ -1441,21 +1441,25 @@ body.stagefull #stage>.sessionbar{
         Dein Punktestand steht oben in der Leiste.</dd>
       <dt>Bilder</dt><dd><b>Pflanze am Bild erkennen:</b> Du siehst nur ein <b>Bild der Pflanze</b>, sonst
         nichts – am nächsten an der Prüfung, wo die Pflanze vor dir steht. Gefragt ist immer der <b>volle
-        Name</b> (botanisch + deutsch). Gezeigt werden <b>bevorzugt Fotos</b>; gibt es zu einer Art auf
-        Wikimedia Commons keines, erscheint ersatzweise eine <b>Zeichnung</b> oder ein Herbarbeleg – als solche
-        gekennzeichnet (»Zeichnung · kein Foto verfügbar«; ein aufgedruckter Name kann die Lösung verraten).
+        Name</b> (botanisch + deutsch). Gezeigt werden <b>bevorzugt Fotos</b> von Wikimedia Commons; gibt es
+        dort keines, ein Beobachtungsfoto von <b>iNaturalist</b> (nur mit freier Lizenz, mit Bildnachweis); fehlt
+        auch das, erscheint ersatzweise eine <b>Zeichnung</b> oder ein Herbarbeleg – als solche gekennzeichnet
+        (»Zeichnung · kein Foto verfügbar«; ein aufgedruckter Name kann die Lösung verraten). Gibt es zu einer
+        Art gar kein Bild, kommt nur diese eine als Auswahlfrage am Namen.
         Buchscans, Verbreitungskarten und Diagramme nie. Bei
         <b>Sorten mit beschreibendem Namen</b> ('Nigra', 'Glauca', 'Flaviramea') kommt nur ein Bild
         genau dieser Sorte in Frage, nie das der Art. Bei <b>Sammeleinträgen</b> (»Rosa Cultivars«,
-        »Prunus 'Sorte'«) zeigt das Bild die Gattung – möglichst eine benannte Gartensorte, nie eine Art, die in
-        deiner Liste eigens steht; Arten derselben Gattung stehen dann auch nicht zur Auswahl.
+        »Prunus 'Sorte'«) zeigt das Bild die Gattung in einer <b>Gartenform</b> – möglichst eine benannte
+        Gartensorte, bei Gruppen genau diese (»Elatior«, »Neuguinea«); eine Wildart nur, wenn sich keine
+        Gartenform findet, und nie eine Art, die in deiner Liste eigens steht. Arten derselben Gattung stehen
+        dann auch nicht zur Auswahl.
         <b>Wie du antwortest, bestimmst du unter »Optionen · Antwort«:</b>
         aus <b>vier Namen auswählen</b> oder die Namen <b>selbst eingeben – »wie in der Prüfung«</b>:
         dann erscheint unter dem Bild für jede bewertete Spalte ein eigenes Feld
         (Gattung, Art, Familie, Deutscher Name) mit den <b>Punkten deiner Fachrichtung</b>; du bekommst
         <b>Teilpunkte</b> und siehst feldweise, was gestimmt hat. Nach der Antwort erscheinen der deutsche
         Name und der <b>Bildnachweis</b>.
-        <b>Dieser Modus braucht Internet</b>: Die Bilder kommen von Wikimedia Commons und Wikipedia; geladen
+        <b>Dieser Modus braucht Internet</b>: Die Bilder kommen von Wikimedia Commons und Wikipedia, ersatzweise von iNaturalist; geladen
         wird erst, wenn du den Modus startest. Ohne Netz sagt der Modus das klar – <b>alle anderen Modi laufen
         ohne Internet weiter</b>. Gesucht wird <b>vom Genauen zum Groben</b>: zuerst die Bildkategorie genau
         dieser Art oder Sorte, erst danach unschärfere Quellen. Bilder, die eine <b>andere Art</b> derselben

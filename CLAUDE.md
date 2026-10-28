@@ -24,8 +24,10 @@ Bitte alle Antworten und Commit-/PR-Texte **auf Deutsch**.
   Wikipedia, nur auf Knopfdruck) – **in beiden Werkzeugen** (Lern-Tool und
   Prüfungswerkzeug; die Info-Karte ist identisch, im Prüfungswerkzeug über die
   ℹ-Knöpfe in der Auswahl-Liste und in der »Aktuellen Prüfung«). (2) Der **Lernmodus
-  »Bilder«** lädt Bilder von Wikipedia/Wikimedia Commons – aber erst, wenn der Modus
-  gestartet wird (**nur im Lern-Tool**).
+  »Bilder«** lädt Bilder von Wikipedia/Wikimedia Commons, **ersatzweise von iNaturalist**
+  (Beobachtungsfotos mit freier Lizenz, wenn Commons zu einer Art kein Foto hat) – aber erst,
+  wenn eine Sitzung mit Bildern startet (Modus »Bilder« oder die geführte Lektion »Weiter
+  lernen«; **nur im Lern-Tool**).
   Beide laden **nichts beim Seitenaufbau** und nutzen **JSONP** (zur Laufzeit
   erzeugtes `<script>`) statt `fetch`/`XHR` – dadurch bleibt `check_offline.py` grün.
   Der Kern (**Karteikarten/Quiz/Selbst eingeben/Liste** bzw. Ziehen/Bogen/Musterlösung/Noten)
@@ -145,7 +147,9 @@ Entwicklungsumgebung bremst Wikimedia stark (429) – der volle Lauf gehört auf
 bildcheck → Run workflow); lokal taugen `--art` (einzelne Arten nachprüfen) und `--mock` (Logikprobe ohne
 Netz: eine Datei, die genau die Art nennt, muss überall angenommen werden). **Der Bildcheck zählt nur, ob
 ein Bild kommt, nicht, ob es stimmt** – den Kontaktbogen bzw. die gewählten Dateinamen deshalb durchsehen
-(so fiel der Radweg aus Rosà für »Rosa Cultivars« auf).
+(so fiel der Radweg aus Rosà für »Rosa Cultivars« auf, später die Hebriden-Insel Canna für »Canna Cultivars«).
+iNaturalist (Ersatzquelle) bekommt höchstens eine Anfrage je Sekunde; der Bericht listet die iNaturalist-Treffer
+und die Sammeleinträge (nur Wildart gefunden · Gruppe nicht gefunden · gewähltes Bild je Eintrag) eigens.
 
 **PWA (installierbar + offline):** `build.py` legt zusätzlich `dist/manifest.webmanifest`,
 `dist/sw.js` (Service Worker; Cache-Version = Inhalts-Hash) und die `dist/icon-*.png` ab.
@@ -2665,6 +2669,112 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Ablenker Bilder- vs. Text-Modus; Cache-Auffrischung nur für Gattungskarten; keine
       Sonder-Anführungszeichen mehr in den Seeds, die neun Sorten erkannt und »richtig«, Schlüssel-Umzug;
       `tests/smoke.mjs`: Excel-Import normalisiert ˋ.
+
+- [x] **Geführte Lektion immer mit Bild · iNaturalist als Ersatzquelle · Sammeleinträge mit Gartenform**
+      (Rückmeldung: »Bild und Namensfragen nicht extra mischen! Nur wenn überhaupt kein Bild verfügbar
+      ist (einzelne!). Ja, Bildquelle iNaturalist hinzufügen, falls Wikimedia nicht ausreicht – alles
+      korrigieren«). **(1) Geführte Lektion:** Bisher wählte `guidedForm` die Übungsform je Karte nach der
+      Leitner-Stufe (Stufe 2 = Auswahlfrage ohne Bild, 3 = Karteikarte, 4–5 = Tippen) – mit Netz kam das
+      einer zufälligen Mischung gleich. Jetzt ist **jede Karte eine Bildkarte**; die Stufe bestimmt nur die
+      **Antwortart** (`photo` = vier Namen bis Stufe 2, `photoExam` = »wie in der Prüfung« ab Stufe 3; ohne
+      Internet beim Start `quiz`). Die Antwortart je Karte hält `sess.ans`, gelesen über `phAns()` (Auswahl,
+      Wertung, Punkte). **Nur eine einzelne Art ohne jedes Bild** (alle Suchwege sauber leer) kommt als
+      Auswahlfrage mit Hinweis `.ph-fallback`/Pille (»zu dieser Art kein Bild – deshalb Auswahlfrage«); ein
+      Netzproblem lässt den Warte-Bildschirm stehen, der jetzt auch »Ohne Bilder weiterlernen« anbietet.
+      **Duell-Link:** Bit 4 im Zusatzbyte der geführten Lektion (`CH_PHOTO_ONLY=16`) markiert Bild-Lektionen,
+      deren Formen dann über die neue feste Tabelle `CH_FORMS_PH = ["cards","quiz","photo","photoExam"]`
+      laufen; alte Links (ohne Bit) lesen weiter `CH_FORMS`. **Reihenfolge von `CH_FORMS_PH` nicht ändern.**
+      Pille/Intro/Hilfe/Idle-Text sagen es so. **(2) iNaturalist** (`inatPhoto` in `learn.js`): Findet
+      Wikimedia für eine Art kein Foto (gar nichts, nur eine Zeichnung oder ein Weg kam nicht durch), fragt
+      das Lern-Tool die **iNaturalist-API** per **JSONP** (`api.inaturalist.org/v1/taxa?…&callback=` – kein
+      `fetch`, `check_offline.py` bleibt grün). Regeln: nur Art/Hybride/Unterart (`inatTaxon`; nie Gattung,
+      Sammeleintrag, Sektion, beschreibende Sorte; Varietäten genau als Trinom, tiefer gestaffelte wie
+      *var. capitata f. rubra* gar nicht – das Kopfkohl-Foto wäre für Rotkohl falsch); Treffer nur bei
+      **exaktem Namen samt Rang** oder als **Synonym** (`matched_term`, Realfall »Perovskia abrotanoides« →
+      *Salvia abrotanoides*, `inatPick`); **Lizenzen** nur CC0, CC BY, CC BY-SA, CC BY-NC, CC BY-NC-SA
+      (`INAT_LIC`, nie »alle Rechte vorbehalten« oder ND); bis zu sechs Taxon-Fotos als Galerie, Nachweis
+      Urheber + Lizenz + Link auf die Fotoseite (`Foto: iNaturalist · …`), Großansicht über die
+      `original`-Größe im Pfad (`lbBig`). Ein Foto geht vor der Zeichnung; fällt iNaturalist aus, wird aus
+      einem sauberen »kein Bild« kein Netzfehler (die Zeichnung gilt dann nur vorläufig, `tmp`). **CSP**:
+      `script-src` + `https://api.inaturalist.org`, `img-src` + `inaturalist-open-data.s3.amazonaws.com` und
+      `static.inaturalist.org`. **Datenschutzseite** (eigener Absatz: gemeinnützige Organisation in
+      Kalifornien, Name + IP, Fotos bei AWS Open Data, Lizenzen, Link auf deren Datenschutzerklärung),
+      Hilfe, README, Technik-Doku. Gemerkte Zeichnungen werden einmal sofort neu gesucht (`ART_V`), damit
+      ein iNaturalist-Foto sie ersetzt. Bildcheck: iNaturalist ≤ 1 Anfrage/s, eigener Berichtsabschnitt.
+      **(3) Sammeleinträge** (Bildcheck-Lauf 4: »Fuchsia Cultivars« zeigte die kolumbianische Wildart
+      *F. putumayensis*, Aquilegia eine Wildakelei aus Montenegro, Gladiolus *G. illyricus*, Solidago die
+      Riesen-Goldrute, die drei Begonien-Gruppen dasselbe Bild – und **»Canna Cultivars« ein Luftbild der
+      Hebriden-Insel Canna**, weil der deutsche Artikel »Canna« die Insel ist). Für Sammelkarten
+      (`sammelCard`) läuft die Kette jetzt **Gartenform zuerst**: genannte Gruppe (`sammelGroup`/
+      `GROUP_ALIAS`: »Begonia elatior«/»hiemalis«, »Begonia rex«, »Begonia tuberhybrida«, »Impatiens "new
+      guinea"«/»hawkeri«, »Delphinium belladonna«) → **»Gattung cultivar«** (Commons-Volltext, liefert fast
+      nur Sorten: »Fuchsia 'Twinny'«, »Solidago 'Goldjunge'«, »Lilium 'Nochka'«) → »Quality images of …«
+      → deutscher Sammelname → Gattungskategorie → Gattungsartikel → Volltext. **Sofort genommen** wird
+      nur ein Bild, das erkennbar eine Gartenform zeigt (`gardenEvident`: Sortenname in Anführungszeichen,
+      »cultivar«/Hybride/×, ein großgeschriebener Name direkt hinter der Gattung wie »Canna Roma«, in der
+      Sortensuche auch hinter dem Epitheton wie »Lupinus polyphyllus Manhattan Lights«), jeder Treffer der
+      Sortensuche, der keine Wildart nennt, oder die genannte Gruppe. Alles andere landet in
+      Rückfall-Listen (`pools`, `poolHit` mit `rf` »wild«/»form«): eine **benannte Wildart**
+      (`wildSpeciesFile`: Gattung – auch kleingeschrieben – plus Epitheton, auch »martagon«), bei Gruppen eine
+      **andere Form**, sonst ein Bild ohne erkennbare Gartenform (Qualitätsbild einer Goldrute am See);
+      genommen werden sie erst, wenn kein Weg eine Gartenform liefert (Gruppe: andere Form vor Wildart; sonst
+      nach Bewertung, die Gattung im Namen schlägt ein namenloses Foto) – ein Foto der Gattung geht trotzdem
+      vor jeder Zeichnung. **Nachbesserung nach Bildcheck-Lauf 5:** Dort liefen die Qualitätsbilder noch vor
+      der Sortensuche und wurden sofort genommen – Streptocarpus zeigte die **Saintpaulia** derselben Liste,
+      Lilium den wilden Türkenbund, Lupinus die texanische Wildlupine »Bluebonnet«, Calibrachoa eine
+      **Hummel**. Deshalb zusätzlich: `onPlantPhoto` verwirft für **alle** Karten Fotos »Tier on/auf
+      Gattung« (Hauptmotiv ist das Tier). Dateien, die eine **Art einer anderen Gattung** nennen
+      (`namesOtherTaxon`: »Antirrhinum majus Floral Showers Fuchsia« = Löwenmaul in der Farbe Fuchsia) oder
+      eine andere Listen-Gattung ohne die eigene (»Saintpaulia20110530 01«), fallen raus; der
+      Gattungsartikel zählt nur als **Pflanzenartikel** (`plantArticle` – auch in der Info-Karte **beider**
+      Werkzeuge für Ein-Wort-Titel). Bewertung: +1 für Gartenform ohne Sortennamen (»Canna cultivar (2)«),
+      +3 für die genannte Gruppe (Dateiname oder Commons-Kategorien). Gemerkte Treffer von Sammelkarten
+      werden einmal neu gesucht (`GEN_V = 2`). Sammelkarten fragen iNaturalist nie. Vorab mit den echten
+      Commons-Suchen geprüft (`Fuchsia cultivar`, `Solidago cultivar`, `Canna cultivar`, `Aquilegia
+      cultivar`, `Begonia Elatior/Rex/tuberhybrida`, `Impatiens "New Guinea"`). Tests: `tests/learn.mjs`
+      prüft die geführte Lektion (nur Bildkarten, Antwortart je Stufe, Duell-Bit, alte Links), die Einzel-
+      Ausweichfrage, iNaturalist (Kette mit Fixtures nach den echten Antworten, Lizenzfilter, Synonym,
+      Rangprüfung, Ausfall, Sammelkarte ohne Abfrage, Nachweis ohne Zweitabruf, Großansicht, CSP) und die
+      Sammeleinträge (Gartensorte statt Wildart, späte Gartensorte schlägt frühe Wildart, Insel Canna nie,
+      Gruppen, Rückfall-Reihenfolge, Cache-Auffrischung, die vier Realfälle aus Lauf 5 mit den echten
+      Dateinamen); `tests/smoke.mjs` `plantArticle` im Prüfungswerkzeug.
+      **Feinschliff nach Bildcheck-Lauf 6** (2105 Fotos · 1 Zeichnung · 8 ohne Bild · 0 Netzfehler, keine
+      Sammelkarte mehr mit Wildart-Rückfall; die gewählten Dateien durchgesehen): Drei Sammeleinträge zeigten
+      zwar eine Sorte, aber die **Sortenform einer Wildart** – »Verbena hastata 'Rosea'« für die
+      Garten-Verbene, »Tulipa aleppensis cultivar« für die Gartentulpe – bzw. bei »Prunus 'Sorte'«
+      (Zier-Kirsche) eine Mandel-Pfirsich-Hybride, weil die Sortensuche dort nur Arten der Liste lieferte
+      (*P. serrulata*, *P. cerasifera*). `commonsScore` gibt den Sorten-Bonus (+2) jetzt nur noch für eine
+      Gartensorte **direkt hinter der Gattung** – mit Anführungszeichen oder als großgeschriebener Name ohne
+      (»Verbena Tukana Scarlet«, »Tulipa Juliette«, »Canna Roma«) –, und +1 für »Gattung cultivar« nur, wenn
+      kein Art-Epitheton folgt. Platzhalter-Sammelkarten suchen außerdem zuerst nach den **typischen
+      Gartensorten, die auch die Info-Karte nennt** (`SORTEN_BEISPIELE`, die ersten zwei: »Prunus Accolade«,
+      »Malus Evereste«, »Weigela "Bristol Ruby"«); für *Prunus* steht 'Accolade' jetzt vor 'Kanzan' (keine
+      Sorte der eigens gelisteten *P. serrulata*). Im Bildcheck-Bericht fasst »Sammeleinträge – gewähltes
+      Bild« nur noch Einträge **mit derselben Datei** zusammen (Lauf 6 zeigte bei *Hemerocallis Cultivars*
+      eine Zeile für zwei Listen, obwohl die Staudengärtnerei-Gärtner-Liste – mit *H. fulva* als eigener
+      Art – ein anderes Bild bekam). Geprüft mit den echten Trefferlisten (`Verbena cultivar`, `Tulipa
+      cultivar`, `Prunus cultivar`, `Prunus Accolade`, `Prunus Kanzan`, wörtlich in `tests/learn.mjs`).
+      Die Bartiris-Sorte 'Skylark's Song' ist laut Commons-Kategorie eine Bartiris (»Bearded Iris
+      cultivars«) – passt. **Lauf 7** (2105 · 1 · 8 · 0): Prunus 'Accolade', Malus 'Evereste', Weigela
+      'Bristol Ruby', Tulipa 'Juliette', Verbena 'Tukana Scarlet', Belladonna-Rittersporn 'Völkerfrieden'.
+      Dabei noch drei Lücken geschlossen: **Monatsnamen** sind keine Sortennamen (`GENERIC_CAP`:
+      »Phalaenopsis July 2020-2« schlug die Gartensorte), `onPlantPhoto` kennt auch spanisch/portugiesisch/
+      italienisch/polnisch »auf« (`en`/`em`/`sul(la)`/`na` – »Abeja (Bombus) en una Dahlia x hortensis«
+      stand in allen Läufen bei der Dahlie), `looksDamage` kennt **Bakterien und Fäulen** (Erwinia/
+      Pectobacterium/Xanthomonas …, Weich-/Braunfäule, Grauschimmel, Schorf, Obstbaumkrebs, Spinnmilben,
+      Thripse – Lauf 6 zeigte für Küchen-Zwiebel und Schalotte »Allium cepa with Erwinia carotovora«);
+      bewusst **nicht** »schimmel« allein (*Picea glauca* heißt »Schimmel-Fichte«), nicht »rot«, »brand«,
+      »scab« (Rot-Buche, Brandkraut, *Deutzia scabra*). Offline-Gegenprobe über alle 2114 in Lauf 7
+      gewählten Dateien: der neue Filter verwirft genau das Dahlien-Hummelfoto. `tests/learn.mjs` prüft
+      die Realfälle und dass **kein Listen-Name** (botanisch oder deutsch) als Schadbild/Tierfoto gilt.
+      **Lauf 8** auf dem Endstand (2105 · 1 · 8 · 0, kein einziger Statuswechsel): Dahlie →
+      »Starr 071024-0300 Dahlia x hortensis.jpg«, Phalaenopsis → »Phalaenopsis Cultivar White 01.jpg«; die
+      übrigen Dateiwechsel sind gleich gute Ansichten derselben Art (Commons sortiert gleich bewertete
+      Treffer je Abfrage leicht anders). Zuletzt noch `usablePhoto` ohne **Etiketten/Pflanzenschilder**
+      (`label`, `etikett`, `pflanzenschild`, `plant tag` – ein Etikett verrät die Lösung; Lauf 7 wählte für
+      den Goldregen »… invasive plant sold in stores label.jpg«; »labellum« bleibt). Offline-Gegenprobe über
+      alle 1297 in den Läufen 5–8 gewählten Dateien: die Filter verwerfen genau die bekannten Fehlgriffe
+      (Etikett, vier Insektenfotos, Bakterienfäule) – und keinen einzigen Listen-Namen.
 
 ## Offene Aufgaben (TODO)
 

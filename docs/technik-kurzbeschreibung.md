@@ -48,9 +48,11 @@ Prüfungswerkzeug — der einzige interne Verweis führt auf Impressum/Datenschu
 - **Zwei bewusste, freiwillige Online-Funktionen** — beide laden **nichts beim Seitenaufbau**,
   sondern erst auf ausdrücklichen Knopfdruck:
   1. „Online-Infos laden" — deutscher Wikipedia-Kurztext und Bild in der Info-Karte.
-  2. Lernmodus „Bilder" — Pflanzenfotos von Wikipedia/Wikimedia Commons.
-  Dabei wird die IP-Adresse an die Wikimedia Foundation übermittelt; die Datenschutzseite
-  weist das aus. **Beide Funktionen sind abschaltbar**, falls das IT-Referat eine Fassung
+  2. Lernmodus „Bilder" — Pflanzenfotos von Wikipedia/Wikimedia Commons, ersatzweise
+     Beobachtungsfotos von iNaturalist (nur mit freier Lizenz), wenn Commons zu einer Art
+     kein Foto hat.
+  Dabei wird die IP-Adresse an die Wikimedia Foundation bzw. an iNaturalist (Fotos bei
+  Amazon Web Services) übermittelt; die Datenschutzseite weist das aus. **Beide Funktionen sind abschaltbar**, falls das IT-Referat eine Fassung
   ohne jede Außenverbindung wünscht — der Kern (Karteikarten, Quiz, Selbst eingeben, Listen,
   Prüfungsbogen, Notenberechnung) funktioniert vollständig ohne Netz.
 - **Impressum (§ 5 DDG) und Datenschutzerklärung** sind vorhanden und aus beiden
@@ -127,8 +129,9 @@ und eine Kategorie, die in vier Listen unterschiedlich heißt, trägt einheitlic
 »Wild- & Beikräuter« (welche Arten dazugehören, bleibt unverändert).
 
 **Lernhilfen: automatisch erzeugt, teils mithilfe generativer KI.** Themenzuordnung, botanische
-Namensherleitung, Familien-Steckbriefe und die Auswahl der Bilder im Bilder-Quiz (Fotos, selten
-historische Pflanzentafeln von Wikimedia Commons – nicht KI-erzeugt) stammen nicht aus den
+Namensherleitung, Familien-Steckbriefe und die Auswahl der Bilder im Bilder-Quiz (Fotos von
+Wikimedia Commons, ersatzweise von iNaturalist, selten historische Pflanzentafeln – nicht
+KI-erzeugt) stammen nicht aus den
 Prüfungslisten. Die Anwendung kennzeichnet diese
 Trennung dort, wo die Namen gelesen werden – im Hinweis vor den Lektionen, an der Artenliste, in
 der Info-Karte jeder Pflanze und auf der gedruckten Lernliste. Prüfungsbogen, Musterlösung und

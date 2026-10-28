@@ -855,8 +855,11 @@ const DIRS_PHOTO = ["img2bot","img2de","img2both"];   // Bilder-Quiz – Reihenf
 function dirsFor(m){ return (m||mode)==="photo" ? ["img2both"] : DIRS_TEXT; }   // was das Auswahlfeld anbietet
 function playableDirs(){                                // was die Engine spielen kann
   if(mode!=="photo") return DIRS_TEXT;
-  return photoAnswer==="mc" ? DIRS_PHOTO : DIRS_PHOTO.filter(d=>d!=="img2both");  // »voller Name« braucht die 4 Auswahl-Optionen
+  return phAns()==="mc" ? DIRS_PHOTO : DIRS_PHOTO.filter(d=>d!=="img2both");  // »voller Name« braucht die 4 Auswahl-Optionen
 }
+/* Antwortart der laufenden Bildfrage: in der geführten Lektion je Karte (nach Lernstand),
+   sonst die gewählte unter »Optionen · Antwort«. */
+function phAns(){ return (sess && sess.active && sess.ans) || photoAnswer; }
 function curDir(){                                 // gültige Richtung für den aktuellen Modus
   const d = mode==="photo" ? dirPhoto : dirText, ok = playableDirs();
   if(ok.includes(d)) return d;
@@ -1396,6 +1399,13 @@ const CH_DIRS  = ["de2bot","bot2de","img2bot","img2de"];   // nur noch zum LESEN
 const CH_DIR3  = { quiz:DIRS_TEXT, type:DIRS_TEXT, photo:DIRS_PHOTO, guided:DIRS_TEXT };
 const CH_PHA   = ["mc","type","exam"];
 const CH_FORMS = ["cards","quiz","photo","type"];
+/* Geführte Lektion mit Bildern (seit der Rückmeldung »nicht extra mischen«): Bit 4 im
+   Zusatzbyte kennzeichnet sie; die zwei Bit je Karte lesen sich dann nach CH_FORMS_PH –
+   »photo« = Bild + Auswahl, »photoExam« = Bild + selbst eingeben (wie in der Prüfung),
+   »quiz« = Auswahlfrage ohne Bild (kein Internet beim Start). Links ohne das Bit lesen
+   sich wie bisher nach CH_FORMS. Reihenfolge ebenfalls NICHT ändern. */
+const CH_FORMS_PH = ["cards","quiz","photo","photoExam"];
+const CH_PHOTO_ONLY = 16;
 const CH_VER   = 3;
 
 function vPut(out, n){                     // Varint: kleine Zahlen = ein Byte
@@ -1436,14 +1446,14 @@ function chEncode(o){
   // Antwortart gehört zur Aufgabe; bei der geführten Lektion zusätzlich die
   // Bild-Richtung (sie hat ja Bild- UND Textkarten) – beides in einem Byte.
   if(o.m==="photo") out.push(Math.max(0, CH_PHA.indexOf(o.a||"mc")));
-  else if(o.m==="guided") out.push((Math.max(0, CH_PHA.indexOf(o.a||"mc"))<<2) | Math.max(0, DIRS_PHOTO.indexOf(o.rp||"img2bot")));
+  else if(o.m==="guided") out.push((o.po ? CH_PHOTO_ONLY : 0) | (Math.max(0, CH_PHA.indexOf(o.a||"mc"))<<2) | Math.max(0, DIRS_PHOTO.indexOf(o.rp||"img2bot")));
   const idx = o.i||[];
   vPut(out, idx.length); idx.forEach(n=>vPut(out,n));
   if(o.m==="guided"){                                   // Übungsform je Karte, 4 Karten pro Byte
     const f = o.f||[];
     for(let k=0;k<idx.length;k+=4){
       let b=0;
-      for(let j=0;j<4;j++) b |= (Math.max(0, CH_FORMS.indexOf(f[k+j]||"quiz")) << (j*2));
+      for(let j=0;j<4;j++) b |= (Math.max(0, (o.po ? CH_FORMS_PH : CH_FORMS).indexOf(f[k+j]||"quiz")) << (j*2));
       out.push(b);
     }
   }
@@ -1467,23 +1477,23 @@ function chDecode(s){
         if(pi===15){ const len=vGet(raw,st); let t=""; for(let k=0;k<len;k++) t+=String.fromCharCode(raw[st.i++]); p=decodeURIComponent(escape(t)); }
         else p = CH_PROFILES[pi] || "";
         const m = CH_MODES[(head>>>2)&3] || "quiz";
-        let a = "mc", rp = "img2bot";
+        let a = "mc", rp = "img2bot", po = false;
         if(ver===3 && m==="photo") a = CH_PHA[raw[st.i++]] || "mc";
-        else if(ver===3 && m==="guided"){ const b=raw[st.i++]; a = CH_PHA[(b>>>2)&3]||"mc"; rp = DIRS_PHOTO[b&3]||"img2bot"; }
+        else if(ver===3 && m==="guided"){ const b=raw[st.i++]; a = CH_PHA[(b>>>2)&3]||"mc"; rp = DIRS_PHOTO[b&3]||"img2bot"; po = !!(b & CH_PHOTO_ONLY); }
         const cnt=vGet(raw,st), i=[];
         for(let k=0;k<cnt;k++) i.push(vGet(raw,st));
         let f = null;
         if(ver===3 && m==="guided"){                     // Übungsform je Karte, 4 pro Byte
           f=[];
           for(let k=0;k<cnt;k+=4){ const b=raw[st.i++];
-            for(let j=0;j<4 && k+j<cnt;j++) f.push(CH_FORMS[(b>>>(j*2))&3]||"quiz"); }
+            for(let j=0;j<4 && k+j<cnt;j++) f.push((po ? CH_FORMS_PH : CH_FORMS)[(b>>>(j*2))&3]||"quiz"); }
         }
         const sc=vGet(raw,st), t=vGet(raw,st), z=vGet(raw,st);
         const nl=vGet(raw,st); let nm="";
         for(let k=0;k<nl;k++) nm += String.fromCharCode(raw[st.i++]);
         const dirs = CH_DIR3[m] || DIRS_TEXT;
         const r = ver===3 ? (dirs[head&3] || dirs[0]) : (CH_DIRS[head&3] || "de2bot");
-        const o = { v:ver, p, m, r, a, rp, f, i, s:sc, t, z, n:decodeURIComponent(escape(nm)) };
+        const o = { v:ver, p, m, r, a, rp, po, f, i, s:sc, t, z, n:decodeURIComponent(escape(nm)) };
         return chPlausible(o) ? o : null;
       }
     }
@@ -1514,7 +1524,7 @@ function challengeURL(){                  // aktuelle Sitzung als Herausforderun
   // Die geführte Lektion wird als eigener Modus geteilt: die Übungsform je Karte
   // fährt mit, gezählt wird über die BEWERTETEN Karten (Karteikarten geben keine Quote).
   const payload = { v:CH_VER, p:profileId, m: auto ? "guided" : mode,
-                    r: auto ? dirText : curDir(), a:photoAnswer, rp: dirPhoto,
+                    r: auto ? dirText : curDir(), a:photoAnswer, rp: dirPhoto, po: auto && !!sess.photoOnly,
                     f: auto ? (sess.cards||[]).map(c=>(sess.formOf&&sess.formOf.get(c))||"quiz") : null,
                     i:idx, s:sess.correct, t: auto ? (sess.scored||0) : sess.done,
                     z:Math.round((sess.ms||0)/1000), n:duelName() };
@@ -1580,7 +1590,7 @@ function showChallengeBanner(ch){
   const theirAcc = ch.t ? Math.round(ch.s/ch.t*100) : 0;
   const modeLabel = chModeLabel(ch.m);
   // Aufgabenstellung mit ansagen – gefragt ist genau dasselbe wie beim Herausforderer
-  const wie = ch.m==="guided" ? "gemischte Übungsformen"
+  const wie = ch.m==="guided" ? (ch.po ? "mit Bildern, Antwort nach Lernstand" : "gemischte Übungsformen")
             : ch.m==="photo" && ch.a==="exam" ? "wie in der Prüfung"
             : (DIRS[ch.r] ? DIRS[ch.r].label : "") + (ch.m==="photo" && ch.a==="type" ? " · Namen eingeben" : "");
   const n=(ch.i||[]).length;
@@ -1616,7 +1626,7 @@ function startChallenge(){                // genau die Karten der Herausforderun
   if(ch.m==="guided" && Array.isArray(ch.f) && ch.f.length===cards.length){
     const formOf = new Map();
     cards.forEach((c,k)=>formOf.set(c, ch.f[k]));
-    sess.auto = true; sess.scored = 0; sess.formOf = formOf; sess.modeBefore = mode;
+    sess.auto = true; sess.scored = 0; sess.formOf = formOf; sess.modeBefore = mode; sess.photoOnly = !!ch.po;
   }
   clockRun(true); stageFull(true);
   nextCard();
@@ -1650,22 +1660,20 @@ function startSession(){
   nextCard();
 }
 /* ---------- Geführte Sitzung (Ein-Knopf-Start »Weiter lernen«) ----------
-   Wählt die Übungsform PRO KARTE nach ihrem Leitner-Stand – der Lernpfad
-   (erkennen → abrufen), eingebaut statt nur erklärt:
-     Box 0–1 (neu/unsicher) → Bilder-Quiz (ohne Internet: Auswahl-Quiz)
-     Box 2                  → Auswahl-Quiz
-     Box 3                  → Karteikarte (Selbsteinschätzung)
-     Box 4–5 (sitzt)        → Tippen (prüfungsnah)
-   Umsetzung: nextCard() schaltet den Modus je Karte um – Renderer, Tastatur-,
-   Uhr-, Punkte- und Leitner-Logik gelten damit unverändert je Übungsform; beim
-   Abschluss wird der zuvor gewählte Modus wiederhergestellt. Geführte Sitzungen
-   haben kein Lernduell (CH_MODES bleibt unangetastet – Teilen gibt es in den
-   reinen Modi Quiz/Tippen/Bilder). */
+   Jede Pflanze kommt als BILD – Rückmeldung: »Bild und Namensfragen nicht extra
+   mischen, nur wenn überhaupt kein Bild verfügbar (einzelne)«. Früher wechselte die
+   Übungsform mit der Stufe (ab Stufe 2 am Namen, dann Karteikarte, dann Tippen); weil
+   die Warteschlange nach Stufe sortiert ist, kamen damit alle Namensfragen am Stück.
+   Der Lernstand bestimmt jetzt nur noch, WIE man antwortet (erkennen → abrufen):
+     Stufe 0–2 (neu/wackelig) → Bild + aus vier Namen wählen
+     Stufe 3–5               → Bild + Namen selbst eingeben, wie in der Prüfung
+   Eine Auswahlfrage OHNE Bild kommt nur für die einzelne Art, zu der es kein Bild gibt
+   (renderPhoto), oder für alle, wenn beim Start kein Internet da ist.
+   Umsetzung: nextCard() setzt Modus und Antwortart je Karte (sess.ans, phAns()) –
+   Renderer, Tastatur-, Uhr-, Punkte- und Leitner-Logik gelten unverändert. */
 function guidedForm(box, online){
-  if(box<=1) return online ? "photo" : "quiz";
-  if(box===2) return "quiz";
-  if(box===3) return "cards";
-  return "type";
+  if(!online) return "quiz";
+  return box>=3 ? "photoExam" : "photo";
 }
 function startGuided(){
   endChallengeOverride();
@@ -1676,7 +1684,7 @@ function startGuided(){
   q.forEach(c=>{ const b = pget(c.key).box||0; boxOf.set(c, b); formOf.set(c, guidedForm(b, online)); });
   queue=q; qi=0; photoMisses=0; qStart=0;
   sess = { id:++sessSeq, total:q.length, done:0, correct:0, scored:0, ms:0, pts:null, active:true, baseMode:mode,
-           cards:q.slice(), challenge:null, auto:true, formOf, boxOf, modeBefore:mode };
+           cards:q.slice(), challenge:null, auto:true, formOf, boxOf, modeBefore:mode, photoOnly:true };
   clockRun(true); stageFull(true);
   nextCard();
 }
@@ -1692,30 +1700,29 @@ function sessionBar(){
     (scoreable()?`<span class="sclock" id="sclock" title="Denkzeit dieser Sitzung – die Uhr läuft nur, solange eine Frage offen ist">${ico("clock")}<span id="sclockT">${fmtDur(clockNow())}</span></span>`:``)+
     `<button class="btn ghost" id="btnStop" title="Sitzung beenden">beenden</button></div>`;
 }
-/* Warum kommt DIESE Karte gerade so? In der geführten Lektion wechselt die
-   Übungsform mit dem Lernstand (neu → Bild, ab Stufe 2 am Namen statt am Bild, dann
-   selbst abrufen, zuletzt tippen). Ohne Hinweis wirkt das wie ein zufällig
-   »eingemischtes« Quiz – deshalb eine ruhige Zeile über der Aufgabe. Nur in der
-   geführten Lektion; bei einer angenommenen Herausforderung fehlt der fremde
-   Lernstand, dann nennt sie nur die Übungsform.
-   Wortlaut: »jetzt ohne Bild« las sich wie ein Fehler des Bilder-Quiz (Rückmeldung mit
-   drei Screenshots) – der gewollte Schritt heißt jetzt »am Namen statt am Bild«, und ein
-   ECHTER Ausfall (Bild geplant, aber keins gefunden bzw. »Ohne Bilder weiterlernen«
-   gewählt) wird als solcher benannt. */
-const GUIDED_WIE = { photo:"am Bild erkennen", quiz:"jetzt am Namen statt am Bild",
-                     cards:"selbst abrufen", type:"prüfungsnah eingeben" };
+/* Warum kommt DIESE Karte gerade so? Die geführte Lektion zeigt jede Pflanze als Bild,
+   die Antwortart wechselt mit dem Lernstand (bis Stufe 2 Auswahl, ab Stufe 3 selbst
+   eingeben). Eine ruhige Zeile über der Aufgabe sagt beides an – und benennt einen
+   Ausfall ehrlich (zu dieser Art kein Bild, kein Internet beim Start, »Ohne Bilder
+   weiterlernen« gewählt). Bei einer angenommenen Herausforderung fehlt der fremde
+   Lernstand, dann nennt sie nur die Antwortart. */
+const GUIDED_WIE = { photo:"am Bild erkennen", photoExam:"am Bild · Namen selbst eingeben",
+                     quiz:"Auswahlfrage am Namen", cards:"selbst abrufen", type:"prüfungsnah eingeben" };
 function guidedNoteHTML(card){
   if(!sess.auto || !card) return "";
-  let wie = GUIDED_WIE[mode]; if(!wie) return "";
   const plan = sess.formOf ? sess.formOf.get(card) : undefined;
-  if(mode==="quiz" && plan==="photo")                  // Bild war geplant, kommt aber nicht: ehrlich sagen, warum
-    wie = sess.photoGiveUp ? "ohne Bild – auf deinen Wunsch" : "kein brauchbares Bild gefunden – deshalb Auswahlfrage";
+  let wie = GUIDED_WIE[plan] || GUIDED_WIE[mode];
+  if(mode==="quiz" && (plan==="photo" || plan==="photoExam"))   // Bild war geplant, kommt aber nicht: ehrlich sagen, warum
+    wie = sess.photoGiveUp ? "ohne Bild – auf deinen Wunsch" : "zu dieser Art kein Bild – deshalb Auswahlfrage";
+  else if(plan==="quiz" && sess.photoOnly) wie = "ohne Internet – deshalb Auswahlfrage";
+  if(!wie) return "";
   const box = sess.boxOf ? sess.boxOf.get(card) : undefined;
   const stufe = box===undefined ? "" : box ? `Stufe ${box} von 5` : "Neu";
-  return `<div class="gnote" title="Die geführte Lektion wählt die Übungsform nach deinem Lernstand: `+
-    `neu → am Bild erkennen · ab Stufe 2 am Namen statt am Bild (gewollt, kein Fehler) · Stufe 3 selbst abrufen · ab Stufe 4 selbst eingeben wie in der Prüfung. `+
-    `Durchgehend Bilder: unter »Selbst wählen« den Modus Bilder nehmen.">`+
-    `${stufe?esc(stufe)+" · ":""}${esc(wie)}</div>`;
+  const title = sess.photoOnly
+    ? `Die geführte Lektion zeigt jede Pflanze als Bild. Bis Stufe 2 wählst du aus vier Namen, ab Stufe 3 gibst du die Namen selbst ein – wie in der Prüfung. `+
+      `Eine Auswahlfrage ohne Bild kommt nur, wenn es zu einer Art kein Bild gibt oder kein Internet da ist.`
+    : `Herausforderung aus einer älteren Version: die Übungsform je Karte steht im Link.`;
+  return `<div class="gnote" title="${esc(title)}">${stufe?esc(stufe)+" · ":""}${esc(wie)}</div>`;
 }
 function showGuidedNote(){
   const html = guidedNoteHTML(current); if(!html) return;
@@ -1730,9 +1737,12 @@ function nextCard(){
     return finishSession();
   }
   current = queue[qi]; flipped=false;
-  if(sess.auto && sess.formOf && sess.formOf.has(current))
-    mode = sess.formOf.get(current);   // geführte Sitzung: Übungsform je Karte (wird nicht gespeichert)
-  else if(sess.baseMode) mode = sess.baseMode;   // Bilder-Modus: Quiz-Ausweichen der Vorkarte zurücknehmen
+  if(sess.auto && sess.formOf && sess.formOf.has(current)){   // geführte Sitzung: Übungsform je Karte (wird nicht gespeichert)
+    const f = sess.formOf.get(current);
+    mode = f==="photoExam" ? "photo" : f;
+    sess.ans = f==="photoExam" ? "exam" : (f==="photo" && sess.photoOnly) ? "mc" : null;   // ältere Links: Antwortart aus dem Link
+  }
+  else if(sess.baseMode){ mode = sess.baseMode; sess.ans = null; }   // Bilder-Modus: Quiz-Ausweichen der Vorkarte zurücknehmen
   if(mode==="cards") renderCard();
   else if(mode==="quiz") renderQuiz();
   else if(mode==="photo") renderPhoto();
@@ -1974,9 +1984,9 @@ function startHintOnly(){
   $("#stage").innerHTML = `<div class="stage-empty">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22V8M12 8C12 8 7 3 4 4c-1 3 4 8 8 8zM12 8c0 0 5-5 8-4 1 3-4 8-8 8z"/></svg>
     <h2>Bereit zum Lernen</h2>
-    <p><b>»Weiter lernen«</b> startet eine geführte Sitzung – die Übungsform (Bilder, Quiz,
-       Karteikarte, Selbst eingeben) richtet sich je Pflanze nach deinem Lernstand. Unter <b>»Selbst
-       wählen«</b> gibt es jeden Modus einzeln; Details unter <b>Hilfe</b>.</p>
+    <p><b>»Weiter lernen«</b> startet eine geführte Sitzung – jede Pflanze kommt als Bild, und
+       wie du antwortest, richtet sich nach deinem Lernstand. Unter <b>»Selbst wählen«</b> gibt es
+       jeden Modus einzeln; Details unter <b>Hilfe</b>.</p>
     ${photo ? `<p class="stage-note">Der Bilder-Modus braucht Internet (die Bilder kommen von
        Wikipedia); alles andere läuft auch ohne.</p>` : ``}
   </div>`;
@@ -3294,7 +3304,7 @@ function renderWiki(host, d){
     (d.thumb ? `<img src="${esc(d.thumb)}" alt="${esc(d.photo ? (d.photo.alt||"Bild der Sorte") : d.title)}" loading="lazy">` : "")+
     `<div class="wp-text">${esc(d.extract)}</div>`+
     `<div class="wp-src">Quelle: <a href="${esc(d.url)}" target="_blank" rel="noopener">Wikipedia – ${esc(d.title)}</a> · Text unter CC BY-SA`+
-    (d.photo ? ` · Bild: <a href="${esc(d.photo.url||"https://commons.wikimedia.org/")}" target="_blank" rel="noopener">Wikimedia Commons</a>${credit ? " ("+esc(credit)+")" : ""}` : "")+
+    (d.photo ? ` · Bild: <a href="${esc(d.photo.url||"https://commons.wikimedia.org/")}" target="_blank" rel="noopener">${d.photo.src==="inat" ? "iNaturalist" : "Wikimedia Commons"}</a>${credit ? " ("+esc(credit)+")" : ""}` : "")+
     `</div>`;
   lbWire(host.querySelector("img"), d.gallery && d.gallery.length>1 ? "Bilder ansehen" : "Vorschaubild vergrößern", d.gallery && d.gallery.length>1 ? d.gallery : undefined);
 }
@@ -3342,7 +3352,10 @@ function lbThrifty(){                                    // Datensparmodus oder 
 }
 const LB_STEPS = [960, 1280, 1920];                      // Standardstufen, die für die Großansicht taugen
 function lbBig(src, w){                                  // w: Originalbreite, falls bekannt – nie größer anfragen als das Original
-  const s = String(src||""), m = s.match(/\/(\d{2,4})px-/);
+  const s = String(src||"");
+  const ina = s.match(/^(https:\/\/(?:inaturalist-open-data\.s3\.amazonaws\.com|static\.inaturalist\.org)\/photos\/\d+\/)(square|small|medium|large|original)(\.\w+)/);
+  if(ina) return (lbThrifty() || ina[2]==="original") ? s : ina[1]+"original"+ina[3];   // iNaturalist: Größe steht im Pfad (original ≤ 2048 px)
+  const m = s.match(/\/(\d{2,4})px-/);
   if(!m) return s;
   const cur = +m[1], max = lbThrifty() ? 1280 : 1920;
   const want = LB_STEPS.filter(x => x<=max && (!w || x<w)).pop() || 0;
@@ -3437,8 +3450,9 @@ function lbShow(i){
   lbCancel = lbTry(img, it, ()=>{                        // ganze Kette gescheitert → Meldung statt leerem Rahmen
     img.removeAttribute("src"); sc.classList.add("lb-failed");
     const d = el("div","lb-fail"); d.setAttribute("role","status");
-    d.innerHTML = `<b>Bild nicht verfügbar</b><br>Der Bildserver (Wikimedia Commons) liefert diese Datei gerade nicht aus.`+
-      (it.file ? `<br><a href="https://commons.wikimedia.org/wiki/File:${esc(encodeURIComponent(it.file))}" target="_blank" rel="noopener">Datei auf Commons öffnen</a>` : "");
+    const inat = /inaturalist/.test(String(it.src||"")) || /^inat:/.test(it.file||"");
+    d.innerHTML = `<b>Bild nicht verfügbar</b><br>Der Bildserver (${inat ? "iNaturalist" : "Wikimedia Commons"}) liefert diese Datei gerade nicht aus.`+
+      (it.file && !inat ? `<br><a href="https://commons.wikimedia.org/wiki/File:${esc(encodeURIComponent(it.file))}" target="_blank" rel="noopener">Datei auf Commons öffnen</a>` : "");
     img.insertAdjacentElement("afterend", d);
   });
   lbSync();
@@ -3645,7 +3659,7 @@ async function taxonNote(card, pg, data){
   if(hit && hit.thumb){
     const bild = hit.art ? (hit.art==="herbar" ? "der Herbarbeleg" : "die Zeichnung") : "das Bild";   // Notnagel der Bildsuche (kein Foto auf Commons)
     data.thumb = hit.thumb;
-    data.photo = { file:hit.file||"", url:hit.url||"", artist:hit.artist||"", license:hit.license||"", alt: hit.art ? "Zeichnung der Sorte" : "" };
+    data.photo = { file:hit.file||"", url:hit.url||"", artist:hit.artist||"", license:hit.license||"", src:hit.src||"", alt: hit.art ? "Zeichnung der Sorte" : "" };
     const urls = (hit.gal && hit.gal.length>1) ? hit.gal : [hit.thumb];
     data.gallery = urls.map((u,i)=>({ src:u, label:`Bild ${i+1} – ${was.replace(/^die /,"")}`, w:(hit.galInfo && hit.galInfo[i] && hit.galInfo[i].w)||0 }));
     data.note = `${lab} – der Text gilt der ${rang}; ${bild} zeigt ${was}${hit.art ? " (ein Foto gibt es auf Wikimedia Commons nicht)" : ""}.`;
@@ -3666,7 +3680,7 @@ async function genusNote(card, pg, data){
   if(hit && hit.thumb){
     const bild = hit.art ? (hit.art==="herbar" ? "der Herbarbeleg" : "die Zeichnung") : "das Bild";   // Notnagel der Bildsuche (kein Foto auf Commons)
     data.thumb = hit.thumb;
-    data.photo = { file:hit.file||"", url:hit.url||"", artist:hit.artist||"", license:hit.license||"", alt: hit.art ? "Zeichnung der Art" : "Bild der Art" };
+    data.photo = { file:hit.file||"", url:hit.url||"", artist:hit.artist||"", license:hit.license||"", src:hit.src||"", alt: hit.art ? "Zeichnung der Art" : "Bild der Art" };
     const urls = (hit.gal && hit.gal.length>1) ? hit.gal : [hit.thumb];
     data.gallery = urls.map((u,i)=>({ src:u, label:`Bild ${i+1} – ${full}`, w:(hit.galInfo && hit.galInfo[i] && hit.galInfo[i].w)||0 }));
     data.note = `${lab} Der Text beschreibt die Gattung; ${bild} zeigt diese Art${hit.art ? " (ein Foto gibt es auf Wikimedia Commons nicht)" : ""}.`;
@@ -3685,7 +3699,11 @@ async function loadWiki(card, host, btn){
   // nicht zur Gattung« für Lonicera nitida 'Elegant', obwohl »Lonicera« → Heckenkirschen existiert.)
   let pg=null, antworten=0, fehler=0, gattung=false;
   const frag = async t=>{ try{ const d=await wikiJSONP(t); antworten++; return wikiFirstPage(d); }catch(e){ fehler++; return null; } };
-  for(const t of wikiCandidates(card)){ pg = await frag(t); if(pg) break; }
+  for(const t of wikiCandidates(card)){
+    pg = await frag(t);
+    if(pg && !/\s/.test(t) && !plantArticle(pg)) pg = null;   // Ein-Wort-Titel: nur ein Pflanzenartikel (»Canna« ist die Hebriden-Insel)
+    if(pg) break;
+  }
   if(!pg){                                              // Gattungs-Notnagel: nur ein echter Gattungsartikel, deutlich gekennzeichnet
     for(const t of wikiGenusCandidates(card)){
       const p = await frag(t); if(p && genusArticleOk(p, card)){ pg=p; gattung=true; break; }
@@ -3771,6 +3789,9 @@ function usablePhoto(file){
   // »map« jeden »maple«-Dateinamen und »orange« jede Zitrusfrucht (Audit-Fund). Deutsche
   // Komposita bleiben erfasst (»Verbreitungskarte«: Präfix »verbreitung«, Suffix »karte«).
   if(/(\bmaps?\b|karten?\b|\bdistribution\b|\branges?\b|verbreitung|\blocator\b|\bdiagrams?\b|\bcharts?\b|\bwappen\b|\blogos?\b|\bsignature\b)/i.test(f)) return false;
+  // Etiketten/Pflanzenschilder verraten die Lösung (Bildcheck-Lauf 7: »Laburnum × watereri (Goldenchain tree)-
+  // invasive plant sold in stores label.jpg«) – »labellum« (Orchideen-Lippe) bleibt dank Wortgrenze
+  if(/(\blabels?\b|\blabell?ed\b|etikett|pflanzenschild|namensschild|schildchen|\bplant ?tags?\b)/i.test(f)) return false;
   return !/(\bcover\b|einband|buchdeckel|deckblatt|titelblatt|titelseite|\btitle ?page\b|frontispi[sz]|manuscript|manuskript|handschrift|codex|\bbook\b|\bscans?\b|\bscanned\b)/i.test(f);
 }
 /* ---------- Welches Bild gehört wirklich zu DIESER Art? ----------
@@ -3828,7 +3849,7 @@ function looksIllustration(file){                     // alte Tafeln/Sammelbilde
    Blumenkohl), Gallen nur englisch/als Kompositum (»St. Gallen«-Fotos bleiben). */
 function looksDamage(file){
   const f = deacc(String(file||"").toLowerCase()).replace(/[_\-.]+/g," ");
-  return /(telia|teliospor|uredini|aecidi|\brusts?\b|\brost\b|mildew|mehltau|blight|leaf ?spot|blattfleck|disease|krankheit|infect|infest|\bdamaged?\b|\bschaden\b|befall|\bgalls?\b|gallmilbe|gallwespe|pflanzengalle|leaf ?miner|blattminier|\blarvae?\b|\blarven?\b|\braupen?\b|caterpillar|aphid|blattlaus|\bpests?\b|pathogen|\bfungus\b|\bfungi\b|pilzbefall|\bvirus\b|chlorosis|chlorose|necrosis|nekrose|deficiency|uromyces|puccinia|erysiphe|peronospora|phytophthora|fusarium|septoria|colletotrichum|alternaria|sclerotinia|monilinia|venturia|missbildung|fasciation|fasziation|verb(ae|a)nderung)/.test(f);
+  return /(telia|teliospor|uredini|aecidi|\brusts?\b|\brost\b|mildew|mehltau|blight|leaf ?spot|blattfleck|disease|krankheit|infect|infest|\bdamaged?\b|\bschaden\b|befall|\bgalls?\b|gallmilbe|gallwespe|pflanzengalle|leaf ?miner|blattminier|\blarvae?\b|\blarven?\b|\braupen?\b|caterpillar|aphid|blattlaus|\bpests?\b|pathogen|\bfungus\b|\bfungi\b|pilzbefall|\bvirus\b|chlorosis|chlorose|necrosis|nekrose|deficiency|uromyces|puccinia|erysiphe|peronospora|phytophthora|fusarium|septoria|colletotrichum|alternaria|sclerotinia|monilinia|venturia|missbildung|fasciation|fasziation|verb(ae|a)nderung|erwinia|carotovora|pectobacter|xanthomonas|pseudomonas|agrobacter|ralstonia|clavibacter|bacterial|bakteri|soft ?rot|(weich|nass|braun|grau|stengel|stangel|wurzel|frucht|kraut|knollen|herz|zwiebel)faule|faeulnis|\bfaulnis|grauschimmel|schimmelpilz|schimmelrasen|\bmou?lds?\b|\bscab\b|\bschorf\b|apfelschorf|\bcankers?\b|obstbaumkrebs|\bsmut\b|mosaic ?virus|mosaikvirus|nematod|\bthrips\b|\bmites?\b|spinnmilbe|spider ?mites?|weevil|ruesselkaefer|russelkafer)/.test(f);
 }
 /* ---------- Zeichnungen, Tafeln, Herbarbelege, Buchscans: raus ----------
    Rückmeldung mit Screenshot: Im Bilder-Quiz erschien eine Tafel aus einem
@@ -3879,7 +3900,8 @@ function fileMetaQuery(file){                          // Metadaten EINER Common
 async function fileMeta(file){                          // → {art, kind, mime, credit} | null (nicht auf Commons → nicht prüfbar)
   const p = wikiPage(await fileMetaQuery(file)), ii = p && p.imageinfo && p.imageinfo[0];
   if(!ii) return null;
-  return { art: looksArtwork(ii.extmetadata), kind: artKind(file, ii.extmetadata), mime: ii.mime||"", credit: metaCredit(ii.extmetadata) };
+  return { art: looksArtwork(ii.extmetadata), kind: artKind(file, ii.extmetadata), mime: ii.mime||"", credit: metaCredit(ii.extmetadata),
+           cats: metaValue(ii.extmetadata,"Categories") };   // Kategorien: Sammelkarten prüfen damit die genannte Gruppe
 }
 function fileMentionsOther(file, card){               // Dateiname nennt eine andere Art derselben Gattung
   const gen = norm(card.g||"").toLowerCase(); if(!gen) return false;
@@ -3974,6 +3996,116 @@ function namesListSpecies(file, card){
   const flatF = words.replace(/\s+/g,"");
   return lat.some(n=>words.indexOf(" "+n+" ")>=0) || z.some(n=>flatF.indexOf(n)>=0);
 }
+/* ---------- Sammeleinträge: Gartenform statt Wildart ----------
+   Bildcheck-Lauf 4: »Fuchsia Cultivars« zeigte die kolumbianische Wildart F. putumayensis,
+   »Aquilegia Cultivars« eine Wildakelei aus Montenegro, »Gladiolus Cultivars« G. illyricus,
+   »Solidago Cultivars« die Riesen-Goldrute – jeweils das Artikelbild der Gattung –, die drei
+   Begonien-Gruppen (Elatior, Rex, Knollenbegonie) dasselbe Bild, und »Canna Cultivars« sogar
+   ein Luftbild der Hebriden-Insel Canna (der deutsche Artikel »Canna« ist die Insel). Gemeint
+   ist die Gattung in einer GARTENFORM. Deshalb sucht die Kette für Sammelkarten zuerst auf
+   Commons nach der genannten Gruppe (»Begonia Elatior«) und nach Gartensorten (»Fuchsia
+   cultivar« liefert fast nur Sorten: »Fuchsia 'Twinny'«, »Solidago 'Goldjunge'«). Eine
+   benannte Wildart (»Gladiolus illyricus«) – bei Gruppen auch eine andere Gartenform – nimmt
+   sie nur, wenn sich nirgends Passenderes findet; Fotos gehen trotzdem vor Zeichnungen. */
+function sammelCard(card){
+  card = photoCard(card); const k = cultivarKind(card.a||"");
+  return k!=="cv" && k!=="infra" && genusLevel(card) && !sectName(card.a||"");
+}
+const GROUP_ALIAS = { elatior:["elatior","hiemalis"], "rex-cultorum":["rex"], tuberhybrida:["tuberhybrida"],
+  neuguinea:["new guinea","hawkeri"], "neu-guinea":["new guinea","hawkeri"], belladonna:["belladonna"],
+  "semperflorens-cultorum":["semperflorens"] };
+function sammelGroup(card){                              // genannte Gruppe → Suchwörter (»Cultivars Elatior-Grp.« → elatior, hiemalis)
+  const w = norm(photoCard(card).a||"").replace(/[()]/g," ").split(" ")
+    .map(x=>x.replace(/-(grp\.?|gruppe|group|hybriden?)$/i,""))
+    .filter(x=>x && !GROUP_TOKEN.test(x) && !/^(in|sorten?)$/i.test(x) && /^[A-ZÄÖÜ]/.test(x));
+  if(!w.length) return [];
+  const k = deacc(w.join(" ").toLowerCase());
+  return GROUP_ALIAS[k] || [k];
+}
+function groupNamed(text, words){                        // nennt Dateiname/Kategorien/Artikel die Gruppe? (ganze Wörter)
+  const t = " "+deacc(String(text||"").toLowerCase()).replace(/[^a-z0-9]+/g," ")+" ";
+  return (words||[]).some(w=>t.indexOf(" "+deacc(w).replace(/[^a-z0-9]+/g," ").trim()+" ")>=0);
+}
+const GARDEN_RE = /(^|[^a-z])(cultivars?|hybrids?|hybrida|hybriden?|sorten?|cv)([^a-z]|$)|×/i;   // Gartenform im Dateinamen
+const NOT_EPI = new Set(("flower flowers flor flores flore fleur fleurs fiore fiori bloem bloemen blume blumen blüte blüten bud buds "+
+  "bloom blooms blossom blossoms leaf leaves blatt plant plants pflanze pflanzen cultivar cultivars hybrid hybrids hybrida hybridum "+
+  "hybridus hybride hybriden cultorum hortorum sp spp spec species cv var subsp ssp in at on and with from of the de la le les du des "+
+  "del della der die das den dem und im am an auf bei von vom mit en et garden gardens garten park close closeup detail macro red "+
+  "white pink yellow blue purple orange violet lilac rosa rot rote weiss gelb blau lila lily lilies tree bush shrub hedge seed seeds "+
+  "fruit fruits").split(" "));
+const LATINISH = /(a|ae|i|ii|is|us|um|ens|ans|ex|ix|ax|ale|are|ense|oides)$/;
+function latinEpi(x){ x = String(x||"").replace(/\d+$/,""); return /^[a-z][a-z-]{2,}$/.test(x) && !NOT_EPI.has(x) && LATINISH.test(x); }
+function nameWords(file){ return String(file||"").replace(/\.[a-z0-9]{2,5}$/i,"").split(/[\s_,;()\[\]–-]+/).filter(Boolean).map(x=>x.replace(/\d+$/,"")).filter(Boolean); }
+const CAP_WORD = /^[A-ZÄÖÜ][a-zäöüß]{2,}$/;
+const GENERIC_CAP = new Set(("plants plant flowers flower flores fleurs fiori blossom bloom blooms garden gardens garten park "+
+  "botanical botanic botanischer jardin giardino tuin leaves leaf bud buds detail close macro image photo foto img dsc "+
+  "cultivar cultivars hybrid hybrids hybride hybriden in at "+
+  // Monatsnamen sind keine Sortennamen (Bildcheck-Lauf 7: »Phalaenopsis July 2020-2« galt als Sorte 'July')
+  "january february march april may june july august september october november december januar februar märz maerz "+
+  "mai juni juli oktober dezember januari februari maart mei augustus enero febrero marzo abril mayo junio julio agosto "+
+  "septiembre octubre noviembre diciembre gennaio febbraio aprile maggio giugno luglio settembre ottobre dicembre "+
+  "janvier avril juin juillet septembre octobre novembre").split(" "));
+/* Zeigt die Datei erkennbar eine GARTENFORM? Sortenname in Anführungszeichen, »cultivar«/Hybride/×,
+   oder ein großgeschriebener Name direkt hinter der Gattung (»Canna Roma«, »Begonia Nonstop« – so
+   benennt Commons Sorten oft ohne Anführungszeichen). lenient (nur Treffer der Sortensuche): auch
+   hinter dem Epitheton (»Lupinus polyphyllus Manhattan Lights«) – sonst wäre das oft ein Ortsname. */
+function gardenEvident(file, card, lenient){
+  const f = String(file||""), G = genusOf(card).toLowerCase(); if(!G) return false;
+  if(GARDEN_RE.test(f) || /['‘’`´"“”„]/.test(f)) return true;
+  const w = nameWords(f), cap = x => CAP_WORD.test(x||"") && !GENERIC_CAP.has(String(x).toLowerCase());
+  return w.some((x,i)=> x.toLowerCase()===G && (cap(w[i+1]) || (lenient && /^[a-z][a-z-]{2,}$/.test(w[i+1]||"") && cap(w[i+2]))));
+}
+function wildSpeciesFile(file, card){                    // Sammelkarte: Datei zeigt eine benannte Art der Gattung, keine Gartenform?
+  const G = genusOf(card).toLowerCase(); if(!G || gardenEvident(file, card, false)) return false;
+  const w = nameWords(file);                             // Gattung auch kleingeschrieben (»Venusschuh paphiopedilum tranlienianum«)
+  return w.some((x,i)=> x.toLowerCase()===G && /^[a-z][a-z-]{2,}$/.test(w[i+1]||"") && !NOT_EPI.has(w[i+1]));   // jedes Epitheton (»martagon« endet nicht lateinisch)
+}
+let generaMemo = null;                                   // alle Gattungen aller Listen (kleingeschrieben, akzentfrei)
+function allGenera(){
+  if(!generaMemo){ generaMemo = new Set();
+    Object.keys(SEEDS).forEach(id=>(SEEDS[id]||[]).forEach(r=>{ const g = deacc(norm(r[0]||"").replace(/^×\s*/,"").split(/[\s-]/)[0].toLowerCase()); if(g) generaMemo.add(g); })); }
+  return generaMemo;
+}
+function namesOtherTaxon(file, card){                    // Sammelkarte: nennt die Datei eine Art einer ANDEREN Gattung der Listen?
+  // »Antirrhinum majus Floral Showers Fuchsia« ist ein Löwenmaul in der Farbe Fuchsia, »Helbra, Rudbeckia
+  // laciniata und Solidago canadensis« zeigt zwei Pflanzen; »Saintpaulia20110530 01« in den Qualitätsbildern
+  // von Streptocarpus ist das Usambaraveilchen – eine eigene Art derselben Liste
+  const G = deacc(genusOf(card).toLowerCase()), gen = allGenera(), w = nameWords(file);
+  const other = x => /^[A-ZÄÖÜ][a-zäöüß]+$/.test(x) && deacc(x.toLowerCase())!==G && gen.has(deacc(x.toLowerCase()));
+  if(w.some((x,i)=> other(x) && latinEpi(w[i+1]))) return true;
+  return w.some(other) && !w.some(x=>deacc(x.toLowerCase())===G);   // andere Gattung genannt, die eigene nicht
+}
+/* »Bombus pascuorum on Calibrachoa 'Cabaret Purple'«: Hauptmotiv ist das Tier, die Pflanze nur die
+   Unterlage – mit Gattung und Sortenname gewann das Bild sonst sogar das Ranking. Gilt für alle Karten. */
+function onPlantPhoto(file, card){
+  const G = norm(genusOf(card)||""); if(!G) return false;
+  const g = G.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+  // auch »en una Dahlia« (spanisch – Bildcheck-Lauf 7: »Abeja (Bombus) en una Dahlia x hortensis«), »em« (pt),
+  // »sul/sulla« (it), »na« (pl/cz); niederländisch »en« = »und« – ein Mischbild »Rozen en Dahlia's« fällt dann eben auch raus
+  return new RegExp("(^|[^a-z])(on|auf|sur|op|su|sobre|visiting|en|em|sul|sulla|na)\\s+(?:(?:a|an|the|der|die|das|den|einer|einem|la|le|les|un|une|een|de|het|una|uno|um|uma|il|lo)\\s+)?"+
+    "(?:(?:flowers?|blossoms?|leaf|leaves|bl(?:ü|ue)ten?|blatt|fleurs?|bloem(?:en)?)\\s+(?:of|von|der|de|des|du|van)\\s+)?"+g+"([^a-z]|$)","i")
+    .test(String(file||"").replace(/_/g," "));
+}
+/* Meint der Artikel eine PFLANZE? Für Suchen nach einem einzelnen Wort (bloße Gattung, deutscher
+   Sammelname): Der deutsche Artikel »Canna« ist die Hebriden-Insel, die Gattung heißt dort »Blumenrohr«. */
+const PLANT_WORD_RE = /(gattung|pflanze|gewächs|familie|\bart(en)?\b|unterart|varietät|sorte|hybride|kreuzung|kulturform|gemüse|obst|kraut|kräuter|baum|bäume|strauch|sträucher|staude|gras|gräser|farn|orchidee|blume|blüte|liane|kletter|zwiebel|knolle|kakte|sukkulent|botani|taxon|beere|getreide|wurz)/i;
+function plantArticle(p){
+  const t = norm(String((p && p.title) || "")), x = norm(String((p && p.extract) || ""));
+  if(/(steht für|bezeichnet:|kann bedeuten|mehrere bedeutungen)/i.test(x)) return false;   // Begriffsklärung
+  const satz = x.split(/[.!?]\s+(?=[A-ZÄÖÜ])/)[0] || "";
+  return PLANT_WORD_RE.test(satz) || PLANT_WORD_RE.test(t);
+}
+function poolHit(list, rf){                              // bester Rückfall-Treffer einer Sammelkarte (siehe sammelCard); rf: "wild" | "form" (Bildcheck)
+  const seen = new Set();
+  list = list.filter(o=>{ const k=String(o.file||o.thumb).replace(/_/g," ").toLowerCase(); if(seen.has(k)) return false; seen.add(k); return true; })
+             .sort((a,b)=> (b.sc||0)-(a.sc||0) || a.n-b.n);
+  const page = o => o.file ? "https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(o.file) : o.url;
+  const cred = o => o.credit || ((o.artist||o.license) ? { artist:o.artist||"", license:o.license||"" } : {});
+  const best = list[0], take = list.slice(0,6);
+  return Object.assign({ thumb: best.thumb, file: best.file, title: best.title, url: page(best), src: "cm", rf: rf || best.rf || "",
+           gal: take.map(o=>o.thumb), top: take.filter(o=>(o.sc||0)===(best.sc||0)).length,
+           galInfo: take.map(o=>Object.assign({ file:o.file, url:page(o), w:o.w||0 }, cred(o))) }, cred(best));
+}
 function photoSteps(card){                            // Suchwege, vom genauesten zum gröbsten
   card = photoCard(card);
   const binom = searchName(card), de = (card.de||"").split(/[,;/]/)[0].trim();
@@ -3989,6 +4121,18 @@ function photoSteps(card){                            // Suchwege, vom genaueste
     steps.push({k:"cm", q:`${binom} ${subQ}`});                          // Volltext, alle Wörter müssen vorkommen
     // grob (Artniveau) – nur wenn das für diese Karte zulässig ist (artLevelOk)
     if(artLevelOk(card)){ steps.push({k:"wp", q:binom}); steps.push({k:"cm", q:`incategory:"${binom}"`}); }
+  }else if(sammelCard(card)){                         // Sammelkarte: Gartenform zuerst (siehe sammelCard)
+    const G = genusOf(card);
+    sammelGroup(card).forEach(w=>steps.push({k:"cm", q:`${G} ${/\s/.test(w) ? '"'+w+'"' : w}`}));   // genannte Gruppe (»Begonia elatior«, »Impatiens "new guinea"«)
+    // typische Gartensorten, die auch die Info-Karte nennt (»Prunus 'Sorte'« = Zier-Kirsche: 'Accolade' –
+    // die Sortensuche lieferte dort nur Arten der Liste, am Ende eine Mandel-Pfirsich-Hybride)
+    (SORTEN_BEISPIELE[G] || []).slice(0,2).forEach(s=>steps.push({k:"cm", q:`${G} ${/\s/.test(s) ? '"'+s+'"' : s}`}));
+    steps.push({k:"cm", q:`${G} cultivar`});                            // Volltext: fast nur Gartensorten (»Fuchsia 'Twinny'«, »Lilium 'Nochka'«)
+    steps.push({k:"cm", q:`incategory:"Quality images of ${G}"`});      // geprüfte Bilder – oft aber Wildarten (Türkenbund, Goldrute am See)
+    if(de) steps.push({k:"wp", q:de});                                   // deutscher Sammelname (»Edelrose«, »Knollenbegonie«)
+    steps.push({k:"cm", q:`incategory:"${G}"`});                         // Gattungskategorie – Sammelschublade (genusNamed)
+    steps.push({k:"wp", q:G});                                           // Gattungsartikel – nur, wenn er eine Pflanze meint (plantArticle)
+    steps.push({k:"cm", q:G});                                           // Volltext
   }else{                                              // reine Art, Sektion oder Platzhalter-Sorte: direkt das Taxon
     const taxon = taxonName(card);                     // Hybride mit »×«, Sektion »Gattung sect. Name« – so heißen Artikel und Kategorien
     steps.push({k:"wp", q:taxon});
@@ -4036,13 +4180,23 @@ function commonsScore(file, card){
   if(gen && f.indexOf(gen)>=0) s += ((epi && f.indexOf(epi)>=0) || synEpi) ? 4 : 2;
   if(de && de.length>4 && f.indexOf(de)>=0) s += 3;
   // Sammelkarte (»Rosa Cultivars«, »Fuchsia-Hybriden«): eine benannte Gartensorte (»Rosa 'Gloria Dei'«)
-  // zeigt die Gartenform – besser als eine Wildart der Gattung
-  if(!epi && gen && cultivarKind(card.a||"")==="placeholder" && new RegExp("(^|[^a-z])"+gen+"\\s*['‘’`´\"“”„]").test(f)) s += 2;
+  // zeigt die Gartenform – besser als eine Wildart der Gattung. Zählt nur DIREKT hinter der Gattung
+  // (auch ohne Anführungszeichen: »Verbena Tukana Scarlet«, »Tulipa Juliette«); eine Sorte hinter einem
+  // Art-Epitheton ist meist eine Wildart in Sortenform (Bildcheck-Lauf 6: »Verbena hastata 'Rosea'« für
+  // die Garten-Verbene, »Tulipa aleppensis cultivar« für die Gartentulpe)
+  if(!epi && gen && cultivarKind(card.a||"")==="placeholder"){
+    const w = nameWords(file), i = w.findIndex(x=>deacc(x.toLowerCase())===gen), nx = i>=0 ? (w[i+1]||"") : "";
+    const epiNext = /^[a-z][a-z-]{2,}$/.test(nx) && !NOT_EPI.has(nx);
+    if(new RegExp("(^|[^a-z])"+gen+"\\s*['‘’`´\"“”„]").test(f) || (CAP_WORD.test(nx) && !GENERIC_CAP.has(nx.toLowerCase()))) s += 2;
+    else if(f.indexOf(gen)>=0 && GARDEN_RE.test(f) && !epiNext) s += 1;   // »Canna cultivar (2)«, »Begonia × tuberhybrida« – Gartenform ohne Sortennamen
+  }
   return s;
 }
-function pickCommons(d, card, artOut, q){             // bester Treffer der Commons-Suche; artOut: Sammelliste für Zeichnungen/Belege (Notnagel); q: Suchweg
+function pickCommons(d, card, artOut, q, pools){      // bester Treffer der Commons-Suche; artOut: Sammelliste für Zeichnungen/Belege (Notnagel); q: Suchweg
   const pg = (d && d.query && d.query.pages) || null; if(!pg) return null;
-  const G = genusOf(card), bare = !!q && genusLevel(card) && !sectName(card.a||"") && (q===`incategory:"${G}"` || q===G);   // Suche nach der bloßen Gattung
+  const sam = !!pools && sammelCard(card), grp = sam ? sammelGroup(card) : [];   // pools: Rückfall-Listen einer Sammelkarte (Wildart, andere Gruppe)
+  const G = genusOf(card), bare = !!q && genusLevel(card) && !sectName(card.a||"") &&
+    (q===`incategory:"${G}"` || q===G || (sam && q.indexOf(G+" ")===0));   // bloße Gattung bzw. Gattung + Sortenwort/Gruppe: die Datei muss die Gattung nennen
   const volltext = bare && q===G;
   const list = Object.keys(pg).map(k=>pg[k]).sort((a,b)=>(a.index||0)-(b.index||0));
   const ok = [];
@@ -4050,8 +4204,9 @@ function pickCommons(d, card, artOut, q){             // bester Treffer der Comm
     const file = String(p.title||"").replace(/^File:/i,"").replace(/^Datei:/i,"");
     const ii = p.imageinfo && p.imageinfo[0]; if(!ii || !(ii.thumburl||ii.url)) return;
     if(ii.mime && (!/^image\//i.test(ii.mime) || /djvu/i.test(ii.mime))) return;   // PDF/DjVu-Buchscans: Vorschau = Buchdeckel
-    if(!usablePhoto(file) || looksDamage(file) || fileMentionsOther(file, card)) return;
+    if(!usablePhoto(file) || looksDamage(file) || onPlantPhoto(file, card) || fileMentionsOther(file, card)) return;
     if(bare && !genusNamed(file, card, volltext)) return;   // Beifang der Gattungskategorie (Rosà, Hotelzimmer, »Rosa Parks«)
+    if(sam && namesOtherTaxon(file, card)) return;     // andere Gattung mit Art im Namen (Löwenmaul in der Farbe »Fuchsia«)
     const meta = ii.extmetadata || null;
     const cand = { thumb: ii.thumburl || ii.url, file, i, w: ii.width||0, sc: commonsScore(file, card), credit: metaCredit(meta),
               url: ii.descriptionurl || ("https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(file)) };
@@ -4059,6 +4214,14 @@ function pickCommons(d, card, artOut, q){             // bester Treffer der Comm
       const kind = artKind(file, meta);              // → höchstens Notnagel; Karten/Scans/Etiketten gar nicht
       if(kind && artOut) artOut.push(Object.assign(cand, { kind, src:"cm", title: norm(card.g+" "+card.a) }));
       return;
+    }
+    if(sam){                                           // Sammelkarte: sofort nur die genannte Gruppe bzw. eine erkennbare Gartenform – sonst Rückfall
+      const cvStep = q===`${G} cultivar`;              // Treffer der Sortensuche gelten als Gartenform, außer sie nennen eine Wildart
+      if(grp.length && groupNamed(file+" "+metaValue(meta,"Categories"), grp)) cand.sc += 3;
+      else {
+        const garden = gardenEvident(file, card, cvStep), wild = !garden && wildSpeciesFile(file, card);
+        if(grp.length || wild || !(garden || cvStep)){ (wild ? pools.wild : pools.plain).push(Object.assign(cand, { title: norm(card.g+" "+card.a), n: pools.n++ })); return; }
+      }
     }
     ok.push(cand);
   });
@@ -4099,10 +4262,12 @@ async function wikiPhoto(card){                        // → {thumb,title,file,
   // trifft, gilt der Treffer nur für diese Sitzung (tmp) – sonst stünde das Artbild für
   // immer im Speicher, obwohl es ein Sortenbild gäbe. Beim nächsten Start wird neu gesucht.
   const mark = h => { if(fehler) h.tmp = true; return h; };
+  const sam = sammelCard(card), pools = sam ? { wild:[], plain:[], n:0 } : null;   // Sammelkarte: Wildart / andere Gruppe nur als Rückfall
+  const grp = sam ? sammelGroup(card) : [];
   for(const st of photoSteps(card)){
     try{
       if(st.k==="cm"){
-        const hit = pickCommons(await commonsQuery(st.q), card, art, st.q);
+        const hit = pickCommons(await commonsQuery(st.q), card, art, st.q, pools);
         answered = true;
         if(hit) return mark(hit);
       }else{
@@ -4110,10 +4275,12 @@ async function wikiPhoto(card){                        // → {thumb,title,file,
         const p = wikiPage(d);
         if(!p || !p.thumbnail || !p.thumbnail.source) continue;
         if(!pageFitsCard(p, card)) continue;                       // anderer Artikel (Homonym)
+        if(sam && !plantArticle(p)) continue;                      // »Canna« ist die Hebriden-Insel, nicht die Gattung
         // Sorte gesucht, aber auf dem Art-Artikel gelandet? Nur zulässig, wenn das Artbild für diese Karte erlaubt ist.
         if(strict && ((p.title||"")+" "+(p.extract||"")).toLowerCase().indexOf(sub) < 0) continue;
         const file = p.pageimage || "";
-        if(!usablePhoto(file) || looksDamage(file) || fileMentionsOther(file, card)) continue;
+        if(!usablePhoto(file) || looksDamage(file) || onPlantPhoto(file, card) || fileMentionsOther(file, card)) continue;
+        if(sam && namesOtherTaxon(file, card)) continue;
         const hit = { thumb:p.thumbnail.source, title:p.title, file, src:"wp",
                       url:"https://de.wikipedia.org/wiki/"+encodeURIComponent(String(p.title).replace(/ /g,"_")) };
         const vormerken = (kind, credit) => { if(kind) art.push(Object.assign({}, hit, { kind, wp:true, credit:credit||null, i:art.length, sc:commonsScore(file, card) })); };
@@ -4125,6 +4292,16 @@ async function wikiPhoto(card){                        // → {thumb,title,file,
         if(fm && fm.mime && !/^image\//i.test(fm.mime)) continue;
         if(fm && fm.art){ vormerken(fm.kind, fm.credit); continue; }
         if(fm && fm.credit) Object.assign(hit, fm.credit);         // Bildnachweis liegt damit schon vor
+        if(sam){                                                   // Sammelkarte: Artikelbild sofort nur bei erkennbarer Gartenform bzw. Gruppe – sonst Rückfall
+          const grpHit = grp.length && groupNamed(file+" "+((fm && fm.cats)||"")+" "+p.title+" "+(p.extract||""), grp);
+          if(!grpHit){
+            const garden = gardenEvident(file, card, false), wild = !garden && wildSpeciesFile(file, card);
+            if(grp.length || wild || !garden){
+              (wild ? pools.wild : pools.plain).push(Object.assign({}, hit, { sc: commonsScore(file, card), n: pools.n++ }));
+              continue;
+            }
+          }
+        }
         return mark(hit);
       }
     }catch(e){ fehler++; continue; }                   // einzelner Fehlversuch – nächster Weg
@@ -4135,9 +4312,103 @@ async function wikiPhoto(card){                        // → {thumb,title,file,
   // bildlos und der Bilder-Quiz fiele wegen einer schwachen Leitung zurück.
   // Kein Foto auf keinem Weg: lieber eine Zeichnung als gar kein Bild (Rückmeldung). Kam ein Weg nicht
   // durch, gilt sie nur für diese Sitzung (tmp) – beim nächsten Start wird erneut nach einem Foto gesucht.
-  if(art.length) return mark(bestArt(art));
+  // Kein Foto auf Wikimedia (nur eine Zeichnung, gar nichts, oder ein Weg kam nicht durch):
+  // iNaturalist fragen – ein Foto geht vor der Zeichnung. Brach ein Wikimedia-Weg ab, gilt
+  // der Treffer nur für diese Sitzung (mark → tmp); beim nächsten Start wird Wikimedia neu
+  // gefragt. Fällt iNaturalist selbst aus, macht das aus einem sauberen »kein Bild« keinen
+  // Netzfehler (sonst wartete eine bildlose Art endlos), die Zeichnung gilt dann nur vorläufig.
+  if(pools && (pools.plain.length || pools.wild.length)){  // Sammelkarte ohne erkennbare Gartenform – ein Foto der Gattung geht trotzdem vor jeder Zeichnung
+    if(grp.length) return mark(pools.plain.length ? poolHit(pools.plain, "form") : poolHit(pools.wild, "wild"));   // Gruppe: andere Gartenform vor Wildart
+    pools.plain.forEach(o=>{ o.rf = "form"; }); pools.wild.forEach(o=>{ o.rf = "wild"; });
+    return mark(poolHit(pools.plain.concat(pools.wild)));   // sonst nach Bewertung: Datei, die die Gattung nennt, vor namenlosem Bild
+  }
+  let ina = null, inaFehler = false;
+  try{ ina = await inatPhoto(card); }catch(e){ inaFehler = true; }
+  if(ina) return mark(ina);
+  if(art.length){ const h = mark(bestArt(art)); if(inaFehler) h.tmp = true; return h; }
   if(!answered || fehler) throw new Error("network");
   return null;                                         // beantwortet, aber ohne passendes Bild – nicht einmal eine Zeichnung
+}
+/* ---------- iNaturalist als Ersatzquelle ----------
+   Rückmeldung: »Bildquelle iNaturalist hinzufügen, falls Wikimedia nicht ausreicht«. Liefert
+   Wikimedia für eine Art kein Foto, fragt das Lern-Tool die iNaturalist-API (Beobachtungs-
+   fotos, von der Gemeinschaft bestimmt). Regeln:
+   · nur Karten auf Art-, Hybrid- oder Unterart-Ebene. iNaturalist führt keine Gartensorten,
+     und das Bild einer Gattung zeigt irgendeine Art (bei Sammeleinträgen genau das Problem).
+     Sorten nur, wenn ein Artbild für sie zulässig ist (artLevelOk – Phantasiename ohne
+     Schwestersorte); Varietäten/Unterarten nur genau als solche (»Brassica oleracea
+     capitata«), nie das Bild der Wildart.
+   · der Name muss genau passen – Taxonname oder der Name, unter dem iNaturalist ihn als
+     Synonym führt (»Perovskia abrotanoides« → Salvia abrotanoides) –, der Rang ebenso.
+   · Lizenzen: nur CC0, CC BY, CC BY-SA, CC BY-NC, CC BY-NC-SA. Das Lern-Tool ist frei und
+     nicht kommerziell (sonst NC streichen); »alle Rechte vorbehalten« und ND (keine
+     Bearbeitung) nie. Bildnachweis mit Urheber, Lizenz und Link auf die Fotoseite.
+   · Abruf per JSONP (api.inaturalist.org kennt »callback«) – kein fetch, check_offline bleibt
+     grün; geladen wird nur im Bilder-Quiz und nur, wenn Wikimedia kein Foto hat. */
+const INAT_API = "https://api.inaturalist.org/v1/taxa";
+const INAT_LIC = { "cc0":"CC0", "cc-by":"CC BY", "cc-by-sa":"CC BY-SA", "cc-by-nc":"CC BY-NC", "cc-by-nc-sa":"CC BY-NC-SA" };
+const inatKey = s => norm(String(s||"").toLowerCase().replace(/×/g," ").replace(/(^|\s)x(?=\s|$)/g," ")
+  .replace(/\b(?:var|subsp|ssp|f|convar|cv)\.\s*/g," "));
+const INAT_RANK = /^(?:var|subsp|ssp|supsp|convar|f|cv|nothof|nothosubsp|nothovar)\.$/i;
+function inatEpithets(a){                              // Epitheta in Reihenfolge, ohne Rangwörter; Sorte/Gruppe beendet den Namen
+  const eps = []; let rest = false;
+  for(let w of norm(a||"").replace(/×/g," ").split(" ")){
+    if(!w || /^x$/i.test(w) || INAT_RANK.test(w)) continue;
+    const komma = /[,;]$/.test(w); w = w.replace(/[,;]+$/,"");
+    if(!/^[a-zäöüß][a-zäöüß-]*$/.test(w)){ rest = true; break; }   // 'Sorte', Gruppe, Großgeschriebenes, Notiz
+    if(eps[eps.length-1]!==w) eps.push(w);             // Autonym dazwischen (»ssp. vulgare var. azoricum«) fällt weg
+    if(komma){ rest = true; break; }
+  }
+  return { eps, rest };
+}
+function inatTaxon(card){                              // Name, unter dem iNaturalist gefragt wird – "" = nicht zulässig
+  card = photoCard(card);
+  if(genusLevel(card)) return "";                      // Gattung, Sammeleintrag, Sektion
+  const kind = cultivarKind(card.a||""), { eps, rest } = inatEpithets(card.a);
+  if((kind==="cv" || rest) && !artLevelOk(card)) return "";   // beschreibende Sorte / Schwestersorte / Gruppe: ein Artfoto wäre falsch
+  if(eps.length<=1) return taxonName(card);            // Art bzw. Hybride mit »×« (auch Autonym = die Art)
+  // Varietät/Unterart genau so, nie das Bild der Wildart. Tiefer gestaffelt (»var. capitata f. rubra« =
+  // Rotkohl, »var. capitata alba«) führt iNaturalist nicht – das Kopfkohl-Foto wäre dann falsch → nicht fragen.
+  return eps.length===2 ? norm(card.g+" "+eps.join(" ")) : "";
+}
+function inatPick(results, q){                          // passender Treffer: Name gleich (Rang passt) oder als Synonym geführt
+  const want = inatKey(q), hyb = /×/.test(q), tri = want.split(" ").length >= 3;
+  return (results||[]).find(t => {
+    if(!t || t.is_active===false) return false;
+    if(inatKey(t.name)===want) return hyb ? t.rank==="hybrid" : tri ? /^(variety|subspecies|form)$/.test(t.rank||"") : t.rank==="species";
+    // Synonym (»Perovskia abrotanoides« → Salvia abrotanoides, »Lonicera nitida« → eine Varietät):
+    // iNaturalist führt dieselbe Pflanze unter anderem Namen, auch auf anderem Rang – nie eine Gattung
+    return inatKey(t.matched_term)===want && /^(species|hybrid|variety|subspecies|form)$/.test(t.rank||"");
+  }) || null;
+}
+function inatPhotoOk(ph){ return !!(ph && INAT_LIC[ph.license_code||""] && (ph.large_url || ph.medium_url || ph.url)); }
+function inatImg(ph, size){                             // Größe aus der Foto-Adresse ableiten (square/small/medium/large/original)
+  const u = String(ph.large_url || ph.medium_url || ph.url || "");
+  return size ? u.replace(/\/(square|small|medium|large|original)\.(jpe?g|png|gif|webp)/i, "/"+size+".$2") : u;
+}
+function inatCredit(ph){
+  const who = norm(ph.attribution_name || String(ph.attribution||"").replace(/^\(c\)\s*/i,"").replace(/,.*$/,""));
+  return { artist: who, license: INAT_LIC[ph.license_code||""] || "" };
+}
+async function inatPhoto(card){                         // → Treffer wie wikiPhoto | null; wirft bei Netzfehler
+  const q = inatTaxon(card); if(!q) return null;
+  const d = await jsonp(INAT_API+"?is_active=true&per_page=10&q="+encodeURIComponent(q));
+  if(d && d.error) throw new Error("api:inat");
+  const t = inatPick(d && d.results, q); if(!t) return null;
+  let photos = [];
+  try{                                                  // Taxon-Fotos: mehrere Ansichten, je mit eigener Lizenz
+    const det = await jsonp(INAT_API+"/"+encodeURIComponent(t.id)+"?locale=de");
+    const tt = det && det.results && det.results[0];
+    photos = ((tt && tt.taxon_photos) || []).map(x => x && x.photo).filter(inatPhotoOk);
+  }catch(e){ /* Detail nicht erreichbar: das Standardfoto reicht */ }
+  if(!photos.length && inatPhotoOk(t.default_photo)) photos = [t.default_photo];
+  if(!photos.length) return null;                       // nur Fotos mit gesperrter Lizenz
+  photos = photos.slice(0, 6);
+  const best = photos[0], page = ph => "https://www.inaturalist.org/photos/"+ph.id;
+  return Object.assign({ thumb: inatImg(best, "large"), file: "inat:"+best.id, title: t.name, src: "inat", url: page(best),
+    gal: photos.map(ph => inatImg(ph, "large")), top: 1,
+    galInfo: photos.map(ph => Object.assign({ file: "inat:"+ph.id, url: page(ph),
+      w: (ph.original_dimensions && ph.original_dimensions.width) || 0 }, inatCredit(ph))) }, inatCredit(best));
 }
 let photoSource = wikiPhoto;                           // austauschbar (Tests laufen ohne Netz)
 /* »Kein Bild« gilt nur für DIESE Sitzung. Früher wurde ein Fehlversuch dauerhaft
@@ -4147,18 +4418,19 @@ let photoSource = wikiPhoto;                           // austauschbar (Tests la
    einen frischen Versuch; gefundene Bilder bleiben wie bisher dauerhaft gemerkt. */
 const photoTried = new Set(), photoTmp = new Map();  // photoTmp: Treffer, bei denen ein feinerer Suchweg nicht durchkam – nur für diese Sitzung
 const ART_TTL = 30*86400e3;                            // gemerkte Zeichnung: nach 30 Tagen erneut nach einem Foto suchen (Commons wächst)
-const GEN_V = 1;   // Gattungsebene neu geprüft (Sammelschublade, Art derselben Liste): ältere Treffer dieser Karten einmal neu suchen
+const GEN_V = 2;   // Gattungsebene neu geprüft: 1 = Sammelschublade, Art derselben Liste; 2 = Gartenform vor Wildart, »Canna« (Insel) raus – ältere Treffer dieser Karten einmal neu suchen
+const ART_V = 1;   // gemerkte Zeichnung: 1 = iNaturalist als Ersatzquelle – einmal sofort neu suchen (sonst erst nach ART_TTL), die Zeichnung bleibt Rückfall
 async function photoFor(card){
   const known = photoStoreLoad()[card.key];
   const genAlt = !!(known && genusLevel(card) && (known.gv||0) < GEN_V);       // vielleicht der Radweg aus Rosà – nicht als Rückfall zeigen
-  const alt = !!(known && known.art && Date.now() - (known.t||0) > ART_TTL);   // Notnagel gealtert → neue Suche, die alte bleibt als Rückfall
+  const alt = !!(known && known.art && (Date.now() - (known.t||0) > ART_TTL || (known.av||0) < ART_V));   // Notnagel gealtert oder neue Quelle → neue Suche, die alte bleibt als Rückfall
   if(known && !alt && !genAlt) return known;           // gemerktes Bild – sofort da
   if(photoTmp.has(card.key)) return photoTmp.get(card.key);
   if(photoTried.has(card.key)) return known || null;   // in dieser Sitzung schon erfolglos gesucht
   let p;
   try{ p = await photoSource(card); }                  // wirft bei Netzfehler (dann KEIN Merken → später erneut)
   catch(e){ if(known && !genAlt){ photoTried.add(card.key); return known; } throw e; }   // alte Zeichnung bleibt, solange die neue Suche nicht durchkommt
-  if(p && p.art) p.t = Date.now();
+  if(p && p.art){ p.t = Date.now(); p.av = ART_V; }
   if(p && genusLevel(card)) p.gv = GEN_V;
   if(p && p.tmp){ photoTmp.set(card.key, p); return p; }   // nicht dauerhaft merken: beim nächsten Start wird wieder fein gesucht
   photoRemember(card.key, p);
@@ -4175,6 +4447,8 @@ async function photoCredit(file){
   return m ? metaCredit(m) : null;
 }
 function photoSrcLine(p){                              // Quellenzeile unter dem Bild (nach der Antwort)
+  if(p.src==="inat")                                   // iNaturalist: Fotoseite (dort Urheber, Lizenz, Beobachtung)
+    return `<div class="ph-src" id="phSrc">Foto: <a href="${esc(p.url)}" target="_blank" rel="noopener">iNaturalist</a></div>`;
   const commons = p.file ? "https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(p.file) : p.url;
   return `<div class="ph-src" id="phSrc">Bild: <a href="${esc(commons)}" target="_blank" rel="noopener">Wikimedia&nbsp;Commons</a>`+
          (p.src==="cm" ? "" :                          // Commons-Treffer haben keinen Artikel dahinter
@@ -4289,13 +4563,13 @@ function photoImgFailed(card, p){
 /* ---------- Geduld statt Ersatzmodus ----------
    Der Bilder-Quiz bleibt der Bilder-Quiz. Eine schwache Leitung darf nicht dazu
    führen, dass plötzlich Textfragen kommen – das fühlt sich an, als wäre das
-   Werkzeug kaputt. Zwei Wege statt Moduswechsel:
-     · Findet sich für EINE Art gerade kein Foto, kommt sie ans Ende der Runde und
-       wir machen mit der nächsten Art weiter (sie ist später wieder dran).
-     · Kommt gar nichts durch, wartet der Bildschirm sichtbar auf die Verbindung
-       und versucht es von selbst weiter, bis das Netz zurück ist.
-   Erst wenn eine ganze Runde ohne ein einziges Bild vergangen ist, fragen wir –
-   und wechseln auch dann nur, wenn der Lernende es ausdrücklich will. */
+   Werkzeug kaputt. Deshalb:
+     · Kommt keine Antwort durch (Funkloch, Drosselung), wartet der Bildschirm sichtbar
+       auf die Verbindung und versucht es von selbst weiter; »Andere Art zeigen« schiebt
+       die Karte ans Ende der Runde, »Ohne Bilder weiterlernen« schaltet nur auf Wunsch um.
+     · Lädt die Bilddatei selbst nicht, kommt die Art ans Ende der Runde (photoImgFailed).
+     · Gibt es zu EINER Art wirklich kein Bild (alle Suchwege haben geantwortet), kommt
+       nur diese Karte als Auswahlfrage – siehe renderPhoto. */
 function deferPhotoCard(ctr){                         // ctr: Zähler – "photoDefer" (Suche erfolglos) oder "imgDefer" (Datei lädt nicht)
   ctr = ctr || "photoDefer";
   const rest = queue.length - qi;                      // noch offene Karten (inkl. dieser)
@@ -4337,30 +4611,28 @@ async function renderPhoto(){
   if(netFail){
     // Kein Moduswechsel: Der Bildschirm wartet sichtbar auf die Verbindung und
     // versucht es von selbst weiter – sobald das Netz zurück ist, geht es weiter.
-    photoNotice(`<b>Warte auf die Bilder …</b> Die Fotos kommen von Wikipedia; die Verbindung ist gerade
+    photoNotice(`<b>Warte auf die Bilder …</b> Die Fotos kommen von Wikimedia Commons; die Verbindung ist gerade
       langsam oder weg. Sobald sie wieder da ist, geht es automatisch weiter.
       <div class="ph-dots" aria-hidden="true"><i></i><i></i><i></i></div>
       <div class="ph-actions"><button class="btn primary" id="phRetry">Jetzt nochmal versuchen</button>
-      <button class="btn ghost" id="phOther">Andere Art zeigen</button></div>`);
+      <button class="btn ghost" id="phOther">Andere Art zeigen</button>
+      <button class="btn ghost" id="phQuiz" title="Für den Rest dieser Sitzung Auswahlfragen ohne Bild – nur wenn du es willst">Ohne Bilder weiterlernen</button></div>`);
     $("#phRetry").onclick=()=>{ phWaitStop(); renderPhoto(); };
     $("#phOther").onclick=()=>{ phWaitStop(); if(deferPhotoCard()) nextCard(); else renderPhoto(); };
+    $("#phQuiz").onclick=()=>{ phWaitStop(); sess.photoGiveUp=true; mode="quiz"; sess.ans=null; renderQuiz(); showGuidedNote(); };
     phWaitTimer = setTimeout(()=>{ if(!stale()) renderPhoto(); }, phWaitMs);
     return;
   }
   if(!p){
-    // Für DIESE Art gibt es gerade kein brauchbares Foto: Karte ans Ende der Runde,
-    // weiter mit der nächsten – der Bilder-Quiz bleibt ein Bilder-Quiz.
-    photoMisses++;
-    if(deferPhotoCard()) return nextCard();
-    // Eine ganze Runde ohne ein einziges Bild – jetzt ehrlich fragen statt still
-    // den Modus zu wechseln. Der Wechsel passiert nur auf Knopfdruck.
-    photoNotice(`<b>Zu diesen Arten finde ich gerade kein Bild.</b> Das liegt meist an der Verbindung;
-      zu wenigen Arten gibt es auf Wikimedia Commons auch schlicht weder ein Foto noch eine Zeichnung
-      (Buchscans, Karten und Diagramme zeige ich nicht).
-      <div class="ph-actions"><button class="btn primary" id="phRetry">Nochmal versuchen</button>
-      <button class="btn ghost" id="phQuiz">Ohne Bilder weiterlernen</button></div>`);
-    $("#phRetry").onclick=()=>{ sess.photoDefer=0; renderPhoto(); };
-    $("#phQuiz").onclick=()=>{ sess.photoGiveUp=true; mode="quiz"; renderQuiz(); showGuidedNote(); };
+    // Zu DIESER Art gibt es kein Bild – alle Suchwege haben geantwortet, nichts passt (ein
+    // Funkloch wird oben abgewartet und landet nie hier). Dann kommt nur DIESE eine Karte als
+    // Auswahlfrage am Namen; die nächste ist wieder eine Bildfrage (nextCard stellt den Modus
+    // zurück). Rückmeldung: »nur wenn überhaupt kein Bild verfügbar – einzelne«. Früher wanderte
+    // die Art ans Ende, und am Schluss bot ein Knopf »Ohne Bilder weiterlernen« für ALLE an.
+    mode = "quiz"; sess.ans = null; renderQuiz();
+    if(sess.auto) showGuidedNote();
+    else { const bar=$("#stage").querySelector(".sessionbar");
+      if(bar) bar.insertAdjacentHTML("afterend", `<div class="ph-fallback">Zu dieser Art gibt es kein Bild – deshalb als Auswahlfrage</div>`); }
     return;
   }
   photoMisses = 0; sess.photoDefer = 0;
@@ -4394,9 +4666,10 @@ async function renderPhoto(){
   }
   // antippen/Enter → Großansicht; mehrere Ansichten derselben Art als Galerie
   lbWire(img, viele ? "Bilder ansehen" : "Bild vergrößern", gal, photoGalLoader(p));
-  if(photoAnswer==="exam")      renderPhotoExam(p);
-  else if(photoAnswer==="type") renderPhotoType(p);
-  else                          renderPhotoChoice(p);
+  const ans = phAns();
+  if(ans==="exam")      renderPhotoExam(p);
+  else if(ans==="type") renderPhotoType(p);
+  else                  renderPhotoChoice(p);
   clockStart();                                        // erst jetzt – die Ladezeit zählt nicht mit
   prefetchPhoto();                                     // nächstes Bild schon im Hintergrund holen
 }
@@ -4488,7 +4761,7 @@ function bookPoints(card, got, max){
   sess.pts.je[k] = Math.max(sess.pts.je[k]||0, got);
   return { nach: alt===undefined ? 0 : nach, sum:sess.pts.sum, max:sess.pts.max };
 }
-function examScoring(){ return mode==="type" || (mode==="photo" && photoAnswer==="exam"); }   // Modi mit Punkten (Tippen zählt wie der Bogen)
+function examScoring(){ return mode==="type" || (mode==="photo" && phAns()==="exam"); }   // Modi mit Punkten (Tippen zählt wie der Bogen)
 /* Gemeinsamer Abschluss: bewerten, Rückmeldung, Bildnachweis, »Weiter« */
 function finishPhotoAnswer(ok, g, p, solHTML, full){
   clockStop();                                        // gilt für alle drei Antwortarten
@@ -4500,7 +4773,7 @@ function finishPhotoAnswer(ok, g, p, solHTML, full){
   if(ok) celebrate($("#fb"), 1);
   // Punkte + Combo: Auswahl zählt wie Quiz, Tippen/»wie in der Prüfung« wie freies Tippen;
   // teilweise richtig (»hard«) gibt die Hälfte.
-  scoreHit(photoAnswer==="mc" ? "quiz" : "type", ok, ok?1:(g==="hard"?0.5:0), $("#fb"));
+  scoreHit(phAns()==="mc" ? "quiz" : "type", ok, ok?1:(g==="hard"?0.5:0), $("#fb"));
   photoRevealCredit(p);
   const nav=$("#nav"); nav.innerHTML=infoBtnHTML("Mehr")+`<button class="btn primary" id="wt">Weiter</button>`;
   wireInfoBtn(); $("#wt").onclick=advance; $("#wt").focus();
@@ -4516,7 +4789,7 @@ function photoRevealCredit(p){                        // Bildnachweis erst jetzt
       el2.insertAdjacentHTML("beforeend", ` · ${esc([cr.artist,cr.license].filter(Boolean).join(", "))}`);
   };
   if(p.artist || p.license) show(p);                   // kam mit den Suchmetadaten – kein weiterer Abruf
-  else if(p.file) photoCredit(p.file).then(show).catch(()=>{});   // ältere Cache-Einträge / eingehängte Quellen
+  else if(p.file && p.src!=="inat") photoCredit(p.file).then(show).catch(()=>{});   // ältere Cache-Einträge / eingehängte Quellen
 }
 function prefetchPhoto(){
   // Die nächsten ZWEI Karten vorab holen – auf einer langsamen Leitung ist der
@@ -4604,7 +4877,7 @@ const SORTEN_BEISPIELE = {
   "Phlox paniculata":            ["Bright Eyes", "Orange Perfection", "Düsterlohe", "Pax", "Starfire", "Blue Paradise"],
   "Phlox subulata":              ["Emerald Cushion Blue", "Candy Stripe", "McDaniel's Cushion", "Scarlet Flame", "White Delight"],
   "Primula denticulata":         ["Alba", "Rubin", "Lilac", "Cashmeriana"],
-  "Prunus":                      ["Kanzan", "Accolade", "Amanogawa", "Shirotae", "Autumnalis", "Royal Burgundy"],
+  "Prunus":                      ["Accolade", "Kanzan", "Amanogawa", "Shirotae", "Autumnalis", "Royal Burgundy"],   // 'Accolade' zuerst: keine Sorte der eigens gelisteten P. serrulata (Bildsuche)
   "Rhododendron forrestii":      ["Scarlet Wonder", "Baden-Baden", "Elisabeth Hobbie", "Bad Eilsen"],
   "Salvia nemorosa":             ["Caradonna", "Ostfriesland", "Mainacht", "Schneehügel", "Blauhügel"],
   "Saxifraga arendsii":          ["Peter Pan", "Purpurteppich", "Schneeteppich", "Blütenteppich", "Pixie"],
@@ -5079,7 +5352,7 @@ function openIntro(auto, onClose){
   scrim.innerHTML = `<div class="modal intro" role="dialog" aria-modal="true" aria-labelledby="introTtl">
     <button class="modal-x" id="introClose" aria-label="Schließen" title="Schließen">×</button>
     <h2 class="intro-h" id="introTtl">So wirst du prüfungsreif</h2>
-    <p class="intro-lead">Am einfachsten: <b>»Weiter lernen«</b> – die passende Stufe wird automatisch nach deinem Lernstand gewählt. Wer selbst wählt: die Stufen sind nach Schwierigkeit sortiert, vom Erkennen bis zum freien Schreiben:</p>
+    <p class="intro-lead">Am einfachsten: <b>»Weiter lernen«</b> – jede Pflanze kommt als Bild, und wie du antwortest, richtet sich nach deinem Lernstand. Wer selbst wählt: die Stufen sind nach Schwierigkeit sortiert, vom Erkennen bis zum freien Schreiben:</p>
     <ol class="intro-steps">
       <li>${ico("image","is-ic")}<div><b>Bilder</b><span class="is-tag">leicht</span><br>Pflanze am Foto erkennen und den richtigen Namen wählen.</div></li>
       <li>${ico("check","is-ic")}<div><b>Quiz</b><span class="is-tag">leicht</span><br>Zum deutschen Namen den richtigen botanischen aus vier Optionen wählen.</div></li>
@@ -5210,6 +5483,7 @@ window.clean=clean;
 window.checkTyped=checkTyped;
 window.wikiGallery=wikiGallery;
 window.photoFor=photoFor;
+window.inatPhoto=inatPhoto; window.inatTaxon=inatTaxon; window.inatPick=inatPick; window.inatPhotoOk=inatPhotoOk; window.inatImg=inatImg;   // iNaturalist-Ersatzquelle (für Tests)
 window.artShown=artShown;             // für Tests: Platzhalter »'Sorte'« → »in Sorten«, Bildvielfalt, Info-Karte
 window.photoVariant=photoVariant;
 window.sortenInfoHTML=sortenInfoHTML;
