@@ -523,7 +523,29 @@ function boxAfter(cur, g){                    // Zielbox je Bewertung (cur = akt
 const todayISO = () => { const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
 function addDays(iso,n){ const d=new Date(iso+"T00:00:00"); d.setDate(d.getDate()+n); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function progKey(){ return LS_PREFIX+"progress."+profileId; }
-function loadProgress(){ try{ const raw=store.get(progKey()); progress=raw?JSON.parse(raw):{}; if(typeof progress!=="object"||!progress) progress={}; }catch(e){ progress={}; } masteryReset(); }
+/* Berichtigte Quellzeilen (tools/fix_source_gaps.py) ändern den Kartenschlüssel (Gattung|Art|dt. Name).
+   Damit niemand seinen Lernstand für diese Arten verliert, zieht loadProgress ihn einmalig um. */
+const KEY_RENAMES = {
+  "salvia|abrotanoides|bauernjasmin, gewöhnlicher pfeifenstrauch, falscher jasmin": "philadelphus|coronarius|bauernjasmin, gewöhnlicher pfeifenstrauch, falscher jasmin",
+  "juniperus|communis 'hibernika'|irischer säulenwacholder": "juniperus|communis 'hibernica'|irischer säulenwacholder",
+  "lagererstroemia|indica|kreppmyrte": "lagerstroemia|indica|kreppmyrte",
+  "olea|europea|echte olive": "olea|europaea|echte olive",
+  "antirrinum|majus|löwenmäulchen": "antirrhinum|majus|löwenmäulchen",
+  "gypsohila|paniculata|schleierkraut": "gypsophila|paniculata|schleierkraut",
+  "urtica|dioca|brennnessel": "urtica|dioica|brennnessel",
+  "thymus|serphyllum|thymian": "thymus|serpyllum|thymian",
+  "chameacyparis|obtusa 'nana gracilis'|muschel-scheinzypresse": "chamaecyparis|obtusa 'nana gracilis'|muschel-scheinzypresse",
+  "chameacypris|lawsoniana 'glauca'|blaue scheinzypresse": "chamaecyparis|lawsoniana 'glauca'|blaue scheinzypresse",
+  "hosta|cultivars fortuei aurea'|frühlingsgold-funkie": "hosta|cultivars fortunei aurea'|frühlingsgold-funkie",
+  "amaranthus|retoflexus|zurückgekr. fuchsschwanz, amarant": "amaranthus|retroflexus|zurückgekr. fuchsschwanz, amarant",
+  "petunie|x atkinsiana|garten-petunie": "petunia|x atkinsiana|garten-petunie"
+};
+function migrateKeys(p){
+  let n = 0;
+  Object.keys(KEY_RENAMES).forEach(a=>{ if(p && p[a]){ const b = KEY_RENAMES[a]; if(!p[b]) p[b] = p[a]; delete p[a]; n++; } });
+  return n;
+}
+function loadProgress(){ try{ const raw=store.get(progKey()); progress=raw?JSON.parse(raw):{}; if(typeof progress!=="object"||!progress) progress={}; }catch(e){ progress={}; } if(migrateKeys(progress)) saveProgress(); masteryReset(); }
 function saveProgress(){ store.set(progKey(), JSON.stringify(progress)); }
 function pget(key){ return progress[key] || {box:0,due:"",seen:0,correct:0,wrong:0}; }
 function grade(card, g){ // g: 'again' | 'hard' | 'good'
@@ -2331,7 +2353,7 @@ const RANK_TOKEN = /^([×x]|var\.|subsp\.|ssp\.|supsp\.|f\.|cv\.|convar\.|nothof
 const GROUP_TOKEN = /^(cultivars?|hybriden?|sorten|grp\.?|gruppe|group|hort\.?)$/i;   // Sammel-/Sortenwort – auch kleingeschrieben (»Lupinus cultivars«, 7 Zeilen) kein Epitheton
 function binomEpithet(a){
   const s = stripCultivar(a);                          // sonst wäre bei »Weigela 'Bristol Ruby'« »'Bristol« das Epitheton
-  const w = (s.split(" ").filter(w=> w && !RANK_TOKEN.test(w))[0] || "").replace(/[,;:]+$/,"");   // »vulgaris, A. Cultivars« → vulgaris
+  const w = (s.split(" ").filter(w=> w && !RANK_TOKEN.test(w) && !/\./.test(w))[0] || "").replace(/[,;:]+$/,"");   // »vulgaris, A. Cultivars« → vulgaris; Abkürzungen (»Sphagnum z.B: fallax …«) tragen nie ein Epitheton
   return /^[a-zäöüß]/.test(w) && !GROUP_TOKEN.test(w) ? w : "";   // großgeschrieben = Sektion/Gruppe (»Ruderalia«), Sammelwort (»Cultivars«/»cultivars«) – kein Art-Epitheton
 }
 function searchName(c){ return norm(c.g+" "+binomEpithet(c.a)); }
@@ -3115,7 +3137,7 @@ Object.assign(LAT_GEN, {
   Hippuris:"griech. ‚Pferdeschwanz‘ (Tannenwedel)", Hyssopus:"griech./hebr. Name (Ysop)",
   Iberis:"‚aus Iberien‘ (Schleifenblume)", Jasminum:"vom pers. ‚yasmin‘ (Jasmin)",
   Kerria:"nach dem Gärtner W. Kerr (Ranunkelstrauch)", Koeleria:"nach dem Botaniker G. Koeler (Schillergras)",
-  Lagererstroemia:"nach dem Kaufmann M. von Lagerström (Kreppmyrte)", Lathyrus:"griech. Name (Platterbse/Wicke)",
+  Lagererstroemia:"nach dem Kaufmann M. von Lagerström (Kreppmyrte)", Lagerstroemia:"nach dem Kaufmann M. von Lagerström (Kreppmyrte)", Lathyrus:"griech. Name (Platterbse/Wicke)",
   Laurus:"lat. für Lorbeer", Leontopodium:"griech. ‚Löwenfüßchen‘ (Edelweiß)",
   Lepidium:"griech. ‚Schüppchen‘ (Kresse, Früchte)", Levisticum:"aus lat. ligusticum (Liebstöckel)",
   Liatris:"Herkunft unklar (Prachtscharte)", Lobelia:"nach dem Botaniker M. de l’Obel",
@@ -3885,7 +3907,17 @@ function artLevelOk(card){                            // darf ein Bild der ART g
   if(kind!=="infra" && kind!=="cv") return true;      // reine Art oder Platzhalter ('Sorte', Hybriden) → Artbild ist das richtige Bild
   return (binomCount.get(searchName(card).toLowerCase())||0) <= 1;   // Geschwister in der Liste? dann nein
 }
+/* Sammelgruppe im Gattungsfeld: Die Fachwerker-Liste der Friedhofsgärtnerei führt
+   »Fuchsia-Hybriden«, »Freesia-Hybriden«, »Hippeastrum-Hybriden« und »Rosa-Hybriden« als
+   GATTUNG mit leerer Art. Gemeint ist die Gattung in irgendeiner Gartenform – für die
+   Bildsuche also Gattung + Platzhalter »Hybriden« (Bildcheck: drei davon blieben sonst
+   ohne Bild, weil kein Artikel die »Gattung« »Fuchsia-Hybriden« nennt). */
+function photoCard(card){
+  const m = /^(×?\s*[A-ZÄÖÜ][a-zäöüß]+)\s*-\s*(hybriden?|cultivars?|sorten)$/i.exec(norm((card && card.g)||""));
+  return (m && !norm(card.a||"")) ? Object.assign({}, card, { g:m[1], a:"Hybriden" }) : card;
+}
 function photoSteps(card){                            // Suchwege, vom genauesten zum gröbsten
+  card = photoCard(card);
   const binom = searchName(card), de = (card.de||"").split(/[,;/]/)[0].trim();
   const kind = cultivarKind(card.a), inf = infraEpithet(card.a), cv = cultivarName(card.a), steps = [];
   if(kind==="infra" || kind==="cv"){
@@ -3991,6 +4023,7 @@ function bestArt(list){
          best.credit||{});
 }
 async function wikiPhoto(card){                        // → {thumb,title,file,url,src,art?,artist?,license?,tmp?} | null
+  card = photoCard(card);                              // »Fuchsia-Hybriden« → Fuchsia + Hybriden
   let answered = false, fehler = 0;
   const art = [], metaMemo = new Map();               // art: Zeichnungen/Belege als Notnagel; metaMemo: dieselbe Datei nur einmal abfragen
   const kind = cultivarKind(card.a), sub = (infraEpithet(card.a) || cultivarName(card.a)).toLowerCase();
@@ -5098,6 +5131,7 @@ window.cultivarKind=cultivarKind;
 window.descriptiveCultivar=descriptiveCultivar;
 window.looksArtwork=looksArtwork;
 window.artKind=artKind; window.bestArt=bestArt;   // Notnagel-Zeichnung (für Tests)
+window.photoCard=photoCard; window.KEY_RENAMES=KEY_RENAMES;   // Sammelgruppen-Gattung, Schlüssel berichtigter Zeilen (für Tests)
 window.binomEpithet=binomEpithet;
 window.clean=clean;
 window.checkTyped=checkTyped;

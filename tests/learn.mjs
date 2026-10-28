@@ -486,7 +486,8 @@ async function main() {
     return { vor, imListe, zu: !n.open, sum, ki: /generativer KI/.test(t), bild: /Bildauswahl/.test(t),
       gewaehr: /keine Gewähr/.test(t) && /Haftung/.test(t), amtlich: /offiziellen Prüfungslisten/.test(t),
       quelle: /unverändert/.test(t) && /amtlichen Prüfungsliste/.test(t),
-      lueckenDok: /Chimonanthus/.test(t) && /Philadelphus coronarius/.test(t) && /Wuchsform/.test(t),
+      lueckenDok: /Chimonanthus/.test(t) && /Philadelphus coronarius/.test(t) && /Wuchsform/.test(t) &&
+        /Fünf Eingriffe/.test(t) && /Rechtschreibfehler/.test(t) && /Antirrhinum/.test(t),
       anfz: /Anführungszeichen um/.test(t),
       mehr: !!(n && n.querySelector('a[href="rechtliches.html#datenquellen"]')), t };
   });
@@ -505,7 +506,7 @@ async function main() {
     "Die zugeklappte Zeile muss die Lernhilfen als KI-gestützt ausweisen: " + note.sum);
   assert(note.quelle, "Der Volltext muss »unverändert aus der amtlichen Prüfungsliste« sagen: " + note.t);
   assert(note.lueckenDok,
-    "Der Volltext muss die dokumentierten Eingriffe offenlegen (Chimonanthus, Philadelphus, Wuchsform): " + note.t);
+    "Der Volltext muss die dokumentierten Eingriffe offenlegen (Chimonanthus, Philadelphus, Rechtschreibfehler, Wuchsform): " + note.t);
   assert(note.anfz,
     "Der Volltext muss die vereinheitlichten Anführungszeichen der Sortennamen als Schreibweise-Anpassung nennen: " + note.t);
   assert(note.mehr, "Der Hinweis muss auf rechtliches.html#datenquellen verweisen");
@@ -526,6 +527,71 @@ async function main() {
     "Die berichtigte Zeile muss deutsche Namen, Familie und ZP behalten und als Laubgehölz gelten: " + JSON.stringify(fix.zeile));
   assert(/Salvia abrotanoides/.test(fix.syn),
     "Die Blauraute (Perovskia abrotanoides) muss ihr Synonym Salvia abrotanoides behalten: " + JSON.stringify(fix));
+
+  // Rechtschreibfehler in botanischen Namen (Fund des Bildchecks, berichtigt über
+  // tools/fix_source_gaps.py): keine falsche Form mehr, die richtige genau einmal je Liste,
+  // deutsche Namen/Familie unverändert. Dazu: Der Lernstand zieht mit (KEY_RENAMES).
+  const tippfehler = await page.evaluate(() => {
+    const F = [
+      ["baumschule_fachwerker", "Juniperus", "communis 'Hibernika'", "Juniperus communis 'Hibernica'", "Irischer Säulenwacholder"],
+      ["baumschule_gaertner", "Lagererstroemia", "indica", "Lagerstroemia indica", "Kreppmyrte"],
+      ["baumschule_gaertner", "Olea", "europea", "Olea europaea", "Echte Olive"],
+      ["friedhofsgaertnerei_fachwerker", "Antirrinum", "majus", "Antirrhinum majus", "Löwenmäulchen"],
+      ["friedhofsgaertnerei_fachwerker", "Gypsohila", "paniculata", "Gypsophila paniculata", "Schleierkraut"],
+      ["friedhofsgaertnerei_fachwerker", "Urtica", "dioca", "Urtica dioica", "Brennnessel"],
+      ["friedhofsgaertnerei_fachwerker", "Thymus", "serphyllum", "Thymus serpyllum", "Thymian"],
+      ["friedhofsgaertnerei_fachwerker", "Chameacyparis", "obtusa 'Nana Gracilis'", "Chamaecyparis obtusa 'Nana Gracilis'", "Muschel-Scheinzypresse"],
+      ["friedhofsgaertnerei_fachwerker", "Chameacypris", "lawsoniana 'Glauca'", "Chamaecyparis lawsoniana 'Glauca'", "Blaue Scheinzypresse"],
+      ["friedhofsgaertnerei_gaertner", "Hosta", "Cultivars Fortuei Aurea'", "Hosta Cultivars Fortunei Aurea'", "Frühlingsgold-Funkie"],
+      ["gemuesebau_gaertner", "Amaranthus", "retoflexus", "Amaranthus retroflexus", "Zurückgekr. Fuchsschwanz, Amarant"],
+      ["zierpflanzenbau_gaertner", "Petunie", "x atkinsiana", "Petunia x atkinsiana", "Garten-Petunie"],
+    ];
+    const fehler = [];
+    F.forEach(([pid, g, a, richtig, de]) => {
+      const rows = SEEDS[pid] || [];
+      if (rows.some((r) => r[0] === g && r[1] === a)) fehler.push(pid + ": falsche Form noch da: " + g + " " + a);
+      const hit = rows.filter((r) => (r[0] + " " + r[1]) === richtig && r[3] === de);
+      if (hit.length !== 1) fehler.push(pid + ": berichtigte Zeile " + richtig + " (" + de + ") " + hit.length + "×");
+    });
+    // Lernstand-Umzug: jeder neue Schlüssel ist eine echte Karte, kein alter mehr
+    const keys = new Set(Object.keys(SEEDS).flatMap((id) => cardsFor(id).map((c) => c.key)));
+    Object.entries(KEY_RENAMES).forEach(([alt, neu]) => {
+      if (keys.has(alt)) fehler.push("alter Schlüssel noch als Karte: " + alt);
+      if (!keys.has(neu)) fehler.push("neuer Schlüssel keine Karte: " + neu);
+    });
+    const prev = $("#frSelect").value + "|" + $("#nivSelect").value;
+    const alt = "amaranthus|retoflexus|zurückgekr. fuchsschwanz, amarant", neu = KEY_RENAMES[alt];
+    const vorher = localStorage.getItem("pflanzenlernen.progress.gemuesebau_gaertner");
+    const p0 = JSON.parse(vorher || "{}"); delete p0[neu]; p0[alt] = { box: 3, due: "2099-01-01", seen: 4, correct: 3, wrong: 1 };
+    localStorage.setItem("pflanzenlernen.progress.gemuesebau_gaertner", JSON.stringify(p0));
+    $("#frSelect").value = "obstbau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    $("#frSelect").value = "gemuesebau"; $("#nivSelect").value = "gaertner"; applyProfile();
+    const umzug = { neuBox: progress[neu] && progress[neu].box, altWeg: !(alt in progress),
+      gespeichert: JSON.parse(localStorage.getItem("pflanzenlernen.progress.gemuesebau_gaertner") || "{}")[neu] != null };
+    delete progress[neu]; saveProgress();
+    const [fr, niv] = prev.split("|"); $("#frSelect").value = fr; $("#nivSelect").value = niv; applyProfile();
+    return { fehler, umzug };
+  });
+  assert(tippfehler.fehler.length === 0, "Rechtschreibfehler müssen berichtigt sein: " + JSON.stringify(tippfehler.fehler));
+  assert(tippfehler.umzug.neuBox === 3 && tippfehler.umzug.altWeg && tippfehler.umzug.gespeichert,
+    "Der Lernstand einer berichtigten Art muss unter den neuen Schlüssel umziehen: " + JSON.stringify(tippfehler.umzug));
+
+  // Bildsuche: Sammelgruppe im Gattungsfeld (»Fuchsia-Hybriden«, Art leer) und eine Notiz statt
+  // Epitheton (»Sphagnum z.B: fallax …«) – beide blieben im Bildcheck ohne Bild.
+  const sammel = await page.evaluate(() => {
+    const fu = photoCard({ g: "Fuchsia-Hybriden", a: "", de: "Fuchsie", key: "t-fu" });
+    const ro = photoCard({ g: "Rosa-Hybriden", a: "", de: "Rose", key: "t-ro" });
+    const keep = photoCard({ g: "Impatiens", a: "Neu-Guinea-Hybriden", de: "Edellieschen" });
+    const sph = { g: "Sphagnum", a: "z.B: fallax ca. 35 Arten in der BRD", de: "Torfmoos" };
+    return { fu, ro, keepG: keep.g, steps: photoSteps({ g: "Fuchsia-Hybriden", a: "", de: "Fuchsie" }).map((s) => s.k + ":" + s.q).slice(0, 2),
+      sphEpi: binomEpithet(sph.a), sphSearch: searchName(sph), aquilegia: binomEpithet("vulgaris, A. Cultivars") };
+  });
+  assert(sammel.fu.g === "Fuchsia" && sammel.fu.a === "Hybriden" && sammel.ro.g === "Rosa" && sammel.keepG === "Impatiens",
+    "Sammelgruppe im Gattungsfeld muss für die Bildsuche zur Gattung werden (nur bei leerer Art): " + JSON.stringify(sammel));
+  assert(sammel.steps[0] === "wp:Fuchsia",
+    "Bildsuche für »Fuchsia-Hybriden« beginnt beim Gattungsartikel: " + JSON.stringify(sammel.steps));
+  assert(sammel.sphEpi === "fallax" && sammel.sphSearch === "Sphagnum fallax" && sammel.aquilegia === "vulgaris",
+    "Abkürzungen wie »z.B:« sind kein Epitheton (Sphagnum fallax), »vulgaris, A. Cultivars« bleibt vulgaris: " + JSON.stringify(sammel));
 
   // Kennzeichnung dort, wo Namen nachgeschlagen werden: Liste und Info-Karte
   const quelle = await page.evaluate(() => {
@@ -1531,10 +1597,11 @@ async function main() {
     "Bricht ein feinerer Suchweg ab, gilt der gröbere Treffer nur für diese Sitzung (tmp, nicht im Speicher, kein zweiter Abruf): " + JSON.stringify(sorten));
   assert(sorten.platzKind === "placeholder" && sorten.platzArt && sorten.platzWege[0] === "wp:" + sorten.platzBinom,
     "Platzhalter 'Sorte' meint die Art: direkt der Art-Artikel, keine Sorten-Suche: " + JSON.stringify(sorten));
-  assert(sorten.alleErkannt && sorten.namenZahl === 61 && sorten.descZahl === 38 && sorten.descJa && sorten.descNein &&
+  assert(sorten.alleErkannt && sorten.namenZahl === 60 && sorten.descZahl === 37 &&   // 61/38 bis zur Berichtigung 'Hibernika' → 'Hibernica' (stand schon so in der Baumschul-Gärtner-Liste)
+    sorten.descJa && sorten.descNein &&
     sorten.frieder === "Frieder's Evergreen" && sorten.klammer === "Nana" && sorten.klammerEpi === "procumbens" &&
     sorten.vergessenEnde === "Nidiformis" && sorten.vergessenAnfang === "Emerald Gold" && sorten.vergessenEpi === "fortunei",
-    "Alle 61 Sortennamen der 14 Listen erkannt (6 Zeilen mit vergessenem Anführungszeichen), 38 davon beschreibend; Referenzfälle: " + JSON.stringify(sorten));
+    "Alle 60 Sortennamen der 14 Listen erkannt (6 Zeilen mit vergessenem Anführungszeichen), 37 davon beschreibend; Referenzfälle: " + JSON.stringify(sorten));
 
   // Zeichnungen, Tafeln, Herbarbelege, Buchscans: Der Dateiname verrät sie oft nicht
   // (Realfall Screenshot: »Bulletin de la Société … de Moscou (1841)« = Buchtafel mit

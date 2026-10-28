@@ -237,7 +237,8 @@ async function main() {
     const open = { vis: $("#helpScrim").classList.contains("open"), active: $("#btnHelp").classList.contains("active"),
       hasContent: /In fünf Schritten/.test(ht),
       // Datenherkunft: amtliche Liste vs. automatisch erzeugt, und der Bogen bleibt davon frei
-      quelle: /unverändert aus den amtlichen\s*Prüfungslisten/.test(ht) && /Chimonanthus/.test(ht) && /Philadelphus coronarius/.test(ht) && /Anführungszeichen um/.test(ht),
+      quelle: /unverändert aus den amtlichen\s*Prüfungslisten/.test(ht) && /Chimonanthus/.test(ht) && /Philadelphus coronarius/.test(ht) && /Anführungszeichen um/.test(ht) &&
+        /Fünf Eingriffe/.test(ht) && /Rechtschreibfehler/.test(ht) && /Antirrhinum/.test(ht),
       erzeugt: /generativer KI/.test(ht) && /Mehr zur Pflanze/.test(ht),
       bogenFrei: /Notenberechnung enthalten davon nichts/.test(ht),
       mehr: !!$('#helpPanel a[href="rechtliches.html#datenquellen"]') };

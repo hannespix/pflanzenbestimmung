@@ -70,6 +70,52 @@ REPLACEMENTS = {
     ],
 }
 
+# Rechtschreibfehler in botanischen Namen (Fund des Bildchecks tools/bildcheck.mjs: mit dem
+# falschen Namen fand die Bildsuche nichts, und Lernende hätten die falsche Schreibweise
+# gelernt). Jeder Fall ist eindeutig: dieselbe Art steht in anderen Listen richtig geschrieben,
+# oder der Name existiert botanisch nur in der berichtigten Form. Familie, deutsche Namen,
+# Nummer, ZP und Synonyme bleiben unverändert.
+TYPOS = {
+    "baumschule_fachwerker": [
+        (("Juniperus", "communis 'Hibernika'", "Cupressaceae", "Irischer Säulenwacholder"),
+         {ART: "communis 'Hibernica'"}),          # Sorte 'Hibernica' (lat. »irisch«), so in der Baumschul-Gärtner-Liste
+    ],
+    "baumschule_gaertner": [
+        (("Lagererstroemia", "indica", "Lythraceae", "Kreppmyrte"),
+         {GATTUNG: "Lagerstroemia"}),             # nach M. von Lagerström
+        (("Olea", "europea", "Oleaceae", "Echte Olive"),
+         {ART: "europaea"}),                      # so in zwei anderen Listen
+    ],
+    "friedhofsgaertnerei_fachwerker": [
+        (("Antirrinum", "majus", "Scrophulariaceae", "Löwenmäulchen"),
+         {GATTUNG: "Antirrhinum"}),               # so in drei anderen Listen
+        (("Gypsohila", "paniculata", "Caryophyllaceae", "Schleierkraut"),
+         {GATTUNG: "Gypsophila"}),                # so in fünf anderen Listen
+        (("Urtica", "dioca", "Urticaceae", "Brennnessel"),
+         {ART: "dioica"}),                        # so in sieben anderen Listen
+        (("Thymus", "serphyllum", "Lamiaceae", "Thymian"),
+         {ART: "serpyllum"}),                     # so in drei anderen Listen
+        (("Chameacyparis", "obtusa 'Nana Gracilis'", "Cupressaceae", "Muschel-Scheinzypresse"),
+         {GATTUNG: "Chamaecyparis"}),             # so in vier anderen Listen (acht Einträge)
+        (("Chameacypris", "lawsoniana 'Glauca'", "Cupressaceae", "Blaue Scheinzypresse"),
+         {GATTUNG: "Chamaecyparis"}),
+    ],
+    "friedhofsgaertnerei_gaertner": [
+        (("Hosta", "Cultivars Fortuei Aurea'", "Asparagaceae", "Frühlingsgold-Funkie"),
+         {ART: "Cultivars Fortunei Aurea'"}),     # Sorte 'Fortunei Aurea'; nur der Buchstabe
+    ],
+    "gemuesebau_gaertner": [
+        (("Amaranthus", "retoflexus", "Amaranthaceae", "Zurückgekr. Fuchsschwanz, Amarant"),
+         {ART: "retroflexus"}),                   # so in zwei anderen Listen
+    ],
+    "zierpflanzenbau_gaertner": [
+        (("Petunie", "x atkinsiana", "Solanaceae", "Garten-Petunie"),
+         {GATTUNG: "Petunia"}),                   # »Petunie« ist der deutsche Name; Petunia in drei anderen Listen
+    ],
+}
+for _pid, _items in TYPOS.items():                # dieselbe Mechanik wie REPLACEMENTS
+    REPLACEMENTS.setdefault(_pid, []).extend(_items)
+
 
 def _load(pid):
     path = SEEDS / f"{pid}.json"

@@ -2581,13 +2581,50 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Artikelbild). Jetzt gelten auch die Teile eines Bindestrich-Epithetons als eigene Art.
       `tests/learn.mjs` prüft über **alle 2114 Einträge**, dass ein Dateiname mit dem eigenen Artnamen
       (Leerzeichen-, Unterstrich- und Taxon-Form) nie als »andere Art« gilt – eine andere Art schon.
+      **Erster echter Lauf (GitHub-Runner, 14 min, 2543 Anfragen, kein 429):** 2092 Fotos · 4 Zeichnungen
+      · 18 ohne Bild · 0 Netzfehler. Die Diagnose der 22 ohne Foto ergab drei Ursachen, alle behoben:
+      **(1) Zwölf Rechtschreibfehler in den amtlichen Listen** (Bildsuche fand mit dem falschen Namen
+      nichts, und Lernende hätten die falsche Schreibweise gelernt): »Antirrinum«, »Gypsohila«,
+      »Chameacyparis«/»Chameacypris«, »Lagererstroemia«, »Petunie« (deutscher Name im Gattungsfeld),
+      »retoflexus«, »serphyllum«, »europea«, »dioca«, »'Hibernika'«, »Fortuei«. Gefunden zusätzlich
+      über einen Ähnlichkeitsscan aller Gattungen/Epitheta (Levenshtein 1–2 gegen dieselbe Art in
+      anderen Listen). Berichtigt **reproduzierbar** über eine `TYPOS`-Tabelle in
+      `tools/fix_source_gaps.py` (dieselbe Mechanik wie `REPLACEMENTS`: alle vier Textfelder müssen
+      passen, nur Gattung/Art ändern sich, Wuchsform unverändert), Seeds-Neubau = genau diese zwölf
+      Felder in sechs Dateien, zweiter Lauf »Offen: 0«. **Offengelegt als fünfter Eingriff** (»Fünf
+      Eingriffe«) in `.learnnote`, Prüfwerkzeug-Hilfe »Datenherkunft«, `recht.html#datenquellen`
+      (vollständige Liste je Fachrichtung) und Technik-Doku. **Lernstand zieht mit:** `KEY_RENAMES`
+      + `migrateKeys()` in `loadProgress` verschieben gespeicherten Fortschritt alter Schlüssel
+      (Gattung|Art|dt. Name) auf den berichtigten – auch für die frühere Salvia→Philadelphus-Zeile.
+      Namensherleitung kennt jetzt auch *Lagerstroemia*. Der Sortennamen-Guard sinkt auf 60/37
+      (»'Hibernika'« war neben »'Hibernica'« doppelt gezählt). **(2) Sammelgruppe im Gattungsfeld**
+      (»Fuchsia-/Freesia-/Hippeastrum-/Rosa-Hybriden« mit leerer Art): `photoCard()` macht daraus
+      für die Bildsuche Gattung + Platzhalter »Hybriden« (in `photoSteps` und `wikiPhoto`).
+      **(3) Notiz statt Epitheton** (»Sphagnum z.B: fallax ca. 35 Arten …«): `binomEpithet`
+      überspringt Wörter mit Punkt (Epitheta haben nie einen) → *Sphagnum fallax* (beide Werkzeuge).
+      **Bewusst ohne Bild bleiben** Sorten mit beschreibendem Namen bzw. Geschwistern in der Liste,
+      zu denen Commons kein Sortenbild hat (*Arabis ferdinandi-coburgi* 'Variegata', *Cotoneaster
+      dammeri* 'Frieder's Evergreen'/'Streib's Findling', *Euonymus fortunei* 'Sürth'/'Sun Spot',
+      *Picea abies* 'Echiniformis') – ein Artfoto wäre dort falsch – sowie *Scaevola saligna*
+      (Handelsname; die Wikipedia zeigt *S. aemula*). `tests/learn.mjs`: zwölf berichtigte Zeilen
+      (keine falsche Form mehr, richtige genau einmal), Schlüssel-Umzug (alle neuen Schlüssel sind
+      Karten, Lernstand zieht um und wird gespeichert), `photoCard` (nur bei leerer Art),
+      »Fuchsia-Hybriden« beginnt beim Gattungsartikel, »z.B:« ist kein Epitheton;
+      `tests/smoke.mjs`: Hilfe nennt fünf Eingriffe samt Rechtschreibfehlern.
+      **CI-Flake behoben:** Der Persistenz-Test im Lern-Test (Warten auf nicht leeren Fortschritt
+      nach dem Reload) setzte voraus, dass frühere Testblöcke im Standardprofil etwas gespeichert
+      hatten – jetzt bewertet er selbst eine Art, prüft genau diesen Eintrag und räumt auf.
+      **Workflow:** `cancel-in-progress: false` – ein neuer Push bricht einen laufenden Bildcheck
+      nicht mehr ab, sondern wartet dahinter.
 
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.
       **Stand:** ein Vollscan (2114 Arten) fand nur die inzwischen geschlossene
       Familien-Lücke zu *Chimonanthus praecox*; dazu kam der aus einer Rückmeldung bekannte
-      Übertragungsfehler »Salvia abrotanoides · Bauernjasmin« (berichtigt, siehe Erledigt).
+      Übertragungsfehler »Salvia abrotanoides · Bauernjasmin« (berichtigt, siehe Erledigt), und der
+      Bildcheck förderte zwölf Rechtschreibfehler in botanischen Namen zutage (berichtigt über
+      `TYPOS`). Die Liste der berichtigten Fehler sollte der Betreiber an die zuständige Stelle melden.
       Künftige Lücken über die `CORRECTIONS`-Tabelle, nachweislich falsche Felder über die
       `REPLACEMENTS`-Tabelle in `tools/fix_source_gaps.py` (nicht direkt im Seed – die CI
       lehnt Hand-Edits in `seeds/` ab). Jeder neue Eingriff gehört zusätzlich in die
