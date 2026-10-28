@@ -1168,7 +1168,7 @@ body{overflow-x:clip}
   </main>
 
   <footer class="pagefoot">
-    <span>Pflanzenkenntnis · Prüfen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 27.10.2026 · Version 2d607d5</span></span>
+    <span>Pflanzenkenntnis · Prüfen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 27.10.2026 · Version 43940ab</span></span>
     <a class="legal" href="rechtliches.html">Impressum &amp; Datenschutz</a>
   </footer>
 </div>
@@ -2390,6 +2390,18 @@ function taxonName(c){
   if(ep && /(^|\s)[×x](\s|$)/i.test(norm(c.a||""))) return norm(c.g+" × "+ep);
   return searchName(c);
 }
+/* Synonyme aus der Prüfungsliste (Feld 7, botanisch, kommagetrennt) als Karten: Commons und
+   Wikipedia führen eine Art oft unter dem ANDEREN Namen – Realfall »Lonicera nitida« ist auf
+   Commons eine leere Kategorie, die Fotos liegen unter dem akzeptierten Namen »Lonicera
+   ligustrina var. yunnanensis«, genau dem Synonym der Liste (383 Zeilen tragen Synonyme:
+   Mahonia→Berberis, Potentilla→Dasiphora, Mespilus→Crataegus …). */
+function synCards(card){
+  const own = norm((card && card.g||"")+" "+(card && card.a||"")).toLowerCase();
+  return String(card && card.syn||"").split(/[,;]/).map(s=>norm(s))
+    .filter(s=>/^[A-ZÄÖÜ×][\wäöüß-]*\s+\S/.test(s))             // botanischer Name: Gattung + Rest
+    .map(s=>{ const w=s.split(" "); return { g:w[0], a:w.slice(1).join(" "), de:(card.de||""), syn:"" }; })
+    .filter(c=>norm(c.g+" "+c.a).toLowerCase()!==own).slice(0,3);
+}
 /* ---------- Botanische Namensherleitung (Merkhilfe, offline & kuratiert) ----------
    Latein/Griechisch → Deutsch: kurze Bedeutung von Gattung und Art-Epitheton, damit
    sich die botanischen Namen leichter merken lassen. Ganzwort-Wörterbuch plus
@@ -3273,9 +3285,10 @@ function jsonpGet(url){
   });
 }
 let jsonp = (...a) => jsonpGet(...a);                 // austauschbar: der Smoke-Test gibt Antworten ohne Netz vor
+const apiOk = d=>{ if(d && d.error) throw new Error("api:"+(d.error.code||"")); return d; };   // API-Fehlerantwort (ratelimited, maxlag …) = Ausfall, nicht »nicht gefunden«
 function wikiJSONP(title){
   return jsonp("https://de.wikipedia.org/w/api.php?action=query&format=json&prop=extracts%7Cpageimages%7Cpageprops&ppprop=disambiguation"+   // pageprops: Begriffsklärungen erkennen
-    "&exintro=1&explaintext=1&piprop=thumbnail&pithumbsize=320&redirects=1&titles="+encodeURIComponent(title));
+    "&exintro=1&explaintext=1&piprop=thumbnail&pithumbsize=320&redirects=1&titles="+encodeURIComponent(title)).then(apiOk);
 }
 function wikiFirstPage(d){
   const pg = d && d.query && d.query.pages; if(!pg) return null;
@@ -3580,11 +3593,14 @@ function wikiCandidates(card){
   add(full);                                            // voller Name (z. B. mit Sorte/Gruppe)
   const hyb = full.replace(/(^|\s)[x×](?=\s)/i, m=>m.replace(/[x×]/i, c=>c==="×" ? "x" : "×"));
   if(hyb!==full) add(hyb);                              // Hybrid-Zeichen in der anderen Schreibweise (»Forsythia × intermedia« ↔ »x«)
+  const syn = ()=>synCards(card).forEach(s=>add(norm(s.g+" "+s.a)));   // Synonyme der Liste = dieselbe Pflanze unter anderem Namen
   if(pureGroupName(card.a)){                            // Sammel-/Sorteneintrag: keine Art → Gattung ist das beste Ziel
     de.forEach(add);                                    // deutscher (Sammel-)Name, z. B. »Goldrute«
+    syn();
     add(card.g);                                        // bloße Gattung – dt. Wikipedia löst »Solidago« → »Goldruten« auf
   }else if(inf && !autonym){                            // ANDERE Unterart: Binom = Elternart (Raps) → nur deutscher Name
     de.forEach(add);
+    syn();                                              // vor der Elternart: das Synonym meint dieselbe Pflanze, die Elternart nicht
     add(searchName(card));                              // Notnagel ganz am Ende: findet der deutsche Name nichts (»Garten-Dill«
                                                         // hat keinen Artikel), ist die Elternart (»Dill«) besser als gar nichts;
                                                         // die Steckrübe erreicht ihn nie, ihr deutscher Titel trifft vorher
@@ -3592,6 +3608,7 @@ function wikiCandidates(card){
     add(taxonName(card));                               // Hybride mit »×«, Sektion »Gattung sect. Name«, sonst reines Binom (eindeutig)
     add(searchName(card));                              // Hybride auch ohne Zeichen (»Amelanchier lamarckii« leitet weiter)
     de.forEach(add);
+    syn();
   }
   return cands;
 }
@@ -3640,24 +3657,26 @@ async function loadWiki(card, host, btn){
     host.innerHTML='<div class="wp-note">Offline – für Online-Infos ist Internet nötig. Die Links oben funktionieren, sobald du online bist.</div>'; return;
   }
   btn.disabled=true; btn.textContent="lädt …";
-  let pg=null, hadResponse=false, gattung=false;
-  for(const t of wikiCandidates(card)){
-    try{ const d=await wikiJSONP(t); hadResponse=true; pg=wikiFirstPage(d); if(pg) break; }
-    catch(e){ /* Netzfehler/Timeout – nächster Versuch (hadResponse ggf. false) */ }
-  }
+  // »Nicht gefunden« darf nur heißen: JEDE Anfrage wurde beantwortet und keine traf. Blieb
+  // auch nur eine ohne Antwort (Zeitüberschreitung, Drosselung, API-Fehler), ist das ein
+  // Verbindungsproblem – nicht cachen, Wiederholung anbieten. (Realfall: »kein Artikel – auch
+  // nicht zur Gattung« für Lonicera nitida 'Elegant', obwohl »Lonicera« → Heckenkirschen existiert.)
+  let pg=null, antworten=0, fehler=0, gattung=false;
+  const frag = async t=>{ try{ const d=await wikiJSONP(t); antworten++; return wikiFirstPage(d); }catch(e){ fehler++; return null; } };
+  for(const t of wikiCandidates(card)){ pg = await frag(t); if(pg) break; }
   if(!pg){                                              // Gattungs-Notnagel: nur ein echter Gattungsartikel, deutlich gekennzeichnet
     for(const t of wikiGenusCandidates(card)){
-      try{ const d=await wikiJSONP(t); hadResponse=true; const p=wikiFirstPage(d); if(p && genusArticleOk(p, card)){ pg=p; gattung=true; break; } }
-      catch(e){ /* s. o. */ }
+      const p = await frag(t); if(p && genusArticleOk(p, card)){ pg=p; gattung=true; break; }
     }
   }
   if(!pg){
-    if(hadResponse){                                    // echte „nicht gefunden" – cachen, Knopf weg
+    if(fehler===0 && antworten>0){                      // echte „nicht gefunden" – cachen, Knopf weg
       wikiCache.set(card.key, null);
       host.innerHTML='<div class="wp-note">'+WP_NONE+'</div>';
       if(btn.parentNode) btn.remove();
-    } else {                                            // offline/blockiert – nicht cachen, Wiederholung anbieten
-      host.innerHTML='<div class="wp-note">Online-Infos konnten nicht geladen werden (offline oder blockiert). Die Links oben funktionieren weiterhin.</div>';
+    } else {                                            // offline/gedrosselt/Zeitüberschreitung – nicht cachen, Wiederholung anbieten
+      host.innerHTML='<div class="wp-note">Online-Infos konnten nicht geladen werden – '+fehler+' von '+(antworten+fehler)+
+        ' Anfragen an Wikipedia blieben ohne Antwort (offline, langsam oder gedrosselt). Die Links oben funktionieren weiterhin.</div>';
       btn.disabled=false; btn.innerHTML=ico("globe")+" Erneut versuchen";
     }
     return;
@@ -4165,7 +4184,7 @@ window.__swUpdate=swUpdate; window.__swReloadHook=fn=>{ swReload = fn || (()=>{ 
 window.__setJsonp=fn=>{ jsonp = fn || ((...a)=>jsonpGet(...a)); };   // Smoke-Test: Wikipedia-Antworten ohne Netz vorgeben
 window.wikiCache=wikiCache;
 window.wikiCandidates=wikiCandidates; window.wikiGenusCandidates=wikiGenusCandidates;   // Smoke-Test: Gattungs-Notnagel, Rang-Kürzel
-window.genusArticleOk=genusArticleOk; window.taxonName=taxonName; window.binomEpithet=binomEpithet;
+window.genusArticleOk=genusArticleOk; window.taxonName=taxonName; window.binomEpithet=binomEpithet; window.synCards=synCards;
 
 </script>
 <script>/* Hell/Dunkel-Umschalter: übersteuert die System-Einstellung, Wahl wird gespeichert.

@@ -1579,7 +1579,7 @@ body.stagefull #stage>.sessionbar{
   </p>
 
   <footer class="foot">
-    <span>Pflanzenkenntnis · Lernen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 27.10.2026 · Version 2d607d5</span></span>
+    <span>Pflanzenkenntnis · Lernen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 27.10.2026 · Version 43940ab</span></span>
     <a class="legal" href="rechtliches.html">Impressum &amp; Datenschutz</a>
   </footer>
 </div>
@@ -3939,6 +3939,18 @@ function taxonName(c){
   if(ep && /(^|\s)[×x](\s|$)/i.test(norm(c.a||""))) return norm(c.g+" × "+ep);
   return searchName(c);
 }
+/* Synonyme aus der Prüfungsliste (Feld 7, botanisch, kommagetrennt) als Karten: Commons und
+   Wikipedia führen eine Art oft unter dem ANDEREN Namen – Realfall »Lonicera nitida« ist auf
+   Commons eine leere Kategorie, die Fotos liegen unter dem akzeptierten Namen »Lonicera
+   ligustrina var. yunnanensis«, genau dem Synonym der Liste (383 Zeilen tragen Synonyme:
+   Mahonia→Berberis, Potentilla→Dasiphora, Mespilus→Crataegus …). */
+function synCards(card){
+  const own = norm((card && card.g||"")+" "+(card && card.a||"")).toLowerCase();
+  return String(card && card.syn||"").split(/[,;]/).map(s=>norm(s))
+    .filter(s=>/^[A-ZÄÖÜ×][\wäöüß-]*\s+\S/.test(s))             // botanischer Name: Gattung + Rest
+    .map(s=>{ const w=s.split(" "); return { g:w[0], a:w.slice(1).join(" "), de:(card.de||""), syn:"" }; })
+    .filter(c=>norm(c.g+" "+c.a).toLowerCase()!==own).slice(0,3);
+}
 /* ---------- Botanische Namensherleitung (Merkhilfe, offline & kuratiert) ----------
    Latein/Griechisch → Deutsch: kurze Bedeutung von Gattung und Art-Epitheton, damit
    sich die botanischen Namen leichter merken lassen. Ganzwort-Wörterbuch plus
@@ -4819,9 +4831,10 @@ function jsonpGet(url){
     document.head.appendChild(sc);
   });
 }
+const apiOk = d=>{ if(d && d.error) throw new Error("api:"+(d.error.code||"")); return d; };   // API-Fehlerantwort (ratelimited, maxlag …) = Ausfall, nicht »nicht gefunden«
 function wikiJSONP(title){
   return jsonp("https://de.wikipedia.org/w/api.php?action=query&format=json&prop=extracts%7Cpageimages%7Cpageprops&ppprop=disambiguation"+   // pageprops: Begriffsklärungen erkennen
-    "&exintro=1&explaintext=1&piprop=thumbnail&pithumbsize=320&redirects=1&titles="+encodeURIComponent(title));
+    "&exintro=1&explaintext=1&piprop=thumbnail&pithumbsize=320&redirects=1&titles="+encodeURIComponent(title)).then(apiOk);
 }
 function wikiFirstPage(d){
   const pg = d && d.query && d.query.pages; if(!pg) return null;
@@ -5116,11 +5129,14 @@ function wikiCandidates(card){
   add(full);                                            // voller Name (z. B. mit Sorte/Gruppe)
   const hyb = full.replace(/(^|\s)[x×](?=\s)/i, m=>m.replace(/[x×]/i, c=>c==="×" ? "x" : "×"));
   if(hyb!==full) add(hyb);                              // Hybrid-Zeichen in der anderen Schreibweise (»Forsythia × intermedia« ↔ »x«)
+  const syn = ()=>synCards(card).forEach(s=>add(norm(s.g+" "+s.a)));   // Synonyme der Liste = dieselbe Pflanze unter anderem Namen
   if(pureGroupName(card.a)){                            // Sammel-/Sorteneintrag: keine Art → Gattung ist das beste Ziel
     de.forEach(add);                                    // deutscher (Sammel-)Name, z. B. »Goldrute«
+    syn();
     add(card.g);                                        // bloße Gattung – dt. Wikipedia löst »Solidago« → »Goldruten« auf
   }else if(inf && !autonym){                            // ANDERE Unterart: Binom = Elternart (Raps) → nur deutscher Name
     de.forEach(add);
+    syn();                                              // vor der Elternart: das Synonym meint dieselbe Pflanze, die Elternart nicht
     add(searchName(card));                              // Notnagel ganz am Ende: findet der deutsche Name nichts (»Garten-Dill«
                                                         // hat keinen Artikel), ist die Elternart (»Dill«) besser als gar nichts;
                                                         // die Steckrübe erreicht ihn nie, ihr deutscher Titel trifft vorher
@@ -5128,6 +5144,7 @@ function wikiCandidates(card){
     add(taxonName(card));                               // Hybride mit »×«, Sektion »Gattung sect. Name«, sonst reines Binom (eindeutig)
     add(searchName(card));                              // Hybride auch ohne Zeichen (»Amelanchier lamarckii« leitet weiter)
     de.forEach(add);
+    syn();
   }
   return cands;
 }
@@ -5221,24 +5238,26 @@ async function loadWiki(card, host, btn){
     host.innerHTML='<div class="wp-note">Offline – für Online-Infos ist Internet nötig. Die Links oben funktionieren, sobald du online bist.</div>'; return;
   }
   btn.disabled=true; btn.textContent="lädt …";
-  let pg=null, hadResponse=false, gattung=false;
-  for(const t of wikiCandidates(card)){
-    try{ const d=await wikiJSONP(t); hadResponse=true; pg=wikiFirstPage(d); if(pg) break; }
-    catch(e){ /* Netzfehler/Timeout – nächster Versuch (hadResponse ggf. false) */ }
-  }
+  // »Nicht gefunden« darf nur heißen: JEDE Anfrage wurde beantwortet und keine traf. Blieb
+  // auch nur eine ohne Antwort (Zeitüberschreitung, Drosselung, API-Fehler), ist das ein
+  // Verbindungsproblem – nicht cachen, Wiederholung anbieten. (Realfall: »kein Artikel – auch
+  // nicht zur Gattung« für Lonicera nitida 'Elegant', obwohl »Lonicera« → Heckenkirschen existiert.)
+  let pg=null, antworten=0, fehler=0, gattung=false;
+  const frag = async t=>{ try{ const d=await wikiJSONP(t); antworten++; return wikiFirstPage(d); }catch(e){ fehler++; return null; } };
+  for(const t of wikiCandidates(card)){ pg = await frag(t); if(pg) break; }
   if(!pg){                                              // Gattungs-Notnagel: nur ein echter Gattungsartikel, deutlich gekennzeichnet
     for(const t of wikiGenusCandidates(card)){
-      try{ const d=await wikiJSONP(t); hadResponse=true; const p=wikiFirstPage(d); if(p && genusArticleOk(p, card)){ pg=p; gattung=true; break; } }
-      catch(e){ /* s. o. */ }
+      const p = await frag(t); if(p && genusArticleOk(p, card)){ pg=p; gattung=true; break; }
     }
   }
   if(!pg){
-    if(hadResponse){                                    // echte „nicht gefunden" – cachen, Knopf weg
+    if(fehler===0 && antworten>0){                      // echte „nicht gefunden" – cachen, Knopf weg
       wikiCache.set(card.key, null);
       host.innerHTML='<div class="wp-note">'+WP_NONE+'</div>';
       if(btn.parentNode) btn.remove();
-    } else {                                            // offline/blockiert – nicht cachen, Wiederholung anbieten
-      host.innerHTML='<div class="wp-note">Online-Infos konnten nicht geladen werden (offline oder blockiert). Die Links oben funktionieren weiterhin.</div>';
+    } else {                                            // offline/gedrosselt/Zeitüberschreitung – nicht cachen, Wiederholung anbieten
+      host.innerHTML='<div class="wp-note">Online-Infos konnten nicht geladen werden – '+fehler+' von '+(antworten+fehler)+
+        ' Anfragen an Wikipedia blieben ohne Antwort (offline, langsam oder gedrosselt). Die Links oben funktionieren weiterhin.</div>';
       btn.disabled=false; btn.innerHTML=ico("globe")+" Erneut versuchen";
     }
     return;
@@ -5398,7 +5417,7 @@ function metaCredit(meta){                             // Urheber + Lizenz für 
 function fileMetaQuery(file){                          // Metadaten EINER Commons-Datei (Artikelbild der Wikipedia: Tafel? Urheber/Lizenz?)
   return jsonp("https://commons.wikimedia.org/w/api.php?action=query&format=json&prop=imageinfo"+
     "&iiprop=mime%7Cextmetadata&iiextmetadatafilter=Categories%7CArtist%7CCredit%7CLicenseShortName&titles=File:"+
-    encodeURIComponent(file));
+    encodeURIComponent(file)).then(apiOk);
 }
 async function fileMeta(file){                          // → {art, mime, credit} | null (nicht auf Commons → nicht prüfbar)
   const p = wikiPage(await fileMetaQuery(file)), ii = p && p.imageinfo && p.imageinfo[0];
@@ -5410,17 +5429,21 @@ function fileMentionsOther(file, card){               // Dateiname nennt eine an
   const epi = binomEpithet(card.a||"").toLowerCase(), inf = infraEpithet(card.a||"");
   if(!epi) return false;                              // gattungsreine Karte (»Weigela 'Bristol Ruby'«): jede Art der Gattung darf sie vertreten
   const cv = cultivarName(card.a||"").toLowerCase().split(" ")[0];   // »Prunus cerasifera Nigra 01.jpg« nennt keine andere Art
+  const ok = new Set([epi, inf, cv, "var","subsp","ssp","sect","nothof"].filter(Boolean));
+  synCards(card).forEach(s=>{ const e=binomEpithet(s.a).toLowerCase(), i=infraEpithet(s.a); if(e) ok.add(e); if(i) ok.add(i); });   // Synonym-Epitheta (»ligustrina«, »yunnanensis«) = dieselbe Pflanze
   const w = String(file||"").replace(/[_\-.,()']/g," ").split(/\s+/).filter(Boolean);
   for(let i=0;i<w.length-1;i++){
     const a = w[i].toLowerCase(), b = w[i+1].toLowerCase().replace(/\d+$/,"");
     if(a!==gen || !/^[a-zäöüß]{4,}$/.test(b)) continue;
-    if(b!==epi && b!==inf && b!==cv && b!=="var" && b!=="subsp" && b!=="ssp" && b!=="sect" && b!=="nothof") return true;
+    if(!ok.has(b)) return true;
   }
   return false;
 }
 function pageFitsCard(p, card){                       // Artikel muss die Pflanze meinen, nicht ein Homonym
   const gen = norm(card.g||"").toLowerCase().replace(/^×\s*/,""); if(!gen) return true;   // Hybridgattung ohne × (im Artikel steht »× Hesperotropsis« mit Leerzeichen)
-  return (((p.title||"")+" "+(p.extract||"")).toLowerCase()).indexOf(gen) >= 0;
+  const txt = ((p.title||"")+" "+(p.extract||"")).toLowerCase();
+  const gens = [gen].concat(synCards(card).map(s=>norm(s.g).toLowerCase().replace(/^×\s*/,"")));   // Synonym-Gattung (»Mahonia« für Berberis aquifolium)
+  return gens.some(g=>g && txt.indexOf(g)>=0);
 }
 let binomCount = new Map();                           // Binom → Zahl der Arten im Profil (Sorten-Geschwister)
 function buildBinomIndex(){
@@ -5458,18 +5481,26 @@ function photoSteps(card){                            // Suchwege, vom genaueste
     if(de) steps.push({k:"wp", q:de});
     steps.push({k:"cm", q:taxon});                                        // Volltext, z. B. »Osmanthus burkwoodii« (Kategorie heißt »× burkwoodii«)
   }
+  // Synonyme der Liste (Artniveau): Commons/Wikipedia führen die Art oft unter dem ANDEREN Namen
+  // (»Lonicera nitida« = leere Kategorie; die Fotos liegen unter »Lonicera ligustrina var. yunnanensis«)
+  if((kind!=="infra" && kind!=="cv") || artLevelOk(card)){
+    synCards(card).forEach(s=>{
+      const t = (infraEpithet(s.a) || cultivarName(s.a)) ? norm(s.g+" "+s.a) : taxonName(s);   // infraspezifisches Synonym ganz (»… var. yunnanensis« – die Art allein wäre ein anderes Taxon)
+      if(steps.some(x=>x.q===t)) return;
+      steps.push({k:"wp", q:t}); steps.push({k:"cm", q:`incategory:"${t}"`}); steps.push({k:"cm", q:t}); });
+  }
   return steps;
 }
 let jsonp = (...a) => jsonpGet(...a);                 // austauschbar: die Tests laufen ohne Netz
 function wikiArticleQuery(title){                     // Artikelbild + erster Satz in EINER Anfrage
   return jsonp("https://de.wikipedia.org/w/api.php?action=query&format=json&prop=pageimages%7Cextracts"+
     "&exintro=1&explaintext=1&exsentences=1&piprop=thumbnail%7Cname&pithumbsize=640&redirects=1&titles="+
-    encodeURIComponent(title));
+    encodeURIComponent(title)).then(apiOk);
 }
 function commonsQuery(q){                             // Dateien auf Commons suchen (Kategorie oder Phrase) – samt Metadaten (Tafel? Urheber/Lizenz)
   return jsonp("https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search"+
     "&gsrnamespace=6&gsrlimit=12&gsrsearch="+encodeURIComponent(q)+
-    "&prop=imageinfo&iiprop=url%7Cmime%7Csize%7Cextmetadata&iiextmetadatafilter=Categories%7CArtist%7CCredit%7CLicenseShortName&iiurlwidth=640");   // 640 → Server rundet auf 960 px (Standardstufe)
+    "&prop=imageinfo&iiprop=url%7Cmime%7Csize%7Cextmetadata&iiextmetadatafilter=Categories%7CArtist%7CCredit%7CLicenseShortName&iiurlwidth=640").then(apiOk);   // 640 → Server rundet auf 960 px (Standardstufe)
 }
 /* Dateien, die die Pflanze im Namen führen, sind meist gezielte Aufnahmen –
    besser als ein beliebiges Bild aus derselben Kategorie (»Hortus Haren … 24.jpg«). */
@@ -5479,7 +5510,8 @@ function commonsScore(file, card){
   const epi = deacc((binomEpithet(card.a||"") || sectName(card.a||"")).toLowerCase());   // Sektion zählt wie ein Epitheton (»Taraxacum sect. Ruderalia 01.JPG«)
   const de = deacc(((card.de||"").split(/[,;/]/)[0]||"").toLowerCase().trim());
   let s = 0;
-  if(gen && f.indexOf(gen)>=0) s += (epi && f.indexOf(epi)>=0) ? 4 : 2;
+  const synEpi = synCards(card).some(x=>{ const e=deacc(binomEpithet(x.a).toLowerCase()); return e && f.indexOf(e)>=0; });
+  if(gen && f.indexOf(gen)>=0) s += ((epi && f.indexOf(epi)>=0) || synEpi) ? 4 : 2;
   if(de && de.length>4 && f.indexOf(de)>=0) s += 3;
   return s;
 }
@@ -6628,6 +6660,7 @@ window.wikiGenusCandidates=wikiGenusCandidates;   // für Tests: Gattungs-Notnag
 window.genusArticleOk=genusArticleOk;
 window.taxonName=taxonName;
 window.sectName=sectName;
+window.synCards=synCards;
 window.pureGroupName=pureGroupName;
 /* Bild-Quelle austauschbar + Bild-Cache leerbar: Die Tests laufen ohne Netz. */
 window.__setPhotoSource=fn=>{ photoSource = fn || wikiPhoto; };
