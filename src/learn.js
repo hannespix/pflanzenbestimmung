@@ -3611,11 +3611,12 @@ async function taxonNote(card, pg, data){
   if(artLevelOk(card)){ data.note = `${lab} – das Bild zeigt die ${rang}, nicht ${was}.`; return; }
   let hit = null; try{ hit = await photoFor(card); }catch(e){ hit = null; }     // Sortenfoto aus der Quiz-Suche (Cache oder Netz)
   if(hit && hit.thumb){
+    const bild = hit.art ? (hit.art==="herbar" ? "der Herbarbeleg" : "die Zeichnung") : "das Bild";   // Notnagel der Bildsuche (kein Foto auf Commons)
     data.thumb = hit.thumb;
-    data.photo = { file:hit.file||"", url:hit.url||"", artist:hit.artist||"", license:hit.license||"" };
+    data.photo = { file:hit.file||"", url:hit.url||"", artist:hit.artist||"", license:hit.license||"", alt: hit.art ? "Zeichnung der Sorte" : "" };
     const urls = (hit.gal && hit.gal.length>1) ? hit.gal : [hit.thumb];
     data.gallery = urls.map((u,i)=>({ src:u, label:`Bild ${i+1} – ${was.replace(/^die /,"")}`, w:(hit.galInfo && hit.galInfo[i] && hit.galInfo[i].w)||0 }));
-    data.note = `${lab} – der Text gilt der ${rang}; das Bild zeigt ${was}.`;
+    data.note = `${lab} – der Text gilt der ${rang}; ${bild} zeigt ${was}${hit.art ? " (ein Foto gibt es auf Wikimedia Commons nicht)" : ""}.`;
   }else{
     data.thumb = null;
     data.note = `${lab} – das Artikelbild zeigt die ${rang} und ist hier weggelassen; ein Bild von ${was.replace(/^die /,"der ")} liegt nicht vor.`;
@@ -3631,11 +3632,12 @@ async function genusNote(card, pg, data){
   const lab = `<b>Kein eigener Wikipedia-Artikel</b> zu <i>${esc(full)}</i> – stattdessen der Artikel zur <b>Gattung</b> <i>${esc(gen)}</i>${titel}.`;
   let hit = null; try{ hit = await photoFor(card); }catch(e){ hit = null; }
   if(hit && hit.thumb){
+    const bild = hit.art ? (hit.art==="herbar" ? "der Herbarbeleg" : "die Zeichnung") : "das Bild";   // Notnagel der Bildsuche (kein Foto auf Commons)
     data.thumb = hit.thumb;
-    data.photo = { file:hit.file||"", url:hit.url||"", artist:hit.artist||"", license:hit.license||"", alt:"Bild der Art" };
+    data.photo = { file:hit.file||"", url:hit.url||"", artist:hit.artist||"", license:hit.license||"", alt: hit.art ? "Zeichnung der Art" : "Bild der Art" };
     const urls = (hit.gal && hit.gal.length>1) ? hit.gal : [hit.thumb];
     data.gallery = urls.map((u,i)=>({ src:u, label:`Bild ${i+1} – ${full}`, w:(hit.galInfo && hit.galInfo[i] && hit.galInfo[i].w)||0 }));
-    data.note = `${lab} Der Text beschreibt die Gattung; das Bild zeigt diese Art.`;
+    data.note = `${lab} Der Text beschreibt die Gattung; ${bild} zeigt diese Art${hit.art ? " (ein Foto gibt es auf Wikimedia Commons nicht)" : ""}.`;
   }else{
     data.note = `${lab} Text und Bild beschreiben die Gattung – nicht unbedingt diese Art.`;
   }
@@ -3806,16 +3808,32 @@ function looksDamage(file){
    Antwort wie die Bild-URL (iiprop=extmetadata) – kostet also keinen zusätzlichen
    Abruf; für das Artikelbild der Wikipedia fragen wir sie einmal VOR dem Anzeigen
    ab (der Bildnachweis kam bisher ohnehin nach der Antwort – jetzt eben vorher, und
-   dafür entfällt der Abruf danach). Zeichnungen gelten im Quiz nicht mehr als
-   Notnagel: Lieber bleibt eine Art ohne Bild, als dass eine Buchtafel mit
-   aufgedrucktem Namen erscheint. (In der Info-Karte bleiben Tafeln erlaubt – beim
-   Nachschlagen sind sie hilfreich.) */
+   dafür entfällt der Abruf danach). FOTOS GEHEN IMMER VOR. Zeichnungen, Tafeln und
+   Herbarbelege sind seit der Rückmeldung »lieber Zeichnung als gar kein Bild« der
+   NOTNAGEL: Sie werden während der Suche gesammelt (artKind) und nur gezeigt, wenn auf
+   keinem Weg ein Foto zu finden ist – gekennzeichnet (»Zeichnung · kein Foto verfügbar«,
+   ein aufgedruckter Name kann die Lösung verraten). Nie als Notnagel: Karten, Diagramme,
+   Etiketten, Briefmarken, Buchscans/PDFs, Textseiten – die zeigen die Pflanze nicht.
+   (In der Info-Karte bleiben Tafeln ohnehin erlaubt – beim Nachschlagen sind sie hilfreich.) */
 const ART_CAT_RE = /(illustration|drawing|line art|engrav|lithograph|woodcut|etching|chromolith|painting|watercolo|aquarell|botanical art|\bplates?\b|\btafeln?\b|herbari|exsiccat|type specimen|\bscans?\b|scanned|book images|internet ?archive|biodiversity heritage|\bbhl\b|flora batava|flora danica|botanical magazine|medizinal|\bthom[eé]\b|\bsturm\b|\bprints?\b|manuscript|codex|postcard|\bstamps?\b|\bcoins?\b|artwork|\bpd-art\b|sketch|graphics?\b|diagram|\bmaps?\b|seed packet|catalog|advertis|\blabels?\b|\blogos?\b|pdf files|djvu)/i;
 const ART_BY_RE  = /(internet ?archive|biodiversity heritage|\bbhl\b|herbari|archive\.org|biodiversitylibrary)/i;
 function metaValue(m, k){ const v = m && m[k] && m[k].value; return v==null ? "" : String(v).replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim(); }
 function looksArtwork(meta){                           // meta = imageinfo[0].extmetadata; ohne Metadaten nicht prüfbar → gilt als Foto
   if(!meta) return false;
   return ART_CAT_RE.test(metaValue(meta,"Categories")) || ART_BY_RE.test(metaValue(meta,"Artist")+" "+metaValue(meta,"Credit"));
+}
+/* Was für ein Nicht-Foto ist das? "zeichnung" (Illustration, Tafel, Stich, Aquarell, Köhler …)
+   und "herbar" (Herbarbeleg) zeigen die Pflanze und taugen als Notnagel – Zeichnung vor Beleg;
+   "" = kein Kunstwerk ODER Karte/Diagramm/Etikett/Logo/Briefmarke/Buchscan/Textseite (nie zeigen).
+   Entschieden nach Dateiname UND Commons-Kategorien: »Bulletin … de Moscou (1841)« sagt
+   nichts, die Kategorie »Botanical illustrations« schon. */
+const ART_HERB_RE  = /(herbari|exsiccat|specimen|herbarbeleg)/i;
+const ART_NOPIC_RE = /(\bmaps?\b|\bkarten?\b|diagram|\bcharts?\b|distribution|verbreitung|\blabels?\b|etikett|\blogos?\b|\bstamps?\b|briefmarke|\bcoins?\b|postcard|postkarte|seed packet|catalog|advertis|manuscript|codex|\bscans?\b|scanned|pdf files|djvu|graphics?\b|signature|\bcovers?\b|title ?pages?)/i;
+function artKind(file, meta){
+  if(!looksIllustration(file) && !looksArtwork(meta)) return "";
+  const cats = metaValue(meta,"Categories"), f = deacc(String(file||"").toLowerCase()).replace(/[_\-.]+/g," ");
+  if(ART_NOPIC_RE.test(cats) || ART_NOPIC_RE.test(f)) return "";
+  return (ART_HERB_RE.test(cats) || ART_HERB_RE.test(f)) ? "herbar" : "zeichnung";
 }
 function metaCredit(meta){                             // Urheber + Lizenz für den Bildnachweis
   const artist = metaValue(meta,"Artist"), license = metaValue(meta,"LicenseShortName");
@@ -3826,10 +3844,10 @@ function fileMetaQuery(file){                          // Metadaten EINER Common
     "&iiprop=mime%7Cextmetadata&iiextmetadatafilter=Categories%7CArtist%7CCredit%7CLicenseShortName&titles=File:"+
     encodeURIComponent(file)).then(apiOk);
 }
-async function fileMeta(file){                          // → {art, mime, credit} | null (nicht auf Commons → nicht prüfbar)
+async function fileMeta(file){                          // → {art, kind, mime, credit} | null (nicht auf Commons → nicht prüfbar)
   const p = wikiPage(await fileMetaQuery(file)), ii = p && p.imageinfo && p.imageinfo[0];
   if(!ii) return null;
-  return { art: looksArtwork(ii.extmetadata), mime: ii.mime||"", credit: metaCredit(ii.extmetadata) };
+  return { art: looksArtwork(ii.extmetadata), kind: artKind(file, ii.extmetadata), mime: ii.mime||"", credit: metaCredit(ii.extmetadata) };
 }
 function fileMentionsOther(file, card){               // Dateiname nennt eine andere Art derselben Gattung
   const gen = norm(card.g||"").toLowerCase(); if(!gen) return false;
@@ -3922,7 +3940,7 @@ function commonsScore(file, card){
   if(de && de.length>4 && f.indexOf(de)>=0) s += 3;
   return s;
 }
-function pickCommons(d, card){                        // bester Treffer der Commons-Suche
+function pickCommons(d, card, artOut){                // bester Treffer der Commons-Suche; artOut: Sammelliste für Zeichnungen/Belege (Notnagel)
   const pg = (d && d.query && d.query.pages) || null; if(!pg) return null;
   const list = Object.keys(pg).map(k=>pg[k]).sort((a,b)=>(a.index||0)-(b.index||0));
   const ok = [];
@@ -3930,11 +3948,16 @@ function pickCommons(d, card){                        // bester Treffer der Comm
     const file = String(p.title||"").replace(/^File:/i,"").replace(/^Datei:/i,"");
     const ii = p.imageinfo && p.imageinfo[0]; if(!ii || !(ii.thumburl||ii.url)) return;
     if(ii.mime && (!/^image\//i.test(ii.mime) || /djvu/i.test(ii.mime))) return;   // PDF/DjVu-Buchscans: Vorschau = Buchdeckel
-    if(!usablePhoto(file) || looksIllustration(file) || looksDamage(file) || fileMentionsOther(file, card)) return;
+    if(!usablePhoto(file) || looksDamage(file) || fileMentionsOther(file, card)) return;
     const meta = ii.extmetadata || null;
-    if(looksArtwork(meta)) return;                   // Tafel/Herbarbeleg/Buchscan laut Kategorien oder Urheber – auch bei harmlosem Dateinamen
-    ok.push({ thumb: ii.thumburl || ii.url, file, i, w: ii.width||0, sc: commonsScore(file, card), credit: metaCredit(meta),
-              url: ii.descriptionurl || ("https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(file)) });
+    const cand = { thumb: ii.thumburl || ii.url, file, i, w: ii.width||0, sc: commonsScore(file, card), credit: metaCredit(meta),
+              url: ii.descriptionurl || ("https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(file)) };
+    if(looksIllustration(file) || looksArtwork(meta)){   // kein Foto (Tafel/Herbarbeleg laut Dateiname, Kategorien oder Urheber)
+      const kind = artKind(file, meta);              // → höchstens Notnagel; Karten/Scans/Etiketten gar nicht
+      if(kind && artOut) artOut.push(Object.assign(cand, { kind, src:"cm", title: norm(card.g+" "+card.a) }));
+      return;
+    }
+    ok.push(cand);
   });
   if(!ok.length) return null;
   ok.sort((a,b)=> b.sc-a.sc || a.i-b.i);              // Gleichstand → der zuerst gelistete (Relevanz der Suche)
@@ -3948,8 +3971,24 @@ function pickCommons(d, card){                        // bester Treffer der Comm
            galInfo: take.map(o=>Object.assign({ file:o.file, url:o.url, w:o.w }, o.credit||{})) },   // Datei + Nachweis + Originalbreite je Ansicht
          best.credit||{});   // + artist/license → Bildnachweis ohne zweiten Abruf
 }
-async function wikiPhoto(card){                        // → {thumb,title,file,url,src,artist?,license?,tmp?} | null
+/* Notnagel wählen: Zeichnung/Tafel vor Herbarbeleg; darunter das Artikelbild der Wikipedia
+   (von Menschen als Artbild gewählt) vor Commons-Funden, dann Dateien, die die Art nennen;
+   dieselbe Datei kann über mehrere Wege kommen (Synonym) → nur einmal. Die übrigen werden
+   zur Galerie wie bei Fotos. */
+function bestArt(list){
+  const seen = new Set();
+  list = list.filter(o=>{ const k=String(o.file||o.thumb).replace(/_/g," ").toLowerCase(); if(seen.has(k)) return false; seen.add(k); return true; });
+  const rank = o => o.kind==="zeichnung" ? 2 : 1;
+  list.sort((a,b)=> rank(b)-rank(a) || (b.wp?1:0)-(a.wp?1:0) || (b.sc||0)-(a.sc||0) || (a.i||0)-(b.i||0));
+  const best = list[0], take = list.slice(0,6);
+  return Object.assign({ thumb: best.thumb, file: best.file, title: best.title, url: best.url, src: best.src, art: best.kind,
+           gal: take.map(o=>o.thumb), top: 1,
+           galInfo: take.map(o=>Object.assign({ file:o.file, url:o.url, w:o.w||0 }, o.credit||{})) },
+         best.credit||{});
+}
+async function wikiPhoto(card){                        // → {thumb,title,file,url,src,art?,artist?,license?,tmp?} | null
   let answered = false, fehler = 0;
+  const art = [], metaMemo = new Map();               // art: Zeichnungen/Belege als Notnagel; metaMemo: dieselbe Datei nur einmal abfragen
   const kind = cultivarKind(card.a), sub = (infraEpithet(card.a) || cultivarName(card.a)).toLowerCase();
   const strict = (kind==="infra" || kind==="cv") && !artLevelOk(card);   // Artbild für diese Karte NICHT zulässig
   // Kam ein FEINERER Suchweg nicht durch (Zeitüberschreitung, Ratenlimit) und ein gröberer
@@ -3959,7 +3998,7 @@ async function wikiPhoto(card){                        // → {thumb,title,file,
   for(const st of photoSteps(card)){
     try{
       if(st.k==="cm"){
-        const hit = pickCommons(await commonsQuery(st.q), card);
+        const hit = pickCommons(await commonsQuery(st.q), card, art);
         answered = true;
         if(hit) return mark(hit);
       }else{
@@ -3970,13 +4009,17 @@ async function wikiPhoto(card){                        // → {thumb,title,file,
         // Sorte gesucht, aber auf dem Art-Artikel gelandet? Nur zulässig, wenn das Artbild für diese Karte erlaubt ist.
         if(strict && ((p.title||"")+" "+(p.extract||"")).toLowerCase().indexOf(sub) < 0) continue;
         const file = p.pageimage || "";
-        if(!usablePhoto(file) || looksIllustration(file) || looksDamage(file) || fileMentionsOther(file, card)) continue;
-        // Metadaten der Datei: Tafel/Herbarbeleg/Buchscan laut Kategorien oder Urheber? → nächster Weg.
-        // (Kein Notnagel mehr für Zeichnungen – lieber kein Bild als eine Tafel mit aufgedrucktem Namen.)
-        const fm = file ? await fileMeta(file) : null;
-        if(fm && (fm.art || (fm.mime && !/^image\//i.test(fm.mime)))) continue;
+        if(!usablePhoto(file) || looksDamage(file) || fileMentionsOther(file, card)) continue;
         const hit = { thumb:p.thumbnail.source, title:p.title, file, src:"wp",
                       url:"https://de.wikipedia.org/wiki/"+encodeURIComponent(String(p.title).replace(/ /g,"_")) };
+        const vormerken = (kind, credit) => { if(kind) art.push(Object.assign({}, hit, { kind, wp:true, credit:credit||null, i:art.length, sc:commonsScore(file, card) })); };
+        // Zeichnung laut Dateiname (Köhler, »Illustration …«)? → Notnagel vormerken, ohne Metadaten-Abruf (Nachweis kommt nach der Antwort)
+        if(looksIllustration(file)){ vormerken(artKind(file, null), null); continue; }
+        // Metadaten der Datei: Tafel/Herbarbeleg laut Kategorien oder Urheber? → Notnagel vormerken, nächster Weg (Buchscan/PDF: gar nicht)
+        if(file && !metaMemo.has(file)) metaMemo.set(file, await fileMeta(file));
+        const fm = file ? metaMemo.get(file) : null;
+        if(fm && fm.mime && !/^image\//i.test(fm.mime)) continue;
+        if(fm && fm.art){ vormerken(fm.kind, fm.credit); continue; }
         if(fm && fm.credit) Object.assign(hit, fm.credit);         // Bildnachweis liegt damit schon vor
         return mark(hit);
       }
@@ -3986,8 +4029,11 @@ async function wikiPhoto(card){                        // → {thumb,title,file,
   // hatte einen Treffer. Kam auch nur ein Weg nicht durch (Zeitüberschreitung,
   // Funkloch), ist das ein Verbindungsproblem – sonst gilt die Art fälschlich als
   // bildlos und der Bilder-Quiz fiele wegen einer schwachen Leitung zurück.
+  // Kein Foto auf keinem Weg: lieber eine Zeichnung als gar kein Bild (Rückmeldung). Kam ein Weg nicht
+  // durch, gilt sie nur für diese Sitzung (tmp) – beim nächsten Start wird erneut nach einem Foto gesucht.
+  if(art.length) return mark(bestArt(art));
   if(!answered || fehler) throw new Error("network");
-  return null;                                         // beantwortet, aber ohne passendes Bild
+  return null;                                         // beantwortet, aber ohne passendes Bild – nicht einmal eine Zeichnung
 }
 let photoSource = wikiPhoto;                           // austauschbar (Tests laufen ohne Netz)
 /* »Kein Bild« gilt nur für DIESE Sitzung. Früher wurde ein Fehlversuch dauerhaft
@@ -3996,12 +4042,17 @@ let photoSource = wikiPhoto;                           // austauschbar (Tests la
    auf eine Quizfrage zurück. Jetzt bekommt jede solche Art bei jedem neuen Start
    einen frischen Versuch; gefundene Bilder bleiben wie bisher dauerhaft gemerkt. */
 const photoTried = new Set(), photoTmp = new Map();  // photoTmp: Treffer, bei denen ein feinerer Suchweg nicht durchkam – nur für diese Sitzung
+const ART_TTL = 30*86400e3;                            // gemerkte Zeichnung: nach 30 Tagen erneut nach einem Foto suchen (Commons wächst)
 async function photoFor(card){
   const known = photoStoreLoad()[card.key];
-  if(known) return known;                              // gemerktes Bild – sofort da
+  const alt = !!(known && known.art && Date.now() - (known.t||0) > ART_TTL);   // Notnagel gealtert → neue Suche, die alte bleibt als Rückfall
+  if(known && !alt) return known;                      // gemerktes Bild – sofort da
   if(photoTmp.has(card.key)) return photoTmp.get(card.key);
-  if(photoTried.has(card.key)) return null;            // in dieser Sitzung schon erfolglos gesucht
-  const p = await photoSource(card);                   // wirft bei Netzfehler (dann KEIN Merken → später erneut)
+  if(photoTried.has(card.key)) return known || null;   // in dieser Sitzung schon erfolglos gesucht
+  let p;
+  try{ p = await photoSource(card); }                  // wirft bei Netzfehler (dann KEIN Merken → später erneut)
+  catch(e){ if(known){ photoTried.add(card.key); return known; } throw e; }   // alte Zeichnung bleibt, solange die neue Suche nicht durchkommt
+  if(p && p.art) p.t = Date.now();
   if(p && p.tmp){ photoTmp.set(card.key, p); return p; }   // nicht dauerhaft merken: beim nächsten Start wird wieder fein gesucht
   photoRemember(card.key, p);
   if(!p) photoTried.add(card.key);
@@ -4079,7 +4130,7 @@ function photoVariant(p, card){
    zweiter Abruf). Netzfehler schluckt wikiGallery ([]) – dann nächste Sitzung erneut. */
 const photoMoreTried = new Set();
 async function photoMoreViews(p, card){
-  if(!p || p.src!=="wp" || !p.title || (p.gal && p.gal.length>1)) return p;
+  if(!p || p.art || p.src!=="wp" || !p.title || (p.gal && p.gal.length>1)) return p;   // Notnagel-Zeichnung: keine Foto-Nachsuche
   if(photoSeenGet(card.key)==null || photoMoreTried.has(card.key)) return p;   // erste Begegnung: Artikelbild reicht
   photoMoreTried.add(card.key);
   let list = [];
@@ -4095,7 +4146,7 @@ async function photoMoreViews(p, card){
 }
 function photoGalLoader(p){
   if(!p || p.src!=="wp" || !p.title) return null;
-  return ()=>wikiGallery(p.title, true, 640).then(l=>l.map(it=>({ src:it.src, label:"Weiteres Bild der gesuchten Pflanze", w:it.w, id:it.file })));
+  return ()=>wikiGallery(p.title, !p.art, 640).then(l=>l.map(it=>({ src:it.src, label:(p.art?"Weitere Abbildung":"Weiteres Bild")+" der gesuchten Pflanze", w:it.w, id:it.file })));   // Notnagel: auch die übrigen Zeichnungen des Artikels
 }
 /* ---------- Bild lädt nicht: nicht aufgeben ----------
    Alle Ansichten einer Art, jede über beide Wikimedia-Hosts (siehe hostAlt); die zweite
@@ -4196,9 +4247,9 @@ async function renderPhoto(){
     if(deferPhotoCard()) return nextCard();
     // Eine ganze Runde ohne ein einziges Bild – jetzt ehrlich fragen statt still
     // den Modus zu wechseln. Der Wechsel passiert nur auf Knopfdruck.
-    photoNotice(`<b>Zu diesen Arten finde ich gerade keine Fotos.</b> Das liegt meist an der Verbindung;
-      zu wenigen Arten gibt es auch schlicht kein brauchbares Foto – Zeichnungen, Herbarbelege und
-      Buchscans zeige ich bewusst nicht.
+    photoNotice(`<b>Zu diesen Arten finde ich gerade kein Bild.</b> Das liegt meist an der Verbindung;
+      zu wenigen Arten gibt es auf Wikimedia Commons auch schlicht weder ein Foto noch eine Zeichnung
+      (Buchscans, Karten und Diagramme zeige ich nicht).
       <div class="ph-actions"><button class="btn primary" id="phRetry">Nochmal versuchen</button>
       <button class="btn ghost" id="phQuiz">Ohne Bilder weiterlernen</button></div>`);
     $("#phRetry").onclick=()=>{ sess.photoDefer=0; renderPhoto(); };
@@ -4210,8 +4261,10 @@ async function renderPhoto(){
   if(stale()) return;
   p = photoVariant(p, c);                              // nicht immer dasselbe Bild zuerst (merkt sich die letzte Ansicht)
   const gal = photoGalList(p), viele = gal.length>1;
+  const artLabel = p.art==="herbar" ? "Herbarbeleg" : "Zeichnung";   // Notnagel: kein Foto auf Commons – gekennzeichnet, Name bleibt geheim
   $("#stage").querySelector(".photobox").innerHTML =
-    `<div class="ph-wrap"><img class="ph-img" id="phImg" src="${esc(p.thumb)}" alt="Bild der gesuchten Pflanze">`+
+    `<div class="ph-wrap"><img class="ph-img" id="phImg" src="${esc(p.thumb)}" alt="${p.art ? artLabel : "Bild"} der gesuchten Pflanze">`+
+    (p.art ? `<span class="ph-kind" title="Zu dieser Art gibt es auf Wikimedia Commons kein Foto – ersatzweise ${p.art==="herbar" ? "ein Herbarbeleg" : "eine Zeichnung"}. Ein aufgedruckter Name kann die Lösung verraten.">${artLabel} · kein Foto verfügbar</span>` : "")+
     (viele ? `<span class="ph-more">${gal.length} Bilder</span>` : "")+`</div>`;
   const img=$("#phImg");
   // Lädt die Datei selbst nicht (Funkloch, Zeitüberschreitung, HTTP 429 am Thumbnail-
@@ -4366,7 +4419,7 @@ function prefetchPhoto(){
   for(const nx of [queue[qi+1], queue[qi+2]]){
     if(!nx) continue;
     const known = photoStoreLoad()[nx.key];
-    if(known && known.src==="wp") photoMoreViews(known, nx).catch(()=>{});          // weitere Ansichten schon vorab
+    if(known && known.src==="wp" && !known.art) photoMoreViews(known, nx).catch(()=>{});   // weitere Ansichten schon vorab
     else if(!known && !photoTried.has(nx.key)) photoFor(nx).catch(()=>{});
   }
 }
@@ -5040,6 +5093,7 @@ window.cultivarName=cultivarName;       // für Tests: Sorten-Erkennung, Artbild
 window.cultivarKind=cultivarKind;
 window.descriptiveCultivar=descriptiveCultivar;
 window.looksArtwork=looksArtwork;
+window.artKind=artKind; window.bestArt=bestArt;   // Notnagel-Zeichnung (für Tests)
 window.binomEpithet=binomEpithet;
 window.clean=clean;
 window.checkTyped=checkTyped;
