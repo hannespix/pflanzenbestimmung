@@ -2822,6 +2822,62 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Link-Bit, `gradeOf`-Kette), `tests/smoke.mjs` (kein Schalter, Dunkelpalette per Media-Query,
       Rechtliches ohne `pbw.theme`). Screenshots (390 px hell/dunkel, Probeprüfung-Abschluss) verifiziert.
 
+- [x] **Rückmeldung aus dem Unterricht: »ssp.« = »subsp.«, Fokus-Layout, Probeprüfung »nur ZP«**
+      (Screenshot einer Lehrerin aus der Probeprüfung: »sanguinea ssp. sanguinea« wurde mit »≈«
+      als Schreibfehler gewertet – halbe Punkte –, obwohl *ssp.* und *subsp.* beide zulässige
+      Abkürzungen der Unterart sind; im selben Screenshot lagen Bildnachweis und »Weiter«-Knopf
+      über der langen Rückmeldung; dazu der bestätigte Vorschlag »Probeprüfung nur mit ZP-Arten
+      direkt am Knopf«). **(1) Rang-Kürzel gleichwertig** (`RANK_ALIAS` in `clean()`, `learn.js`):
+      ssp./subspecies/supsp. → subsp., forma → f., varietas/variety → var., sectio/sec. → sect.,
+      convariety → convar., cultivar → cv. – nur ganze Wörter, nie Namen. Da jede Eingabeprüfung
+      (`closeEnough`, `fieldOk`, `fieldJudge`, `checkTyped`, `judgeTyped`) über `clean()` läuft,
+      gilt die Gleichsetzung überall; `judgeTyped.exact` wird damit wahr → »Richtig!« ohne
+      Schreibweise-Hinweis, volle Punkte. Ohne Kürzel (»sanguinea sanguinea«) bleibt es »fast«.
+      **(2) Fokus-Modus** (`learn.html`): das Overlay ist eine Flex-Spalte mit fester Höhe
+      (100dvh); passte der Inhalt nicht hinein, stauchte der Browser `.feedback` (eigene
+      `min-height`, daher schrumpfbar) – nachgestellt bei 390×844: 135 px nötig, 83 px bekommen,
+      der Rest lief über `.ph-srcslot` und `#nav`. Jetzt `flex-shrink:0` auf allen Kindern
+      (`body.stagefull #stage>*`), das Overlay scrollt stattdessen. **(3) Segment »nur ZP«** am
+      Probeprüfungs-Knopf (`.gosplit`/`#examSplit`, `#btnExamZp`; kein dritter großer Knopf –
+      der Start bleibt ruhig): `startProbe({zp:true})` zieht nur `c.zp` (gleicher Umfang 20/15),
+      `sess.probeZp` → Abschluss »(nur ZP-Arten)«, »Neue Probeprüfung« behält den Umfang,
+      Duell-Nachricht/Banner nennen ihn (Link-Bit `CH_PROBE_ZP = 64` im Zusatzbyte der geführten
+      Lektion; ältere Leser ignorieren es). `renderProgress` blendet das Segment aus, wenn die
+      Liste keine ZP-Arten führt (Stauden-G/FW, Obstbau-G, Friedhof-FW; Hauptknopf bekommt über
+      `solo` wieder runde Ecken) oder die Option »nur ZP-relevant« ohnehin gilt (Unterzeile sagt
+      dann »· nur ZP-Arten«). Hilfe (»Selbst eingeben«, »Probeprüfung«) und README ergänzt.
+      `tests/learn.mjs`: Rang-Kürzel (fieldOk/fieldJudge/judgeTyped/clean, forma/varietas/supsp.,
+      ohne Kürzel = fast, deutsche Namen unberührt) + derselbe Fall in der Oberfläche (✓, 4/4,
+      »Richtig!«); Fokus-Guard bei 390×844 mit langer Rückmeldung (nicht gestaucht, Bildnachweis
+      und »Weiter« darunter, Overlay scrollt); Segment (Rundung, 20 ZP-Arten, Abschluss/Link/
+      Nachricht, Neustart, Option, Staudengärtnerei ohne Segment). **Testharnisch dabei
+      gehärtet:** Ein `page.setViewport` mit geändertem `isMobile`/`hasTouch` lädt die Seite in
+      Puppeteer **neu** – der per `page.evaluate` gesetzte Offline-Stub für `jsonp` war danach weg,
+      und alle folgenden Blöcke fragten **live** bei Commons/Wikipedia an (bei HTTP 429 = neun
+      Konsolenfehler, der Lauf rot). Der Fokus-Guard wechselt deshalb nur Breite/Höhe, und der
+      Stub wird jetzt in `evaluateOnNewDocument` je Dokument beim `DOMContentLoaded` neu gesetzt
+      (überlebt auch den Reload des Persistenz-Tests und den 360-px-Block). Diagnose-Rezept: Kopie
+      des Tests mit `page.on("request")`-Logger + `BLOCK`-Marker je `page.evaluate`-Block.
+      Zweite Lehre: Ein Block, der `startSession` nutzt, wählt seinen Modus-Tab **selbst** – der
+      Modus ist globaler Zustand, und ein später eingefügter Block davor (hier der Zähl-Test im
+      Quiz) ließ die Eingabe-Blöcke sonst stumm im falschen Modus starten (kein `#chk`).
+      **(4) Zählung beim Beenden** (zweiter Screenshot derselben Lehrerin: Probeprüfungs-
+      Herausforderung nach zwei von zwanzig Pflanzen beendet → »1 Karten gelernt · 2 richtig von
+      1 bewerteten (200 %)« und »Du hast gewonnen!« gegen 20/20): Treffer zählten beim Antworten
+      (`sess.correct++`), »gelernt«/»bewertet« erst in `advance()` beim Klick auf »Weiter« – wer
+      nach der Antwort »beenden« drückte, hatte einen Treffer mehr als Karten. Jetzt setzen die
+      drei Antwort-Handler (Quiz/Eingeben/Bild) `sess.answered`, `advance()` löscht es, und
+      `finishSession` zählt eine offene beantwortete Karte wie ein Weitergehen (`done`/`scored`/
+      `qi`, ohne die nächste zu zeigen; war es die letzte, gilt die Lektion als geschafft). Ein
+      **Duell-Urteil** (gewonnen/verloren/Zeit) gibt es nur noch, wenn **beide** alle Karten
+      gespielt haben: eigener Abbruch → »Nach N von M Karten beendet – ein Vergleich zählt erst,
+      wenn du alle Karten gespielt hast«; Herausforderer unvollständig (`ch.t` < Soll aus den
+      Übungsformen `ch.f` ohne Karteikarten, sonst `ch.i.length`) → »X hat nur N von M Karten
+      gespielt – kein Vergleich möglich«; keine Feier. Teilen bleibt wie bisher möglich.
+      `tests/learn.mjs`: Quiz antworten + beenden (1 von 1, 100 %), der Screenshot-Fall als
+      Herausforderung (2 von 20, 100 % 2/2, »beendet«, kein Sieg, keine Note), unvollständiger
+      Herausforderer, vollständiges Duell bleibt ein Sieg, letzte Karte + beenden = geschafft.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.

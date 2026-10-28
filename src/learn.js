@@ -976,9 +976,18 @@ function lev(a,b){ a=a||""; b=b||""; const m=a.length,n=b.length; if(!m)return n
    freistehendes x): ob jemand »Petunia × atkinsiana« oder »Petunia atkinsiana«
    schreibt, ist keine Frage der Pflanzenkenntnis. (Realfall: »x „Bristol Ruby“« gab
    Abzug, weil die Anführungszeichen und das x als Teil des Namens verglichen wurden.) */
+/* Rang-Kürzel sind gleichwertig: »ssp.« und »subsp.« sind beide zulässige Abkürzungen der
+   Unterart (Rückmeldung einer Lehrerin: »sanguinea ssp. sanguinea« galt als Schreibfehler mit
+   halben Punkten, weil die Liste »subsp.« schreibt). Ebenso forma/f., varietas/var.,
+   sectio/sect., convariety/convar.; die Quell-Tippfehler »supsp.«/»sec.« lesen sich wie die
+   richtige Form. Nur Kürzel werden vereinheitlicht, nie Namen – und nur als ganze Wörter. */
+const RANK_ALIAS = { ssp:"subsp", subspecies:"subsp", supsp:"subsp", forma:"f", varietas:"var", variety:"var",
+                     convariety:"convar", cultivar:"cv", sec:"sect", sectio:"sect", section:"sect" };
+const RANK_ALIAS_RE = new RegExp("\\b("+Object.keys(RANK_ALIAS).join("|")+")\\b", "g");
 const clean = s => norm(s).toLowerCase().replace(/×/g," ").replace(/[.,;:’'`´‘‚“”„"«»()\[\]ˋˊ′‵ʹʻʼʽ]/g," ")
   .replace(/(^|\s)x(?=\s|$)/g," ")
   .replace(/\bin sorten\b|\bsorten?\b/g," ")                     // Platzhalter »'Sorte'« / »in Sorten« zählt nicht (Salvia nemorosa 'Sorte' = Salvia nemorosa)
+  .replace(RANK_ALIAS_RE, m=>RANK_ALIAS[m])                      // ssp. = subsp., forma = f. … (Rang-Kürzel, s. o.)
   .replace(/\s+/g," ").trim();
 /* Wie viel Tippfehler zählt noch als »richtig«?
    Früher waren zwei Zeichen erlaubt – damit ging »Bollensellerie« als
@@ -1242,7 +1251,14 @@ function renderProgress(){
   const gh=$("#goHint");
   if(gh) gh.textContent = p.length ? `${due} Karten heute dran · jede als Bild` : "Keine Arten in der aktuellen Auswahl.";
   const ex=$("#btnExam"), eh=$("#examHint");
-  if(ex){ ex.disabled = !allCards.length; if(eh) eh.textContent = `${probeCount()} Pflanzen am Bild · alle Felder des Bogens · Note`; }
+  const zpOpt = !!($("#onlyzp") && $("#onlyzp").checked), hasZp = allCards.some(c=>c.zp);
+  if(ex){ ex.disabled = !allCards.length; if(eh) eh.textContent = `${probeCount()} Pflanzen am Bild · alle Felder des Bogens · Note${zpOpt?" · nur ZP-Arten":""}`; }
+  // Segment »nur ZP«: nur wenn die Liste ZP-Arten führt (Stauden, Obstbau-Gärtner und Friedhof-
+  // Fachwerker haben keine) und die Option »nur ZP-relevant« nicht ohnehin gilt – dann zieht der
+  // Hauptknopf bereits nur ZP-Arten. Ohne Segment bekommt der Hauptknopf wieder runde Ecken (solo).
+  const zb=$("#btnExamZp"), sp=$("#examSplit");
+  if(zb) zb.hidden = !hasZp || zpOpt;
+  if(sp) sp.classList.toggle("solo", !zb || zb.hidden);
 }
 
 /* ---------- Kleine Belohnung: Feuerwerk + Haptik bei einem Treffer ----------
@@ -1374,6 +1390,9 @@ const CH_PHOTO_ONLY = 16;
    zweite Chance, Note am Ende). Ältere Leser ignorieren das Bit und spielen die Karten als geführte
    Lektion – dieselbe Aufgabe, nur ohne Notenzeile. */
 const CH_PROBE = 32;
+/* Bit 6: die Probeprüfung zog nur ZP-relevante Arten (»nur ZP«-Segment am Knopf). Dient nur der
+   Beschriftung von Banner und Nachricht – die Karten selbst stehen ohnehin im Link. */
+const CH_PROBE_ZP = 64;
 const CH_VER   = 3;
 
 function vPut(out, n){                     // Varint: kleine Zahlen = ein Byte
@@ -1414,7 +1433,7 @@ function chEncode(o){
   // Antwortart gehört zur Aufgabe; bei der geführten Lektion zusätzlich die
   // Bild-Richtung (sie hat ja Bild- UND Textkarten) – beides in einem Byte.
   if(o.m==="photo") out.push(Math.max(0, CH_PHA.indexOf(o.a||"mc")));
-  else if(o.m==="guided") out.push((o.po ? CH_PHOTO_ONLY : 0) | (o.pr ? CH_PROBE : 0) | (Math.max(0, CH_PHA.indexOf(o.a||"mc"))<<2) | Math.max(0, DIRS_PHOTO.indexOf(o.rp||"img2bot")));
+  else if(o.m==="guided") out.push((o.po ? CH_PHOTO_ONLY : 0) | (o.pr ? CH_PROBE : 0) | (o.pz ? CH_PROBE_ZP : 0) | (Math.max(0, CH_PHA.indexOf(o.a||"mc"))<<2) | Math.max(0, DIRS_PHOTO.indexOf(o.rp||"img2bot")));
   const idx = o.i||[];
   vPut(out, idx.length); idx.forEach(n=>vPut(out,n));
   if(o.m==="guided"){                                   // Übungsform je Karte, 4 Karten pro Byte
@@ -1445,9 +1464,9 @@ function chDecode(s){
         if(pi===15){ const len=vGet(raw,st); let t=""; for(let k=0;k<len;k++) t+=String.fromCharCode(raw[st.i++]); p=decodeURIComponent(escape(t)); }
         else p = CH_PROFILES[pi] || "";
         const m = CH_MODES[(head>>>2)&3] || "quiz";
-        let a = "mc", rp = "img2bot", po = false, pr = false;
+        let a = "mc", rp = "img2bot", po = false, pr = false, pz = false;
         if(ver===3 && m==="photo") a = CH_PHA[raw[st.i++]] || "mc";
-        else if(ver===3 && m==="guided"){ const b=raw[st.i++]; a = CH_PHA[(b>>>2)&3]||"mc"; rp = DIRS_PHOTO[b&3]||"img2bot"; po = !!(b & CH_PHOTO_ONLY); pr = !!(b & CH_PROBE); }
+        else if(ver===3 && m==="guided"){ const b=raw[st.i++]; a = CH_PHA[(b>>>2)&3]||"mc"; rp = DIRS_PHOTO[b&3]||"img2bot"; po = !!(b & CH_PHOTO_ONLY); pr = !!(b & CH_PROBE); pz = !!(b & CH_PROBE_ZP); }
         const cnt=vGet(raw,st), i=[];
         for(let k=0;k<cnt;k++) i.push(vGet(raw,st));
         let f = null;
@@ -1461,7 +1480,7 @@ function chDecode(s){
         for(let k=0;k<nl;k++) nm += String.fromCharCode(raw[st.i++]);
         const dirs = CH_DIR3[m] || DIRS_TEXT;
         const r = ver===3 ? (dirs[head&3] || dirs[0]) : (CH_DIRS[head&3] || "de2bot");
-        const o = { v:ver, p, m, r, a, rp, po, pr, f, i, s:sc, t, z, n:decodeURIComponent(escape(nm)) };
+        const o = { v:ver, p, m, r, a, rp, po, pr, pz, f, i, s:sc, t, z, n:decodeURIComponent(escape(nm)) };
         return chPlausible(o) ? o : null;
       }
     }
@@ -1492,7 +1511,7 @@ function challengeURL(){                  // aktuelle Sitzung als Herausforderun
   // Die geführte Lektion wird als eigener Modus geteilt: die Übungsform je Karte
   // fährt mit, gezählt wird über die BEWERTETEN Karten (Karteikarten geben keine Quote).
   const payload = { v:CH_VER, p:profileId, m: auto ? "guided" : mode,
-                    r: auto ? dirText : curDir(), a: sess.ans || chAns || "mc", rp: dirPhoto, po: auto && !!sess.photoOnly, pr: !!sess.probe,
+                    r: auto ? dirText : curDir(), a: sess.ans || chAns || "mc", rp: dirPhoto, po: auto && !!sess.photoOnly, pr: !!sess.probe, pz: !!sess.probeZp,
                     f: auto ? (sess.cards||[]).map(c=>(sess.formOf&&sess.formOf.get(c))||"quiz") : null,
                     i:idx, s:sess.correct, t: auto ? (sess.scored||0) : sess.done,
                     z:Math.round((sess.ms||0)/1000), n:duelName() };
@@ -1504,7 +1523,7 @@ function chModeLabel(m){
 function duelMessage(url){
   const who = duelName().trim();
   const auto = !!sess.auto;
-  const modeLabel = sess.probe ? "Probeprüfung" : chModeLabel(auto ? "guided" : mode);
+  const modeLabel = sess.probe ? "Probeprüfung"+(sess.probeZp?" · nur ZP-Arten":"") : chModeLabel(auto ? "guided" : mode);
   const fr = frNameOf(profileId);
   const zeit = sess.ms ? ` in ${fmtDur(sess.ms)} min` : "";
   const von = auto ? (sess.scored||0) : sess.done;
@@ -1556,7 +1575,7 @@ function showChallengeBanner(ch){
   const b=$("#duelBanner"); if(!b) return;
   const who=(ch.n||"").trim();
   const theirAcc = ch.t ? Math.round(ch.s/ch.t*100) : 0;
-  const modeLabel = ch.pr ? "Probeprüfung" : chModeLabel(ch.m);
+  const modeLabel = ch.pr ? "Probeprüfung"+(ch.pz?" · nur ZP-Arten":"") : chModeLabel(ch.m);
   // Aufgabenstellung mit ansagen – gefragt ist genau dasselbe wie beim Herausforderer
   const wie = ch.pr ? "jede Pflanze als Bild · alle Felder des Bogens" : ch.m==="guided" ? (ch.po ? "mit Bildern, Antwort nach Lernstand" : "gemischte Übungsformen")
             : ch.m==="photo" && ch.a==="exam" ? "wie in der Prüfung"
@@ -1594,7 +1613,7 @@ function startChallenge(){                // genau die Karten der Herausforderun
   if(ch.m==="guided" && Array.isArray(ch.f) && ch.f.length===cards.length){
     const formOf = new Map();
     cards.forEach((c,k)=>formOf.set(c, ch.f[k]));
-    sess.auto = true; sess.scored = 0; sess.formOf = formOf; sess.modeBefore = mode; sess.photoOnly = !!ch.po; sess.probe = !!ch.pr;
+    sess.auto = true; sess.scored = 0; sess.formOf = formOf; sess.modeBefore = mode; sess.photoOnly = !!ch.po; sess.probe = !!ch.pr; sess.probeZp = !!ch.pz;
   }
   clockRun(true); stageFull(true);
   nextCard();
@@ -1666,21 +1685,23 @@ function startGuided(){
    linearen Schlüssel Baden-Württembergs (1 ≥ 90 % · 2 ≥ 70 · 3 ≥ 50 · 4 ≥ 30 · 5 ≥ 10 · sonst 6 –
    derselbe Standard wie im Prüfungswerkzeug). Technisch eine geführte Sitzung, deren Form für jede
    Karte »photoExam« ist (sess.probe = true); so zählt sie in den Lernstand und ist über den
-   Duell-Link teilbar (CH_PROBE). */
+   Duell-Link teilbar (CH_PROBE). Das Segment »nur ZP« am Knopf ruft startProbe({zp:true}) auf:
+   dieselbe Prüfung, gezogen nur aus den für die Zwischenprüfung markierten Arten (sess.probeZp –
+   »Neue Probeprüfung« behält den Umfang, Banner/Nachricht nennen ihn, Link-Bit CH_PROBE_ZP). */
 const GRADE_EDGES = [90,70,50,30,10];            // Prozent-Untergrenzen der Noten 1..5 (Baden-Württemberg, linear)
 function gradeOf(pct){ for(let i=0;i<GRADE_EDGES.length;i++){ if(pct>=GRADE_EDGES[i]) return i+1; } return 6; }
 function probeCount(){ return isFachwerker() ? 15 : 20; }   // Pflanzen je Bogen (Fachwerker/in 15, Gärtner/in 20)
-function startProbe(){
+function startProbe(o){                            // o.zp: nur ZP-relevante Arten (Segment »nur ZP«); sonst gilt die Option »nur ZP-relevant«
   endChallengeOverride();
   if(navigator.onLine===false){ toast("Für die Probeprüfung brauchst du Internet – jede Pflanze kommt als Bild.", true); return; }
-  const zp = $("#onlyzp") && $("#onlyzp").checked;
+  const zp = !!(o && o.zp) || !!($("#onlyzp") && $("#onlyzp").checked);
   const p = allCards.filter(c=>!zp||c.zp); shuffle(p);
   const q = p.slice(0, Math.min(probeCount(), p.length));
-  if(!q.length){ toast("Keine Arten in dieser Liste", true); return; }
+  if(!q.length){ toast(zp ? "Keine ZP-relevanten Arten in dieser Liste" : "Keine Arten in dieser Liste", true); return; }
   const formOf = new Map(); q.forEach(c=>formOf.set(c, "photoExam"));
   queue=q; qi=0; photoMisses=0; qStart=0;
   sess = { id:++sessSeq, total:q.length, done:0, correct:0, scored:0, ms:0, pts:null, active:true, baseMode:mode,
-           cards:q.slice(), challenge:null, auto:true, formOf, modeBefore:mode, photoOnly:true, probe:true };
+           cards:q.slice(), challenge:null, auto:true, formOf, modeBefore:mode, photoOnly:true, probe:true, probeZp:zp };
   clockRun(true); stageFull(true);
   nextCard();
 }
@@ -1746,7 +1767,7 @@ function nextCard(){
   showGuidedNote();                    // geführte Lektion: Lernstand + Übungsform ansagen
   const stop=$("#btnStop"); if(stop) stop.onclick=finishSession;
 }
-function advance(){ if(sess.auto && mode!=="cards") sess.scored=(sess.scored||0)+1; qi++; sess.done++; nextCard(); }
+function advance(){ sess.answered=false; if(sess.auto && mode!=="cards") sess.scored=(sess.scored||0)+1; qi++; sess.done++; nextCard(); }
 function requeueCurrent(){ // "Nochmal"/falsch: Karte in dieser Sitzung später erneut zeigen
   if(sess.probe) return;                        // Probeprüfung: keine zweite Chance – wie am Prüfungstag
   const pos = Math.min(queue.length, qi + 3 + Math.floor(Math.random()*3)); // 3–5 Karten später
@@ -1758,6 +1779,12 @@ function exitSession(){ stageFull(false); startHintOnly(); try{ window.scrollTo(
 function finishSession(){
   clockStop(); clockRun(false); phWaitStop();   // Fokus-Overlay bleibt an: Ergebnis + Teilen im Vollbild
   sess.active=false;
+  // Beantwortet, aber noch nicht auf »Weiter« gedrückt: Treffer zählten bisher beim Antworten,
+  // »bewertet«/»gelernt« erst beim Weitergehen – wer nach der Antwort »beenden« drückte, hatte
+  // einen Treffer mehr als Karten (Screenshot: »2 richtig von 1 bewerteten (200 %)«). Die offene
+  // Karte zählt jetzt wie ein Weitergehen (ohne die nächste zu zeigen); war es die letzte,
+  // gilt die Lektion als geschafft.
+  if(sess.answered){ sess.answered=false; if(sess.auto && mode!=="cards") sess.scored=(sess.scored||0)+1; sess.done++; qi++; }
   const auto = !!sess.auto;
   if(auto && sess.modeBefore) mode = sess.modeBefore;   // Übungsform-Umschaltung der geführten Sitzung zurücknehmen
   const aborted = qi < queue.length;   // vorzeitig über »beenden« verlassen (nicht alle Karten dran)
@@ -1768,7 +1795,7 @@ function finishSession(){
   // Quote fürs Vergleichen und Teilen: bei der geführten Lektion zählen nur die
   // BEWERTETEN Karten – Karteikarten geben keine Trefferquote.
   const accEff = auto ? accS : acc, doneEff = auto ? scoredN : sess.done;
-  const probe = !!sess.probe;
+  const probe = !!sess.probe, probeZp = !!sess.probeZp;   // Probeprüfung (ggf. nur ZP-Arten)
   const probePct = probe && sess.pts && sess.pts.max ? Math.round(sess.pts.sum/sess.pts.max*100) : null;   // Probeprüfung: Prozent der Bogenpunkte
   let extra = "", gewonnen = probe ? (!aborted && probePct!=null && probePct>=70)   // Note 2 oder besser
                            : auto ? (scoredN>0 && accS>=80) : (scoreable() && sess.done>0 && acc>=80);   // ohne Duell: gute Quote reicht
@@ -1776,8 +1803,16 @@ function finishSession(){
     const theirAcc = ch.t ? Math.round(ch.s/ch.t*100) : 0;
     const who = (ch.n||"").trim() || "Herausforderer";
     const mine = sess.ms||0, theirs = (ch.z||0)*1000;   // Zeit entscheidet nur bei gleicher Quote
-    gewonnen = accEff>theirAcc || (accEff===theirAcc && !!mine && !!theirs && mine<theirs);
-    const verdict = accEff>theirAcc ? `<b class="duel-win">Du hast gewonnen!</b>`
+    // Ein Urteil gibt es nur, wenn BEIDE die ganze Lektion gespielt haben – »beenden« nach zwei
+    // von zwanzig Karten gewann sonst mit 100 % gegen 20/20 (Screenshot). Karteikarten zählen
+    // nicht als bewertet, deshalb der Soll-Wert aus den Übungsformen des Links.
+    const nAll = (ch.i||[]).length;
+    const theirMax = (Array.isArray(ch.f) && ch.f.length) ? ch.f.filter(f=>f!=="cards").length : nAll;
+    const theirDone = Number.isFinite(ch.t) && ch.t >= theirMax;
+    gewonnen = !aborted && theirDone && (accEff>theirAcc || (accEff===theirAcc && !!mine && !!theirs && mine<theirs));
+    const verdict = aborted ? `<b>Nach ${Math.min(doneEff, nAll)} von ${nAll} Karten beendet – ein Vergleich zählt erst, wenn du alle Karten gespielt hast.</b>`
+      : !theirDone ? `<b>${esc(who)} hat nur ${ch.t} von ${theirMax} Karten gespielt – kein Vergleich möglich.</b>`
+      : accEff>theirAcc ? `<b class="duel-win">Du hast gewonnen!</b>`
       : accEff<theirAcc ? `<b class="duel-lose">Knapp – ${esc(who)} liegt vorn. Nochmal versuchen?</b>`
       : (mine && theirs && mine<theirs) ? `<b class="duel-win">Gleiche Quote – aber du warst schneller!</b>`
       : (mine && theirs && mine>theirs) ? `<b class="duel-lose">Gleiche Quote – ${esc(who)} war schneller. Revanche?</b>`
@@ -1799,7 +1834,7 @@ function finishSession(){
   stage.innerHTML = `<div class="stage-empty${probe?" probe":""}">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6L9 17l-5-5"/></svg>
     <h2>${probe ? (aborted?"Probeprüfung abgebrochen":"Probeprüfung geschafft") : (aborted?"Sitzung beendet":"Sitzung geschafft")}</h2>
-    <p>${probe ? `${sess.done} von ${sess.total} Pflanzen${scoredN?` · ${sess.correct} ganz richtig`:""}`
+    <p>${probe ? `${sess.done} von ${sess.total} Pflanzen${probeZp?" (nur ZP-Arten)":""}${scoredN?` · ${sess.correct} ganz richtig`:""}`
                : `${sess.done} Karten gelernt${auto ? (scoredN?` · ${sess.correct} richtig von ${scoredN} bewerteten (${accS} %)`:"") : (mode!=="cards"?` · ${sess.correct} richtig (${acc} %)`:"")}`}${sess.pts&&(auto||examScoring())&&!noteHTML?` · <b>${nfmt(sess.pts.sum)} von ${nfmt(sess.pts.max)} Punkten</b>`:""}${(auto?sess.ms:(scoreable()&&sess.ms))?` · Denkzeit ${fmtDur(sess.ms)}`:""}.</p>
     ${noteHTML}
     ${(sess.comboMax>=3 && !probe)?`<p class="xpline">Beste Serie: ${sess.comboMax}× richtig in Folge</p>`:""}
@@ -1810,7 +1845,7 @@ function finishSession(){
       <button class="btn ghost" id="btnOverview">Zur Übersicht</button>
     </div></div>`;
   wireShareBlock();
-  const a=$("#againBtn"); if(a) a.onclick = probe ? startProbe : (auto ? startGuided : startSession);
+  const a=$("#againBtn"); if(a) a.onclick = probe ? ()=>startProbe({zp:probeZp}) : (auto ? startGuided : startSession);
   const ov=$("#btnOverview"); if(ov) ov.onclick=exitSession;
   if(gewonnen) celebrate(stage.querySelector("h2"), 2);
   herbCheck();                                 // frisch gemeisterte Themen einmalig feiern
@@ -1904,7 +1939,7 @@ function answerQuiz(btn, chosen, opts){
     if(txt.toLowerCase()===correct.toLowerCase()) b.classList.add("correct");
   });
   if(!ok) btn.classList.add("wrong");
-  grade(c, ok?"good":"again"); if(ok) sess.correct++; else requeueCurrent();
+  grade(c, ok?"good":"again"); if(ok) sess.correct++; else requeueCurrent(); sess.answered=true;
   $("#fb").innerHTML = (ok ? `<span class="good">Richtig!</span>` : `<span class="bad">Leider falsch.</span>`)+
     ` <span class="sol">${solutionLine(c)}</span>` + stepHTML();
   if(ok) celebrate(btn, 1);
@@ -1969,7 +2004,7 @@ function submitType(ins){
   const all = right===ins.length;
   const buch = bookPoints(c, got, max);                          // Punkte gutschreiben (Rest bei der Wiederholung)
   grade(c, all ? "good" : (right||near) ? "hard" : "again");
-  if(all) sess.correct++; else requeueCurrent();
+  if(all) sess.correct++; else requeueCurrent(); sess.answered=true;
   $("#fb").innerHTML = `<span class="sol">${nfmt(got)} von ${nfmt(max)} Punkten`+
     (buch.nach>0 ? ` · <b>+${nfmt(buch.nach)}</b> nachträglich gutgeschrieben` : "")+
     (near&&!all ? ` · <b>≈</b> Schreibfehler zählen halb – schreibst du es gleich fehlerfrei, gibt es den Rest`
@@ -4759,7 +4794,7 @@ function examScoring(){ return mode==="type" || (mode==="photo" && phAns()==="ex
 function finishPhotoAnswer(ok, g, p, solHTML, full){
   clockStop();                                        // gilt für alle drei Antwortarten
   const c=current;
-  grade(c, g); if(ok) sess.correct++; else requeueCurrent();
+  grade(c, g); if(ok) sess.correct++; else requeueCurrent(); sess.answered=true;
   $("#fb").innerHTML = (full ? solHTML                 // Tippen bringt seinen Text schon fertig mit
     : (ok ? `<span class="good">Richtig!</span>`
       : g==="hard" ? `<span class="near">Teilweise richtig.</span>` : `<span class="bad">Leider falsch.</span>`)+" "+solHTML) + stepHTML();
@@ -5236,7 +5271,8 @@ function wire(){
   });
   $("#btnStart").onclick=startSession;
   if($("#btnGo")) $("#btnGo").onclick=startGuided;
-  if($("#btnExam")) $("#btnExam").onclick=startProbe;
+  if($("#btnExam")) $("#btnExam").onclick=()=>startProbe();
+  if($("#btnExamZp")) $("#btnExamZp").onclick=()=>startProbe({zp:true});   // Probeprüfung nur mit ZP-relevanten Arten
   if($("#btnList")) $("#btnList").onclick=()=>{             // Liste rein/raus ohne die Klappe zu öffnen
     const target = mode==="list" ? (lastLearnMode||"photo") : "list";
     if(mode!=="list") lastLearnMode=mode;

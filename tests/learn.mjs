@@ -68,6 +68,12 @@ async function main() {
     // View-Transitions deaktivieren: sie rendern asynchron und würden die
     // synchronen Assertions des Tests unzuverlässig machen (vt()-Fallback).
     window.__noVT = 1;
+    // Kein Netz – auch nach jedem Reload (Persistenz-Test, Viewport-Wechsel mit isMobile lädt in
+    // Puppeteer neu): der Offline-Stub für jsonp wird je Dokument neu gesetzt, sobald das Skript
+    // gelaufen ist. Sonst gingen spätere Blöcke live zu Commons/Wikipedia – und ein HTTP 429 dort
+    // (Ratenbegrenzung) zählte als Konsolenfehler.
+    window.__offlineJsonp = () => Promise.reject(new Error("offline (Test)"));
+    document.addEventListener("DOMContentLoaded", () => { try { if (window.__setJsonp) window.__setJsonp(window.__offlineJsonp); } catch (e) {} });
   });
   const errs = [];
   page.on("pageerror", (e) => errs.push(String(e.message || e)));
@@ -1268,6 +1274,142 @@ async function main() {
     "Probeprüfung: Neustart-Knopf, teilbar, Link trägt das Probe-Bit und nur photoExam-Formen: " + JSON.stringify(probe));
   assert(probe.noten === "1,1,2,2,3,4,5,6,6", "Notenschlüssel linear (BW): 1 ≥ 90 … 5 ≥ 10, sonst 6 – war " + probe.noten);
 
+  // Segment »nur ZP« am Probeprüfungs-Knopf (geteilter Knopf): zieht nur ZP-relevante Arten
+  // (Gemüsebau/Gärtner: 87 von 148), nennt den Umfang am Ende, im Duell-Link (Bit CH_PROBE_ZP) und
+  // in der Nachricht; »Neue Probeprüfung« behält ihn. Gilt die Option »nur ZP-relevant« ohnehin,
+  // verschwindet das Segment (Unterzeile nennt ZP); ohne ZP-Markierung in der Liste
+  // (Staudengärtnerei) fehlt es, und der Hauptknopf bekommt wieder runde Ecken (solo).
+  const zpBtn = await page.evaluate(async (PX) => {
+    __clearPhotoCache(); photoTried.clear();
+    __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g, file: "T.jpg", url: "https://x/y" }));
+    const zb = document.querySelector("#btnExamZp"), sp = document.querySelector("#examSplit"), ex = document.querySelector("#btnExam");
+    const out = { da: !!zb && !zb.hidden && !sp.classList.contains("solo") && zb.offsetParent !== null, text: zb.textContent.replace(/\s+/g, " ").trim(),
+      eckeLinks: getComputedStyle(ex).borderTopRightRadius, eckeRechts: getComputedStyle(zb).borderTopLeftRadius };
+    zb.click();
+    { const t0 = Date.now(); while (Date.now() - t0 < 4000 && !document.querySelector("#examForm")) await new Promise((r) => setTimeout(r, 25)); }
+    out.probe = !!sess.probe; out.zp = !!sess.probeZp; out.total = sess.total; out.alleZp = sess.cards.every((c) => c.zp);
+    out.zpInListe = allCards.filter((c) => c.zp).length; out.liste = allCards.length;
+    let guard = 0;
+    while (sess.active && guard++ < 40) {
+      if (!document.querySelector("#ex_g")) { await new Promise((r) => setTimeout(r, 25)); continue; }
+      const c = current, fill = (k, v) => { const i = document.querySelector("#ex_" + k); if (i) i.value = v; };
+      fill("g", c.g); fill("a", c.a); fill("fam", (c.fam || "").split("/")[0]); fill("de", deMain(c));
+      document.querySelector("#chk").click(); const w = document.querySelector("#wt"); if (w) w.click();
+      await new Promise((r) => setTimeout(r, 25));
+    }
+    await new Promise((r) => setTimeout(r, 60));
+    out.titel = (document.querySelector(".stage-empty h2") || {}).textContent || "";
+    out.text2 = (document.querySelector(".stage-empty p") || {}).textContent || "";
+    const dec = chDecode(challengeURL().split("#c=")[1]); out.link = { pr: dec.pr, pz: dec.pz, n: dec.i.length };
+    out.nachricht = duelMessage("x").split("\n")[0];
+    document.querySelector("#againBtn").click(); await new Promise((r) => setTimeout(r, 80));
+    out.nochmal = { probe: !!sess.probe, zp: !!sess.probeZp, alleZp: sess.cards.every((c) => c.zp) };
+    document.querySelector("#btnStop").click(); await new Promise((r) => setTimeout(r, 40)); document.querySelector("#btnOverview").click();
+    const opt = document.querySelector("#onlyzp"); opt.checked = true; opt.dispatchEvent(new Event("change")); await new Promise((r) => setTimeout(r, 60));
+    out.optWeg = zb.hidden && sp.classList.contains("solo"); out.optHint = document.querySelector("#examHint").textContent;
+    opt.checked = false; opt.dispatchEvent(new Event("change")); await new Promise((r) => setTimeout(r, 60));
+    out.wieder = !zb.hidden && !sp.classList.contains("solo") && !/ZP/.test(document.querySelector("#examHint").textContent);
+    const prev = [document.querySelector("#frSelect").value, document.querySelector("#nivSelect").value];
+    document.querySelector("#frSelect").value = "staudengaertnerei"; document.querySelector("#nivSelect").value = "gaertner"; applyProfile();
+    await new Promise((r) => setTimeout(r, 60));
+    out.ohneZp = { profil: profileId, hatZp: allCards.some((c) => c.zp), weg: zb.hidden && getComputedStyle(zb).display === "none",
+      solo: sp.classList.contains("solo"), ecke: getComputedStyle(ex).borderTopRightRadius, hauptDa: ex.offsetParent !== null && !ex.disabled };
+    document.querySelector("#frSelect").value = prev[0]; document.querySelector("#nivSelect").value = prev[1]; applyProfile();
+    await new Promise((r) => setTimeout(r, 60));
+    out.zurueck = profileId;
+    __setPhotoSource(null);
+    return out;
+  }, PX);
+  assert(zpBtn.da && /^nur ZP/.test(zpBtn.text) && zpBtn.eckeLinks === "0px" && zpBtn.eckeRechts === "0px",
+    "Segment »nur ZP« neben der Probeprüfung (geteilter Knopf, innen ohne Rundung): " + JSON.stringify(zpBtn));
+  assert(zpBtn.probe && zpBtn.zp && zpBtn.total === 20 && zpBtn.alleZp && zpBtn.zpInListe > 20 && zpBtn.zpInListe < zpBtn.liste,
+    "»nur ZP« zieht 20 ZP-relevante Arten als Probeprüfung: " + JSON.stringify(zpBtn));
+  assert(/Probeprüfung geschafft/.test(zpBtn.titel) && /nur ZP-Arten/.test(zpBtn.text2) && zpBtn.link.pr && zpBtn.link.pz && zpBtn.link.n === 20 && /Probeprüfung · nur ZP-Arten/.test(zpBtn.nachricht),
+    "Abschluss, Duell-Link (Bit) und Nachricht nennen »nur ZP-Arten«: " + JSON.stringify(zpBtn));
+  assert(zpBtn.nochmal.probe && zpBtn.nochmal.zp && zpBtn.nochmal.alleZp, "»Neue Probeprüfung« behält den ZP-Umfang: " + JSON.stringify(zpBtn.nochmal));
+  assert(zpBtn.optWeg && /nur ZP-Arten/.test(zpBtn.optHint) && zpBtn.wieder,
+    "Bei Option »nur ZP-relevant« verschwindet das Segment und die Unterzeile nennt ZP; danach wieder da: " + JSON.stringify(zpBtn));
+  assert(!zpBtn.ohneZp.hatZp && zpBtn.ohneZp.weg && zpBtn.ohneZp.solo && zpBtn.ohneZp.ecke !== "0px" && zpBtn.ohneZp.hauptDa && zpBtn.zurueck === "gemuesebau_gaertner",
+    "Ohne ZP-Arten (Staudengärtnerei) fehlt das Segment, der Hauptknopf bleibt mit runden Ecken: " + JSON.stringify(zpBtn.ohneZp));
+
+  // Zählung beim Beenden (Screenshot einer Lehrerin: »2 richtig von 1 bewerteten (200 %)« und
+  // »Du hast gewonnen!« nach zwei von zwanzig Karten einer Probeprüfungs-Herausforderung):
+  // Treffer zählten beim Antworten, »bewertet«/»gelernt« erst beim Klick auf »Weiter« – wer nach
+  // der Antwort »beenden« drückte, hatte einen Treffer mehr als Karten. Jetzt zählt die offene
+  // Karte beim Beenden mit; ein Duell-Urteil gibt es nur, wenn beide die ganze Lektion gespielt
+  // haben; die beantwortete LETZTE Karte macht die Lektion zur geschafften.
+  const abbruch = await page.evaluate(async (PX) => {
+    __clearPhotoCache(); photoTried.clear();
+    __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g, file: "T.jpg", url: "https://x/y" }));
+    const out = {}, tick = (ms) => new Promise((r) => setTimeout(r, ms));
+    const richtigWaehlen = () => { const r = answerText(current).toLowerCase();
+      [...document.querySelectorAll("#opts .opt")].find((b) => b.querySelector("span:last-child").textContent.toLowerCase() === r).click(); };
+    // (a) Quiz: antworten, dann sofort beenden – ohne »Weiter«
+    document.querySelector('#modeTabs button[data-mode="quiz"]').click();
+    $("#sessLen").value = "5"; startSession(); await tick(40);
+    richtigWaehlen();
+    document.querySelector("#btnStop").click(); await tick(40);
+    out.quiz = { done: sess.done, correct: sess.correct, titel: document.querySelector(".stage-empty h2").textContent,
+      text: document.querySelector(".stage-empty p").textContent };
+    document.querySelector("#btnOverview").click();
+    // (b) Probeprüfungs-Herausforderung (20/20 in 4:38): zwei Pflanzen richtig, die zweite ohne »Weiter«, dann beenden
+    const idx = allCards.map((c, i) => i).slice(0, 20);
+    pendingChallenge = { v: 3, p: profileId, m: "guided", r: "de2bot", a: "exam", rp: "img2both", po: true, pr: true,
+      f: idx.map(() => "photoExam"), i: idx, s: 20, t: 20, z: 278, n: "Hannes" };
+    startChallenge();
+    const bis = async (f, ms = 4000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (f()) return true; await new Promise((r) => setTimeout(r, 25)); } return false; };
+    const fill = (k, v) => { const i = document.querySelector("#ex_" + k); if (i) i.value = v; };
+    for (let k = 0; k < 2; k++) {
+      if (!await bis(() => !!document.querySelector("#chk"))) return { keinFormular: k };
+      const c = current; fill("g", c.g); fill("a", c.a); fill("fam", (c.fam || "").split("/")[0]); fill("de", deMain(c));
+      document.querySelector("#chk").click();
+      if (k === 0) { document.querySelector("#wt").click(); }
+    }
+    document.querySelector("#btnStop").click(); await tick(40);
+    const st = document.querySelector(".stage-empty");
+    out.duel = { titel: st.querySelector("h2").textContent, text: st.querySelector("p").textContent, done: sess.done, scored: sess.scored, correct: sess.correct,
+      du: st.querySelector(".duel-row .duel-pct").textContent, duRaw: st.querySelector(".duel-row .duel-raw").textContent,
+      verdict: st.querySelector(".duel-verdict").textContent, win: !!st.querySelector(".duel-win"), lose: !!st.querySelector(".duel-lose"),
+      note: !!st.querySelector(".grade"), share: !!st.querySelector("#shareBlock") };
+    document.querySelector("#btnOverview").click(); pendingChallenge = null;
+    // (c) umgekehrt: der Herausforderer hat selbst nur 1 von 3 Karten gespielt → kein Urteil
+    document.querySelector('#modeTabs button[data-mode="quiz"]').click();
+    pendingChallenge = { p: profileId, m: "quiz", i: [0, 1, 2], s: 1, t: 1 };
+    startChallenge(); await tick(40);
+    let guard = 0;
+    while (sess.active && guard++ < 10) { richtigWaehlen(); const w = document.querySelector("#wt"); if (w) w.click(); await tick(20); }
+    const st2 = document.querySelector(".stage-empty");
+    out.teil = { aktiv: sess.active, verdict: (st2.querySelector(".duel-verdict") || {}).textContent || "", win: !!st2.querySelector(".duel-win"), lose: !!st2.querySelector(".duel-lose") };
+    document.querySelector("#btnOverview").click(); pendingChallenge = null;
+    // (d) vollständig gespielt, Herausforderer auch → Urteil wie gehabt (3/3 gegen 2/3 = gewonnen)
+    pendingChallenge = { p: profileId, m: "quiz", i: [0, 1, 2], s: 2, t: 3 };
+    startChallenge(); await tick(40); guard = 0;
+    while (sess.active && guard++ < 10) { richtigWaehlen(); const w = document.querySelector("#wt"); if (w) w.click(); await tick(20); }
+    out.voll = { win: !!document.querySelector(".stage-empty .duel-win"), verdict: (document.querySelector(".duel-verdict") || {}).textContent || "" };
+    document.querySelector("#btnOverview").click(); pendingChallenge = null;
+    // (e) letzte Karte beantwortet, dann »beenden« statt »Weiter«: zählt als geschafft
+    startSession(); await tick(40);
+    queue = [current]; sess.cards = [current]; sess.total = 1;
+    richtigWaehlen();
+    document.querySelector("#btnStop").click(); await tick(40);
+    out.letzte = { titel: document.querySelector(".stage-empty h2").textContent, done: sess.done, correct: sess.correct };
+    document.querySelector("#btnOverview").click();
+    __setPhotoSource(null);
+    return out;
+  }, PX);
+  assert(abbruch.quiz.done === 1 && abbruch.quiz.correct === 1 && /1 Karten gelernt · 1 richtig \(100 %\)/.test(abbruch.quiz.text) && /Sitzung beendet/.test(abbruch.quiz.titel),
+    "Beantwortet + beenden ohne »Weiter«: die Karte zählt als gelernt (1 von 1, 100 %): " + JSON.stringify(abbruch.quiz));
+  assert(abbruch.keinFormular === undefined && abbruch.duel.done === 2 && abbruch.duel.scored === 2 && abbruch.duel.correct === 2 && /2 von 20 Pflanzen · 2 ganz richtig/.test(abbruch.duel.text)
+    && abbruch.duel.du === "100 %" && abbruch.duel.duRaw === "2/2" && /Probeprüfung abgebrochen/.test(abbruch.duel.titel),
+    "Herausforderung nach 2 Pflanzen beendet: 2 von 20, 100 % (2/2) statt 200 %: " + JSON.stringify(abbruch.duel));
+  assert(/Nach 2 von 20 Karten beendet/.test(abbruch.duel.verdict) && !abbruch.duel.win && !abbruch.duel.lose && !abbruch.duel.note,
+    "Abgebrochene Herausforderung: kein »gewonnen«, kein Urteil, keine Note: " + JSON.stringify(abbruch.duel));
+  assert(!abbruch.teil.aktiv && /nur 1 von 3 Karten gespielt/.test(abbruch.teil.verdict) && !abbruch.teil.win && !abbruch.teil.lose,
+    "Herausforderer mit unvollständiger Lektion: kein Urteil: " + JSON.stringify(abbruch.teil));
+  assert(abbruch.voll.win && /gewonnen/.test(abbruch.voll.verdict), "Vollständig gespielt (3/3 gegen 2/3) bleibt ein Sieg: " + JSON.stringify(abbruch.voll));
+  assert(/Sitzung geschafft/.test(abbruch.letzte.titel) && abbruch.letzte.done === 1 && abbruch.letzte.correct === 1,
+    "Letzte Karte beantwortet + beenden: gilt als geschafft: " + JSON.stringify(abbruch.letzte));
+
   // Feldprüfung: tippfehlertolerant, Familie lateinisch ODER deutsch
   const fchk = await page.evaluate(() => {
     const c = { g: "Quercus", a: "robur", fam: "Fagaceae", de: "Stiel-Eiche, Deutsche Eiche" };
@@ -1291,6 +1433,99 @@ async function main() {
     "Familie muss lateinisch UND deutsch zählen: " + JSON.stringify(fchk));
   assert(fchk.deSecond && fchk.deNoHyphen && !fchk.empty,
     "Deutscher Name: Zweitname und Schreibung ohne Bindestrich müssen zählen: " + JSON.stringify(fchk));
+
+  // Rang-Kürzel sind gleichwertig (Rückmeldung einer Lehrerin: »sanguinea ssp. sanguinea« galt als
+  // Schreibfehler mit halben Punkten, weil die Liste »subsp.« schreibt): ssp. = subsp. (auch ohne
+  // Punkt, auch ausgeschrieben), forma = f., varietas = var., der Quell-Tippfehler supsp. = subsp.
+  // Volle Punkte, kein »≈«, kein Schreibweise-Hinweis. Ohne Kürzel bleibt es »fast«, Falsches falsch.
+  const rang = await page.evaluate(() => {
+    const c = { g: "Cornus", a: "sanguinea subsp. sanguinea", fam: "Cornaceae", de: "Blutroter Hartriegel" };
+    const v = { g: "Brassica", a: "oleracea var. capitata f. rubra", fam: "Brassicaceae", de: "Rotkohl" };
+    const w = { g: "Vitis", a: "vinifera supsp. vinifera", fam: "Vitaceae", de: "Weinrebe" };
+    // judgeTyped vergleicht »exakt« gegen answerText() – das hängt an der Abfragerichtung des Modus
+    // (im Bilder-Modus »voller Name«), deshalb hier im Modus »Selbst eingeben« prüfen
+    const tabVorher = mode; document.querySelector('#modeTabs button[data-mode="type"]').click();
+    const j = judgeTyped("Cornus sanguinea ssp. sanguinea", c);
+    document.querySelector('#modeTabs button[data-mode="' + tabVorher + '"]').click();
+    return { ssp: fieldOk("a", "sanguinea ssp. sanguinea", c), sspJudge: fieldJudge("a", "sanguinea ssp. sanguinea", c),
+      ohnePunkt: fieldJudge("a", "sanguinea ssp sanguinea", c), voll: fieldJudge("a", "sanguinea subspecies sanguinea", c),
+      jLvl: j.lvl, jExact: j.exact, cleanGleich: clean("sanguinea ssp. sanguinea") === clean("sanguinea subsp. sanguinea"),
+      forma: fieldJudge("a", "oleracea varietas capitata forma rubra", v), supsp: fieldJudge("a", "vinifera subsp. vinifera", w),
+      ohneRang: fieldJudge("a", "sanguinea sanguinea", c), falsch: fieldJudge("a", "alba", c),
+      deUnberuehrt: fieldOk("de", "Blutroter Hartriegel", c) && !fieldOk("de", "Hartriegel ssp", c) };
+  });
+  assert(rang.ssp && rang.sspJudge === "ok" && rang.ohnePunkt === "ok" && rang.voll === "ok" && rang.cleanGleich,
+    "ssp. muss wie subsp. zählen (auch ohne Punkt, auch ausgeschrieben): " + JSON.stringify(rang));
+  assert(rang.jLvl === "ok" && rang.jExact === true,
+    "Selbst eingeben: ssp. statt subsp. ist »Richtig!« ohne Schreibweise-Hinweis: " + JSON.stringify(rang));
+  assert(rang.forma === "ok" && rang.supsp === "ok",
+    "forma/varietas und der Quell-Tippfehler supsp. gelten wie f./var./subsp.: " + JSON.stringify(rang));
+  assert(rang.ohneRang === "near" && rang.falsch === "no" && rang.deUnberuehrt,
+    "Ohne Rang-Kürzel bleibt es »fast«, Falsches bleibt falsch, deutsche Namen unberührt: " + JSON.stringify(rang));
+
+  // Derselbe Fall in der Oberfläche (Eingabe »wie in der Prüfung« mit der echten Listen-Art):
+  // Artfeld ✓ statt ≈, volle Punkte, Rückmeldung »Richtig!« ohne Schreibweise-Hinweis.
+  const sspUI = await page.evaluate(async (PX) => {
+    __clearPhotoCache(); photoTried.clear();
+    __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g, file: "T.jpg", url: "https://x/y" }));
+    const card = allCards.find((c) => c.g === "Cornus" && /^sanguinea subsp\. sanguinea$/.test(c.a)) || allCards.find((c) => /subsp\./.test(c.a));
+    if (!card) return { keineKarte: true };
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();   // unabhängig vom Modus, den ein früherer Block hinterließ
+    startSession({ ans: "exam" });
+    queue = [card]; qi = 0; sess.cards = [card]; sess.total = 1; current = null; nextCard();
+    const bis = async (f, ms = 4000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (f()) return true; await new Promise((r) => setTimeout(r, 25)); } return false; };
+    if (!await bis(() => !!document.querySelector("#chk"))) return { keinFormular: true, mode };
+    const fill = (k, v) => { const i = document.querySelector("#ex_" + k); if (i) i.value = v; };
+    fill("g", card.g); fill("a", card.a.replace("subsp.", "ssp.")); fill("fam", (card.fam || "").split("/")[0]); fill("de", deMain(card));
+    document.querySelector("#chk").click();
+    await new Promise((r) => setTimeout(r, 60));
+    const o = { art: card.a, mark: document.querySelector("#mk_a").textContent.trim(), fb: document.querySelector("#fb").textContent.replace(/\s+/g, " ").trim(),
+      pts: sess.pts.je[card.key], max: sess.pts.max, richtig: sess.correct };
+    document.querySelector("#btnStop").click(); await new Promise((r) => setTimeout(r, 40)); document.querySelector("#btnOverview").click();
+    __setPhotoSource(null);
+    return o;
+  }, PX);
+  assert(!sspUI.keineKarte && !sspUI.keinFormular && /subsp\./.test(sspUI.art), "Listen-Art mit »subsp.« und Eingabeformular für den ssp.-Fall erwartet: " + JSON.stringify(sspUI));
+  assert(sspUI.mark === "✓" && sspUI.pts === sspUI.max && sspUI.richtig === 1 && /^Richtig!/.test(sspUI.fb) && !/Schreibweise|≈|halb/.test(sspUI.fb),
+    "»ssp.« statt »subsp.« in der Oberfläche: ✓, volle Punkte, »Richtig!« ohne Hinweis: " + JSON.stringify(sspUI));
+
+  // Fokus-Modus auf dem Handy: Eine lange Rückmeldung (Teilpunkte + Lösung + Stufe) wurde im
+  // 100dvh-Flex-Overlay gestaucht (.feedback hat eine eigene min-height und durfte schrumpfen) und
+  // lief als Text über Bildnachweis und »Weiter«-Knopf (Screenshot aus der Probeprüfung, 390 px).
+  // Jetzt behält jedes Kind seine Höhe (flex-shrink:0), das Overlay scrollt stattdessen.
+  // Nur Breite/Höhe wechseln: ein Wechsel von isMobile/hasTouch lädt die Seite in Puppeteer neu,
+  // und der Offline-Stub für jsonp (s. o.) wäre weg – das Fokus-Layout hängt nur an der Größe.
+  await page.setViewport({ width: 390, height: 844 });
+  const fokus = await page.evaluate(async () => {
+    const IMG = (() => { const c = document.createElement("canvas"); c.width = 640; c.height = 640; const x = c.getContext("2d"); x.fillStyle = "#2f6b3a"; x.fillRect(0, 0, 640, 640); return c.toDataURL("image/png"); })();
+    __clearPhotoCache(); photoTried.clear();
+    __setPhotoSource((card) => Promise.resolve({ thumb: IMG, title: card.g, file: "T.jpg", url: "https://x/y", artist: "Testfoto", license: "CC BY 4.0", gal: [{ url: IMG }, { url: IMG }, { url: IMG }] }));
+    const card = allCards.find((c) => c.g === "Cornus" && /^sanguinea subsp/.test(c.a)) || allCards.find((c) => /subsp\./.test(c.a)) || allCards[0];
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();   // unabhängig vom Modus, den ein früherer Block hinterließ
+    startSession({ ans: "exam" });
+    queue = [card]; qi = 0; sess.cards = [card]; sess.total = 1; current = null; nextCard();
+    const bis = async (f, ms = 4000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (f()) return true; await new Promise((r) => setTimeout(r, 25)); } return false; };
+    if (!await bis(() => !!document.querySelector("#chk") && !!document.querySelector(".ph-img"))) return { keinFormular: true };
+    const fill = (k, v) => { const i = document.querySelector("#ex_" + k); if (i) i.value = v; };
+    // Art mit falschem Anfangsbuchstaben → »fast« (halbe Punkte) → die lange Rückmeldung
+    fill("g", card.g); fill("a", card.a.replace(/^./, "z")); fill("fam", (card.fam || "").split("/")[0]); fill("de", deMain(card));
+    document.querySelector("#chk").click();
+    await new Promise((r) => setTimeout(r, 250));
+    const st = document.querySelector("#stage"); st.scrollTop = st.scrollHeight;
+    const rc = (s) => { const e = document.querySelector(s); const r = e.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, sh: e.scrollHeight, ch: e.clientHeight, shrink: getComputedStyle(e).flexShrink }; };
+    const fb = rc("#fb"), src = rc(".ph-srcslot"), nav = rc("#nav"), img = rc(".ph-img");
+    const o = { fbText: document.querySelector("#fb").textContent.replace(/\s+/g, " ").trim().slice(0, 50), fbVoll: fb.sh <= fb.ch + 1, fbShrink: fb.shrink,
+      srcUnterFb: src.top >= fb.bottom - 0.5, navUnterSrc: nav.top >= src.bottom - 0.5, scrollt: st.scrollHeight > st.clientHeight + 10,
+      srcDa: /Bild:/.test(document.querySelector(".ph-srcslot").textContent), imgH: Math.round(img.ch), fbH: Math.round(fb.ch) };
+    document.querySelector("#btnStop").click(); await new Promise((r) => setTimeout(r, 40)); document.querySelector("#btnOverview").click();
+    __setPhotoSource(null);
+    return o;
+  });
+  await page.setViewport({ width: 800, height: 600 });
+  assert(!fokus.keinFormular && /^Teilweise richtig/.test(fokus.fbText) && fokus.srcDa && fokus.scrollt,
+    "Fokus-Guard braucht die lange Rückmeldung, den Bildnachweis und mehr Inhalt als Bildschirmhöhe (sonst prüft er nichts): " + JSON.stringify(fokus));
+  assert(fokus.fbVoll && fokus.fbShrink === "0" && fokus.srcUnterFb && fokus.navUnterSrc,
+    "Fokus-Modus 390 px: Rückmeldung darf nicht gestaucht werden – Bildnachweis und »Weiter« müssen darunter stehen: " + JSON.stringify(fokus));
 
 
   // Bilder-Quiz, Abfrage »voller Name« (botanisch + deutsch): die vier Optionen zeigen

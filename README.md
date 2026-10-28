@@ -99,6 +99,10 @@ auf das Prüfungswerkzeug (Einbahnstraße – Azubis sollen es nicht sehen).
   bewerteten Felder des Bogens zum Eingeben (Punkte der Fachrichtung, Schreibfehler halb,
   keine zweite Chance). Am Ende Punkte, Prozent und **Note nach dem linearen Schlüssel
   Baden-Württembergs** (1 ab 90 % … 5 ab 10 %). Zählt in den Lernstand, teilbar als Duell.
+  Das Segment **»nur ZP«** am selben Knopf zieht nur aus den für die Zwischenprüfung markierten
+  Arten (fehlt bei Listen ohne ZP-Markierung). Beim Eingeben zählen die Kürzel der botanischen
+  Ränge gleich: *ssp.* und *subsp.* sind beides zulässige Abkürzungen der Unterart (ebenso
+  *f.*/*forma*, *var.*/*varietas*) – kein Abzug, kein Hinweis.
 - **Fortschritt statt Punktekonto:** Die Gärtner-Laufbahn (Keimling → … → Meistergärtner/in)
   richtet sich allein nach dem Lernstand (angefangene Arten, dann der Anteil, der »sitzt«);
   Erfahrungspunkte gibt es nicht mehr. Eine Lernserie zählt Tage mit mindestens 20 Karten.
