@@ -125,8 +125,9 @@ auf das Prüfungswerkzeug (Einbahnstraße – Azubis sollen es nicht sehen).
     geladen wird **erst beim Start des Modus**. Ohne Netz sagt der Modus das klar –
     **die vier anderen Modi laufen ohne Internet weiter**. Gesucht wird **vom Genauen
     zum Groben** (Taxon-Kategorie der Art bzw. Sorte zuerst); Bilder, die eine **andere
-    Art** derselben Gattung nennen, alte Tafeln, Verbreitungskarten und Diagramme werden
-    aussortiert. Steht neben einer Sorte auch die Art selbst in der Liste (Tomate ↔
+    Art** derselben Gattung nennen, Verbreitungskarten und Diagramme werden aussortiert;
+    alte Tafeln und Herbarbelege nur, solange es ein Foto gibt – sonst sind sie der
+    gekennzeichnete Notnagel (»Zeichnung · kein Foto verfügbar«). Steht neben einer Sorte auch die Art selbst in der Liste (Tomate ↔
     Kirschtomate), wird **kein Bild auf Artniveau** angeboten; findet sich nichts
     Passendes, wird die Art übersprungen statt ein falsches Bild zu zeigen.
 - **Liste / Nachschlagen:** ein vierter Tab zeigt **alle** Arten des Profils –

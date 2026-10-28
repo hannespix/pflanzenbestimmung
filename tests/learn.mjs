@@ -1250,7 +1250,7 @@ async function main() {
     const txt = document.querySelector("#stage").textContent;
     const opts = document.querySelectorAll("#opts .opt").length;
     const verschoben = sess.photoDefer;
-    const frage = /keine Fotos/i.test(txt), knopf = !!document.querySelector("#phQuiz");
+    const frage = /kein Bild/i.test(txt), knopf = !!document.querySelector("#phQuiz");
     if (knopf) document.querySelector("#phQuiz").click();  // ausdrücklich: ohne Bilder weiterlernen
     const nachWahl = document.querySelectorAll("#opts .opt").length;
     __setPhotoSource(null);
@@ -1587,6 +1587,109 @@ async function main() {
   assert(JSON.stringify(tafeln.quizGal) === JSON.stringify(["Perovskia_a_habit.jpg"]) && tafeln.infoGal.length === 3,
     "Galerie: Bilder-Quiz ohne Tafeln (Metadaten + Dateiname), Info-Karte behält sie: " + JSON.stringify(tafeln));
   assert(tafeln.dateiname, "looksIllustration: »Botanical Garden« ist kein Tafel-Hinweis – »Botanical Magazine«, »Plate«, »Koeh-« schon");
+
+  // Lieber Zeichnung als gar kein Bild (Rückmeldung zu Perovskia abrotanoides: auf Commons gibt es
+  // von der Art nur die Tafel der Erstbeschreibung von 1841, kein einziges Foto). Fotos gehen immer
+  // vor; erst wenn KEIN Suchweg ein Foto liefert, nimmt das Quiz die beste Zeichnung (Artikelbild
+  // der Wikipedia zuerst, dann Commons-Funde), gekennzeichnet; Herbarbeleg nur ohne Zeichnung;
+  // Karten, Diagramme, Etiketten, PDFs und andere Arten nie. Gemerkte Zeichnungen altern (30 Tage).
+  const notnagel = await page.evaluate(async () => {
+    __setPhotoSource(null);
+    const perov = { key: "t-perov2", g: "Perovskia", a: "abrotanoides", de: "Blauraute, Silberbusch", fam: "Lamiaceae", syn: "Salvia abrotanoides" };
+    const cmP = (i, file, meta, mime) => ({ index: i, title: "File:" + file, imageinfo: [{ thumburl: "https://x/" + file, mime: mime || "image/jpeg", width: 1200, descriptionurl: "https://commons/" + file, extmetadata: meta }] });
+    const cmA = (specs) => ({ query: { pages: Object.fromEntries(specs.map((s, i) => ["p" + i, cmP(i + 1, s[0], s[1], s[2])])) } });
+    const ia = { Categories: { value: "Perovskia abrotanoides|Bulletin de la Société impériale des naturalistes de Moscou (1841)|Files from Internet Archive Book Images Flickr stream" },
+      Artist: { value: "Internet Archive Book Images" }, LicenseShortName: { value: "No restrictions" } };
+    const tafel1841 = ["Bulletin de la Société impériale des naturalistes de Moscou (1841) (20246494408).jpg", ia];
+    const tafel2 = ["Bulletin de la Société Impériale des Naturalistes de Moscou (1841) (14784932583).jpg", ia];
+    const andereArt = ["Perovskia atriplicifolia Kreuzberg 1.jpg", { Categories: { value: "Perovskia atriplicifolia" }, Artist: { value: "Hp" } }];
+    const pdf = ["Catalogue of plants, Conrad Loddiges (IA catalogueofplant1823conr).pdf", { Categories: { value: "PDF files" } }, "application/pdf"];
+    const karte = ["Perovskia abrotanoides distribution map.png", { Categories: { value: "Perovskia abrotanoides|Distribution maps of plants" } }, "image/png"];
+    const herbar = ["Perovskia abrotanoides - MHNT.BOT.2004.0.726.jpg", { Categories: { value: "Perovskia abrotanoides|Herbarium specimens of Lamiaceae" }, Artist: { value: "Muséum de Toulouse" }, LicenseShortName: { value: "CC BY-SA 4.0" } }];
+    const foto = ["Perovskia abrotanoides 2015-07-01.jpg", { Categories: { value: "Perovskia abrotanoides" }, Artist: { value: "Hp" }, LicenseShortName: { value: "CC BY-SA 4.0" } }];
+    const wpArt = { query: { pages: { "1": { title: "Fiederschnittige Perowskie", extract: "Die Fiederschnittige Perowskie (Salvia abrotanoides, Syn.: Perovskia abrotanoides) ist eine Pflanzenart …",
+      pageimage: tafel1841[0].replace(/ /g, "_"), thumbnail: { source: "https://x/" + tafel1841[0].replace(/ /g, "_") } } } } };
+    const leer = { query: { pages: {} } };
+    const fileMetaAnswer = { query: { pages: { "7": { title: "File:" + tafel1841[0], imageinfo: [{ mime: "image/jpeg", extmetadata: ia }] } } } };
+    let metaAbfragen = 0;
+    const run = async (cmFn, wpFn) => { __clearPhotoCache(); photoTried.clear(); metaAbfragen = 0;
+      __setJsonp((url) => { if (/commons/.test(url) && /titles=File/.test(url)) { metaAbfragen++; return Promise.resolve(fileMetaAnswer); }
+        if (/commons/.test(url)) { const q = decodeURIComponent((url.match(/gsrsearch=([^&]+)/) || [])[1] || ""); return Promise.resolve(cmFn(q)); }
+        const t = decodeURIComponent((url.match(/titles=([^&]+)/) || [])[1] || ""); return Promise.resolve(wpFn(t)); });
+      return wikiPhoto(perov); };
+    // Realfall: Artikelbild = Tafel (Metadaten), Kategorien leer, Volltext = Tafel + andere Art + PDF + Karte
+    const a = await run((q) => /incategory/.test(q) ? leer : cmA([tafel2, andereArt, pdf, karte]), (t) => /Perovskia abrotanoides|Salvia abrotanoides/.test(t) ? wpArt : leer);
+    const aMeta = metaAbfragen;
+    // Foto auf einem späteren Weg (Synonym-Kategorie) → Foto gewinnt, obwohl die Tafel früher kam
+    const b = await run((q) => /incategory:"Salvia abrotanoides"/.test(q) ? cmA([foto]) : (/incategory/.test(q) ? leer : cmA([tafel2, karte])), (t) => /Perovskia abrotanoides/.test(t) ? wpArt : leer);
+    // nur Herbarbeleg → Herbarbeleg; Zeichnung + Herbarbeleg → Zeichnung
+    const c = await run((q) => /incategory:"Perovskia abrotanoides"/.test(q) ? cmA([herbar]) : leer, () => leer);
+    const d = await run((q) => /incategory:"Perovskia abrotanoides"/.test(q) ? cmA([herbar, tafel2]) : leer, () => leer);
+    // nur Karte/PDF/andere Art → gar nichts (null, kein Fehler)
+    const e = await run((q) => /incategory:"Perovskia abrotanoides"/.test(q) ? cmA([karte, pdf, andereArt]) : leer, () => leer);
+    // Zeichnung, aber ein feinerer Weg brach ab → nur für diese Sitzung (tmp)
+    const f = await run((q) => { if (/incategory:"Perovskia abrotanoides"/.test(q)) throw new Error("timeout"); return /incategory/.test(q) ? leer : cmA([tafel2]); }, () => leer).catch((err) => ({ err: String(err) }));
+    // Gemerkte Zeichnung: frisch → sofort da; älter als 30 Tage → neue Suche, bei Netzfehler bleibt die alte
+    __clearPhotoCache(); photoTried.clear();
+    __rememberPhoto(perov.key, Object.assign({}, a, { t: Date.now() - 31 * 86400e3 }));
+    let suchen = 0; __setJsonp(() => { suchen++; return Promise.reject(new Error("offline")); });
+    const g = await photoFor(perov).catch((err) => ({ err: String(err) }));
+    const gSuchen = suchen;
+    __clearPhotoCache(); photoTried.clear();
+    __rememberPhoto(perov.key, Object.assign({}, a, { t: Date.now() }));
+    suchen = 0; const h = await photoFor(perov); const hSuchen = suchen;
+    __setJsonp(window.__offlineJsonp); __clearPhotoCache(); photoTried.clear(); __setPhotoSource(null);
+    return { aFile: a && a.file, aArt: a && a.art, aSrc: a && a.src, aArtist: a && a.artist, aGal: (a && a.gal) || [], aTmp: !!(a && a.tmp), aMeta, aT: !!(a && a.t) === false,
+      bFile: b && b.file, bArt: b && b.art,
+      cArt: c && c.art, cFile: c && c.file, dArt: d && d.art, dFile: d && d.file, e,
+      fArt: f && f.art, fTmp: !!(f && f.tmp), fErr: f && f.err,
+      gFile: g && g.file, gArt: g && g.art, gErr: g && g.err, gSuchen, hFile: h && h.file, hSuchen,
+      kinds: { tafel: artKind(tafel1841[0], ia), herbar: artKind(herbar[0], herbar[1]), karte: artKind(karte[0], karte[1]), foto: artKind(foto[0], foto[1]),
+        koehler: artKind("Salvia_officinalis_-_Köhler–s_Medizinal-Pflanzen-126.jpg", null), label: artKind("Perovskia label.jpg", { Categories: { value: "Botanical illustrations|Plant labels" } }) } };
+  });
+  assert(notnagel.aArt === "zeichnung" && /20246494408/.test(notnagel.aFile || "") && notnagel.aSrc === "wp" && notnagel.aArtist === "Internet Archive Book Images" && !notnagel.aTmp && notnagel.aMeta === 1,
+    "Kein Foto auf keinem Weg → Zeichnung als Notnagel (Artikelbild zuerst, mit Nachweis, dauerhaft, eine Metadaten-Abfrage je Datei): " + JSON.stringify(notnagel));
+  assert(notnagel.aGal.length === 2 && !notnagel.aGal.some((u) => /Kreuzberg|pdf|map/.test(u)),
+    "Notnagel-Galerie: nur Zeichnungen derselben Art, keine andere Art/PDF/Karte, nichts doppelt: " + JSON.stringify(notnagel.aGal));
+  assert(notnagel.bFile === "Perovskia abrotanoides 2015-07-01.jpg" && !notnagel.bArt,
+    "Ein Foto auf einem späteren Weg schlägt die frühere Zeichnung: " + JSON.stringify(notnagel));
+  assert(notnagel.cArt === "herbar" && /MHNT/.test(notnagel.cFile || "") && notnagel.dArt === "zeichnung" && /1841/.test(notnagel.dFile || ""),
+    "Nur Herbarbeleg → Herbarbeleg; Zeichnung geht vor Herbarbeleg: " + JSON.stringify(notnagel));
+  assert(notnagel.e === null, "Karte, PDF und andere Art sind kein Notnagel (null, kein Fehler): " + JSON.stringify(notnagel.e));
+  assert(notnagel.fArt === "zeichnung" && notnagel.fTmp && !notnagel.fErr,
+    "Zeichnung trotz abgebrochenem feineren Weg – aber nur für diese Sitzung (tmp): " + JSON.stringify(notnagel));
+  assert(notnagel.gArt === "zeichnung" && /1841/.test(notnagel.gFile || "") && !notnagel.gErr && notnagel.gSuchen > 0 && notnagel.hSuchen === 0 && /1841/.test(notnagel.hFile || ""),
+    "Gemerkte Zeichnung: nach 30 Tagen neue Suche (bei Netzfehler bleibt die alte), frische ohne Suche: " + JSON.stringify(notnagel));
+  assert(notnagel.kinds.tafel === "zeichnung" && notnagel.kinds.herbar === "herbar" && notnagel.kinds.karte === "" && notnagel.kinds.foto === "" && notnagel.kinds.koehler === "zeichnung" && notnagel.kinds.label === "",
+    "artKind: Tafel/Köhler = Zeichnung, Herbarbeleg = herbar, Karte/Etikett/Foto = nichts: " + JSON.stringify(notnagel.kinds));
+
+  // Oberfläche: eine Notnagel-Zeichnung ist gekennzeichnet (Pille + alt-Text ohne Namen), der
+  // Bildnachweis erscheint wie bei Fotos erst nach der Antwort.
+  const notnagelUI = await page.evaluate(async (PX) => {
+    __clearPhotoCache(); photoTried.clear();
+    __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g + " " + card.a, file: "Tafel 1841.jpg", url: "https://x/y", src: "cm", art: "zeichnung",
+      artist: "Internet Archive Book Images", license: "No restrictions" }));
+    __setJsonp(() => Promise.reject(new Error("offline (Test)")));
+    document.querySelector('#modeTabs button[data-mode="photo"]').click();
+    const pa = $("#phAnswer"); pa.value = "mc"; pa.dispatchEvent(new Event("change"));
+    $("#sessLen").value = "4"; startSession();
+    await new Promise((r) => setTimeout(r, 90));
+    const pille = (document.querySelector(".ph-kind") || {}).textContent || "";
+    const tip = (document.querySelector(".ph-kind") || {}).title || "";
+    const alt = (document.querySelector("#phImg") || {}).alt || "";
+    const correct = answerText(current).toLowerCase();
+    const btn = [...document.querySelectorAll("#opts .opt")].find((b) => b.querySelector("span:last-child").textContent.toLowerCase() === correct);
+    if (btn) btn.click();
+    await new Promise((r) => setTimeout(r, 30));
+    const src = (document.querySelector("#phSrc") || {}).textContent || "";
+    document.querySelector('#modeTabs button[data-mode="cards"]').click();
+    __setPhotoSource(null); __setJsonp(window.__offlineJsonp); __clearPhotoCache(); photoTried.clear();
+    return { pille, tip, alt, src, geklickt: !!btn };
+  }, PX);
+  assert(notnagelUI.pille === "Zeichnung · kein Foto verfügbar" && /kein Foto/.test(notnagelUI.tip) && notnagelUI.alt === "Zeichnung der gesuchten Pflanze",
+    "Notnagel-Zeichnung muss gekennzeichnet sein (Pille, Tooltip, alt ohne Namen): " + JSON.stringify(notnagelUI));
+  assert(notnagelUI.geklickt && /Internet Archive Book Images, No restrictions/.test(notnagelUI.src),
+    "Bildnachweis der Zeichnung nach der Antwort: " + JSON.stringify(notnagelUI));
 
   // Bildnachweis ohne zweiten Abruf: Urheber + Lizenz kommen mit den Suchmetadaten; nach der
   // Antwort wird nichts mehr nachgeladen (früher eine eigene Commons-Anfrage je Bild).

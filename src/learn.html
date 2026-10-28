@@ -100,6 +100,10 @@ input,select{font-family:inherit; color:inherit}
 .ph-more{position:absolute; right:8px; bottom:8px; pointer-events:none;
   padding:3px 8px; border-radius:999px; font-family:var(--mono); font-size:10.5px; letter-spacing:.04em;
   color:#fff; background:rgba(20,28,22,.62); backdrop-filter:blur(3px)}
+/* Notnagel: kein Foto auf Commons → Zeichnung/Herbarbeleg, als solche gekennzeichnet (sepia, oben links) */
+.ph-kind{position:absolute; left:8px; top:8px; pointer-events:none;
+  padding:3px 8px; border-radius:999px; font-family:var(--mono); font-size:10.5px; letter-spacing:.04em;
+  color:#fff; background:rgba(96,64,20,.74); backdrop-filter:blur(3px)}
 /* Geführte Lektion: Lernstand + Übungsform über der Aufgabe – der Formwechsel
    soll als Fortschritt lesbar sein, nicht wie ein zufällig eingemischtes Quiz. */
 .gnote{margin:10px auto 0; width:max-content; max-width:100%; align-self:center; text-align:center;
@@ -1434,9 +1438,10 @@ body.stagefull #stage>.sessionbar{
         Dein Punktestand steht oben in der Leiste.</dd>
       <dt>Bilder</dt><dd><b>Pflanze am Bild erkennen:</b> Du siehst nur ein <b>Bild der Pflanze</b>, sonst
         nichts – am nächsten an der Prüfung, wo die Pflanze vor dir steht. Gefragt ist immer der <b>volle
-        Name</b> (botanisch + deutsch). Gezeigt werden <b>nur Fotos</b>: Zeichnungen, Tafeln aus alten
-        Büchern und Herbarbelege (oft mit aufgedrucktem Namen) werden über Dateiname und
-        Commons-Kategorien ausgefiltert – gibt es zu einer Art nur solche, bleibt sie ohne Bild. Bei
+        Name</b> (botanisch + deutsch). Gezeigt werden <b>bevorzugt Fotos</b>; gibt es zu einer Art auf
+        Wikimedia Commons keines, erscheint ersatzweise eine <b>Zeichnung</b> oder ein Herbarbeleg – als solche
+        gekennzeichnet (»Zeichnung · kein Foto verfügbar«; ein aufgedruckter Name kann die Lösung verraten).
+        Buchscans, Verbreitungskarten und Diagramme nie. Bei
         <b>Sorten mit beschreibendem Namen</b> ('Nigra', 'Glauca', 'Flaviramea') kommt nur ein Bild
         genau dieser Sorte in Frage, nie das der Art. <b>Wie du antwortest, bestimmst du unter »Optionen · Antwort«:</b>
         aus <b>vier Namen auswählen</b> oder die Namen <b>selbst eingeben – »wie in der Prüfung«</b>:
@@ -1448,7 +1453,7 @@ body.stagefull #stage>.sessionbar{
         wird erst, wenn du den Modus startest. Ohne Netz sagt der Modus das klar – <b>alle anderen Modi laufen
         ohne Internet weiter</b>. Gesucht wird <b>vom Genauen zum Groben</b>: zuerst die Bildkategorie genau
         dieser Art oder Sorte, erst danach unschärfere Quellen. Bilder, die eine <b>andere Art</b> derselben
-        Gattung nennen, alte Tafeln, Verbreitungskarten und Diagramme werden aussortiert; steht neben einer
+        Gattung nennen, Verbreitungskarten und Diagramme werden aussortiert (alte Tafeln nur, solange es ein Foto gibt); steht neben einer
         Sorte auch die Art selbst in deiner Liste (z. B. Tomate und Kirschtomate), wird <b>kein Bild der Art</b>
         gezeigt – sonst wäre die Frage nicht zu entscheiden. Findet sich kein passendes Bild, überspringt der
         Modus die Art lieber, als ein falsches zu zeigen. Damit du die <b>Pflanze</b> lernst und nicht das Foto, zeigt das Werkzeug beim nächsten Mal eine

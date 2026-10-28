@@ -2514,6 +2514,37 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Cache; `ratelimited` ebenso; danach mit Verbindung → Heckenkirschen. `tests/smoke.mjs`:
       Synonym-Kandidatin + Ausfall-Zustand im Prüfungswerkzeug.
 
+- [x] **Bilder-Quiz: lieber Zeichnung als gar kein Bild** (Rückmeldung zu *Perovskia abrotanoides*:
+      die Art hat auf Wikimedia Commons **kein einziges Foto**, nur die Tafel der Erstbeschreibung von
+      1841 – das Quiz blieb ohne Bild, die Info-Karte zeigte die Tafel; Antwort auf »Kann das stimmen?«:
+      ja, Namen und Artikel sind richtig, die Fotos im Handel zeigen meist die Silber-Perowskie).
+      Seit #139 wurden Zeichnungen/Tafeln/Herbarbelege im Quiz **hart verworfen** (»lieber kein Bild
+      als eine Tafel mit aufgedrucktem Namen«); der Nutzer hat das umgekehrt. **Fotos gehen weiter
+      immer vor** – an jeder Stelle der Kette. Neu: `pickCommons(d, card, artOut)` und der
+      Wikipedia-Schritt in `wikiPhoto` **sammeln** Nicht-Fotos, die alle übrigen Prüfungen bestehen
+      (Taxon passt, keine andere Art, kein Schadbild, `image/*`), statt sie zu verwerfen;
+      `artKind(file, meta)` sortiert sie: **»zeichnung«** (Illustration, Tafel, Stich, Aquarell, Köhler,
+      BHL/Internet-Archive-Tafeln) · **»herbar«** (Herbarbeleg) · **nichts** bei Karten, Diagrammen,
+      Etiketten, Logos, Briefmarken, Buchscans/PDFs, Textseiten (`ART_NOPIC_RE` – die zeigen die Pflanze
+      nicht; `usablePhoto` und der Mime-Filter bleiben davor). Liefert **kein** Weg ein Foto, gibt
+      `bestArt()` den Notnagel: Zeichnung vor Beleg, **Artikelbild der Wikipedia** (von Menschen
+      gewählt) vor Commons-Funden, dann Dateien, die die Art nennen; Dubletten über Synonym-Wege nur
+      einmal (`metaMemo`: Metadaten je Datei einmal). Die übrigen werden zur Galerie. Treffer tragen
+      `art:"zeichnung"|"herbar"`; `renderPhoto` kennzeichnet sie mit der Pille **»Zeichnung · kein Foto
+      verfügbar«** (`.ph-kind`, Tooltip: aufgedruckter Name kann die Lösung verraten) und neutralem
+      alt-Text. Brach ein feinerer Weg ab, gilt die Zeichnung nur für die Sitzung (`tmp`, wie bei
+      Fotos). **Gemerkte Zeichnungen altern:** `photoFor` sucht nach 30 Tagen (`ART_TTL`, Feld `t`)
+      erneut nach einem Foto – kommt die Suche nicht durch, bleibt die alte Zeichnung (kein Netzfehler
+      nach außen). `photoMoreViews`/`prefetchPhoto` suchen bei Zeichnungen nicht nach, die
+      Artikel-Galerie der Großansicht zeigt dann auch die übrigen Abbildungen. Info-Karte: der
+      Sorten-/Gattungs-Hinweis nennt die Zeichnung als solche (»die Zeichnung zeigt diese Art (ein Foto
+      gibt es auf Wikimedia Commons nicht)«). Hinweistext der Runde ohne Bild, Hilfe »Bilder« und README
+      angepasst (»bevorzugt Fotos … ersatzweise Zeichnung, gekennzeichnet«). `tests/learn.mjs`:
+      Realfall-Kette (Tafel per Metadaten, leere Kategorie, Volltext mit Tafel/anderer Art/PDF/Karte →
+      Artikel-Tafel mit Nachweis, Galerie nur Zeichnungen), Foto auf späterem Weg schlägt frühere Tafel,
+      Beleg nur ohne Zeichnung, Karte/PDF/andere Art → null, `tmp` bei Abbruch, Cache-Alterung mit
+      Netzfehler-Rückfall, `artKind`-Fälle, Pille/alt/Nachweis in der Oberfläche.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.
