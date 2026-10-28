@@ -132,7 +132,17 @@ node tests/smoke.mjs                    # Puppeteer-Smoke Prüfungswerkzeug (npm
 node tests/learn.mjs                    # Puppeteer-Smoke Lern-Tool
 node tests/pwa.mjs                      # PWA: Manifest + Service Worker + Offline-Cache
 node tools/make_icons.mjs               # PWA-Icons einmalig neu erzeugen (Ergebnis committen)
+node tools/bildcheck.mjs [--profil id] [--art muster] [--mock]   # Bildcheck: echte Quiz-Bildsuche für alle Arten
 ```
+
+**Bildcheck** (`tools/bildcheck.mjs`, Workflow `bildcheck.yml`): führt die **echte** Bildsuche des
+Bilder-Quiz (`wikiPhoto` aus `dist/pflanzen-lernen.html`) für alle Arten aller Profile gegen die
+Live-APIs aus und berichtet je Art Foto · Zeichnung · Herbarbeleg · kein Bild (mit Diagnose: welcher
+Suchweg, welche Datei, warum verworfen) plus `kontaktbogen.html` zum Durchsehen. Höflich gedrosselt
+(eigener User-Agent, ≤ 3 parallel, 180/min, 429 mit Retry-After). In dieser Entwicklungsumgebung
+bremst Wikimedia stark (429) – der volle Lauf gehört auf den GitHub-Runner (Actions → bildcheck →
+Run workflow); lokal taugen `--art` (einzelne Arten nachprüfen) und `--mock` (Logikprobe ohne Netz:
+eine Datei, die genau die Art nennt, muss überall angenommen werden).
 
 **PWA (installierbar + offline):** `build.py` legt zusätzlich `dist/manifest.webmanifest`,
 `dist/sw.js` (Service Worker; Cache-Version = Inhalts-Hash) und die `dist/icon-*.png` ab.
@@ -2548,6 +2558,29 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       (»Waiting failed: 10000ms exceeded«), während `pruefen` auf demselben Commit grün war – die
       Boot-Wartezeiten (`window.startSession/startChallenge!=null`) stehen jetzt auf 30 s, und beide
       Workflows setzen `DEBUG_STACK=1`, damit eine Zeitüberschreitung künftig ihren Wartepunkt nennt.
+
+- [x] **Bildcheck: findet das Bilder-Quiz für jede Art ein Bild?** (Nutzerwunsch: »alle Pflanzen
+      direkt prüfen … ob für das Quiz für jede Pflanze jetzt ein Bild verfügbar ist«). Neues Werkzeug
+      `tools/bildcheck.mjs`: lädt `dist/pflanzen-lernen.html` in Puppeteer und führt für **jede Art jedes
+      Profils** die **echte** Suchkette `wikiPhoto` aus (kein Nachbau – nur der JSONP-Abruf wird über
+      `__setJsonp` auf einen Node-Abruf umgelegt). Höflich nach Wikimedia-Regeln (eigener User-Agent mit
+      Kontakt-URL, ≤ 3 parallel, 180/min, 429/503 mit Retry-After bzw. exponentiellem Rückzug, jede URL
+      nur einmal). Bericht: `bildcheck.json` (je Art Status Foto/Zeichnung/Herbarbeleg/kein Bild/Netz,
+      Datei, Quelle, vorläufig; für alles ohne Foto eine **Diagnose** je Suchweg: Artikel, Dateien und
+      warum verworfen), `bildcheck.md` (Zahlen je Profil, Listen je Taxon) und `kontaktbogen.html` (alle
+      Quiz-Bilder als Vorschau zum Durchsehen). Optionen `--profil`, `--art` (Regex), `--max`, `--mock`
+      (Logikprobe ohne Netz: jede Kategorie-Suche liefert eine Datei, die genau das Taxon nennt – die muss
+      überall angenommen werden). Workflow `.github/workflows/bildcheck.yml` (workflow_dispatch mit
+      Eingaben profil/art + pull_request nur bei Änderungen am Prüfskript), Ergebnis in der
+      Step-Summary und als Artefakt. **Erster Fund (schon die Logikprobe):** Bindestrich-Epitheta
+      (*Vaccinium vitis-idaea*, *Dryopteris filix-mas*, *Athyrium filix-femina*, *Capsella
+      bursa-pastoris*, *Echinochloa crus-galli*, *Alisma plantago-aquatica*, *Hibiscus rosa-sinensis*,
+      *Gentiana sino-ornata*, *Blechnum penna-marina*, *Arabis ferdinandi-coburgi* – 12 Taxa, 21 Einträge)
+      bekamen kein eigenes Bild: `fileMentionsOther` zerlegte den Dateinamen am Bindestrich, auf die
+      Gattung folgte »vitis« statt »vitis-idaea« → jede Datei der Art galt als »andere Art« (auch das
+      Artikelbild). Jetzt gelten auch die Teile eines Bindestrich-Epithetons als eigene Art.
+      `tests/learn.mjs` prüft über **alle 2114 Einträge**, dass ein Dateiname mit dem eigenen Artnamen
+      (Leerzeichen-, Unterstrich- und Taxon-Form) nie als »andere Art« gilt – eine andere Art schon.
 
 ## Offene Aufgaben (TODO)
 

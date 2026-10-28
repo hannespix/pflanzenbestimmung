@@ -1691,6 +1691,25 @@ async function main() {
   assert(notnagelUI.geklickt && /Internet Archive Book Images, No restrictions/.test(notnagelUI.src),
     "Bildnachweis der Zeichnung nach der Antwort: " + JSON.stringify(notnagelUI));
 
+  // Ein Dateiname, der genau DIESE Art nennt, darf nie als »andere Art« gelten – geprüft über alle
+  // Arten aller 14 Listen (Fund des Bildchecks: Bindestrich-Epitheta wie vitis-idaea, filix-mas,
+  // rosa-sinensis wurden am Bindestrich zerlegt, und jede Datei der Art fiel heraus).
+  const eigeneDatei = await page.evaluate(() => {
+    const falsch = [];
+    Object.keys(SEEDS).forEach((id) => cardsFor(id).forEach((c) => {
+      [norm(c.g + " " + c.a) + " 01.jpg", taxonName(c) + " 2019.jpg", (c.g + " " + c.a).replace(/\s+/g, "_") + ".jpg"].forEach((f) => {
+        if (fileMentionsOther(f, c)) falsch.push(id + ": " + f);
+      });
+    }));
+    const preisel = { g: "Vaccinium", a: "vitis-idaea", syn: "" };
+    return { falsch: [...new Set(falsch)].slice(0, 20), zahl: falsch.length,
+      eigene: fileMentionsOther("Vaccinium vitis-idaea 20060824 003.jpg", preisel),
+      unterstrich: fileMentionsOther("Vaccinium_vitis-idaea_20060824_003.jpg", preisel),
+      andere: fileMentionsOther("Vaccinium myrtillus 01.jpg", preisel) };
+  });
+  assert(eigeneDatei.zahl === 0 && !eigeneDatei.eigene && !eigeneDatei.unterstrich && eigeneDatei.andere,
+    "Dateien mit dem eigenen Artnamen dürfen nie als »andere Art« gelten (auch Bindestrich-Epitheta) – eine andere Art schon: " + JSON.stringify(eigeneDatei));
+
   // Bildnachweis ohne zweiten Abruf: Urheber + Lizenz kommen mit den Suchmetadaten; nach der
   // Antwort wird nichts mehr nachgeladen (früher eine eigene Commons-Anfrage je Bild).
   const nachweis = await page.evaluate(async (PX) => {

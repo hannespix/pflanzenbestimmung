@@ -3856,6 +3856,10 @@ function fileMentionsOther(file, card){               // Dateiname nennt eine an
   const cv = cultivarName(card.a||"").toLowerCase().split(" ")[0];   // »Prunus cerasifera Nigra 01.jpg« nennt keine andere Art
   const ok = new Set([epi, inf, cv, "var","subsp","ssp","sect","nothof"].filter(Boolean));
   synCards(card).forEach(s=>{ const e=binomEpithet(s.a).toLowerCase(), i=infraEpithet(s.a); if(e) ok.add(e); if(i) ok.add(i); });   // Synonym-Epitheta (»ligustrina«, »yunnanensis«) = dieselbe Pflanze
+  // Bindestrich-Epitheta (plantago-aquatica, vitis-idaea, filix-mas, rosa-sinensis …): Der Dateiname wird unten am
+  // Bindestrich zerlegt – dann folgt auf die Gattung »plantago«, nicht »plantago-aquatica«. Ohne die Teile galt jede
+  // Datei der Art als »andere Art« (Bildcheck: 12 Arten, z. B. Preiselbeere, Wurmfarn, Hirtentäschel, Roseneibisch).
+  [...ok].forEach(x=>x.split("-").forEach(t=>{ if(t) ok.add(t); }));
   const w = String(file||"").replace(/[_\-.,()']/g," ").split(/\s+/).filter(Boolean);
   for(let i=0;i<w.length-1;i++){
     const a = w[i].toLowerCase(), b = w[i+1].toLowerCase().replace(/\d+$/,"");

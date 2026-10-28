@@ -1,0 +1,62 @@
+name: bildcheck
+
+# Findet das Bilder-Quiz für JEDE Art ein Bild? Führt die echte Bildsuche des Lern-Tools
+# (dist/pflanzen-lernen.html) für alle Arten aller 14 Profile gegen die Live-APIs von
+# Wikipedia und Wikimedia Commons aus – siehe tools/bildcheck.mjs.
+# Ergebnis: Zusammenfassung im Lauf (Summary) und das Artefakt »bildcheck« mit
+# bildcheck.json (Diagnose je Art ohne Foto), bildcheck.md und kontaktbogen.html.
+# Läuft nur auf Knopfdruck (Actions → bildcheck → Run workflow) und wenn sich das Prüfskript
+# selbst ändert – nicht bei jedem PR: ein Lauf braucht mehrere tausend API-Anfragen
+# (gedrosselt auf 180/min, Wikimedia erlaubt 200/min) und dauert entsprechend.
+on:
+  workflow_dispatch:
+    inputs:
+      profil:
+        description: "Nur diese Profil-IDs (durch Komma getrennt; leer = alle 14)"
+        required: false
+        default: ""
+      art:
+        description: "Nur Arten, deren botanischer Name dieses Muster trifft (regulärer Ausdruck; leer = alle)"
+        required: false
+        default: ""
+  pull_request:
+    paths:
+      - "tools/bildcheck.mjs"
+      - ".github/workflows/bildcheck.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bildcheck-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bildcheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build
+        run: python3 build.py
+      - name: Node einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Puppeteer (inkl. Chromium) installieren
+        run: npm install --no-save puppeteer@23
+      - name: Bildcheck (echte Suchkette, alle Arten)
+        env:
+          BILDCHECK_PROFIL: ${{ inputs.profil }}
+          BILDCHECK_ART: ${{ inputs.art }}
+        run: node tools/bildcheck.mjs --out bildcheck
+      - name: Bericht hochladen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bildcheck
+          path: bildcheck/
+          retention-days: 30

@@ -268,7 +268,14 @@ python3 tools/check_offline.py dist/rechtliches.html
 node tests/smoke.mjs                               # Puppeteer-Smoke Prüfungswerkzeug
 node tests/learn.mjs                               # Puppeteer-Smoke Lern-Tool
 node tests/pwa.mjs                                 # PWA: Manifest + Service Worker + Offline-Cache
+node tools/bildcheck.mjs                           # Bildcheck: findet das Bilder-Quiz für jede Art ein Bild? (braucht Internet)
 ```
+
+Der **Bildcheck** führt die echte Bildsuche des Bilder-Quiz für alle Arten aller Listen gegen
+Wikipedia und Wikimedia Commons aus und schreibt einen Bericht (Foto · Zeichnung · Herbarbeleg ·
+kein Bild, mit Diagnose) samt Kontaktbogen aller Quiz-Bilder. Am bequemsten läuft er auf GitHub:
+*Actions → bildcheck → Run workflow*; das Ergebnis steht in der Zusammenfassung des Laufs und im
+Artefakt »bildcheck«.
 
 Neue/aktualisierte Fachrichtungsliste einbauen:
 
@@ -305,6 +312,7 @@ python3 build.py
 │  ├─ rebuild_seeds.sh       alle Seeds aus data/<id>.<ext> neu erzeugen
 │  ├─ categorize_seeds.py    Wuchsform-Kategorien für Listen ohne eigene Kategorien (offengelegt)
 │  ├─ fix_source_gaps.py     offengelegte Ergänzungen/Berichtigungen der Quelllisten
+│  ├─ bildcheck.mjs          Bildcheck: echte Quiz-Bildsuche für alle Arten (Bericht + Kontaktbogen)
 │  └─ check_offline.py       CI-Check: keine externen Ressourcen (Datei als Argument)
 ├─ tests/
 │  ├─ smoke.mjs              Puppeteer-Smoke Prüfungswerkzeug + Rechtliches gegen dist/ (file://)
