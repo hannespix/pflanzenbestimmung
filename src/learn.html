@@ -384,6 +384,8 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-variant-numeric
 .plegend i{display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:5px; vertical-align:middle}
 /* Status-Chip: Lernserie (Herbarium ist eine Aktion → Textzeile .tlink daneben; der Rang steht in der Kopfzeile) */
 .statusrow{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap}
+.srlinks{display:inline-flex; align-items:center; gap:4px; margin:0 -8px; flex-wrap:wrap}   /* Herbarium · Sichern: die Zeilen tragen sonst je −8px Außenabstand und überlappten */
+.srlinks .tlink{margin:0}
 .chip{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--rule-strong);
   background:var(--surface-2); color:var(--ink-soft); border-radius:99px; padding:5px 11px;
   font-size:var(--fs-2); cursor:default; min-height:32px}
@@ -411,6 +413,21 @@ button.chip:hover{background:var(--green-tint); border-color:var(--green); color
 .intro-tip .ic,.herb-how .ic{width:16px; height:16px; flex:none; color:var(--sepia)}
 /* Stufen-Erklärung als Leiter (ersetzt drei Textabsätze) */
 .howmodal{max-width:560px}
+/* Lernstand sichern & laden (Dialog im #infoScrim-Muster) */
+.bkmodal{max-width:520px}
+.bk-p{margin:0 0 16px; font-size:var(--fs-3); line-height:1.5; color:var(--ink-soft)}
+.bk-name{display:flex; flex-direction:column; gap:4px; margin:0 0 16px}
+.bk-name span{font-size:var(--fs-1); letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); font-weight:600}
+.bk-name input{border:1.4px solid var(--rule-strong); border-radius:var(--r); padding:9px 12px; min-height:44px; font-size:var(--fs-4); font-family:inherit; background:var(--card); color:var(--ink)}
+.bk-name input:focus{border-color:var(--green)}
+.bk-acts{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+.bk-sum{margin-top:16px; padding:12px 16px; border:1px solid var(--rule); border-radius:var(--r); background:var(--surface-2); font-size:var(--fs-3); line-height:1.5}
+.bk-sum ul{margin:8px 0; padding-left:18px}
+.bk-sum .bk-acts{margin-top:12px}
+.bk-what{margin-top:8px}
+.bk-warn{padding:8px 12px; border-left:3px solid var(--madder); background:var(--card); border-radius:0 var(--r) var(--r) 0}
+.bk-note,.bk-err{font-size:var(--fs-2); color:var(--ink-soft)}
+.bk-err{color:var(--madder)}
 .howgrid{display:grid; gap:8px; margin:16px 0 8px}
 .how-row{display:flex; align-items:center; gap:12px; padding:8px 12px; border:1px solid var(--rule);
   border-radius:var(--r); background:var(--surface-2)}
@@ -1640,6 +1657,15 @@ body.stagefull #stage>.sessionbar{
       <li><b>Herbarium · Thema üben:</b> Auf jeder Sammelkarte im Herbarium startet »Thema üben« eine geführte Lektion
         nur mit den Arten dieses Themas (z. B. nur Gräser). Dasselbe erreichst du über Optionen · Lernstoff, wo du
         auch nach Pflanzenfamilie eingrenzen kannst.</li>
+      <li><b>Lernstand sichern &amp; übertragen:</b> Neben »Herbarium« steht <b>Sichern</b>: Es schreibt deinen
+        gesamten Lernstand (alle Berufe: Stufen, Fälligkeiten, Herbarium, Lernserie) in eine Datei
+        »pflanze-bw-lernstand-…pbwl« – als Sicherung oder für ein anderes Gerät, wo du sie über <b>Datei laden</b>
+        einliest (am Handy geht das Speichern über das Teilen-Menü). Die Datei nennt keinen Namen und keine Zahl im
+        Klartext und trägt eine Prüfsumme; wird sie verändert, lädt sie nicht mehr. Trägt sie <b>denselben Namen</b>
+        wie dein Gerät, werden beide Stände <b>zusammengeführt</b> (je Art zählt die höhere Stufe); ein Gerät ohne
+        Lernstand übernimmt die Datei samt Name und Beruf. Bei einem <b>anderen Namen</b> gibt es kein Zusammenführen –
+        nur Ersetzen nach Rückfrage, damit sich niemand den Stand eines Kollegen dazuholt. Ehrlich gesagt: Das ist eine
+        Schwelle, kein Schloss.</li>
       <li><b>Fokus-Modus (Smartphone):</b> Sobald eine Sitzung läuft, füllt die Karte bzw. Frage auf dem
         Handy den ganzen Bildschirm – Kopf und Menüs verschwinden, du siehst nur noch die aktuelle Aufgabe.
         Oben bleibt die Fortschrittsleiste mit dem Knopf <b>beenden</b>; darüber (oder am Ende der Sitzung)

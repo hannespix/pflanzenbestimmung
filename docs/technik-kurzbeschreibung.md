@@ -46,7 +46,10 @@ Prüfungswerkzeug — der einzige interne Verweis führt auf Impressum/Datenschu
 - **Keine Cookies, kein Tracking, keine Analysedienste** (im Quelltext nachprüfbar nicht
   vorhanden).
 - **Lernfortschritt bleibt auf dem Gerät** (`localStorage` des Browsers) und wird nirgendwo
-  übertragen.
+  übertragen. Wer ihn sichern oder auf ein anderes Gerät mitnehmen will, schreibt ihn über
+  »Sichern« in eine Datei (`.pbwl`, kompakt gepackt und verwürfelt, mit Prüfsumme – kein Klartext,
+  keine Verschlüsselung) und liest sie dort über »Datei laden« ein; die Datei entsteht und bleibt
+  auf dem Gerät des Nutzers.
 - **Zwei bewusste, freiwillige Online-Funktionen** — beide laden **nichts beim Seitenaufbau**,
   sondern erst auf ausdrücklichen Knopfdruck:
   1. „Online-Infos laden" — deutscher Wikipedia-Kurztext und Bild in der Info-Karte.

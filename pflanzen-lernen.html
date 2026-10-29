@@ -384,6 +384,8 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-variant-numeric
 .plegend i{display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:5px; vertical-align:middle}
 /* Status-Chip: Lernserie (Herbarium ist eine Aktion → Textzeile .tlink daneben; der Rang steht in der Kopfzeile) */
 .statusrow{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap}
+.srlinks{display:inline-flex; align-items:center; gap:4px; margin:0 -8px; flex-wrap:wrap}   /* Herbarium · Sichern: die Zeilen tragen sonst je −8px Außenabstand und überlappten */
+.srlinks .tlink{margin:0}
 .chip{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--rule-strong);
   background:var(--surface-2); color:var(--ink-soft); border-radius:99px; padding:5px 11px;
   font-size:var(--fs-2); cursor:default; min-height:32px}
@@ -411,6 +413,21 @@ button.chip:hover{background:var(--green-tint); border-color:var(--green); color
 .intro-tip .ic,.herb-how .ic{width:16px; height:16px; flex:none; color:var(--sepia)}
 /* Stufen-Erklärung als Leiter (ersetzt drei Textabsätze) */
 .howmodal{max-width:560px}
+/* Lernstand sichern & laden (Dialog im #infoScrim-Muster) */
+.bkmodal{max-width:520px}
+.bk-p{margin:0 0 16px; font-size:var(--fs-3); line-height:1.5; color:var(--ink-soft)}
+.bk-name{display:flex; flex-direction:column; gap:4px; margin:0 0 16px}
+.bk-name span{font-size:var(--fs-1); letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); font-weight:600}
+.bk-name input{border:1.4px solid var(--rule-strong); border-radius:var(--r); padding:9px 12px; min-height:44px; font-size:var(--fs-4); font-family:inherit; background:var(--card); color:var(--ink)}
+.bk-name input:focus{border-color:var(--green)}
+.bk-acts{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+.bk-sum{margin-top:16px; padding:12px 16px; border:1px solid var(--rule); border-radius:var(--r); background:var(--surface-2); font-size:var(--fs-3); line-height:1.5}
+.bk-sum ul{margin:8px 0; padding-left:18px}
+.bk-sum .bk-acts{margin-top:12px}
+.bk-what{margin-top:8px}
+.bk-warn{padding:8px 12px; border-left:3px solid var(--madder); background:var(--card); border-radius:0 var(--r) var(--r) 0}
+.bk-note,.bk-err{font-size:var(--fs-2); color:var(--ink-soft)}
+.bk-err{color:var(--madder)}
 .howgrid{display:grid; gap:8px; margin:16px 0 8px}
 .how-row{display:flex; align-items:center; gap:12px; padding:8px 12px; border:1px solid var(--rule);
   border-radius:var(--r); background:var(--surface-2)}
@@ -1640,6 +1657,15 @@ body.stagefull #stage>.sessionbar{
       <li><b>Herbarium · Thema üben:</b> Auf jeder Sammelkarte im Herbarium startet »Thema üben« eine geführte Lektion
         nur mit den Arten dieses Themas (z. B. nur Gräser). Dasselbe erreichst du über Optionen · Lernstoff, wo du
         auch nach Pflanzenfamilie eingrenzen kannst.</li>
+      <li><b>Lernstand sichern &amp; übertragen:</b> Neben »Herbarium« steht <b>Sichern</b>: Es schreibt deinen
+        gesamten Lernstand (alle Berufe: Stufen, Fälligkeiten, Herbarium, Lernserie) in eine Datei
+        »pflanze-bw-lernstand-…pbwl« – als Sicherung oder für ein anderes Gerät, wo du sie über <b>Datei laden</b>
+        einliest (am Handy geht das Speichern über das Teilen-Menü). Die Datei nennt keinen Namen und keine Zahl im
+        Klartext und trägt eine Prüfsumme; wird sie verändert, lädt sie nicht mehr. Trägt sie <b>denselben Namen</b>
+        wie dein Gerät, werden beide Stände <b>zusammengeführt</b> (je Art zählt die höhere Stufe); ein Gerät ohne
+        Lernstand übernimmt die Datei samt Name und Beruf. Bei einem <b>anderen Namen</b> gibt es kein Zusammenführen –
+        nur Ersetzen nach Rückfrage, damit sich niemand den Stand eines Kollegen dazuholt. Ehrlich gesagt: Das ist eine
+        Schwelle, kein Schloss.</li>
       <li><b>Fokus-Modus (Smartphone):</b> Sobald eine Sitzung läuft, füllt die Karte bzw. Frage auf dem
         Handy den ganzen Bildschirm – Kopf und Menüs verschwinden, du siehst nur noch die aktuelle Aufgabe.
         Oben bleibt die Fortschrittsleiste mit dem Knopf <b>beenden</b>; darüber (oder am Ende der Sitzung)
@@ -1728,7 +1754,7 @@ body.stagefull #stage>.sessionbar{
   <div class="installbar" id="installBar" hidden></div>
 
   <footer class="foot">
-    <span>Pflanzenkenntnis · Lernen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 29.10.2026 · Version 2e0a5d4</span></span>
+    <span>Pflanzenkenntnis · Lernen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 29.10.2026 · Version 0ed6911</span></span>
     <a class="legal" href="rechtliches.html">Impressum &amp; Datenschutz</a>
   </footer>
 </div>
@@ -1785,7 +1811,9 @@ const ICONS = {
   prev:   `<path d="M15 5l-7 7 7 7"/>`,
   next:   `<path d="M9 5l7 7-7 7"/>`,
   chev:   `<path d="M6 9l6 6 6-6"/>`,
-  ext:    `<path d="M7 17L17 7"/><path d="M8 7h9v9"/>`
+  ext:    `<path d="M7 17L17 7"/><path d="M8 7h9v9"/>`,
+  // Lernstand sichern: Pfeil in die Ablage
+  download: `<path d="M12 4v10"/><path d="M7.5 10l4.5 4.5 4.5-4.5"/><path d="M4.5 19.5h15"/>`
 };
 
 function ico(name, cls){                       // → <svg> im einheitlichen Strichstil
@@ -1835,6 +1863,12 @@ function toast(msg, isErr){
 }
 
 function todayISO(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+/* Datei zum Herunterladen anbieten (beide Werkzeuge: JSON-Sicherung · Lernstand-Datei) */
+function downloadText(text,name,mime){
+  const url=URL.createObjectURL(new Blob([text],{type:mime||"application/json"}));
+  const a=el("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
 
 function printEcoOn(){ return store.get(LS_PREFIX+"printeco")==="1"; }       // opt-in: sparsam drucken (ohne Farbflächen, kompakt)
 
@@ -3818,11 +3852,15 @@ function renderProgress(){
        <div class="statusrow" id="streakRow">
          <span class="chip flamechip${(st.s||0)>0?" on":""}" title="Lernserie: an so vielen Tagen in Folge hast du ${goal} Karten bearbeitet (etwa eine Lektion). Heute: ${done} von ${goal}. Rekord: ${st.b||0} ${(st.b||0)===1?"Tag":"Tage"}.">
            <span class="sflame${(st.s||0)>0?" on":""}">${ico("flame")}<b>${st.s||0}</b></span><span class="sr-n">· ${done}/${goal} heute</span></span>
-         <button class="tlink" id="btnHerb" title="Deine Themen-Sammlung: Jedes gemeisterte Thema legt eine gepresste Pflanze ins Herbarium.">${ico("leaf")}Herbarium</button>
+         <span class="srlinks">
+           <button class="tlink" id="btnHerb" title="Deine Themen-Sammlung: Jedes gemeisterte Thema legt eine gepresste Pflanze ins Herbarium.">${ico("leaf")}Herbarium</button>
+           <button class="tlink" id="btnBackup" title="Lernstand als Datei sichern – als Sicherung oder für ein anderes Gerät – oder eine gesicherte Datei laden.">${ico("download")}Sichern</button>
+         </span>
        </div>
      </div>`;
   wireRankPopover();
   const hb=$("#btnHerb"); if(hb) hb.onclick=openHerbarium;
+  const bk=$("#btnBackup"); if(bk) bk.onclick=openBackupModal;
   const bh=$("#btnHow"); if(bh) bh.onclick=openHowModal;
   const due = p.filter(c=>{ const pr=pget(c.key); return !pr.box || !pr.due || pr.due<=todayISO(); }).length;
   // Die Portion, nicht der Berg: »303 Karten heute dran« war die ganze Liste (jede neue Art zählt
@@ -7073,6 +7111,255 @@ function openHowModal(){
   infoReturnFocus = document.activeElement;
   try{ scrim.querySelector("#infoClose").focus(); }catch(e){}
 }
+/* ---------- Lernstand sichern & übertragen (Datei) ----------
+   Eine Datei je Lernendem: pflanze-bw-lernstand-<Name>-<Datum>.pbwl – als Sicherung oder für das
+   nächste Gerät. Inhalt binär gepackt (Varints wie beim Duell-Link), 32-Bit-FNV-1a-Prüfsumme und
+   dieselbe Verwürfelung (chMask): keine Namen, keine Zahlen im Klartext, jede Handänderung fällt
+   auf. Ehrlich: Das ist eine Schwelle gegen den schnellen Griff in die Datei, kein Schloss – der
+   Code liegt im Browser. Arten stehen über ihren Platz in der Liste (Index) UND einen Hash des
+   Schlüssels in der Datei: verschiebt eine neue Listenfassung den Platz, findet der Hash die Art
+   wieder; fehlt sie ganz, fällt sie still weg. Datumsangaben als Tage seit dem 31.12.2019
+   (0 = kein Datum). Regeln beim Laden (Nutzerentscheid): leeres Gerät → übernehmen (samt Name und
+   Beruf der Datei); gleicher Name → zusammenführen (je Art die höhere Stufe, bei Gleichstand die
+   spätere Fälligkeit; Zähler das Maximum; Herbarium vereinigt; die längere Serie); anderer Name →
+   kein Zusammenführen, nur Ersetzen mit Rückfrage – damit sich niemand den Stand eines Kollegen
+   dazuholt. Ein Gerät ohne Namen gilt als passend und übernimmt den Namen der Datei. */
+const LS_FILE_VER = 1;                              // Dateikennung »PBWL<Fassung>:« + base64url
+const LS_EPOCH = Date.UTC(2019,11,31);              // Tag 1 = 1.1.2020
+function fnv32(s){ let h=0x811c9dc5; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0; } return h>>>0; }
+function fnv32Bytes(b, len){ let h=0x811c9dc5; for(let i=0;i<len;i++){ h^=b[i]; h=Math.imul(h,0x01000193)>>>0; } return h>>>0; }
+function put32(out, n){ n=n>>>0; out.push((n>>>24)&255, (n>>>16)&255, (n>>>8)&255, n&255); }
+function get32(b, st){ if(st.i+4>b.length) throw 0; const n=(b[st.i]*16777216 + (b[st.i+1]<<16) + (b[st.i+2]<<8) + b[st.i+3])>>>0; st.i+=4; return n; }
+function isoDays(iso){ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||""); if(!m) return 0; const d=Math.round((Date.UTC(+m[1],+m[2]-1,+m[3])-LS_EPOCH)/864e5); return d>0?d:0; }
+function daysIso(n){ n=+n||0; if(n<=0) return ""; const d=new Date(LS_EPOCH+n*864e5); return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0"); }
+function lsPutStr(out, s){ const t=unescape(encodeURIComponent(String(s==null?"":s))); vPut(out, t.length); for(let i=0;i<t.length;i++) out.push(t.charCodeAt(i)&255); }
+function lsGetStr(b, st){ const n=vGet(b,st); if(st.i+n>b.length) throw 0; let t=""; for(let k=0;k<n;k++) t+=String.fromCharCode(b[st.i++]); return decodeURIComponent(escape(t)); }
+function lsProfiles(){ return Object.keys(typeof SEEDS!=="undefined" && SEEDS ? SEEDS : {}); }
+function lsProgOf(id){ if(id===profileId) return progress; try{ const o=JSON.parse(store.get(LS_PREFIX+"progress."+id)||"{}"); return (o&&typeof o==="object")?o:{}; }catch(e){ return {}; } }
+function lsHerbOf(id){ try{ const a=JSON.parse(store.get(LS_PREFIX+"herb."+id)||"[]"); return Array.isArray(a)?a.filter(t=>typeof t==="string"&&t):[]; }catch(e){ return []; } }
+const lsLive = e => !!e && typeof e==="object" && ((+e.box||0)>0 || (+e.seen||0)>0);   // ein Eintrag mit Inhalt
+function lsCollect(name){                           // alles, was den Lernstand ausmacht – über alle Berufe
+  const st=streakState(), xp=xpLoad();
+  const out={ v:LS_FILE_VER, name:norm(name).slice(0,40), ts:Math.floor(Date.now()/60000), p:profileId,
+    streak:{ d:st.d||"", n:+st.n||0, s:+st.s||0, b:+st.b||0, gd:st.gd||"" }, r:+xp.r||0, profiles:[] };
+  lsProfiles().forEach(id=>{
+    const prog=lsProgOf(id), herb=lsHerbOf(id), keys=Object.keys(prog).filter(k=>lsLive(prog[k]));
+    if(!keys.length && !herb.length) return;
+    const idx=new Map(cardsFor(id).map((c,i)=>[c.key,i]));
+    out.profiles.push({ id, herb, entries: keys.map(k=>{ const e=prog[k];
+      return { key:k, i: idx.has(k)?idx.get(k)+1:0, h:fnv32(k), box:Math.min(5,Math.max(0,+e.box||0)), due:e.due||"", seen:+e.seen||0, correct:+e.correct||0, wrong:+e.wrong||0 }; }) });
+  });
+  return out;
+}
+function lsPack(o){                                 // → »PBWL1:<base64url>« (verwürfelt, mit Prüfsumme)
+  const out=[];
+  vPut(out, o.v||LS_FILE_VER); lsPutStr(out, o.name); vPut(out, o.ts||0); lsPutStr(out, o.p);
+  const s=o.streak||{};
+  vPut(out, isoDays(s.d)); vPut(out, s.n||0); vPut(out, s.s||0); vPut(out, s.b||0); vPut(out, isoDays(s.gd)); vPut(out, o.r||0);
+  vPut(out, o.profiles.length);
+  o.profiles.forEach(pr=>{
+    lsPutStr(out, pr.id);
+    vPut(out, pr.entries.length);
+    pr.entries.forEach(e=>{ vPut(out, e.i); put32(out, e.h); vPut(out, e.box); vPut(out, isoDays(e.due)); vPut(out, e.seen); vPut(out, e.correct); vPut(out, e.wrong); });
+    vPut(out, pr.herb.length); pr.herb.forEach(t=>lsPutStr(out, t));
+  });
+  put32(out, fnv32Bytes(out, out.length));
+  return "PBWL"+LS_FILE_VER+":"+bytesToB64url(chMask(Uint8Array.from(out)));
+}
+function lsUnpack(str){                             // null bei fremdem Inhalt, Prüfsummenfehler, neuerer Fassung
+  try{
+    const m=/^PBWL(\d+):([A-Za-z0-9_-]+)$/.exec(String(str==null?"":str).replace(/\s+/g,""));
+    if(!m || +m[1]!==LS_FILE_VER) return null;
+    const b=chMask(b64urlToBytes(m[2]));
+    if(b.length<5) return null;
+    const body=b.length-4;
+    if(fnv32Bytes(b, body)!==get32(b,{i:body})) return null;
+    const st={i:0}, o={};
+    o.v=vGet(b,st); o.name=lsGetStr(b,st); o.ts=vGet(b,st); o.p=lsGetStr(b,st);
+    o.streak={ d:daysIso(vGet(b,st)), n:vGet(b,st), s:vGet(b,st), b:vGet(b,st), gd:daysIso(vGet(b,st)) };
+    o.r=vGet(b,st);
+    const np=vGet(b,st); o.profiles=[];
+    for(let k=0;k<np;k++){
+      const id=lsGetStr(b,st), ne=vGet(b,st), entries=[];
+      for(let j=0;j<ne;j++) entries.push({ i:vGet(b,st), h:get32(b,st), box:vGet(b,st), due:daysIso(vGet(b,st)), seen:vGet(b,st), correct:vGet(b,st), wrong:vGet(b,st) });
+      const nh=vGet(b,st), herb=[]; for(let j=0;j<nh;j++) herb.push(lsGetStr(b,st));
+      o.profiles.push({ id, entries, herb });
+    }
+    if(st.i!==body) return null;
+    return o;
+  }catch(e){ return null; }
+}
+function lsResolve(o){                              // Datei-Einträge auf die heutigen Listen abbilden
+  const res={ profiles:[], dropped:0, n:0, fest:0, herb:0 };
+  ((o && o.profiles) || []).forEach(pr=>{
+    if(!(typeof SEEDS!=="undefined" && SEEDS[pr.id])){ res.dropped += pr.entries.length; return; }
+    const cards=cardsFor(pr.id), byHash=new Map();
+    cards.forEach(c=>{ const h=fnv32(c.key); if(!byHash.has(h)) byHash.set(h, c.key); });
+    const entries=[], seen=new Set();
+    pr.entries.forEach(e=>{
+      const c=cards[e.i-1]; let key=null;
+      if(e.i>0 && c && fnv32(c.key)===e.h) key=c.key; else if(byHash.has(e.h)) key=byHash.get(e.h);
+      if(!key || seen.has(key)){ res.dropped++; return; }
+      seen.add(key);
+      entries.push({ key, box:Math.min(5,Math.max(0,+e.box||0)), due:/^\d{4}-\d{2}-\d{2}$/.test(e.due)?e.due:"", seen:+e.seen||0, correct:+e.correct||0, wrong:+e.wrong||0 });
+    });
+    const herb=(pr.herb||[]).filter(t=>typeof t==="string"&&t), fest=entries.filter(e=>e.box>=4).length;
+    res.profiles.push({ id:pr.id, entries, herb, fest });
+    res.n+=entries.length; res.fest+=fest; res.herb+=herb.length;
+  });
+  return res;
+}
+function lsDeviceState(){                           // hat dieses Gerät schon einen Lernstand? (und welchen Namen)
+  const any = lsProfiles().some(id=>{ const p=lsProgOf(id); return Object.keys(p).some(k=>lsLive(p[k])) || lsHerbOf(id).length>0; });
+  return { any, name: duelName() };
+}
+function lsNameKey(n){ return deacc(norm(n)).toLowerCase(); }
+function lsMode(o){                                 // adopt (leeres Gerät) · merge (gleicher Name) · replace (anderer Name)
+  const dev=lsDeviceState();
+  if(!dev.any) return "adopt";
+  if(!dev.name || lsNameKey(dev.name)===lsNameKey(o.name)) return "merge";
+  return "replace";
+}
+function lsMergeEntry(a, b){                        // je Art: höhere Stufe gewinnt, bei Gleichstand die spätere Fälligkeit; Zähler das Maximum
+  if(!a) return { box:b.box, due:b.due, seen:b.seen, correct:b.correct, wrong:b.wrong };
+  const ba=+a.box||0, bb=+b.box||0;
+  const win = (bb>ba || (bb===ba && String(b.due||"")>String(a.due||""))) ? b : a;
+  return { box:+win.box||0, due:win.due||"", seen:Math.max(+a.seen||0,+b.seen||0), correct:Math.max(+a.correct||0,+b.correct||0), wrong:Math.max(+a.wrong||0,+b.wrong||0) };
+}
+function lsApply(o, res, mode){
+  if(mode==="replace") lsProfiles().forEach(id=>{ store.remove(LS_PREFIX+"progress."+id); store.remove(LS_PREFIX+"herb."+id); });
+  res.profiles.forEach(pr=>{
+    const cur = mode==="merge" ? lsProgOf(pr.id) : {}, out=Object.assign({}, cur);
+    pr.entries.forEach(e=>{ out[e.key] = mode==="merge" ? lsMergeEntry(cur[e.key], e) : { box:e.box, due:e.due, seen:e.seen, correct:e.correct, wrong:e.wrong }; });
+    store.set(LS_PREFIX+"progress."+pr.id, JSON.stringify(out));
+    const herb = mode==="merge" ? [...new Set([...lsHerbOf(pr.id), ...pr.herb])] : pr.herb.slice();
+    if(herb.length) store.set(LS_PREFIX+"herb."+pr.id, JSON.stringify(herb)); else store.remove(LS_PREFIX+"herb."+pr.id);
+  });
+  const fs=o.streak||{};                            // Serie: beim Zusammenführen die längere (bei Gleichstand der neuere Zieltag), sonst die der Datei
+  if(mode==="merge"){
+    const cur=streakState();
+    if((+fs.s||0)>(+cur.s||0) || ((+fs.s||0)===(+cur.s||0) && String(fs.gd||"")>String(cur.gd||""))){ cur.s=+fs.s||0; cur.gd=fs.gd||cur.gd||""; }
+    cur.b=Math.max(+cur.b||0, +fs.b||0);
+    if(fs.d && fs.d===cur.d) cur.n=Math.max(+cur.n||0, +fs.n||0);
+    streakSave(cur);
+  } else streakSave({ d:fs.d||"", n:+fs.n||0, s:+fs.s||0, b:+fs.b||0, gd:fs.gd||"" });
+  const xp=xpLoad(); xp.r = mode==="merge" ? Math.max(+xp.r||0, +o.r||0) : (+o.r||0); xpSave(xp);   // Feiermarke: nichts doppelt feiern
+  if(o.name && (mode!=="merge" || !duelName())) duelName(o.name);   // wer noch keinen Namen hat, übernimmt ihn; beim Ersetzen immer
+  const target = mode!=="merge" && o.p && typeof SEEDS!=="undefined" && SEEDS[o.p] ? o.p : null;   // Übernehmen/Ersetzen: in den Beruf der Datei
+  const m = target && target!==profileId ? /^(.*)_(gaertner|fachwerker)$/.exec(target) : null;
+  if(m && $("#frSelect") && $("#nivSelect")){ $("#frSelect").value=m[1]; $("#nivSelect").value=m[2]; applyProfile(); }   // rendert den Fortschritt mit
+  else { loadProgress(); renderProgress(); }
+}
+function lsFileName(name){
+  const s=norm(name).replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/Ä/g,"Ae").replace(/Ö/g,"Oe").replace(/Ü/g,"Ue").replace(/ß/g,"ss")
+    .replace(/[^A-Za-z0-9-]+/g,"_").replace(/^_+|_+$/g,"").slice(0,30);
+  return "pflanze-bw-lernstand-"+(s||"lernstand")+"-"+todayISO()+".pbwl";
+}
+/* Speichern: am Handy über das Teilen-Menü des Systems (Dateien, Drive, Mail …), sonst als Download.
+   navigator.share braucht die Nutzergeste – deshalb ohne vorheriges await. → "hook"|"share"|"abort"|"download" */
+function lsSaveFile(text, fileName){
+  if(window.__lsSaveHook){ try{ window.__lsSaveHook(text, fileName); }catch(e){} return Promise.resolve("hook"); }
+  try{
+    if(installEnv().mobile && navigator.share && navigator.canShare && typeof File==="function"){
+      const file=new File([text], fileName, {type:"text/plain"});
+      if(navigator.canShare({files:[file]}))
+        return navigator.share({files:[file], title:"Pflanze-BW · Lernstand"}).then(()=>"share", e=>{ if(e && e.name==="AbortError") return "abort"; downloadText(text, fileName, "text/plain"); return "download"; });
+    }
+  }catch(e){}
+  downloadText(text, fileName, "text/plain");
+  return Promise.resolve("download");
+}
+function lsDate(ts){ const d=new Date((+ts||0)*60000); return isNaN(d) ? "" : String(d.getDate()).padStart(2,"0")+"."+String(d.getMonth()+1).padStart(2,"0")+"."+d.getFullYear()+", "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+function lsProfilLabel(id){ const fr=frNameOf(id); return fr ? fr+" · "+nivNameOf(id) : id; }
+function lsImportText(text){                        // → {ok, mode, o, res} oder {ok:false, msg}
+  const t=String(text==null?"":text);
+  if(/^\s*\{/.test(t) && /"(plants|schema|exams|settings)"\s*:/.test(t))
+    return { ok:false, msg:"Das ist eine JSON-Sicherung des Prüfungswerkzeugs – sie gehört dort unter »JSON laden«. Hier wird nur eine Lernstand-Datei (.pbwl) gelesen." };
+  const o=lsUnpack(t);
+  if(!o) return { ok:false, msg: /^\s*PBWL\d+:/.test(t)
+    ? "Diese Lernstand-Datei ist beschädigt, verändert oder aus einer neueren Fassung – sie wird nicht geladen."
+    : "Keine Lernstand-Datei des Lern-Tools (.pbwl) – erzeugt wird sie über »Sichern«." };
+  return { ok:true, o, res:lsResolve(o), mode:lsMode(o) };
+}
+function lsSummaryHTML(r){                          // Zusammenfassung der Datei + die passende Aktion je Regel
+  const o=r.o, res=r.res, dev=lsDeviceState();
+  const rows=res.profiles.map(p=>`<li><b>${esc(lsProfilLabel(p.id))}</b>: ${p.entries.length} Arten gelernt · ${p.fest} sitzen${p.herb.length?` · Herbarium: ${p.herb.length} ${p.herb.length===1?"Thema":"Themen"}`:""}</li>`).join("");
+  const serie = o.streak && (+o.streak.s||0) ? ` · Lernserie ${o.streak.s} ${o.streak.s===1?"Tag":"Tage"}` : "";
+  const kopf=`<div class="bk-head"><b>${esc(o.name||"ohne Namen")}</b> · ${esc(lsDate(o.ts))}${serie}</div>`;
+  const liste = rows ? `<ul>${rows}</ul>` : `<div class="bk-note">Die Datei enthält keinen Lernstand.</div>`;
+  const weg = res.dropped ? `<div class="bk-note">${res.dropped} ${res.dropped===1?"Eintrag":"Einträge"} nicht mehr in den heutigen Listen – weggelassen.</div>` : "";
+  let txt="", acts="";
+  if(r.mode==="adopt"){
+    txt=`Dieses Gerät hat noch keinen Lernstand – die Datei wird übernommen${o.name?`, samt Name <b>${esc(o.name)}</b>`:""} und Beruf.`;
+    acts=`<button class="btn primary" id="bkApply" data-mode="adopt">Übernehmen</button>`;
+  } else if(r.mode==="merge"){
+    txt = dev.name ? `Gleicher Name – beide Stände werden <b>zusammengeführt</b>: je Art zählt die höhere Stufe, nichts geht verloren.`
+                   : `Dieses Gerät hat noch keinen Namen – es übernimmt <b>${esc(o.name)}</b> und führt beide Stände zusammen (je Art die höhere Stufe).`;
+    acts=`<button class="btn primary" id="bkApply" data-mode="merge">Zusammenführen</button>`;
+  } else {
+    txt=`Die Datei gehört <b>${esc(o.name||"jemand anderem")}</b>, dieses Gerät <b>${esc(dev.name)}</b>. Zusammenführen geht nur bei gleichem Namen – sonst holte man sich fremde Stände. Du kannst deinen Lernstand durch diesen <b>ersetzen</b>; dein eigener geht dabei verloren.`;
+    acts=`<button class="btn outline" id="bkApply" data-mode="replace">Meinen Lernstand durch diesen ersetzen</button><button class="btn text" id="bkCancel">Abbrechen</button>`;
+  }
+  return kopf+liste+weg+`<div class="bk-what${r.mode==="replace"?" bk-warn":""}">${txt}</div><div class="bk-acts">${acts}</div>`;
+}
+function lsShowImport(text){                        // Datei gelesen → Zusammenfassung im Dialog, Aktion je Regel
+  if(!$("#bkSum")) openBackupModal();
+  const box=$("#bkSum"); if(!box) return null;
+  const r=lsImportText(text);
+  box.hidden=false;
+  if(!r.ok){ box.innerHTML=`<div class="bk-err" role="alert">${esc(r.msg)}</div>`; return r; }
+  box.innerHTML=lsSummaryHTML(r);
+  const ap=$("#bkApply"), cn=$("#bkCancel");
+  if(cn) cn.onclick=()=>{ box.hidden=true; box.innerHTML=""; };
+  if(ap) ap.onclick=()=>{
+    if(r.mode==="replace" && !confirm(`Deinen Lernstand auf diesem Gerät wirklich durch den von »${r.o.name||"der Datei"}« ersetzen? Das lässt sich nicht rückgängig machen.`)) return;
+    lsApply(r.o, r.res, r.mode);
+    closeInfo();
+    toast(`Lernstand ${r.mode==="merge"?"zusammengeführt":r.mode==="replace"?"ersetzt":"übernommen"}: ${r.res.n} Arten · ${r.res.fest} sitzen`);
+  };
+  try{ if(ap) ap.focus(); }catch(e){}
+  return r;
+}
+function openBackupModal(){
+  closeInfo();
+  const scrim = el("div","scrim"); scrim.id="infoScrim";
+  scrim.innerHTML = `<div class="modal bkmodal" role="dialog" aria-modal="true" aria-labelledby="bkTitle">
+     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">${ico("x")}</button>
+     <div class="modal-head">
+       <div class="mh-bot fam" id="bkTitle">Lernstand sichern</div>
+       <div class="mh-fam">Als Datei – zur Sicherung oder für ein anderes Gerät</div>
+     </div>
+     <p class="bk-p">Die Datei enthält deinen Lernstand aller Berufe (Stufen, Fälligkeiten, Herbarium, Lernserie) – ohne Klartext, mit Prüfsumme. Auf dem anderen Gerät hier über <b>Datei laden</b> einlesen.</p>
+     <label class="bk-name" for="bkName"><span>Dein Name</span><input type="text" id="bkName" maxlength="40" autocomplete="off" placeholder="z. B. Vorname" value="${esc(duelName())}"></label>
+     <div class="bk-acts">
+       <button class="btn primary" id="bkSave">${ico("download")}Datei speichern</button>
+       <button class="btn outline" id="bkLoad">Datei laden</button>
+     </div>
+     <div class="bk-sum" id="bkSum" hidden></div>
+     <div class="famfoot">Gleicher Name auf beiden Geräten = die Stände werden <b>zusammengeführt</b> (je Art zählt die höhere Stufe). Ein anderer Name kann den eigenen Stand nur <b>ersetzen</b>, nicht ergänzen – so holt sich niemand den Stand eines Kollegen. Eine veränderte Datei lädt nicht mehr.</div>
+   </div>`;
+  document.body.appendChild(scrim); infoEl=scrim;
+  scrim.addEventListener("click", e=>{ if(e.target===scrim) closeInfo(); });
+  scrim.querySelector("#infoClose").onclick = closeInfo;
+  document.addEventListener("keydown", infoKey);
+  infoReturnFocus = document.activeElement;
+  const nameEl=scrim.querySelector("#bkName");
+  scrim.querySelector("#bkSave").onclick=()=>{
+    const name=norm(nameEl.value).slice(0,40);
+    if(!name){ toast("Bitte zuerst deinen Namen eintragen – er entscheidet später, ob zwei Stände zusammengeführt werden dürfen.", true); try{ nameEl.focus(); }catch(e){} return; }
+    if(!lsDeviceState().any){ toast("Auf diesem Gerät gibt es noch keinen Lernstand zum Sichern.", true); return; }
+    duelName(name);
+    const fileName=lsFileName(name), text=lsPack(lsCollect(name));
+    lsSaveFile(text, fileName).then(r=>{ if(r==="abort") return; toast(r==="share" ? "Lernstand als Datei geteilt" : "Lernstand gespeichert: "+fileName); });
+  };
+  scrim.querySelector("#bkLoad").onclick=()=>{
+    const inp=el("input"); inp.type="file";               // bewusst ohne accept: manche Dateiwähler blenden unbekannte Endungen sonst aus
+    inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
+      f.text().then(t=>lsShowImport(t), ()=>toast("Datei konnte nicht gelesen werden", true)); };
+    inp.click();
+  };
+  try{ (duelName() ? scrim.querySelector("#bkSave") : nameEl).focus(); }catch(e){}
+}
 /* ---------- Profil-Wechsel ---------- */
 function loadProfile(id){
   if(!(typeof SEEDS!=="undefined" && SEEDS[id])) id = SEEDS && SEEDS["gemuesebau_gaertner"] ? "gemuesebau_gaertner" : Object.keys(SEEDS||{})[0];
@@ -7448,6 +7735,9 @@ window.streakState=streakState;   // für Tests: Lernserie/Tagesziel
 window.streakBump=streakBump;
 window.streakGoal=streakGoal;
 window.herbCheck=herbCheck;       // für Tests: Sammel-Herbarium
+window.openBackupModal=openBackupModal; window.cardsFor=cardsFor; window.duelName=duelName;   // Lernstand sichern (für Tests)
+window.__lsPack=lsPack; window.__lsUnpack=lsUnpack; window.__lsCollect=lsCollect; window.__lsResolve=lsResolve; window.__lsImportText=lsImportText;
+window.__lsShowImport=lsShowImport; window.__lsApply=lsApply; window.__lsDeviceState=lsDeviceState; window.__lsMode=lsMode; window.__lsFileName=lsFileName;
 window.herbData=herbData;
 window.openHerbarium=openHerbarium;
 window.rankOf=rankOf;             // für Tests: Ränge (nur Lernstand), Combo

@@ -215,12 +215,7 @@ function resetToDefault(){
   toast(cache.length?"Standardliste wiederhergestellt":"Liste geleert (keine hinterlegten Daten)");
 }
 
-/* ---------- Backup als JSON-Datei ---------- */
-function downloadText(text,name,mime){
-  const url=URL.createObjectURL(new Blob([text],{type:mime||"application/json"}));
-  const a=el("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),4000);
-}
+/* ---------- Backup als JSON-Datei (downloadText: src/shared.js) ---------- */
 /* Sicherung enthält die aktuelle Profilliste UND die geräteweiten Daten:
    gespeicherte Prüfungen und Einstellungen (zuständige Stelle etc.). */
 function backupData(){
@@ -289,21 +284,30 @@ function importJsonData(d){
   }
   throw new Error("Format");
 }
+/* Dateiinhalt einlesen (Sicherung oder einzelne Prüfung). Eine Lernstand-Datei des Lern-Tools
+   (»PBWL1:…«, .pbwl) landet gelegentlich hier – sie gehört dorthin und wird klar abgewiesen,
+   statt als »keine gültige .json« zu enden. */
+function importJsonText(txt){
+  if(/^\s*PBWL\d+:/.test(txt||"")){ toast("Das ist eine Lernstand-Sicherung des Lern-Tools – bitte dort über »Sichern« laden",true); return null; }
+  try{
+    const r=importJsonData(JSON.parse(txt));
+    if(r.type==="exam"){
+      openExams();
+      toast(r.dupe
+        ? `Diese Prüfung ist bereits gespeichert (${r.count} Pflanzen)`
+        : `Prüfung importiert (${r.count} Pflanzen · ${fmtDate(r.date)}) – unten »Laden« drücken`);
+    }else{
+      toast(`Sicherung geladen: ${r.plants} Arten`+(r.exams!=null?`, ${r.exams} Prüfungen`:""));
+    }
+    return r;
+  }catch(e){ toast("Keine gültige .json-Datei (weder Sicherung noch Prüfung)",true); return null; }
+}
 function importJsonFile(){
   const inp=el("input"); inp.type="file"; inp.accept=".json,application/json";
   inp.onchange=async()=>{
     const f=inp.files[0]; if(!f) return;
-    try{
-      const r=importJsonData(JSON.parse(await f.text()));
-      if(r.type==="exam"){
-        openExams();
-        toast(r.dupe
-          ? `Diese Prüfung ist bereits gespeichert (${r.count} Pflanzen)`
-          : `Prüfung importiert (${r.count} Pflanzen · ${fmtDate(r.date)}) – unten »Laden« drücken`);
-      }else{
-        toast(`Sicherung geladen: ${r.plants} Arten`+(r.exams!=null?`, ${r.exams} Prüfungen`:""));
-      }
-    }catch(e){ toast("Keine gültige .json-Datei (weder Sicherung noch Prüfung)",true); }
+    let txt=""; try{ txt=await f.text(); }catch(e){ toast("Datei konnte nicht gelesen werden",true); return; }
+    importJsonText(txt);
   };
   inp.click();
 }
@@ -2163,6 +2167,7 @@ function updateSchema(){
 window.pickExcel=pickExcel;
 window.resetToDefault=resetToDefault;
 window.importJsonData=importJsonData; // für Datei-Import und Smoke-Test
+window.importJsonText=importJsonText; // Smoke-Test: Lernstand-Datei des Lern-Tools wird abgewiesen
 function swIdle(){ return selection.length===0 && !document.querySelector(".scrim.open, .infoscrim, .lbscrim") && document.visibilityState!=="hidden"; }
 window.__swUpdate=swUpdate; window.__swReloadHook=fn=>{ swReload = fn || (()=>{ try{ location.reload(); }catch(e){} }); };
 window.__setJsonp=fn=>{ jsonp = fn || ((...a)=>jsonpGet(...a)); };   // Smoke-Test: Wikipedia-Antworten ohne Netz vorgeben

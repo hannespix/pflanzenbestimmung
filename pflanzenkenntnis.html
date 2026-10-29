@@ -981,7 +981,7 @@ body{overflow-x:clip}
         <dl class="hdl">
           <dt>Excel importieren</dt><dd>Liest eine .xlsx/.xls-Liste ein. Kopfzeile, Gattung/Art-Trennung, Familie, deutscher Name, Kategorien und ZP werden automatisch erkannt; beim Import kann die Liste ersetzt oder ergänzt werden.</dd>
           <dt>Art hinzufügen</dt><dd>Fügt eine einzelne Art von Hand hinzu (mit Synonymen, Bemerkungen und ZP-Kennzeichen).</dd>
-          <dt>JSON laden / Sichern</dt><dd>»Sichern« schreibt <b>alles</b> in eine .json-Datei: die Liste dieses Profils, alle gespeicherten Prüfungen und die Einstellungen. »JSON laden« erkennt den Dateityp automatisch: eine Gesamt-Sicherung wird komplett wiederhergestellt (inkl. Wechsel zum gesicherten Profil), eine einzelne Prüfungs-.json wird nur den gespeicherten Prüfungen hinzugefügt – die Pflanzenliste bleibt unangetastet.</dd>
+          <dt>JSON laden / Sichern</dt><dd>»Sichern« schreibt <b>alles</b> in eine .json-Datei: die Liste dieses Profils, alle gespeicherten Prüfungen und die Einstellungen. »JSON laden« erkennt den Dateityp automatisch: eine Gesamt-Sicherung wird komplett wiederhergestellt (inkl. Wechsel zum gesicherten Profil), eine einzelne Prüfungs-.json wird nur den gespeicherten Prüfungen hinzugefügt – die Pflanzenliste bleibt unangetastet. Eine <b>Lernstand-Datei des Lern-Tools</b> (.pbwl, »Sichern« dort) gehört nicht hierher – sie wird mit einem Hinweis abgewiesen.</dd>
           <dt>Standardliste</dt><dd>Verwirft die im Browser gespeicherten Änderungen dieses Profils und stellt die hinterlegte Liste wieder her.</dd>
         </dl>
 
@@ -1172,7 +1172,7 @@ body{overflow-x:clip}
   </main>
 
   <footer class="pagefoot">
-    <span>Pflanzenkenntnis · Prüfen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 29.10.2026 · Version 2e0a5d4</span></span>
+    <span>Pflanzenkenntnis · Prüfen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 29.10.2026 · Version 0ed6911</span></span>
     <a class="legal" href="rechtliches.html">Impressum &amp; Datenschutz</a>
   </footer>
 </div>
@@ -1327,7 +1327,9 @@ const ICONS = {
   prev:   `<path d="M15 5l-7 7 7 7"/>`,
   next:   `<path d="M9 5l7 7-7 7"/>`,
   chev:   `<path d="M6 9l6 6 6-6"/>`,
-  ext:    `<path d="M7 17L17 7"/><path d="M8 7h9v9"/>`
+  ext:    `<path d="M7 17L17 7"/><path d="M8 7h9v9"/>`,
+  // Lernstand sichern: Pfeil in die Ablage
+  download: `<path d="M12 4v10"/><path d="M7.5 10l4.5 4.5 4.5-4.5"/><path d="M4.5 19.5h15"/>`
 };
 
 function ico(name, cls){                       // → <svg> im einheitlichen Strichstil
@@ -1377,6 +1379,12 @@ function toast(msg, isErr){
 }
 
 function todayISO(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+/* Datei zum Herunterladen anbieten (beide Werkzeuge: JSON-Sicherung · Lernstand-Datei) */
+function downloadText(text,name,mime){
+  const url=URL.createObjectURL(new Blob([text],{type:mime||"application/json"}));
+  const a=el("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
 
 function printEcoOn(){ return store.get(LS_PREFIX+"printeco")==="1"; }       // opt-in: sparsam drucken (ohne Farbflächen, kompakt)
 
@@ -2396,12 +2404,7 @@ function resetToDefault(){
   toast(cache.length?"Standardliste wiederhergestellt":"Liste geleert (keine hinterlegten Daten)");
 }
 
-/* ---------- Backup als JSON-Datei ---------- */
-function downloadText(text,name,mime){
-  const url=URL.createObjectURL(new Blob([text],{type:mime||"application/json"}));
-  const a=el("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),4000);
-}
+/* ---------- Backup als JSON-Datei (downloadText: src/shared.js) ---------- */
 /* Sicherung enthält die aktuelle Profilliste UND die geräteweiten Daten:
    gespeicherte Prüfungen und Einstellungen (zuständige Stelle etc.). */
 function backupData(){
@@ -2470,21 +2473,30 @@ function importJsonData(d){
   }
   throw new Error("Format");
 }
+/* Dateiinhalt einlesen (Sicherung oder einzelne Prüfung). Eine Lernstand-Datei des Lern-Tools
+   (»PBWL1:…«, .pbwl) landet gelegentlich hier – sie gehört dorthin und wird klar abgewiesen,
+   statt als »keine gültige .json« zu enden. */
+function importJsonText(txt){
+  if(/^\s*PBWL\d+:/.test(txt||"")){ toast("Das ist eine Lernstand-Sicherung des Lern-Tools – bitte dort über »Sichern« laden",true); return null; }
+  try{
+    const r=importJsonData(JSON.parse(txt));
+    if(r.type==="exam"){
+      openExams();
+      toast(r.dupe
+        ? `Diese Prüfung ist bereits gespeichert (${r.count} Pflanzen)`
+        : `Prüfung importiert (${r.count} Pflanzen · ${fmtDate(r.date)}) – unten »Laden« drücken`);
+    }else{
+      toast(`Sicherung geladen: ${r.plants} Arten`+(r.exams!=null?`, ${r.exams} Prüfungen`:""));
+    }
+    return r;
+  }catch(e){ toast("Keine gültige .json-Datei (weder Sicherung noch Prüfung)",true); return null; }
+}
 function importJsonFile(){
   const inp=el("input"); inp.type="file"; inp.accept=".json,application/json";
   inp.onchange=async()=>{
     const f=inp.files[0]; if(!f) return;
-    try{
-      const r=importJsonData(JSON.parse(await f.text()));
-      if(r.type==="exam"){
-        openExams();
-        toast(r.dupe
-          ? `Diese Prüfung ist bereits gespeichert (${r.count} Pflanzen)`
-          : `Prüfung importiert (${r.count} Pflanzen · ${fmtDate(r.date)}) – unten »Laden« drücken`);
-      }else{
-        toast(`Sicherung geladen: ${r.plants} Arten`+(r.exams!=null?`, ${r.exams} Prüfungen`:""));
-      }
-    }catch(e){ toast("Keine gültige .json-Datei (weder Sicherung noch Prüfung)",true); }
+    let txt=""; try{ txt=await f.text(); }catch(e){ toast("Datei konnte nicht gelesen werden",true); return; }
+    importJsonText(txt);
   };
   inp.click();
 }
@@ -4344,6 +4356,7 @@ function updateSchema(){
 window.pickExcel=pickExcel;
 window.resetToDefault=resetToDefault;
 window.importJsonData=importJsonData; // für Datei-Import und Smoke-Test
+window.importJsonText=importJsonText; // Smoke-Test: Lernstand-Datei des Lern-Tools wird abgewiesen
 function swIdle(){ return selection.length===0 && !document.querySelector(".scrim.open, .infoscrim, .lbscrim") && document.visibilityState!=="hidden"; }
 window.__swUpdate=swUpdate; window.__swReloadHook=fn=>{ swReload = fn || (()=>{ try{ location.reload(); }catch(e){} }); };
 window.__setJsonp=fn=>{ jsonp = fn || ((...a)=>jsonpGet(...a)); };   // Smoke-Test: Wikipedia-Antworten ohne Netz vorgeben
