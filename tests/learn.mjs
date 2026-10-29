@@ -4877,6 +4877,117 @@ async function main() {
   assert(ptitle.after === ptitle.orig && /Pflanzenkenntnis/.test(ptitle.orig),
     "Druck: nach afterprint muss der App-Titel zurück sein: " + JSON.stringify(ptitle));
 
+  // Lernstand sichern & übertragen: »Sichern« neben dem Herbarium (Textzeile mit Icon), Dialog mit
+  // Namenspflicht, Datei »PBWL1:…« ohne Klartext (Prüfsumme + Verwürfelung: eine veränderte Stelle
+  // → abgelehnt), Rundreise der Kodierung, Zusammenführen bei gleichem Namen (höhere Stufe gewinnt,
+  // bei Gleichstand die spätere Fälligkeit, Herbarium vereinigt, längere Serie), anderer Name → nur
+  // Ersetzen nach Rückfrage, leeres Gerät → Übernehmen samt Name und Beruf, Hash findet verschobene
+  // Arten, Prüfwerkzeug-JSON und Unsinn werden klar abgewiesen. Speicher wird danach wiederhergestellt.
+  const bk = await page.evaluate(async () => {
+    const tick = (ms) => new Promise((r) => setTimeout(r, ms));
+    const KEYS = () => Object.keys(localStorage).filter((k) => /^pflanzenlernen\.(progress\.|herb\.|streak$|xp$|name$|profile$)/.test(k));
+    const snap = {}; KEYS().forEach((k) => snap[k] = localStorage.getItem(k));
+    const wipe = () => KEYS().forEach((k) => localStorage.removeItem(k));
+    const prof = (fr, nv) => { document.querySelector("#frSelect").value = fr; document.querySelector("#nivSelect").value = nv; document.querySelector("#frSelect").dispatchEvent(new Event("change")); };
+    const T = (() => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); })();
+    const add = (iso, n) => { const d = new Date(iso + "T00:00:00"); d.setDate(d.getDate() + n); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+    const P = "pflanzenlernen.progress.gemuesebau_gaertner", H = "pflanzenlernen.herb.gemuesebau_gaertner", S = "pflanzenlernen.streak";
+    const cards = cardsFor("gemuesebau_gaertner"), K = (i) => cards[i].key, out = {};
+    const realConfirm = window.confirm, realHook = window.__lsSaveHook;
+    try {
+      document.querySelector('#modeTabs button[data-mode="quiz"]').click();
+      // Gerät A: drei Arten, ein Herbarium-Thema, Serie 3, Name Hannes
+      wipe();
+      localStorage.setItem(P, JSON.stringify({ [K(0)]: { box: 2, due: add(T, 3), seen: 2, correct: 1, wrong: 1 }, [K(1)]: { box: 5, due: add(T, 30), seen: 6, correct: 6, wrong: 0 }, [K(2)]: { box: 1, due: T, seen: 1, correct: 0, wrong: 1 } }));
+      localStorage.setItem(H, JSON.stringify(["Fruchtgemüse"]));
+      localStorage.setItem(S, JSON.stringify({ d: T, n: 100000, gd: T, s: 3, b: 5 }));
+      duelName("Hannes"); prof("gemuesebau", "gaertner"); await tick(40);
+      const bb = document.querySelector("#streakRow #btnBackup");
+      out.btn = { da: !!bb, tlink: !!bb && bb.classList.contains("tlink"), txt: bb && bb.textContent.trim(), svg: !!bb && !!bb.querySelector("svg.ic"),
+        nebenHerb: !!bb && !!document.querySelector("#streakRow #btnHerb") && bb.compareDocumentPosition(document.querySelector("#btnHerb")) === Node.DOCUMENT_POSITION_PRECEDING };
+      bb.click(); await tick(40);
+      out.modal = { da: !!document.querySelector("#infoScrim .bkmodal[role=dialog]"), name: (document.querySelector("#bkName") || {}).value, save: !!document.querySelector("#bkSave"), load: !!document.querySelector("#bkLoad") };
+      let hook = null; window.__lsSaveHook = (t, f) => { hook = { t, f }; };
+      document.querySelector("#bkName").value = "  "; document.querySelector("#bkSave").click(); await tick(30);
+      out.ohneName = { toast: document.querySelector("#toast").textContent, hook: hook === null };
+      document.querySelector("#bkName").value = "Hannes"; document.querySelector("#bkSave").click(); await tick(30);
+      const text = hook && hook.t;
+      out.saved = { f: hook && hook.f, head: text && text.slice(0, 6), form: !!text && /^PBWL1:[A-Za-z0-9_-]+$/.test(text), len: text ? text.length : 0,
+        klartext: !!text && /Hannes|"box"|Brassica|gemuesebau/.test(text), toast: document.querySelector("#toast").textContent, name: duelName() };
+      const o = __lsUnpack(text);
+      out.rund = { name: o.name, p: o.p, n: o.profiles.length === 1 && o.profiles[0].entries.length, herb: o.profiles[0].herb.join(","), s: o.streak.s, b: o.streak.b, gd: o.streak.gd,
+        e0: o.profiles[0].entries.find((e) => e.i === 1), hashOk: o.profiles[0].entries.every((e) => typeof e.h === "number" && e.h > 0) };
+      const res = __lsResolve(o);
+      out.res = { n: res.n, fest: res.fest, herb: res.herb, dropped: res.dropped, keys: res.profiles[0].entries.map((e) => e.key).sort().join("|") === [K(0), K(1), K(2)].sort().join("|") };
+      const mid = Math.floor(text.length / 2), t2 = text.slice(0, mid) + (text[mid] === "A" ? "B" : "A") + text.slice(mid + 1);
+      out.tamper = { nullig: __lsUnpack(t2) === null, msg: __lsImportText(t2).msg, ok: __lsImportText(t2).ok };
+      // Gerät B (gleicher Name): zusammenführen
+      localStorage.setItem(P, JSON.stringify({ [K(0)]: { box: 3, due: add(T, 7), seen: 3, correct: 2, wrong: 1 }, [K(1)]: { box: 5, due: add(T, 10), seen: 4, correct: 4, wrong: 0 }, [K(3)]: { box: 2, due: add(T, 3), seen: 1, correct: 1, wrong: 0 } }));
+      localStorage.setItem(H, JSON.stringify(["Kohlgemüse"]));
+      localStorage.setItem(S, JSON.stringify({ d: T, n: 100000, gd: T, s: 1, b: 1 }));
+      prof("gemuesebau", "gaertner"); await tick(30);
+      const r1 = __lsShowImport(text);
+      out.merge = { mode: r1.mode, btn: (document.querySelector("#bkApply") || {}).textContent, sum: document.querySelector("#bkSum").textContent.replace(/\s+/g, " ") };
+      document.querySelector("#bkApply").click(); await tick(40);
+      const pm = JSON.parse(localStorage.getItem(P));
+      out.merged = { k0: pm[K(0)].box, k1box: pm[K(1)].box, k1due: pm[K(1)].due === add(T, 30), k1seen: pm[K(1)].seen, k2: pm[K(2)] && pm[K(2)].box, k3: pm[K(3)] && pm[K(3)].box,
+        herb: JSON.parse(localStorage.getItem(H)).sort().join(","), s: JSON.parse(localStorage.getItem(S)).s, b: JSON.parse(localStorage.getItem(S)).b,
+        zu: !document.querySelector("#infoScrim"), toast: document.querySelector("#toast").textContent, name: duelName(),
+        legende: (document.querySelector(".plegend") || {}).textContent };
+      // Gerät C (anderer Name): kein Zusammenführen, Ersetzen nur mit Rückfrage
+      duelName("Lena"); const before = localStorage.getItem(P);
+      const r2 = __lsShowImport(text);
+      out.fremd = { mode: r2.mode, btn: (document.querySelector("#bkApply") || {}).textContent, cancel: !!document.querySelector("#bkCancel"), warn: (document.querySelector(".bk-warn") || {}).textContent };
+      let asked = 0; window.confirm = () => { asked++; return false; }; document.querySelector("#bkApply").click(); await tick(30);
+      out.fremdNein = { asked, same: localStorage.getItem(P) === before, name: duelName(), offen: !!document.querySelector("#infoScrim") };
+      window.confirm = () => { asked++; return true; }; document.querySelector("#bkApply").click(); await tick(40);
+      const pr = JSON.parse(localStorage.getItem(P));
+      out.fremdJa = { asked, k0: pr[K(0)].box, k3weg: !(K(3) in pr), name: duelName(), herb: localStorage.getItem(H), zu: !document.querySelector("#infoScrim") };
+      // Gerät D (leer, anderer Beruf): übernehmen samt Name und Beruf
+      wipe(); prof("baumschule", "fachwerker"); await tick(30);
+      out.leer = __lsDeviceState();
+      const r3 = __lsShowImport(text); out.adoptMode = r3.mode; out.adoptBtn = (document.querySelector("#bkApply") || {}).textContent;
+      document.querySelector("#bkApply").click(); await tick(40);
+      out.adopt = { fr: document.querySelector("#frSelect").value, nv: document.querySelector("#nivSelect").value, prof: localStorage.getItem("pflanzenlernen.profile"), name: duelName(),
+        k1: (JSON.parse(localStorage.getItem(P) || "{}")[K(1)] || {}).box, chip: (document.querySelector("#profChipText") || {}).textContent, s: JSON.parse(localStorage.getItem(S)).s, zu: !document.querySelector("#infoScrim") };
+      // Hash findet verschobene Arten; unbekannter Hash fällt weg
+      const o2 = __lsUnpack(text); o2.profiles[0].entries[0].i = 999; o2.profiles[0].entries[1].h = 12345;
+      const r4 = __lsResolve(o2); out.hash = { n: r4.n, dropped: r4.dropped, gefunden: r4.profiles[0].entries.some((e) => e.key === K(0)) };   // Index 999 ist falsch – der Hash findet die Art trotzdem
+      out.abgewiesen = { pw: __lsImportText('{"v":3,"plants":[],"schema":{}}'), junk: __lsImportText("hallo welt"), fname: __lsFileName("Jörg Müller-Lüdenscheidt") };
+    } finally {
+      window.confirm = realConfirm; window.__lsSaveHook = realHook;
+      try { closeInfo(); } catch (e) {}
+      wipe(); Object.keys(snap).forEach((k) => localStorage.setItem(k, snap[k]));
+      prof("gemuesebau", "gaertner"); await tick(30);
+    }
+    return out;
+  });
+  assert(bk.btn.da && bk.btn.tlink && bk.btn.txt === "Sichern" && bk.btn.svg && bk.btn.nebenHerb,
+    "Sichern: Textzeile mit Icon neben »Herbarium« im Fortschritt: " + JSON.stringify(bk.btn));
+  assert(bk.modal.da && bk.modal.name === "Hannes" && bk.modal.save && bk.modal.load, "Sichern-Dialog mit vorbelegtem Namen, Speichern + Laden: " + JSON.stringify(bk.modal));
+  assert(/Namen/.test(bk.ohneName.toast) && bk.ohneName.hook, "Ohne Namen keine Datei (Hinweis): " + JSON.stringify(bk.ohneName));
+  assert(/^pflanze-bw-lernstand-Hannes-\d{4}-\d{2}-\d{2}\.pbwl$/.test(bk.saved.f) && bk.saved.head === "PBWL1:" && bk.saved.form && bk.saved.len < 400 && !bk.saved.klartext && /gespeichert/.test(bk.saved.toast) && bk.saved.name === "Hannes",
+    "Datei: Name mit Datum, »PBWL1:« + base64url, kurz, kein Klartext, Name gemerkt: " + JSON.stringify(bk.saved));
+  assert(bk.rund.name === "Hannes" && bk.rund.p === "gemuesebau_gaertner" && bk.rund.n === 3 && bk.rund.herb === "Fruchtgemüse" && bk.rund.s === 3 && bk.rund.b === 5 && bk.rund.gd && bk.rund.e0 && bk.rund.e0.box === 2 && bk.rund.e0.seen === 2 && bk.rund.hashOk,
+    "Rundreise: Name, Beruf, drei Einträge mit Stufe/Fälligkeit/Zählern, Herbarium, Serie: " + JSON.stringify(bk.rund));
+  assert(bk.res.n === 3 && bk.res.fest === 1 && bk.res.herb === 1 && bk.res.dropped === 0 && bk.res.keys, "Auflösen auf die heutige Liste (Index + Hash): " + JSON.stringify(bk.res));
+  assert(bk.tamper.nullig && bk.tamper.ok === false && /verändert/.test(bk.tamper.msg), "Eine veränderte Stelle → Datei abgelehnt: " + JSON.stringify(bk.tamper));
+  assert(bk.merge.mode === "merge" && bk.merge.btn === "Zusammenführen" && /Hannes/.test(bk.merge.sum) && /Gemüsebau · Gärtner\/in: 3 Arten gelernt · 1 sitzen · Herbarium: 1 Thema/.test(bk.merge.sum) && /Lernserie 3 Tage/.test(bk.merge.sum),
+    "Gleicher Name → Zusammenführen mit Zusammenfassung: " + JSON.stringify(bk.merge));
+  assert(bk.merged.k0 === 3 && bk.merged.k1box === 5 && bk.merged.k1due && bk.merged.k1seen === 6 && bk.merged.k2 === 1 && bk.merged.k3 === 2 && bk.merged.herb === "Fruchtgemüse,Kohlgemüse" && bk.merged.s === 3 && bk.merged.b === 5 && bk.merged.zu && /zusammengeführt/.test(bk.merged.toast) && bk.merged.name === "Hannes" && /1 sitzt/.test(bk.merged.legende) && /3 am Lernen/.test(bk.merged.legende),
+    "Zusammenführen: höhere Stufe gewinnt, Gleichstand → spätere Fälligkeit + max. Zähler, neue Art dazu, eigene bleibt, Herbarium vereinigt, längere Serie, Anzeige aktualisiert: " + JSON.stringify(bk.merged));
+  assert(bk.fremd.mode === "replace" && /ersetzen/.test(bk.fremd.btn) && bk.fremd.cancel && /Hannes/.test(bk.fremd.warn) && /Lena/.test(bk.fremd.warn) && /gleichem Namen/.test(bk.fremd.warn),
+    "Anderer Name → kein Zusammenführen, nur Ersetzen (mit Warnung + Abbrechen): " + JSON.stringify(bk.fremd));
+  assert(bk.fremdNein.asked === 1 && bk.fremdNein.same && bk.fremdNein.name === "Lena" && bk.fremdNein.offen, "Ersetzen verneint → nichts geändert, Dialog bleibt: " + JSON.stringify(bk.fremdNein));
+  assert(bk.fremdJa.asked === 2 && bk.fremdJa.k0 === 2 && bk.fremdJa.k3weg && bk.fremdJa.name === "Hannes" && bk.fremdJa.herb === JSON.stringify(["Fruchtgemüse"]) && bk.fremdJa.zu,
+    "Ersetzen bejaht → Stand der Datei, eigener weg, Name übernommen: " + JSON.stringify(bk.fremdJa));
+  assert(bk.leer.any === false && bk.leer.name === "" && bk.adoptMode === "adopt" && bk.adoptBtn === "Übernehmen", "Leeres Gerät → Übernehmen: " + JSON.stringify({ leer: bk.leer, mode: bk.adoptMode, btn: bk.adoptBtn }));
+  assert(bk.adopt.fr === "gemuesebau" && bk.adopt.nv === "gaertner" && bk.adopt.prof === "gemuesebau_gaertner" && bk.adopt.name === "Hannes" && bk.adopt.k1 === 5 && /Gemüsebau · Gärtner\/in/.test(bk.adopt.chip) && bk.adopt.s === 3 && bk.adopt.zu,
+    "Übernehmen: wechselt in den Beruf der Datei, übernimmt Name, Stand und Serie: " + JSON.stringify(bk.adopt));
+  assert(bk.hash.n === 2 && bk.hash.dropped === 1 && bk.hash.gefunden, "Hash findet eine verschobene Art, unbekannter Hash fällt weg: " + JSON.stringify(bk.hash));
+  assert(bk.abgewiesen.pw.ok === false && /Prüfungswerkzeug/.test(bk.abgewiesen.pw.msg) && bk.abgewiesen.junk.ok === false && /Keine Lernstand-Datei/.test(bk.abgewiesen.junk.msg) && /^pflanze-bw-lernstand-Joerg_Mueller-Luedenscheidt-\d{4}-\d{2}-\d{2}\.pbwl$/.test(bk.abgewiesen.fname),
+    "Prüfwerkzeug-JSON und Unsinn klar abgewiesen, Dateiname ohne Umlaute/Sonderzeichen: " + JSON.stringify(bk.abgewiesen));
+
   // Disclaimer: dezenter Hinweis (RP-Bezug, Stand, KI-Kategorien, keine Gewähr)
   const disc = await page.evaluate(() => {
     const el = document.querySelector(".disclaimer");
@@ -5430,7 +5541,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Lektion zeigt jede Pflanze als Bild, Antwortart nach Lernstand, nur einzelne bildlose Arten als Auswahlfrage, sagt es an, direkt teilbar, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON- und v2-Links lesbar, Richtung inkl. »voller Name«, Antwortart und die Übungsformen der geführten Lektion wandern mit, Banner übernimmt Profil/Modus/Aufgabenstellung, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art oder beschreibender Sorte, Tafeln/Herbarbelege/Buchscans über Commons-Metadaten raus, Bildnachweis ohne Zweitabruf, abgebrochener feiner Weg → Treffer nur je Sitzung), Eingabe ohne Anführungszeichen-/Hybrid-Zwang, Abfragerichtungen (Text de↔bot; Bilder fest »voller Name«, ältere Duell-Links spielen ihre Aufgabe weiter), Auswahl nach Thema/Familie, Quiz, Selbst eingeben, Bilder-Quiz (Bild + 4 volle Namen, »Selbst eingeben (wie in der Prüfung)« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, wartet bei schwacher Verbindung sichtbar und heilt sich selbst statt in Textfragen zu wechseln, Galerie mit mehreren Ansichten – Commons-Kandidaten sofort, Artikelbilder nachgeladen, Wischen, Vorladen der Galerie, Commons-Standardgrößen mit Ausweich-Kette und sichtbarer Meldung, stille Wiederholung bei Aussetzern, neuer Versuch je Sitzung; iNaturalist als Ersatzquelle mit freien Lizenzen und Nachweis; Sammeleinträge zeigen eine Gartenform statt einer Wildart, genannte Gruppen gezielt, nie einen Fremdartikel wie die Insel Canna), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast, Lernserie/Tagesziel, Herbarium, XP-Ränge + Combo, Stufe 5 (Rang-Popover, Container Queries), Versionskennung + »Neue Version« (Leerlauf: neu laden, Sitzung: Hinweis).");
+  console.log("Lern-Smoke OK – Boot, Ein-Knopf-Start (geführte Lektion zeigt jede Pflanze als Bild, Antwortart nach Lernstand, nur einzelne bildlose Arten als Auswahlfrage, sagt es an, direkt teilbar, »Selbst wählen«-Klappe zu), Profil-Chip (Modal, Wahl gemerkt), Listen-Schnellzugriff, Optionen-Gruppen (Was/Wie üben), Lernstoff (148), Hilfe-Panel, Karteikarten (umdrehen/bewerten), Leitner-Einplanung (again/hard/good unterschiedlich), Info-Modal (Deep-Links + Online-Knopf), Liste (thematisch/durchsuchbar/klickbar), Druckliste (Prüfungsbogen-Form, Produktions- + FW-Familie, ZP-Spalte, Filter, Ansicht-Sortierung Thema/Familie/A–Z), Themen (Zuordnung, Themen-Ansicht, Themen-Sitzung), Familien-Steckbriefe (Modal + Fallback), Lernduell (Teilen-Link kodiert exakte Lektion + Denkzeit kompakt und nicht im Klartext, veränderte Stelle fällt auf, alte JSON- und v2-Links lesbar, Richtung inkl. »voller Name«, Antwortart und die Übungsformen der geführten Lektion wandern mit, Banner übernimmt Profil/Modus/Aufgabenstellung, Annehmen spielt gleiche Karten, Zeitvergleich entscheidet bei gleicher Quote, Zurückschicken), »nur Prüfungsstoff« (Fachwerker: Familie/Synonyme aus Karte+Liste ausgeblendet, Schalter nur bei Fachwerker), Disclaimer (Fußzeile + KI-Hinweis vor den Lektionen), Mobile ohne Overflow, Fokus-Modus (laufende Sitzung füllt mobil den Schirm, Ergebnis + Teilen bleiben im Overlay, Exit über »Zur Übersicht«/Moduswechsel), deutsche Namensformen (Synonyme, geteiltes Grundwort, Adjektiv-Muster, Grundwort nur bei Eindeutigkeit), Tipp-Rückmeldung in drei Stufen (richtig · fast mit markierter Stelle · noch nicht, Partikel nur bei Treffern), Bildzuordnung (Taxon-Kategorie zuerst, Zwei-Arten-Tafel und Homonym verworfen, kein Artbild bei vorhandener Geschwister-Art oder beschreibender Sorte, Tafeln/Herbarbelege/Buchscans über Commons-Metadaten raus, Bildnachweis ohne Zweitabruf, abgebrochener feiner Weg → Treffer nur je Sitzung), Eingabe ohne Anführungszeichen-/Hybrid-Zwang, Abfragerichtungen (Text de↔bot; Bilder fest »voller Name«, ältere Duell-Links spielen ihre Aufgabe weiter), Auswahl nach Thema/Familie, Quiz, Selbst eingeben, Bilder-Quiz (Bild + 4 volle Namen, »Selbst eingeben (wie in der Prüfung)« mit Punkten/Teilpunkten und eigener Feldwahl, Wertung, Bildnachweis, wartet bei schwacher Verbindung sichtbar und heilt sich selbst statt in Textfragen zu wechseln, Galerie mit mehreren Ansichten – Commons-Kandidaten sofort, Artikelbilder nachgeladen, Wischen, Vorladen der Galerie, Commons-Standardgrößen mit Ausweich-Kette und sichtbarer Meldung, stille Wiederholung bei Aussetzern, neuer Versuch je Sitzung; iNaturalist als Ersatzquelle mit freien Lizenzen und Nachweis; Sammeleinträge zeigen eine Gartenform statt einer Wildart, genannte Gruppen gezielt, nie einen Fremdartikel wie die Insel Canna), Fortschritt-Persistenz, Touch-Ziele (≥44px) + Fußzeilen-Kontrast, Lernserie/Tagesziel, Herbarium, XP-Ränge + Combo, Stufe 5 (Rang-Popover, Container Queries), Versionskennung + »Neue Version« (Leerlauf: neu laden, Sitzung: Hinweis), Lernstand-Datei (sichern ohne Klartext, Rundreise, veränderte Datei abgelehnt, Zusammenführen/Ersetzen/Übernehmen nach Namensregel).");
 }
 
 main().catch((e) => { console.error("Lern-Smoke FEHLGESCHLAGEN:\n  " + e.message + (process.env.DEBUG_STACK ? "\n" + e.stack : "")); process.exit(1); });

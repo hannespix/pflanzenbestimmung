@@ -43,7 +43,9 @@ const ICONS = {
   prev:   `<path d="M15 5l-7 7 7 7"/>`,
   next:   `<path d="M9 5l7 7-7 7"/>`,
   chev:   `<path d="M6 9l6 6 6-6"/>`,
-  ext:    `<path d="M7 17L17 7"/><path d="M8 7h9v9"/>`
+  ext:    `<path d="M7 17L17 7"/><path d="M8 7h9v9"/>`,
+  // Lernstand sichern: Pfeil in die Ablage
+  download: `<path d="M12 4v10"/><path d="M7.5 10l4.5 4.5 4.5-4.5"/><path d="M4.5 19.5h15"/>`
 };
 
 function ico(name, cls){                       // → <svg> im einheitlichen Strichstil
@@ -93,6 +95,12 @@ function toast(msg, isErr){
 }
 
 function todayISO(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+/* Datei zum Herunterladen anbieten (beide Werkzeuge: JSON-Sicherung · Lernstand-Datei) */
+function downloadText(text,name,mime){
+  const url=URL.createObjectURL(new Blob([text],{type:mime||"application/json"}));
+  const a=el("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
 
 function printEcoOn(){ return store.get(LS_PREFIX+"printeco")==="1"; }       // opt-in: sparsam drucken (ohne Farbflächen, kompakt)
 

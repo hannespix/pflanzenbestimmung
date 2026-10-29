@@ -1173,6 +1173,16 @@ async function main() {
   assert(p4.kopie === "Test (Kopie)" && p4.esc === "a&#39;b&quot;c", "Kopie-Suffix nur einmal, esc maskiert ': " + JSON.stringify(p4));
   assert(p4.noToggle && p4.h1 && p4.csp, "Kopf-Umschalter, <h1> mit geschütztem Leerzeichen, CSP-Meta: " + JSON.stringify(p4));
 
+  // 9g) Eine Lernstand-Datei des Lern-Tools (»PBWL1:…«) landet im »JSON laden« des Prüfungswerkzeugs:
+  //     klarer Hinweis statt »keine gültige .json«, nichts wird importiert.
+  const pbwl = await page.evaluate(() => {
+    const before = JSON.stringify([cache.length, selection.length]);
+    const r = importJsonText("PBWL1:Q-93AbCdEfGh");
+    return { r, toast: document.querySelector("#toast").textContent, err: document.querySelector("#toast").classList.contains("err"), same: JSON.stringify([cache.length, selection.length]) === before };
+  });
+  assert(pbwl.r === null && /Lern-Tool/.test(pbwl.toast) && /Sichern/.test(pbwl.toast) && pbwl.err && pbwl.same,
+    "Lernstand-Datei des Lern-Tools muss mit Hinweis abgewiesen werden: " + JSON.stringify(pbwl));
+
   // 9f) CSP wirkt: fremde Skripte/Bilder werden geblockt, Wikipedia/Commons (JSONP + Bilder) nicht.
   const cp = await browser.newPage();                 // eigene Seite: die erwarteten CSP-/Netz-Meldungen gehören nicht in die Konsolenfehler des Hauptlaufs
   await cp.goto(FILE, { waitUntil: "load" });

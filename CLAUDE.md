@@ -99,7 +99,7 @@ keine Noten):
 - Baut nur, wenn **beide** Dateien existieren; nutzt dieselben `SEEDS`.
 
 **Gemeinsam:**
-- **`src/shared.js`** — der in **beiden** Werkzeugen wortgleich gebrauchte Code (79 Deklarationen,
+- **`src/shared.js`** — der in **beiden** Werkzeugen wortgleich gebrauchte Code (80 Deklarationen,
   ~900 Zeilen): DOM-Helfer (`$`, `el`, `esc`, `norm`), `store` (localStorage-Wrapper), Icon-Set
   (`ICONS`/`ico`), JSONP (`jsonpGet`, `wikiJSONP`), Wikipedia-Kandidaten (`wikiCandidates`,
   `wikiGenusCandidates`, `deArticleTitles`), Namensherleitung (`LAT_*`, `nameEtymology`),
@@ -3156,6 +3156,36 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       sparsam ≈8pt ohne Band-Fläche; A–Z eine Tabelle mit Körper-Bändern (erstes ohne, weitere mit
       Polster, `.pbrk` am `tr`); Druck-Titel mit gestubbtem `window.print` (nennt die Liste, bleibt
       bis `afterprint`, dann zurück); `catRows` zählt Bänder in `thead` und `tbody`.
+
+- [x] **Lernstand sichern & übertragen (Datei)** (Nutzerwunsch: Export/Import für Herbarium und
+      Fortschritt – »sauber, einfach, mit Namen«, ohne Klartext, Zusammenführen nur bei gleichem
+      Namen). Nur Lern-Tool. **Zugang:** eine Textzeile **»Sichern«** (`#btnBackup`, `.tlink` mit
+      Icon `download`) neben »Herbarium« im Fortschritt-Kasten (`.srlinks`-Gruppe); Dialog
+      (`openBackupModal`, `#infoScrim`-Muster, `.bkmodal`) mit Namensfeld (vorbelegt aus
+      `duelName()`, Pflicht), **»Datei speichern«** (`lsSaveFile`: am Handy über Web-Share mit Datei,
+      sonst Download via `downloadText` – **aus `app.js` nach `src/shared.js` gezogen**) und
+      **»Datei laden«**. **Datei** `pflanze-bw-lernstand-<Name>-<Datum>.pbwl` (`lsFileName`),
+      Inhalt `PBWL1:<base64url>`: binär gepackt (`lsPack`/`lsUnpack` mit `vPut/vGet`, Strings
+      UTF-8 längenpräfixiert, Daten als Tage seit 31.12.2019), **32-Bit-FNV-1a-Prüfsumme** und die
+      Duell-Verwürfelung `chMask` – kein Name, keine Zahl im Klartext, jede Änderung → abgelehnt
+      (ehrlich: Schwelle, kein Schloss). Inhalt (`lsCollect`): Name, Zeitstempel, aktueller Beruf,
+      Lernserie, Rang-Feiermarke, je Beruf die Einträge (Listenindex **und** Hash des Schlüssels –
+      `lsResolve` nimmt den Index, wenn der Hash passt, sonst die Hash-Suche; unbekannte Arten
+      fallen still weg) und die Herbarium-Feiern. **Regeln beim Laden** (`lsMode`/`lsApply`, Nutzer
+      bestätigt die Aktion im Dialog, `lsShowImport`): Gerät ohne Lernstand → **Übernehmen** (samt
+      Name und Beruf der Datei, Profilwechsel über die Selects + `applyProfile`); gleicher Name
+      (`deacc(norm())`, Gerät ohne Namen gilt als passend und übernimmt ihn) → **Zusammenführen**
+      (je Art die höhere Stufe, bei Gleichstand die spätere Fälligkeit, Zähler das Maximum,
+      Herbarium vereinigt, längere Serie, Feiermarke max); anderer Name → **kein** Zusammenführen,
+      nur »Meinen Lernstand durch diesen ersetzen« mit `confirm()` – damit sich niemand den Stand
+      eines Kollegen dazuholt. **Werkzeug-Grenze:** `importJsonText` im Prüfungswerkzeug weist
+      `PBWL…` mit Hinweis ab; das Lern-Tool weist Prüfwerkzeug-JSON (`plants`/`schema`) ab.
+      Hilfe-Absatz, Datenschutz (Datei bleibt lokal, verwürfelt ≠ verschlüsselt, Weitergabe ist
+      die Handlung des Nutzers), README, Technik-Doku. `tests/learn.mjs` (Snapshot/Restore des
+      Speichers): Textzeile, Dialog, Namenspflicht, Datei ohne Klartext, Rundreise, Manipulation →
+      abgelehnt, Zusammenführen (Stufe/Fälligkeit/Zähler/Herbarium/Serie), Ersetzen mit Rückfrage
+      (nein → unverändert, ja → ersetzt + Name), Übernehmen mit Berufswechsel, Hash-Rückfall,
+      Abweisung fremder Dateien; `tests/smoke.mjs` 9g: Prüfungswerkzeug weist `PBWL1:` ab.
 
 ## Offene Aufgaben (TODO)
 

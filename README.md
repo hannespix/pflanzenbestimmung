@@ -108,6 +108,13 @@ auf das Prüfungswerkzeug (Einbahnstraße – Azubis sollen es nicht sehen).
   richtet sich allein nach dem Lernstand (angefangene Arten, dann der Anteil, der »sitzt«);
   Erfahrungspunkte gibt es nicht mehr. Eine Lernserie zählt Tage mit mindestens 20 Karten.
   Hell/Dunkel folgt der Systemeinstellung (kein eigener Schalter).
+- **Lernstand sichern & übertragen:** »Sichern« neben dem Herbarium schreibt den gesamten
+  Lernstand (alle Berufe: Stufen, Fälligkeiten, Herbarium, Lernserie) in eine Datei
+  `pflanze-bw-lernstand-<Name>-<Datum>.pbwl` – kompakt gepackt, verwürfelt, mit Prüfsumme
+  (kein Klartext; eine veränderte Datei lädt nicht). »Datei laden« liest sie auf einem anderen
+  Gerät: gleicher Name → zusammenführen (je Art die höhere Stufe), leeres Gerät → übernehmen
+  (samt Beruf), anderer Name → nur ersetzen nach Rückfrage. Am Handy läuft das Speichern über das
+  Teilen-Menü des Systems.
 - **Feste, prüfungsnahe Lernrichtung:** Wie in der Abschlussprüfung erkennt man die
   Pflanze (der greifbarste bildlose Anker ist ihr **deutscher Name**) und nennt die
   **botanische Identität**: **Gattung, Art, Familie**. Genau diese Richtung üben alle
