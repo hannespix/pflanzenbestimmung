@@ -549,6 +549,18 @@ body.m-manage .selbar, body.m-manage #currentSel{display:none}
   #sheet.sol-look .fres .flab,#sheet.sol-look .fsig2 .fnote3{font-family:'Segoe UI',system-ui,sans-serif}
   #sheet.sol-look .fscale{border-color:#a9ad98; background:#f6f7f1; border-radius:4pt; font-family:'Segoe UI',system-ui,sans-serif; color:#56604f}
   #sheet.sol-look .ffoot{color:#7a6a4f; font-family:'Segoe UI',system-ui,sans-serif}
+  /* Sparsam (opt-in im Druck-Dialog, NUR Musterlösung – der Leerbogen bleibt das amtliche Formular):
+     keine Farbflächen, schwarze Schrift, engere Zeilen; print-color-adjust:economy statt exact */
+  #sheet.sol-look.eco{color:#000; print-color-adjust:economy; -webkit-print-color-adjust:economy; line-height:1.25}
+  #sheet.sol-look.eco .ftitle,#sheet.sol-look.eco .solution-note{color:#000; border-color:#000}
+  #sheet.sol-look.eco .sheet-meta,#sheet.sol-look.eco .ffoot{color:#333}
+  #sheet.sol-look.eco table.exam{font-size:9pt}
+  #sheet.sol-look.eco table.exam th,#sheet.sol-look.eco table.exam td{border-color:#888; padding:2pt 5pt}
+  #sheet.sol-look.eco table.exam thead th{background:none; color:#000; border-color:#000; border-bottom:1pt solid #000}
+  #sheet.sol-look.eco table.exam thead th .p{color:#333}
+  #sheet.sol-look.eco table.exam tbody tr:nth-child(even) td{background:none}
+  #sheet.sol-look.eco table.exam td.fnum{background:none; color:#333}
+  #sheet.sol-look.eco .fscale{background:none; border-color:#888; color:#333}
 }
 
 /* ===== Herbarium 2.0 (2026-Refresh): Design-Token, Dark Mode, Glas & Tiefe =====
@@ -946,7 +958,10 @@ body{overflow-x:clip}
           <li><b>Vorschau · bearbeiten</b>: Reihenfolge per ▲▼ ändern, Arten bearbeiten, ergänzen oder entfernen.</li>
           <li><b>Bogen drucken</b>: im Dialog Prüfungsbogen (leer) oder Musterlösung (mit Antworten) wählen.
             Dort ist <b>»Als Prüfung speichern«</b> bereits angehakt – die Auswahl wird beim Drucken automatisch
-            unter dem Prüfungsdatum abgelegt (Panel »Prüfungen«); eine geladene Prüfung wird stattdessen aktualisiert.</li>
+            unter dem Prüfungsdatum abgelegt (Panel »Prüfungen«); eine geladene Prüfung wird stattdessen aktualisiert.
+            <b>»Musterlösung sparsam drucken«</b> druckt die Musterlösung ohne Farbflächen (kein grüner Kopf,
+            keine Zebrastreifen), mit schwarzer Schrift und engeren Zeilen – spart Toner; die Wahl wird gemerkt.
+            Der Prüfungsbogen selbst bleibt davon unberührt – er ist immer das amtliche Formular.</li>
         </ol>
 
         <h3>Werkzeuge (Kopfzeile)</h3>
@@ -1157,7 +1172,7 @@ body{overflow-x:clip}
   </main>
 
   <footer class="pagefoot">
-    <span>Pflanzenkenntnis · Prüfen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 29.10.2026 · Version 8b9ca1b</span></span>
+    <span>Pflanzenkenntnis · Prüfen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 29.10.2026 · Version ac744e2</span></span>
     <a class="legal" href="rechtliches.html">Impressum &amp; Datenschutz</a>
   </footer>
 </div>
@@ -1231,6 +1246,9 @@ body{overflow-x:clip}
           <input type="date" id="prDate" title="Prüfungsdatum, unter dem die Auswahl gespeichert wird (Vorgabe: heute bzw. Datum der geladenen Prüfung).">
           <input type="text" id="prLabel" placeholder="Bezeichnung (optional)" title="Freie Bezeichnung zur Unterscheidung, z. B. Ausschuss oder Uhrzeit – optional.">
         </div>
+      </div>
+      <div class="prsave preco" id="prEcoRow">
+        <label class="switch" title="Musterlösung sparsam drucken: ohne grünen Tabellenkopf und Zebrastreifen, schwarze Schrift, engere Zeilen – spart Toner. Der Prüfungsbogen (Leerbogen) bleibt immer das amtliche Formular, diese Wahl ändert ihn nicht."><input type="checkbox" id="prEco"><span class="track"></span><span>Musterlösung sparsam drucken (ohne Farbflächen, kompakt)</span></label>
       </div>
     </div>
     <div class="mfoot"><button class="btn ghost" id="printCancel">Abbrechen</button></div>
@@ -2074,7 +2092,7 @@ function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gesp
 
   // Der leere Prüfungsbogen bleibt im offiziellen Arial-Look; die Musterlösung
   // bekommt ein schöneres, gut lesbares Layout (Serif, Zebra, grüner Kopf).
-  $("#sheet").className = sol ? "sol-look" : "";
+  $("#sheet").className = sol ? ("sol-look"+(printEcoOn()?" eco":"")) : "";   // sparsam gilt nur für die Musterlösung
   $("#sheet").innerHTML=`
     <h1 class="ftitle${fam==="fw"?" fb":""}">${esc(title)}${sol?" — Musterlösung":""}</h1>
     ${fam==="fw"?`<div class="fsub">Gartenbaufachwerker/in</div>`:""}
@@ -2101,6 +2119,9 @@ function printSheet(mode,ex){ // ex optional: soeben gespeicherte/aktualisierte 
    auch dann exakt reproduzierbar, wenn die Profil-Liste später geändert wird.
    ============================================================ */
 const EXAMS_KEY = LS_PREFIX+"exams";
+const ECO_KEY = LS_PREFIX+"printeco";                                   // »Musterlösung sparsam drucken« (opt-in, gemerkt)
+function printEcoOn(){ return store.get(ECO_KEY)==="1"; }
+window.printEcoOn=printEcoOn;
 function loadExams(){
   try{ const raw=store.get(EXAMS_KEY); exams=raw?JSON.parse(raw):[]; if(!Array.isArray(exams)) exams=[]; }
   catch(e){ exams=[]; }
@@ -4003,6 +4024,7 @@ function wire(){
   $("#printBlank").onclick=()=>{ const ex=maybeSaveFromPrint(); $("#printScrim").classList.remove("open"); if(printChoose) printChoose("blank",ex); };
   $("#printSolution").onclick=()=>{ const ex=maybeSaveFromPrint(); $("#printScrim").classList.remove("open"); if(printChoose) printChoose("solution",ex); };
   $("#printCancel").onclick=()=>$("#printScrim").classList.remove("open");
+  const pe=$("#prEco"); if(pe){ pe.checked=printEcoOn(); pe.onchange=()=>store.set(ECO_KEY, pe.checked?"1":"0"); }   // sparsam drucken (Musterlösung)
   // Edit-Dialog
   $("#editCancel").onclick=()=>{ selectNewAfterSave=false; $("#editScrim").classList.remove("open"); };
   $("#editSave").onclick=saveEdit;
@@ -4039,6 +4061,7 @@ function askPrintMode(cb){
       $("#prSaveChk").checked = true;
     }
   }
+  const pe=$("#prEco"); if(pe) pe.checked=printEcoOn();
   $("#printScrim").classList.add("open");
 }
 function maybeSaveFromPrint(){

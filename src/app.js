@@ -808,7 +808,7 @@ function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gesp
 
   // Der leere Prüfungsbogen bleibt im offiziellen Arial-Look; die Musterlösung
   // bekommt ein schöneres, gut lesbares Layout (Serif, Zebra, grüner Kopf).
-  $("#sheet").className = sol ? "sol-look" : "";
+  $("#sheet").className = sol ? ("sol-look"+(printEcoOn()?" eco":"")) : "";   // sparsam gilt nur für die Musterlösung
   $("#sheet").innerHTML=`
     <h1 class="ftitle${fam==="fw"?" fb":""}">${esc(title)}${sol?" — Musterlösung":""}</h1>
     ${fam==="fw"?`<div class="fsub">Gartenbaufachwerker/in</div>`:""}
@@ -835,6 +835,9 @@ function printSheet(mode,ex){ // ex optional: soeben gespeicherte/aktualisierte 
    auch dann exakt reproduzierbar, wenn die Profil-Liste später geändert wird.
    ============================================================ */
 const EXAMS_KEY = LS_PREFIX+"exams";
+const ECO_KEY = LS_PREFIX+"printeco";                                   // »Musterlösung sparsam drucken« (opt-in, gemerkt)
+function printEcoOn(){ return store.get(ECO_KEY)==="1"; }
+window.printEcoOn=printEcoOn;
 function loadExams(){
   try{ const raw=store.get(EXAMS_KEY); exams=raw?JSON.parse(raw):[]; if(!Array.isArray(exams)) exams=[]; }
   catch(e){ exams=[]; }
@@ -2737,6 +2740,7 @@ function wire(){
   $("#printBlank").onclick=()=>{ const ex=maybeSaveFromPrint(); $("#printScrim").classList.remove("open"); if(printChoose) printChoose("blank",ex); };
   $("#printSolution").onclick=()=>{ const ex=maybeSaveFromPrint(); $("#printScrim").classList.remove("open"); if(printChoose) printChoose("solution",ex); };
   $("#printCancel").onclick=()=>$("#printScrim").classList.remove("open");
+  const pe=$("#prEco"); if(pe){ pe.checked=printEcoOn(); pe.onchange=()=>store.set(ECO_KEY, pe.checked?"1":"0"); }   // sparsam drucken (Musterlösung)
   // Edit-Dialog
   $("#editCancel").onclick=()=>{ selectNewAfterSave=false; $("#editScrim").classList.remove("open"); };
   $("#editSave").onclick=saveEdit;
@@ -2773,6 +2777,7 @@ function askPrintMode(cb){
       $("#prSaveChk").checked = true;
     }
   }
+  const pe=$("#prEco"); if(pe) pe.checked=printEcoOn();
   $("#printScrim").classList.add("open");
 }
 function maybeSaveFromPrint(){

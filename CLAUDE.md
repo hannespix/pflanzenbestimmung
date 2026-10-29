@@ -3021,6 +3021,28 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Herbarium, Stufen-Leiter + Laufbahn, Lightbox, Fußzeile. Screenshots 390 hell/dunkel und 1000 px
       über alle Ansichten verifiziert.
 
+- [x] **»Sparsam drucken« (opt-in) für Druckliste und Musterlösung** (Nutzerwunsch: »PDF-Export auch
+      mit Funktionen ausstatten, dass sparsam gedruckt werden kann – ohne Hintergrundgrafiken«).
+      **Lern-Tool:** Checkbox »sparsam drucken (ohne Farbflächen, kompakt)« im Drucken-Block des
+      Listen-Akkordeons neben »Namensherkunft« und »jede Gruppe auf neuer Seite«; Zustand
+      `pflanzenlernen.printeco` (`printEcoOn()`), Standard aus. `buildPrintList` setzt `eco` auf
+      `#printList` und `table.ptab`; Print-CSS in `learn.html`: kein grüner Tabellenkopf, keine
+      Zebrastreifen, Themen-/Buchstaben-Bänder nur als Linie (kein Akzentstreifen, keine Fläche),
+      schwarze Schrift (botanischer Name kursiv statt grün – die Legende sagt es), 9,5 pt mit engeren
+      Zeilen, `print-color-adjust:economy` (der Browser darf Hintergründe weglassen). Die Gliederung
+      bleibt über Linien und Schriftschnitt lesbar; ZP-Punkt und Abhak-Kästchen schwarz.
+      **Prüfungswerkzeug:** Schalter »Musterlösung sparsam drucken« im Druck-Dialog (`#prEcoRow`,
+      `#prEco`, gemerkt unter `pflanzenkenntnis.printeco`, `printEcoOn()` in `app.js`, beim Öffnen des
+      Dialogs synchronisiert); `buildSheet("solution")` setzt `#sheet.sol-look.eco` – kein grüner Kopf,
+      keine Zebrastreifen, graue statt grüne Linien, 9 pt, `economy`. **Der Leerbogen bleibt immer das
+      amtliche Formular** (`buildSheet("blank")` setzt nie `eco`). Hilfe beider Werkzeuge ergänzt.
+      Per Puppeteer-PDF geprüft (Musterlösung bleibt einseitig; Druckliste GaLaBau/Thema wird kürzer).
+      `tests/learn.mjs`: Checkbox im Drucken-Block, Standard aus, Klassen + Speicherung, Legende
+      »kursiv« statt »grün«, im Druckmedium Kopf/Band/Zebra ohne Fläche, Band ohne Akzentstreifen,
+      Name schwarz, `economy`; Rücknahme. `tests/smoke.mjs` 8y7: Schalter im Dialog, Standard aus,
+      Musterlösung `sol-look eco`, Leerbogen nie `eco`, gemerkt, Druckmedium ohne Kopf-Fläche/Zebra,
+      Rücknahme.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.

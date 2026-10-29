@@ -4757,6 +4757,39 @@ async function main() {
   assert(pbrk.stored, "Die Wahl »jede Gruppe auf neuer Seite« muss gespeichert werden");
   assert(pbrk.brkOff === 0, "Nach Abwahl darf kein Band mehr .pbrk tragen: " + JSON.stringify(pbrk));
 
+  // »Sparsam drucken« (opt-in, Drucken-Block): Druckliste ohne Farbflächen – kein grüner Kopf, keine Zebra-
+  // streifen, keine Bänder-Flächen, schwarze Schrift, engere Zeilen; gemerkt; Standard aus.
+  const eco = await page.evaluate(() => {
+    const setEco = (v) => { const cb = document.querySelector("#printEco"); cb.checked = v; cb.dispatchEvent(new Event("change")); };
+    const inPanel = !!document.querySelector("#listControls .lc-sec #printEco");
+    const defaultOff = !document.querySelector("#printEco").checked && !printEcoOn();
+    buildPrintList();
+    const ohne = { host: document.querySelector("#printList").classList.contains("eco"), tab: !!document.querySelector("#printList table.ptab.eco"), legend: document.querySelector("#printList .pfoot").textContent };
+    setEco(true); buildPrintList();
+    const mit = { host: document.querySelector("#printList").classList.contains("eco"), tab: !!document.querySelector("#printList table.ptab.eco"), legend: document.querySelector("#printList .pfoot").textContent,
+      stored: localStorage.getItem("pflanzenlernen.printeco") === "1" };
+    return { inPanel, defaultOff, ohne, mit };
+  });
+  assert(eco.inPanel && eco.defaultOff, "Drucken-Block: Checkbox »sparsam drucken« fehlt oder ist nicht standardmäßig aus: " + JSON.stringify(eco));
+  assert(!eco.ohne.host && !eco.ohne.tab && /grün/.test(eco.ohne.legend), "Ohne Option: keine eco-Klassen, Legende nennt den grünen Namen: " + JSON.stringify(eco.ohne));
+  assert(eco.mit.host && eco.mit.tab && eco.mit.stored && /kursiv/.test(eco.mit.legend) && !/grün/.test(eco.mit.legend),
+    "Mit Option: #printList.eco + table.ptab.eco, gespeichert, Legende ohne »grün«: " + JSON.stringify(eco.mit));
+  await page.emulateMediaType("print");
+  const ecoCss = await page.evaluate(() => {
+    const cs = (s) => getComputedStyle(document.querySelector(s)), tr = (c) => c === "rgba(0, 0, 0, 0)" || c === "transparent";
+    const th = cs("#printList table.ptab thead th"), band = cs("#printList table.ptab tr.pcat td"), even = cs("#printList table.ptab tbody tr:nth-of-type(even):not(.pcat) td"), bot = cs("#printList table.ptab td.bot");
+    const mit = { thBg: tr(th.backgroundColor), thColor: th.color, bandBg: tr(band.backgroundColor), bandLeft: band.borderLeftWidth, evenBg: tr(even.backgroundColor), botColor: bot.color, adjust: cs("#printList").printColorAdjust || cs("#printList").webkitPrintColorAdjust };
+    const cb = document.querySelector("#printEco"); cb.checked = false; cb.dispatchEvent(new Event("change")); buildPrintList();
+    const th2 = cs("#printList table.ptab thead th"), band2 = cs("#printList table.ptab tr.pcat td");
+    const ohne = { thBg: tr(th2.backgroundColor), bandBg: tr(band2.backgroundColor), eco: document.querySelector("#printList").classList.contains("eco"), stored: localStorage.getItem("pflanzenlernen.printeco") };
+    return { mit, ohne };
+  });
+  await page.emulateMediaType("screen");
+  assert(ecoCss.mit.thBg && ecoCss.mit.thColor === "rgb(0, 0, 0)" && ecoCss.mit.bandBg && ecoCss.mit.bandLeft === "0px" && ecoCss.mit.evenBg && ecoCss.mit.botColor === "rgb(0, 0, 0)" && ecoCss.mit.adjust === "economy",
+    "Sparsam (Druckmedium): Kopf/Band/Zebra ohne Fläche, Band ohne Akzentstreifen, botanischer Name schwarz, print-color-adjust economy: " + JSON.stringify(ecoCss.mit));
+  assert(!ecoCss.ohne.thBg && !ecoCss.ohne.bandBg && !ecoCss.ohne.eco && ecoCss.ohne.stored === "0",
+    "Nach Abwahl: grüner Kopf und Band-Fläche wieder da, keine eco-Klasse: " + JSON.stringify(ecoCss.ohne));
+
   // Disclaimer: dezenter Hinweis (RP-Bezug, Stand, KI-Kategorien, keine Gewähr)
   const disc = await page.evaluate(() => {
     const el = document.querySelector(".disclaimer");

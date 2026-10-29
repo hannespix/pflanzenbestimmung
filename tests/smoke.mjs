@@ -956,6 +956,36 @@ async function main() {
   assert(druck.bodyImg === "none" && druck.bodyBg === "rgb(255, 255, 255)" && druck.sheetBg === "rgb(255, 255, 255)",
     "Druck: Hintergrund muss weiß und ohne Punktraster/Lichtkegel sein: " + JSON.stringify(druck));
   assert(druck.adjust === "exact", "Musterlösung: Tabellenkopf braucht print-color-adjust:exact: " + JSON.stringify(druck));
+  // 8y7) »Musterlösung sparsam drucken« (Schalter im Druck-Dialog, gemerkt): nur die Musterlösung wird
+  //      flächenlos/kompakt (sol-look eco) – der Leerbogen bleibt das amtliche Formular (nie eco).
+  const spar = await page.evaluate(() => {
+    const cb = document.querySelector("#printScrim #prEco"), inDialog = !!cb && !!cb.closest("#prEcoRow");
+    const defaultOff = !!cb && !cb.checked && !printEcoOn();
+    cb.checked = true; cb.dispatchEvent(new Event("change"));
+    drawRandom(); buildSheet("solution");
+    const solClass = document.querySelector("#sheet").className;
+    buildSheet("blank");
+    const blankClass = document.querySelector("#sheet").className;
+    askPrintMode(); const dialogChecked = document.querySelector("#prEco").checked; document.querySelector("#printCancel").click();
+    return { inDialog, defaultOff, solClass, blankClass, stored: localStorage.getItem("pflanzenkenntnis.printeco"), dialogChecked };
+  });
+  assert(spar.inDialog && spar.defaultOff && spar.solClass === "sol-look eco" && spar.blankClass === "" && spar.stored === "1" && spar.dialogChecked,
+    "Sparsam drucken: Schalter im Dialog, Standard aus, Musterlösung = sol-look eco, Leerbogen nie eco, gemerkt: " + JSON.stringify(spar));
+  await page.emulateMediaType("print");
+  const sparCss = await page.evaluate(() => {
+    buildSheet("solution");
+    const cs = (s) => getComputedStyle(document.querySelector(s)), tr = (c) => c === "rgba(0, 0, 0, 0)" || c === "transparent";
+    const th = cs("#sheet table.exam thead th"), even = cs("#sheet table.exam tbody tr:nth-child(even) td"), sh = cs("#sheet");
+    const mit = { thBg: tr(th.backgroundColor), thColor: th.color, evenBg: tr(even.backgroundColor), adjust: sh.printColorAdjust || sh.webkitPrintColorAdjust, color: sh.color };
+    const cb = document.querySelector("#prEco"); cb.checked = false; cb.dispatchEvent(new Event("change")); buildSheet("solution");
+    const th2 = cs("#sheet table.exam thead th");
+    return { mit, ohne: { thBg: tr(th2.backgroundColor), cls: document.querySelector("#sheet").className, stored: localStorage.getItem("pflanzenkenntnis.printeco") } };
+  });
+  await page.emulateMediaType("screen");
+  assert(sparCss.mit.thBg && sparCss.mit.thColor === "rgb(0, 0, 0)" && sparCss.mit.evenBg && sparCss.mit.adjust === "economy" && sparCss.mit.color === "rgb(0, 0, 0)",
+    "Sparsam (Druckmedium): Musterlösungs-Kopf ohne Fläche und schwarz, keine Zebrastreifen, print-color-adjust economy: " + JSON.stringify(sparCss.mit));
+  assert(!sparCss.ohne.thBg && sparCss.ohne.cls === "sol-look" && sparCss.ohne.stored === "0",
+    "Nach Abwahl: grüner Kopf zurück, nur sol-look, gemerkt »0«: " + JSON.stringify(sparCss.ohne));
   await page.evaluate(() => clearSel());
 
   // 9) Mobile-Layout: Status-Pille überlagert die Überschrift nicht (schmale Breite)

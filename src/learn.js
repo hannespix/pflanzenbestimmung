@@ -2108,6 +2108,7 @@ function renderListControls(){
       <div class="po-cols" id="printCols" role="group" aria-label="Spalten für den Druck"></div>
       <label class="po-ety" title="Zu jeder Pflanze eine kurze Merkzeile mit der Herkunft/Bedeutung des botanischen Namens mitdrucken (Latein/Griechisch → Deutsch, kuratiert – ohne Gewähr)."><input type="checkbox" id="printEty"${printEtyOn()?" checked":""}> Namensherkunft mitdrucken</label>
       <label class="po-ety" title="Jede Gruppe der gewählten Ansicht (Thema, Familie oder Anfangsbuchstabe) beginnt beim Drucken auf einer eigenen Seite – braucht mehr Papier, ist aber übersichtlicher zum Lernen."><input type="checkbox" id="printBreak"${printBreakOn()?" checked":""}> jede Gruppe auf neuer Seite</label>
+      <label class="po-ety" title="Sparsam drucken: ohne Farbflächen (kein grüner Tabellenkopf, keine Zebrastreifen, keine farbigen Bänder), schwarze Schrift, engere Zeilen – spart Toner und Papier. Die Gliederung bleibt über Linien und Schriftschnitt lesbar."><input type="checkbox" id="printEco"${printEcoOn()?" checked":""}> sparsam drucken (ohne Farbflächen, kompakt)</label>
     </div>`;
   host.classList.toggle("open", open);
   host.innerHTML=`
@@ -2137,6 +2138,7 @@ function renderListControls(){
   const ex=$("#lcExamOnly"); if(ex) ex.onchange=()=>{ const src=$("#examOnly"); if(src){ src.checked=ex.checked; src.dispatchEvent(new Event("change")); } };
   const pe=$("#printEty"); if(pe) pe.onchange=()=>store.set(LS_PREFIX+"printety", pe.checked?"1":"0");
   const pb=$("#printBreak"); if(pb) pb.onchange=()=>store.set(LS_PREFIX+"printbreak", pb.checked?"1":"0");
+  const pec=$("#printEco"); if(pec) pec.onchange=()=>store.set(LS_PREFIX+"printeco", pec.checked?"1":"0");
 }
 function renderList(){
   const stage=$("#stage");
@@ -2228,6 +2230,7 @@ function loadPrintColsOff(){
 function savePrintColsOff(){ try{ store.set(LS_PREFIX+"printcols", JSON.stringify([...printColsOff])); }catch(e){} }
 function printEtyOn(){ return store.get(LS_PREFIX+"printety")==="1"; }   // Quelle: Speicher (Checkbox lebt nur im offenen Akkordeon)
 function printBreakOn(){ return store.get(LS_PREFIX+"printbreak")==="1"; }   // opt-in: jede Gruppe auf neuer Seite
+function printEcoOn(){ return store.get(LS_PREFIX+"printeco")==="1"; }       // opt-in: sparsam drucken (ohne Farbflächen, kompakt)
 function renderPrintCols(){
   const host=$("#printCols"); if(!host) return;
   if(!printColsOff) loadPrintColsOff();
@@ -2268,6 +2271,7 @@ function buildPrintList(){
     (showChk?`<th class="pchk" title="zum Abhaken, was schon sitzt">gelernt</th>`:"");
   const wantEty = printEtyOn();                                   // opt-in: Namensherkunft-Merkzeile je Pflanze
   const wantBreak = printBreakOn();                               // opt-in: jede Gruppe auf neuer Seite (mehr Papier, übersichtlicher)
+  const wantEco = printEcoOn();                                   // opt-in: sparsam (keine Farbflächen, schwarze Schrift, engere Zeilen)
   let n=0, rows="", bandN=0;
   const band = label => { bandN++;                                // erstes Band ohne Umbruch (sonst leere erste Seite)
     return `<tr class="pcat${wantBreak&&bandN>1?" pbrk":""}"><td colspan="${tCols}">${esc(label)}</td></tr>`; };
@@ -2316,17 +2320,18 @@ function buildPrintList(){
   const legend=[
     (showZP&&hasZP)?"ZP = für die Zwischenprüfung relevant":"",
     showChk?"Spalte »gelernt« zum Abhaken, was sitzt":"",
-    showBot?"Botanischer Name (grün) = Lernziel":"",
+    showBot?(wantEco?"Botanischer Name (kursiv) = Lernziel":"Botanischer Name (grün) = Lernziel"):"",
     "Artnamen unverändert aus der amtlichen Prüfungsliste der Regierungspräsidien Baden-Württemberg",
     "Pflanzenkenntnis · Lernliste in der Form des Prüfungsbogens (Spalten und Punkte wie in der Prüfung)",
     wantEty?"Namensherkunft: Kurzherleitung (Latein/Griechisch → Deutsch), kuratiert – ohne Gewähr":""
   ].filter(Boolean).join(" · ");
+  host.classList.toggle("eco", wantEco);
   host.innerHTML=`
     <h1 class="ptitle${fam==="fw"?" pb":""}">${esc(title)} — Lernliste</h1>
     ${fam==="fw"?`<div class="psub">Gartenbaufachwerker/in</div>`:""}
     <div class="pmeta">Fachrichtung ${esc(frLabel)} · ${esc(nivLabel)} · ${n} ${n===1?"Art":"Arten"}
       · sortiert nach ${esc(SORT_LABEL[listSort]||"Thema")}${filt.length?` · ${esc(filt.join(" · "))}`:""} · Stand ${esc(heute)}</div>
-    <table class="ptab${wantEty?" ety":""}"><thead><tr>${heads}</tr></thead><tbody>${rows}</tbody></table>
+    <table class="ptab${wantEty?" ety":""}${wantEco?" eco":""}"><thead><tr>${heads}</tr></thead><tbody>${rows}</tbody></table>
     <div class="pfoot">${legend}</div>`;
   return n;
 }
@@ -5549,6 +5554,7 @@ window.__swUpdate=swUpdate; window.__swReloadHook=fn=>{ swReload = fn || (()=>{ 
 window.wikiCandidates=wikiCandidates;
 window.searchName=searchName;
 window.buildPrintList=buildPrintList;
+window.printEcoOn=printEcoOn;   // für Tests: sparsam drucken
 window.themeOf=themeOf;
 window.usablePhoto=usablePhoto;
 window.wikiCandidates=wikiCandidates;
