@@ -34,6 +34,9 @@
      Serif nur im Titel (und beim Rang), Sans für alles Bedienbare, Mono nur noch für reine Zahlen. */
   --fs-1:11px; --fs-2:12.5px; --fs-3:14px; --fs-4:16px; --fs-5:20px; --fs-6:24px;
   --r:10px; --sp-1:8px; --sp-2:16px; --sp-3:24px;
+  /* Teil 2 (Lektion, Liste, Dialoge): Serif für Titel und Pflanzennamen, Sans für alles Bedienbare und
+     alle Beschriftungen, Mono nur noch für laufende Zahlen (Uhr, Combo, Zähler, Versionsstempel).
+     Radien nach Rolle: Fläche/Dialog 16 · Kontrolle/Kasten 10 (--r) · Badge 4 · Chip Pille · Icon-Knopf Kreis. */
 }
 *{box-sizing:border-box}
 [hidden]{display:none !important}   /* damit .progress/.startrow/.listsearchrow (display:flex) das hidden-Attribut respektieren */
@@ -73,29 +76,32 @@ input,select{font-family:inherit; color:inherit}
 .helplink.active{color:var(--green-deep); background:var(--green-tint); border-color:var(--green)}
 .disclaimer{margin:40px 2px 0; padding-top:16px; border-top:1px solid var(--rule); color:var(--ink-soft); font-size:var(--fs-2); line-height:1.65; max-width:760px}
 .disclaimer + .foot{margin-top:14px; padding-top:14px}
-.foot{margin-top:40px; padding-top:18px; border-top:1px solid var(--rule); display:flex; flex-wrap:wrap; gap:8px 16px; justify-content:space-between; align-items:center; color:var(--ink-soft); font-family:var(--mono); font-size:11.5px; letter-spacing:.03em}
+.foot{margin-top:40px; padding-top:16px; border-top:1px solid var(--rule); display:flex; flex-wrap:wrap; gap:8px 16px; justify-content:space-between; align-items:center; color:var(--ink-soft); font-size:var(--fs-2)}
 .foot .legal{color:var(--sepia); text-decoration:none; border-bottom:1px solid var(--rule); transition:color .12s,border-color .12s}
 .foot .legal:hover{color:var(--green-deep); border-color:var(--green)}
 .btn .ic{width:16px; height:16px; flex:none}
 .btn.active{background:var(--green-tint); border-color:var(--green); color:var(--green-deep)}
 /* Hilfe-Panel */
 .helppanel{background:var(--surface); border:1px solid var(--rule-strong); border-radius:6px; padding:20px 22px; margin-top:16px; box-shadow:0 1px 0 var(--shadow)}
-.helppanel .hh{font-family:var(--serif); font-weight:600; font-size:20px; color:var(--green-deep); margin:0 0 8px}
-.helppanel h4{font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); margin:18px 0 8px}
+.helppanel .hh{font-family:var(--serif); font-weight:600; font-size:var(--fs-5); color:var(--green-deep); margin:0 0 8px}
+.helppanel h4{font-size:var(--fs-1); font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); margin:16px 0 8px}
 /* Hilfe als Dialog (wie im Prüfungswerkzeug) statt 7 500 px langer Einblendung in der Seite:
    × / Esc / Klick daneben schließen; der Inhalt scrollt im Dialog, die Themen sind Klappen
    (erste offen) – so bleibt die lange Hilfe überschaubar (Audit-Fund). */
-.modal.helppanel{max-width:820px; margin-top:0; padding:18px 12px 8px 22px}
+.modal.helppanel{max-width:820px; margin-top:0; padding:var(--sp-3) 12px 8px var(--sp-3)}
 .helppanel .hscroll{max-height:min(84vh,900px); overflow:auto; padding-right:10px; overscroll-behavior:contain}
 .helppanel .hsec{border-top:1px solid var(--rule)}
-.helppanel .hlead + .hsec{margin-top:14px}
-.helppanel .hsec>summary{list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px; min-height:44px; padding:8px 2px; font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); user-select:none}
+.helppanel .hlead + .hsec{margin-top:16px}
+.helppanel .hsec>summary{list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px; min-height:44px; padding:8px 2px; font-size:var(--fs-3); font-weight:600; color:var(--ink); user-select:none}
 .helppanel .hsec>summary::-webkit-details-marker{display:none}
-.helppanel .hsec>summary::after{content:"▾"; margin-left:auto; font-family:var(--sans); font-size:13px; color:var(--ink-soft); transition:transform .15s}
+/* Chevron als SVG-Maske in currentColor (kein ▾-Zeichen, folgt dem Dunkelmodus) */
+.helppanel .hsec>summary::after{content:""; margin-left:auto; width:16px; height:16px; flex:none; background:currentColor; color:var(--ink-faint); transition:transform .15s;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat}
 .helppanel .hsec[open]>summary::after{transform:rotate(180deg)}
 .helppanel .hsec>summary:hover{color:var(--green-deep)}
 .helppanel .hbody{padding:0 2px 16px}
-.hlead{font-size:14.5px; color:var(--ink-soft); line-height:1.55; margin:0}
+.hlead{font-size:var(--fs-3); color:var(--ink-soft); line-height:1.55; margin:0}
 .hsteps{margin:0; padding-left:20px; font-size:14px; line-height:1.6} .hsteps li{margin:4px 0}
 .hdl{margin:0; display:grid; grid-template-columns:minmax(110px,150px) 1fr; gap:7px 14px; font-size:14px; line-height:1.5}
 .hdl dt{font-weight:600; color:var(--green-deep)} .hdl dd{margin:0; color:var(--ink-soft)}
@@ -103,87 +109,87 @@ input,select{font-family:inherit; color:inherit}
 .hgood{color:var(--green-deep); font-weight:600} .hnear{color:var(--sepia); font-weight:600} .hbad{color:var(--madder); font-weight:600}
 
 /* Bilder-Quiz: Foto + Quellenzeile (Bild wird erst im Modus geladen) */
-.photobox{margin:16px auto 4px; max-width:520px; text-align:center}
-.ph-img{max-width:100%; max-height:46vh; border-radius:6px; border:1px solid var(--rule-strong);
+.photobox{margin:16px auto 8px; max-width:520px; text-align:center}
+.ph-img{max-width:100%; max-height:46vh; border-radius:var(--r); border:1px solid var(--rule-strong);
   box-shadow:0 1px 3px var(--shadow); background:var(--surface-2); display:block; margin:0 auto}
 /* Hinweis auf die Galerie: mehrere Ansichten derselben Art (Habitus, Blatt, Blüte …) */
 .ph-wrap{position:relative; display:inline-block; max-width:100%}
 .ph-more{position:absolute; right:8px; bottom:8px; pointer-events:none;
-  padding:3px 8px; border-radius:999px; font-family:var(--mono); font-size:10.5px; letter-spacing:.04em;
+  padding:4px 8px; border-radius:999px; font-size:var(--fs-1); font-weight:600;
   color:#fff; background:rgba(20,28,22,.62); backdrop-filter:blur(3px)}
 /* Notnagel: kein Foto auf Commons → Zeichnung/Herbarbeleg, als solche gekennzeichnet (sepia, oben links) */
 .ph-kind{position:absolute; left:8px; top:8px; pointer-events:none;
-  padding:3px 8px; border-radius:999px; font-family:var(--mono); font-size:10.5px; letter-spacing:.04em;
+  padding:4px 8px; border-radius:999px; font-size:var(--fs-1); font-weight:600;
   color:#fff; background:rgba(96,64,20,.74); backdrop-filter:blur(3px)}
 /* Geführte Lektion: Lernstand + Antwortart über der Aufgabe (auch: »zu dieser Art kein
    Bild – deshalb Auswahlfrage«), damit nichts wie ein zufällig eingemischtes Quiz wirkt. */
-.gnote{margin:10px auto 0; width:max-content; max-width:100%; align-self:center; text-align:center;
-  padding:3px 11px; border-radius:999px;
+.gnote{margin:8px auto 0; width:max-content; max-width:100%; align-self:center; text-align:center;
+  padding:4px 12px; border-radius:999px;
   border:1px solid var(--rule); background:var(--surface-2);
-  font-family:var(--mono); font-size:12px; letter-spacing:.04em; color:var(--ink-soft)}
+  font-size:var(--fs-2); font-weight:500; color:var(--ink-soft)}
 /* Wartebildschirm des Bilder-Quiz: drei ruhige Punkte statt eines toten Kastens –
    das Werkzeug arbeitet ja weiter (neuer Versuch im Takt von phWaitMs). */
-.ph-dots{display:flex; gap:6px; justify-content:center; margin:12px 0 2px}
+.ph-dots{display:flex; gap:6px; justify-content:center; margin:16px 0 0}
 .ph-dots i{width:7px; height:7px; border-radius:50%; background:var(--rule-strong);
   animation:phPulse 1.4s ease-in-out infinite}
 .ph-dots i:nth-child(2){animation-delay:.2s}
 .ph-dots i:nth-child(3){animation-delay:.4s}
 @keyframes phPulse{0%,80%,100%{opacity:.25; transform:scale(.85)} 40%{opacity:1; transform:scale(1)}}
 @media (prefers-reduced-motion: reduce){ .ph-dots i{animation:none; opacity:.5} }
-.ph-try{display:block; margin-top:6px; font-family:var(--mono); font-size:11px; color:var(--sepia)}
-.ph-load{padding:44px 16px; border:1px dashed var(--rule-strong); border-radius:6px; color:var(--ink-faint);
-  font-size:13.5px; background:var(--surface-2)}
-.ph-src{margin-top:7px; font-size:11.5px; color:var(--ink-faint); line-height:1.5}
+.ph-try{display:block; margin-top:8px; font-size:var(--fs-1); color:var(--sepia)}
+.ph-load{padding:40px 16px; border:1px dashed var(--rule-strong); border-radius:var(--r); color:var(--ink-soft);
+  font-size:var(--fs-3); background:var(--surface-2)}
+.ph-src{margin-top:8px; font-size:var(--fs-2); color:var(--ink-soft); line-height:1.5}
 .ph-src a{color:var(--sepia)}
 .ph-srcslot:empty{display:none}   /* Bildnachweis-Slot unter Optionen/Rückmeldung (Audit: kein Layoutsprung der Optionen beim Aufdecken) */
-.ph-note{margin:18px auto 0; max-width:460px; padding:18px 20px; border:1px solid var(--rule-strong);
-  border-radius:8px; background:var(--surface); font-size:14px; line-height:1.55; color:var(--ink-soft); text-align:center}
-.ph-actions{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:12px}
+.ph-note{margin:16px auto 0; max-width:460px; padding:16px 20px; border:1px solid var(--rule-strong);
+  border-radius:var(--r); background:var(--surface); font-size:var(--fs-3); line-height:1.55; color:var(--ink-soft); text-align:center}
+.ph-actions{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:16px}
 
 /* Bilder-Quiz »wie in der Prüfung«: ein Feld je bewerteter Spalte + Punkte */
-.examform{display:flex; flex-direction:column; gap:9px; max-width:520px; margin:6px auto 0}
-.exrow{display:grid; grid-template-columns:minmax(120px,170px) 1fr auto; align-items:center; gap:10px}
-.exlab{font-size:13px; color:var(--ink-soft); display:flex; align-items:baseline; gap:6px}
-.expts{font-family:var(--mono); font-size:10.5px; color:var(--sepia); white-space:nowrap}
-.exrow input{border:1.3px solid var(--rule-strong); border-radius:5px; padding:9px 11px; font-size:15px;
+.examform{display:flex; flex-direction:column; gap:8px; max-width:520px; margin:8px auto 0}
+.exrow{display:grid; grid-template-columns:minmax(120px,170px) 1fr auto; align-items:center; gap:8px}
+.exlab{font-size:var(--fs-3); color:var(--ink-soft); display:flex; align-items:baseline; gap:6px}
+.expts{font-size:var(--fs-1); color:var(--sepia); white-space:nowrap; font-variant-numeric:tabular-nums}
+.exrow input{border:1.3px solid var(--rule-strong); border-radius:var(--r); padding:8px 12px; font-size:var(--fs-4);
   background:var(--card); width:100%; min-width:0}
 .exrow input:focus{border-color:var(--green); outline:none}
 .exrow input.ok{border-color:var(--green); background:var(--green-tint)}
 .exrow input.no{border-color:var(--madder-soft); background:var(--madder-tint)}
-.exmark{font-size:12px; min-width:1.2em; text-align:left; line-height:1.3}
+.exmark{font-size:var(--fs-2); min-width:1.2em; text-align:left; line-height:1.3}
 .ex-ok{color:var(--green); font-weight:700} .ex-no{color:var(--madder); font-weight:700}
-.ex-sol{color:var(--ink-soft); font-size:12px}
+.ex-sol{color:var(--ink-soft); font-size:var(--fs-2)}
 /* Selbst bestimmen, welche Felder abgefragt werden */
 @media (max-width:640px){ .exrow{grid-template-columns:1fr; gap:4px} .exlab{gap:8px} }
 
 /* Lernduell: eingehende Herausforderung, Teilen-Block, Vergleich */
-.duelbanner{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:14px; padding:13px 16px;
+.duelbanner{display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-top:16px; padding:16px;
   background:linear-gradient(180deg,var(--green-tint),var(--surface)); border:1px solid var(--green);
-  border-left:5px solid var(--green); border-radius:6px; box-shadow:0 1px 0 var(--shadow)}
+  border-left:5px solid var(--green); border-radius:16px; box-shadow:0 1px 0 var(--shadow)}
 .duel-ic{line-height:0}
 .duel-ic .ic{width:26px; height:26px}
 .duel-txt{flex:1 1 220px; min-width:190px}
-.duel-title{margin:0 0 2px; font-family:var(--serif); font-weight:600; font-size:17px; color:var(--green-deep)}
-.duel-meta{margin:0; font-size:12.5px; color:var(--ink-soft)}
+.duel-title{margin:0 0 2px; font-family:var(--serif); font-weight:600; font-size:var(--fs-4); color:var(--green-deep)}
+.duel-meta{margin:0; font-size:var(--fs-2); color:var(--ink-soft)}
 .duel-cta{display:flex; gap:8px; flex-wrap:wrap}
-.shareblock{margin:16px auto 0; max-width:430px; padding:16px; border:1px dashed var(--green); border-radius:8px;
+.shareblock{margin:16px auto 0; max-width:430px; padding:16px; border:1px dashed var(--green); border-radius:16px;
   background:var(--surface); text-align:left}
-.share-h{margin:0 0 3px; font-family:var(--serif); font-weight:600; font-size:16px; color:var(--green-deep)}
-.share-sub{margin:0 0 10px; font-size:12.5px; color:var(--ink-soft); line-height:1.5}
-.duel-name{width:100%; border:1.3px solid var(--rule-strong); border-radius:5px; padding:9px 11px; font-size:14px;
-  margin-bottom:10px; background:var(--card)}
+.share-h{margin:0 0 4px; font-family:var(--serif); font-weight:600; font-size:var(--fs-4); color:var(--green-deep)}
+.share-sub{margin:0 0 8px; font-size:var(--fs-2); color:var(--ink-soft); line-height:1.5}
+.duel-name{width:100%; border:1.3px solid var(--rule-strong); border-radius:var(--r); padding:8px 12px; font-size:var(--fs-4);
+  margin-bottom:8px; background:var(--card)}
 .duel-name:focus{border-color:var(--green); outline:none}
 .share-btns{display:flex; gap:8px; flex-wrap:wrap; justify-content:center}
-.duel-result{margin:14px auto 0; max-width:340px; border:1px solid var(--rule-strong); border-radius:8px;
+.duel-result{margin:16px auto 0; max-width:340px; border:1px solid var(--rule-strong); border-radius:var(--r);
   overflow:hidden; background:var(--surface)}
-.duel-row{display:flex; align-items:center; gap:10px; padding:9px 14px; font-size:14px}
+.duel-row{display:flex; align-items:center; gap:8px; padding:8px 16px; font-size:var(--fs-3)}
 .duel-row+.duel-row{border-top:1px solid var(--rule)}
 .duel-row span:first-child{flex:1; text-align:left; font-weight:600; color:var(--green-deep)}
-.duel-pct{font-family:var(--mono); font-size:16px; font-weight:600}
-.duel-raw{font-family:var(--mono); font-size:12px; color:var(--ink-faint); min-width:44px; text-align:right}
-.duel-time{font-family:var(--mono); font-size:12px; color:var(--sepia); min-width:46px; display:inline-flex; align-items:center; justify-content:flex-end; gap:4px}
+.duel-pct{font-family:var(--mono); font-size:var(--fs-4); font-weight:600; font-variant-numeric:tabular-nums}
+.duel-raw{font-family:var(--mono); font-size:var(--fs-2); color:var(--ink-soft); min-width:44px; text-align:right}
+.duel-time{font-family:var(--mono); font-size:var(--fs-2); color:var(--sepia); min-width:46px; display:inline-flex; align-items:center; justify-content:flex-end; gap:4px}
 .duel-time .ic{width:12px; height:12px; opacity:.7}   /* Strich-Icon statt der Uhr-Glyphe U+23F1 (Handys rendern sie als buntes Emoji – Audit) */
-.duel-verdict{margin:0; padding:10px 14px; text-align:center; background:var(--green-tint); font-size:14.5px}
+.duel-verdict{margin:0; padding:8px 16px; text-align:center; background:var(--green-tint); font-size:var(--fs-3)}
 .duel-win{color:var(--green-deep)} .duel-lose{color:var(--madder)}
 
 /* Buttons */
@@ -192,14 +198,16 @@ input,select{font-family:inherit; color:inherit}
 .btn:active{transform:translateY(1px)}
 .btn.primary{background:var(--green); border-color:var(--green-deep); color:#f4f7f1}
 .btn.primary:hover{background:var(--green-deep)}
-.btn.ghost{background:transparent; border-color:transparent}
-.btn.ghost:hover{background:var(--surface-2); border-color:var(--rule)}
+/* Dritte Knopf-Stufe als Knopf (gleiche Optik wie .tlink): beenden, Zur Übersicht, schließen, Mehr zur Pflanze … */
+.btn.text{background:transparent; border-color:transparent; color:var(--green-deep)}
+.btn.text:hover{background:var(--surface-2); border-color:transparent}
 /* Zweite Knopf-Stufe (umrandet grün) – Probeprüfung, »nur ZP« und Liste tragen denselben Rand */
 .btn.outline{background:var(--surface-2); color:var(--green-deep); border:1.4px solid var(--green)}
 .btn.outline:hover{background:var(--green-tint); border-color:var(--green)}
 .btn.big{font-size:var(--fs-4); padding:11px 20px}
 .btn:disabled{opacity:.4; cursor:not-allowed}
-:where(button,a,select,input,textarea,summary,[role="button"]):focus-visible{outline:2px solid var(--madder); outline-offset:2px}
+/* Fokusring grün – Rot bleibt Fehlern und Löschen vorbehalten (ein roter Ring um »Weiter« las sich wie ein Fehler) */
+:where(button,a,select,input,textarea,summary,[role="button"]):focus-visible{outline:2px solid var(--green); outline-offset:2px}
 
 /* Setup */
 .setup{background:var(--surface); border:1px solid var(--rule-strong); border-top:none; border-radius:0 0 4px 4px; padding:var(--sp-2); margin-top:-1px; display:flex; flex-direction:column; gap:var(--sp-2)}
@@ -208,13 +216,13 @@ input,select{font-family:inherit; color:inherit}
 .field label{font-size:var(--fs-2); color:var(--sepia)}
 select.mini,input.mini{border:1px solid var(--rule-strong); background:var(--surface-2); border-radius:var(--r); padding:8px 26px 8px 10px; font-size:14px; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2356604f' stroke-width='1.4'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center}
 input.mini{width:64px; padding:8px 10px; text-align:center; font-variant-numeric:tabular-nums; background-image:none}
-.switch{display:inline-flex; align-items:center; gap:8px; font-size:13.5px; cursor:pointer; user-select:none}
+.switch{display:inline-flex; align-items:center; gap:8px; font-size:var(--fs-3); cursor:pointer; user-select:none}
 .switch input{position:absolute; opacity:0; width:0; height:0}
 .switch .track{width:34px; height:19px; border-radius:19px; background:var(--rule-strong); position:relative; transition:background .15s; flex:none}
 .switch .track::after{content:""; position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%; background:var(--card); transition:transform .15s}
 .switch input:checked + .track{background:var(--green)}
 .switch input:checked + .track::after{transform:translateX(15px)}
-.switch input:focus-visible + .track{outline:2px solid var(--madder); outline-offset:2px}
+.switch input:focus-visible + .track{outline:2px solid var(--green); outline-offset:2px}
 /* Modus-Umschalter */
 .modes{display:flex; gap:0; border:1px solid var(--rule-strong); border-radius:var(--r); overflow:hidden; width:fit-content; max-width:100%; flex-wrap:wrap}
 .modes button{border:none; background:var(--surface-2); color:var(--ink-soft); padding:9px 15px; font-size:var(--fs-3); border-right:1px solid var(--rule-strong); display:inline-flex; align-items:center; gap:7px}
@@ -235,42 +243,42 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-variant-numeric
 .introlink{margin-top:var(--sp-1)}   /* Lernpfad-Link = dritte Stufe (.tlink) */
 /* Erst-Einweisung (einmalig, danach über den Link erreichbar) */
 .modal.intro{max-width:460px}
-.intro-h{font-family:var(--serif); font-size:20px; color:var(--green-deep); margin:0 30px 4px 0}
-.intro-lead{margin:0 0 13px; color:var(--ink-soft); font-size:13.5px; line-height:1.45}
-.intro-steps{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px}
-.intro-steps li{display:flex; gap:11px; align-items:flex-start; font-size:13px; line-height:1.4}
-.intro-steps .is-ic{flex:none; width:26px; height:26px; padding:5px; border-radius:7px; background:var(--surface-2); border:1px solid var(--rule-strong); color:var(--green-deep); display:flex; align-items:center; justify-content:center; font-size:14px; margin-top:1px}
+.intro-h{font-family:var(--serif); font-size:var(--fs-5); color:var(--green-deep); margin:0 40px 4px 0}
+.intro-lead{margin:0 0 16px; color:var(--ink-soft); font-size:var(--fs-3); line-height:1.45}
+.intro-steps{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px}
+.intro-steps li{display:flex; gap:12px; align-items:flex-start; font-size:var(--fs-3); line-height:1.4}
+.intro-steps .is-ic{flex:none; width:28px; height:28px; padding:6px; border-radius:50%; background:var(--surface-2); border:1px solid var(--rule-strong); color:var(--green-deep); display:flex; align-items:center; justify-content:center; font-size:14px; margin-top:1px}
 .intro-steps b{color:var(--ink)}
-.is-tag{font-size:var(--fs-1); letter-spacing:.06em; text-transform:uppercase; color:var(--sepia); border:1px solid var(--rule-strong); border-radius:3px; padding:0 4px; margin-left:5px; white-space:nowrap}
-.intro-tip{margin:12px 0 0; padding:0 2px; font-size:12.5px; color:var(--ink-soft); line-height:1.45}
+.is-tag{font-size:var(--fs-1); letter-spacing:.06em; text-transform:uppercase; color:var(--sepia); border:1px solid var(--rule-strong); border-radius:4px; padding:0 4px; margin-left:5px; white-space:nowrap}
+.intro-tip{margin:16px 0 0; padding:0 2px; font-size:var(--fs-2); color:var(--ink-soft); line-height:1.45}
 .intro-tip b{color:var(--ink)}
-.intro-foot{margin:11px 0 0; font-size:12.5px; color:var(--ink-soft); background:var(--surface-2); border-radius:6px; padding:10px 12px; line-height:1.45}
-.intro-cta{margin-top:14px; text-align:center}
+.intro-foot{margin:16px 0 0; font-size:var(--fs-2); color:var(--ink-soft); background:var(--surface-2); border-radius:var(--r); padding:8px 12px; line-height:1.45}
+.intro-cta{margin-top:16px; text-align:center}
 /* »Ehrlich gesagt« – das Werkzeug ist eine Lernhilfe, kein Ersatz für die echte Pflanze */
-.intro-real{margin:12px 0 0; display:flex; gap:10px; align-items:flex-start; padding:10px 12px; border-radius:10px;
-  background:var(--green-tint); border:1px solid var(--rule-strong); font-size:12.5px; line-height:1.45; color:var(--ink)}
+.intro-real{margin:16px 0 0; display:flex; gap:8px; align-items:flex-start; padding:8px 12px; border-radius:var(--r);
+  background:var(--green-tint); border:1px solid var(--rule-strong); font-size:var(--fs-2); line-height:1.45; color:var(--ink)}
 .intro-real .ic{flex:none; width:18px; height:18px; color:var(--green-deep); margin-top:1px}
-.intro-sub{margin:0 0 8px; font-size:12.5px; color:var(--ink-soft)}
+.intro-sub{margin:0 0 8px; font-size:var(--fs-2); color:var(--ink-soft)}
 /* Als App installieren: Knopf nur, wenn der Browser es anbietet (beforeinstallprompt); iPhone: der Weg;
    läuft die Seite schon als App, steht das da (is-on). Slot in Einführung und Hilfe, gefüllt aus learn.js. */
-.intro-install{margin:12px 0 0; display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:10px 12px; border-radius:10px;
-  background:var(--surface-2); border:1px dashed var(--rule-strong); font-size:12.5px; line-height:1.45; color:var(--ink)}
+.intro-install{margin:16px 0 0; display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:8px 12px; border-radius:var(--r);
+  background:var(--surface-2); border:1px dashed var(--rule-strong); font-size:var(--fs-2); line-height:1.45; color:var(--ink)}
 .intro-install>div{flex:1 1 180px}
 .intro-install .ic{flex:none; width:18px; height:18px; color:var(--green-deep)}
 .intro-install .btn{flex:none}
 .intro-install.is-on{border-style:solid; background:var(--green-tint)}
 .install-slot:empty{display:none}
-.installbar{margin:22px 0 0; display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 14px; border-radius:12px;
-  background:var(--green-tint); border:1px solid var(--rule-strong); font-size:13px; line-height:1.45; color:var(--ink)}
+.installbar{margin:24px 0 0; display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 16px; border-radius:16px;
+  background:var(--green-tint); border:1px solid var(--rule-strong); font-size:var(--fs-3); line-height:1.45; color:var(--ink)}
 .installbar .ic{flex:none; width:20px; height:20px; color:var(--green-deep)}
 .installbar>div{flex:1 1 200px}
 .installbar .btn{flex:none}
-.inst-ways{display:flex; flex-direction:column; gap:8px; margin:12px 0 0}
-.inst-way{display:flex; flex-direction:column; gap:2px; padding:9px 11px; border-radius:8px; background:var(--surface-2); border:1px solid var(--rule); font-size:13px; line-height:1.45}
+.inst-ways{display:flex; flex-direction:column; gap:8px; margin:16px 0 0}
+.inst-way{display:flex; flex-direction:column; gap:2px; padding:8px 12px; border-radius:var(--r); background:var(--surface-2); border:1px solid var(--rule); font-size:var(--fs-3); line-height:1.45}
 .inst-way.is-you{border-color:var(--green); background:var(--green-tint)}
 .inst-way>b{color:var(--ink)}
-.hreal{margin:0 0 12px; padding:10px 12px; border-left:3px solid var(--green); background:var(--green-tint);
-  border-radius:0 8px 8px 0; font-size:13.5px; line-height:1.5; color:var(--ink)}
+.hreal{margin:0 0 16px; padding:8px 12px; border-left:3px solid var(--green); background:var(--green-tint);
+  border-radius:0 var(--r) var(--r) 0; font-size:var(--fs-3); line-height:1.5; color:var(--ink)}
 .startrow{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
 /* Hinweis vor dem Lernen: automatisch/KI-erzeugte Inhalte, keine Gewähr */
 .learnnote{margin:var(--sp-3) 0 0; padding:9px 12px; border-left:3px solid var(--gold); border-radius:0 var(--r) var(--r) 0;
@@ -355,7 +363,7 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-variant-numeric
 .profchip .ic{width:14px; height:14px; flex:none; opacity:.7}
 .profmodal .profilerow{margin:10px 0 2px 0}
 .profmodal .profsub{display:block; padding:0; margin:10px 0 0}
-.pm-lead{font-size:13.5px; color:var(--ink-soft); margin:2px 0 4px}
+.pm-lead{font-size:var(--fs-3); color:var(--ink-soft); margin:0 0 8px}
 .setopts[open]>summary .opts-caret{transform:rotate(180deg)}
 .setopts .setrow{padding:13px}
 
@@ -403,25 +411,25 @@ button.chip:hover{background:var(--green-tint); border-color:var(--green); color
 .intro-tip .ic,.herb-how .ic{width:16px; height:16px; flex:none; color:var(--sepia)}
 /* Stufen-Erklärung als Leiter (ersetzt drei Textabsätze) */
 .howmodal{max-width:560px}
-.howgrid{display:grid; gap:8px; margin:14px 0 4px}
-.how-row{display:flex; align-items:center; gap:10px; padding:8px 10px; border:1px solid var(--rule);
-  border-radius:10px; background:var(--surface-2)}
+.howgrid{display:grid; gap:8px; margin:16px 0 8px}
+.how-row{display:flex; align-items:center; gap:12px; padding:8px 12px; border:1px solid var(--rule);
+  border-radius:var(--r); background:var(--surface-2)}
 .how-row.fest{border-color:var(--green); background:var(--green-tint)}
 .how-row .pips{display:inline-flex; gap:4px; flex:none}
 .how-row .pips i{width:9px; height:9px; border-radius:50%; background:var(--rule); border:1px solid var(--rule-strong)}
 .how-row .pips i.on{background:var(--gold); border-color:var(--gold)}
 .how-row .pips i.on.fest{background:var(--green); border-color:var(--green)}
-.how-lab{font-family:var(--serif); font-size:14px; flex:1}
+.how-lab{font-size:var(--fs-3); font-weight:600; flex:1}
 .how-row.fest .how-lab{color:var(--green-deep); font-weight:700}
-.how-int{font-family:var(--mono); font-size:10.5px; color:var(--ink-soft)}
-.how-legend{display:grid; gap:6px; margin:12px 0 2px; font-size:12.5px; color:var(--ink-soft)}
+.how-int{font-size:var(--fs-2); color:var(--ink-soft)}
+.how-legend{display:grid; gap:8px; margin:16px 0 0; font-size:var(--fs-2); color:var(--ink-soft)}
 .how-legend>div{display:flex; align-items:center; gap:8px}
 .hl-ic{line-height:0; flex:none}
 .hl-ic .ic{width:16px; height:16px}
 .hl-ic.ok{color:var(--green)} .hl-ic.hold{color:var(--gold)} .hl-ic.back{color:var(--madder)}
 /* Stufen-Anzeige nach jeder Antwort: fünf Punkte + »noch N× richtig bis sitzt« */
-.stepline{display:flex; align-items:center; justify-content:center; gap:8px; margin-top:10px;
-  font-family:var(--mono); font-size:11.5px; color:var(--ink-soft); flex-wrap:wrap}
+.stepline{display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px;
+  font-size:var(--fs-2); color:var(--ink-soft); flex-wrap:wrap}
 .stepline .pips{display:inline-flex; gap:4px}
 .stepline .pips i{width:9px; height:9px; border-radius:50%; background:var(--rule);
   border:1px solid var(--rule-strong); transition:background .3s, transform .3s}
@@ -431,28 +439,28 @@ button.chip:hover{background:var(--green-tint); border-color:var(--green); color
 .stepline.now .pips i.on{transform:scale(1.15)}
 .stepline b{color:var(--green-deep)}
 @media (prefers-reduced-motion: reduce){ .stepline .pips i{transition:none} }
-.rk-name{font-family:var(--serif); font-size:14px; font-style:italic; color:var(--green-deep); letter-spacing:.01em}
+.rk-name{font-family:var(--serif); font-size:var(--fs-3); font-style:italic; color:var(--green-deep); letter-spacing:.01em}
 /* Sitzungs-Combo: Treffer in Folge (ab 3 sichtbar), poppt bei jeder Erhöhung */
-.scombo{font-family:var(--mono); font-size:12px; color:#b5651d; font-weight:700; letter-spacing:.02em;
+.scombo{font-family:var(--mono); font-size:var(--fs-2); color:#b5651d; font-weight:700; letter-spacing:.02em;
   animation:comboPop .42s cubic-bezier(.2,.85,.3,1.4)}
 @keyframes comboPop{ 0%{transform:scale(.7); opacity:.2} 55%{transform:scale(1.18)} 100%{transform:scale(1); opacity:1} }
 @media (prefers-reduced-motion: reduce){ .scombo{animation:none} }
-.xpline{font-family:var(--mono); font-size:12.5px; color:var(--green-deep); margin:2px 0 0}
+.xpline{font-size:var(--fs-2); color:var(--green-deep); margin:4px 0 0}
 /* Probeprüfung: Note groß, Schlüssel klein */
-.grade{display:flex; flex-direction:column; align-items:center; gap:2px; margin:10px auto 2px; padding:12px 22px; border:1.5px solid var(--green); border-radius:12px; background:var(--green-tint); width:max-content; max-width:100%}
+.grade{display:flex; flex-direction:column; align-items:center; gap:2px; margin:8px auto 0; padding:16px 24px; border:1.5px solid var(--green); border-radius:var(--r); background:var(--green-tint); width:max-content; max-width:100%}
 .grade .g-n{font-family:var(--serif); font-size:30px; font-weight:600; color:var(--green-deep); line-height:1.1}
-.grade .g-sub{font-family:var(--mono); font-size:12px; color:var(--ink-soft)}
-.g-key{font-size:11.5px; color:var(--ink-soft); margin:6px 0 0}
+.grade .g-sub{font-size:var(--fs-2); color:var(--ink-soft)}
+.g-key{font-size:var(--fs-2); color:var(--ink-soft); margin:8px 0 0}
 /* Sammel-Herbarium: eine Sammelkarte je Thema – Klebestreifen oben, gepresste
    Pflanze (SVG, currentColor), »Gemeistert«-Schrägband; Unfertiges bleibt blass */
 .herbmodal{max-width:740px}
 /* Erklärt im Herbarium direkt, wie ein Thema gemeistert wird (nicht erst in der Hilfe) */
-.herb-how{display:flex; align-items:flex-start; gap:8px; font-size:12.5px; line-height:1.5;
-  color:var(--ink-soft); margin:12px 0 2px}
+.herb-how{display:flex; align-items:flex-start; gap:8px; font-size:var(--fs-2); line-height:1.5;
+  color:var(--ink-soft); margin:16px 0 0}
 .herb-how b{color:var(--green-deep)}
-.herbgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin:14px 0 6px}
-.herbcard{position:relative; background:var(--card); border:1px solid var(--rule-strong); border-radius:12px;
-  padding:16px 12px 10px; text-align:center; overflow:hidden; box-shadow:var(--shadow-1)}
+.herbgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; margin:16px 0 8px}
+.herbcard{position:relative; background:var(--card); border:1px solid var(--rule-strong); border-radius:var(--r);
+  padding:16px 12px 12px; text-align:center; overflow:hidden; box-shadow:var(--shadow-1)}
 .herbcard::before{content:""; position:absolute; top:-6px; left:50%; transform:translateX(-50%) rotate(-3deg);
   width:54px; height:16px; background:rgba(190,180,150,.35); border:1px solid rgba(160,150,120,.3)}
 .hc-art{color:var(--rule-strong)}
@@ -462,79 +470,80 @@ button.chip:hover{background:var(--green-tint); border-color:var(--green); color
 .herbcard:not(.done){filter:saturate(.45)}
 .herbcard:not(.done) .hc-art{opacity:.55}
 .hc-stamp{position:absolute; top:12px; right:-30px; transform:rotate(35deg); background:var(--madder); color:#fdf6ef;
-  font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; padding:3px 34px}
-.hc-name{font-family:var(--serif); font-size:13.5px; margin-top:6px; line-height:1.25; min-height:2.5em;
+  font-size:var(--fs-1); font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:3px 34px}
+.hc-name{font-family:var(--serif); font-size:var(--fs-3); margin-top:8px; line-height:1.25; min-height:2.5em;
   display:flex; align-items:center; justify-content:center}
-.hc-bar{height:5px; background:var(--surface-2); border:1px solid var(--rule); border-radius:99px; overflow:hidden; margin:6px 6px 5px}
+.hc-bar{height:5px; background:var(--surface-2); border:1px solid var(--rule); border-radius:99px; overflow:hidden; margin:8px 8px 4px}
 .hc-bar i{display:block; height:100%; background:var(--green); border-radius:99px}
-.hc-n{font-family:var(--mono); font-size:10.5px; color:var(--ink-soft)}
+.hc-n{font-size:var(--fs-1); color:var(--ink-soft); font-variant-numeric:tabular-nums}
 /* »Es fehlen noch …« – nur bei angefangenen Themen, damit klar ist, was zum Blatt fehlt */
 .hc-open{margin-top:8px; padding-top:8px; border-top:1px dashed var(--rule); text-align:left}
-.hc-open-h{font-family:var(--mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); margin-bottom:4px}
+.hc-open-h{font-size:var(--fs-1); font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); margin-bottom:4px}
 .hc-open ul{list-style:none; margin:0; padding:0}
-.hc-open li{font-size:11.5px; color:var(--ink-soft); line-height:1.45; padding-left:9px; position:relative}
+.hc-open li{font-size:var(--fs-2); color:var(--ink-soft); line-height:1.45; padding-left:9px; position:relative}
 .hc-open li::before{content:"·"; position:absolute; left:1px; color:var(--rule-strong)}
 .hc-open li.no-photo{color:var(--ink)}
-.np-tag{font-family:var(--mono); font-size:9px; color:var(--sepia); border:1px solid var(--rule); border-radius:4px; padding:0 4px; white-space:nowrap}
-.hc-more{font-family:var(--mono); font-size:10px; color:var(--ink-faint); margin-top:3px}
-.hc-learn{margin-top:8px; width:100%; justify-content:center; font-size:11.5px; min-height:32px}
+.np-tag{font-size:var(--fs-1); color:var(--sepia); border:1px solid var(--rule); border-radius:4px; padding:0 4px; white-space:nowrap}
+.hc-more{font-size:var(--fs-1); color:var(--ink-soft); margin-top:4px}
+.hc-learn{margin-top:8px; width:100%; justify-content:center; font-size:var(--fs-2); min-height:36px}
 .herbcard:not(.done) .hc-learn{filter:saturate(2.2)}   /* die Karte ist entsättigt – der Knopf soll trotzdem grün lesen */
-.rkp-m{font-family:var(--mono); font-size:10.5px; font-weight:400; letter-spacing:.04em; color:var(--ink-soft); margin-left:8px}
-.rkp-need{font-size:12px; color:var(--green-deep); padding:6px 0 2px; border-top:1px dashed var(--rule); margin-top:4px}
+.rkp-m{font-size:var(--fs-2); font-weight:400; letter-spacing:0; text-transform:none; color:var(--ink-soft); margin-left:8px}
+.rkp-need{font-size:var(--fs-2); color:var(--green-deep); padding:8px 0 0; border-top:1px dashed var(--rule); margin-top:8px}
 /* Hinweis im Bilder-Modus, wenn eine Art mangels Foto als Quizfrage kommt */
-.ph-fallback{font-family:var(--mono); font-size:11.5px; color:var(--sepia); text-align:center;
-  border:1px dashed var(--rule-strong); border-radius:8px; padding:6px 10px; margin:0 auto 10px; max-width:520px}
+.ph-fallback{font-size:var(--fs-2); color:var(--sepia); text-align:center;
+  border:1px dashed var(--rule-strong); border-radius:var(--r); padding:8px 12px; margin:0 auto 8px; max-width:520px}
 
 /* Lernbühne */
-#stage{margin-top:18px}
-.stage-empty{text-align:center; padding:48px 24px; border:1.5px dashed var(--rule-strong); border-radius:6px; background:var(--surface); color:var(--ink-soft)}
+#stage{margin-top:var(--sp-3)}
+.stage-empty{text-align:center; padding:48px 24px; border:1.5px dashed var(--rule-strong); border-radius:16px; background:var(--surface); color:var(--ink-soft)}
 .stage-empty svg{width:46px; height:46px; color:var(--green); opacity:.7}
-.stage-empty h2{font-family:var(--serif); color:var(--ink); font-size:20px; margin:12px 0 6px}
-.sessionbar{display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px; margin-bottom:12px; font-family:var(--mono); font-size:12px; color:var(--ink-soft)}
-.sessionbar .sbar{flex:1; height:6px; border-radius:4px; background:var(--surface-2); border:1px solid var(--rule); overflow:hidden}
+.stage-empty h2{font-family:var(--serif); color:var(--ink); font-size:var(--fs-5); margin:16px 0 8px}
+.sessionbar{display:flex; align-items:center; flex-wrap:wrap; gap:8px 16px; margin-bottom:16px; font-size:var(--fs-2); color:var(--ink-soft); font-variant-numeric:tabular-nums}
+.sessionbar .sbar{flex:1; height:6px; border-radius:999px; background:var(--surface-2); border:1px solid var(--rule); overflow:hidden}
 .sessionbar .sbar i{display:block; height:100%; background:var(--green); transition:width .2s}
 .sessionbar .spts{color:var(--green-deep); font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap}
 .sessionbar .sclock{color:var(--sepia); font-variant-numeric:tabular-nums; white-space:nowrap}
 .sessionbar .sclock{display:inline-flex; align-items:center; gap:4px}
 .sessionbar .sclock .ic{width:13px; height:13px; opacity:.7}
+.sessionbar .sclock #sclockT{font-family:var(--mono)}   /* laufende Zahl: die Uhr bleibt Mono */
 
 /* Karteikarte */
-.card{border:1px solid var(--rule-strong); border-radius:8px; background:var(--surface); box-shadow:0 2px 10px var(--shadow); min-height:230px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:34px 26px; text-align:center; cursor:pointer; position:relative}
-.card:focus-visible{outline:2px solid var(--madder); outline-offset:3px}
+.card{border:1px solid var(--rule-strong); border-radius:8px; background:var(--surface); box-shadow:0 2px 10px var(--shadow); min-height:230px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 24px; text-align:center; cursor:pointer; position:relative}
+.card:focus-visible{outline:2px solid var(--green); outline-offset:3px}
 /* Größere Tap-Ziele auf dem Smartphone (Barrierefreiheit/Touch, ~44px) */
 @media (max-width:640px){
   .btn{min-height:44px}
   .modes button{min-height:48px}
   .cattag,.sortbtn{min-height:36px}
-  .modal-x{min-width:44px; min-height:44px; font-size:26px}
+  .modal-x{width:44px; height:44px}
 }
-.card .side-label{position:absolute; top:12px; left:16px; font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--sepia)}
+.card .side-label{position:absolute; top:12px; left:16px; font-size:var(--fs-1); font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia)}
 .card .prompt{font-family:var(--serif); font-size:clamp(22px,4vw,30px); color:var(--ink); line-height:1.2}
 .card .prompt .g{font-style:italic}
 .card .prompt .a{font-style:italic; color:var(--ink-soft)}
-.card .sub{margin-top:8px; font-size:14px; color:var(--green-deep); font-family:var(--serif)}
+.card .sub{margin-top:8px; font-size:var(--fs-3); color:var(--green-deep); font-family:var(--serif)}
 .card .answer{margin-top:16px; padding-top:16px; border-top:1px solid var(--rule); width:100%}
 .card .answer .big{font-family:var(--serif); font-size:clamp(20px,3.6vw,26px); color:var(--green-deep); font-weight:600; font-style:italic}
-.card .answer .meta{margin:12px auto 0; max-width:360px; display:flex; flex-direction:column; gap:5px; text-align:left}
-.card .answer .meta .mf{font-size:14.5px; color:var(--ink); display:flex; gap:9px; align-items:baseline}
-.card .answer .meta .mf b{flex:none; min-width:66px; color:var(--sepia); font-family:var(--mono); font-size:10px; letter-spacing:.09em; text-transform:uppercase; font-weight:600}
+.card .answer .meta{margin:16px auto 0; max-width:360px; display:flex; flex-direction:column; gap:4px; text-align:left}
+.card .answer .meta .mf{font-size:var(--fs-3); color:var(--ink); display:flex; gap:8px; align-items:baseline}
+.card .answer .meta .mf b{flex:none; min-width:72px; color:var(--sepia); font-size:var(--fs-1); letter-spacing:.08em; text-transform:uppercase; font-weight:600}
 .card .answer .meta .mf i{font-style:italic}
-.card .flip-hint{margin-top:16px; font-size:12.5px; color:var(--ink-faint); font-style:italic}
-.rate{display:flex; gap:10px; margin-top:14px; justify-content:center; flex-wrap:wrap}
-.rate button{flex:1; min-width:120px; border:1px solid var(--rule-strong); background:var(--card); border-radius:5px; padding:11px 12px; font-size:14px; font-weight:600; display:flex; flex-direction:column; align-items:center; gap:2px}
+.card .flip-hint{margin-top:16px; font-size:var(--fs-2); color:var(--ink-soft); font-style:italic}
+.rate{display:flex; gap:8px; margin-top:16px; justify-content:center; flex-wrap:wrap}
+.rate button{flex:1; min-width:120px; border:1px solid var(--rule-strong); background:var(--card); border-radius:var(--r); padding:12px; font-size:var(--fs-3); font-weight:600; display:flex; flex-direction:column; align-items:center; gap:2px}
 .rate .r-again{color:var(--madder)} .rate .r-again:hover{border-color:var(--madder); background:var(--madder-tint)}
 .rate .r-hard{color:var(--gold)} .rate .r-hard:hover{border-color:var(--gold); background:#f6efdc}
 .rate .r-good{color:var(--green-deep)} .rate .r-good:hover{border-color:var(--green); background:var(--green-tint)}
-.rate small{font-family:var(--mono); font-size:10px; font-weight:400; color:var(--ink-faint)}
+.rate small{font-size:var(--fs-1); font-weight:400; color:var(--ink-soft)}
 
 /* Quiz */
-.qprompt{font-family:var(--serif); font-size:clamp(20px,3.6vw,26px); text-align:center; margin:6px 0 4px; line-height:1.25}
+.qprompt{font-family:var(--serif); font-size:clamp(20px,3.6vw,26px); text-align:center; margin:8px 0 4px; line-height:1.25}
 .qprompt .g,.qprompt .a{font-style:italic}
-.qsub{text-align:center; font-size:13px; color:var(--sepia); margin-bottom:16px; font-family:var(--mono)}
-.options{display:grid; gap:10px}
-.opt{border:1px solid var(--rule-strong); background:var(--surface); border-radius:6px; padding:13px 16px; font-size:15px; font-family:var(--serif); text-align:left; display:flex; align-items:center; gap:10px}
+.qsub{text-align:center; font-size:var(--fs-2); color:var(--sepia); margin-bottom:16px}
+.options{display:grid; gap:8px}
+.opt{border:1px solid var(--rule-strong); background:var(--surface); border-radius:var(--r); padding:12px 16px; font-size:var(--fs-4); font-family:var(--serif); text-align:left; display:flex; align-items:center; gap:12px}
 .opt:hover:not(:disabled){border-color:var(--green); background:var(--card)}
-.opt .k{font-family:var(--mono); font-size:12px; color:var(--sepia); border:1px solid var(--rule); border-radius:4px; padding:1px 7px; flex:none}
+.opt .k{font-family:var(--sans); font-size:var(--fs-2); font-weight:600; font-style:normal; color:var(--sepia); border:1px solid var(--rule); border-radius:4px; padding:1px 7px; min-width:26px; text-align:center; flex:none}
 .opt span:last-child{font-style:italic}   /* Antwortoptionen sind botanische Namen */
 .opt.correct{border-color:var(--green); background:var(--green-tint)}
 .opt.wrong{border-color:var(--madder-soft); background:var(--madder-tint)}
@@ -543,10 +552,10 @@ button.chip:hover{background:var(--green-tint); border-color:var(--green); color
 
 /* Tippen */
 .typebox{display:flex; flex-direction:column; gap:12px; align-items:center}
-.typebox input{width:100%; max-width:460px; border:1.4px solid var(--rule-strong); border-radius:5px; padding:13px 14px; font-size:18px; font-family:var(--serif); background:var(--card); text-align:center}
+.typebox input{width:100%; max-width:460px; border:1.4px solid var(--rule-strong); border-radius:var(--r); padding:12px 16px; font-size:var(--fs-5); font-family:var(--serif); background:var(--card); text-align:center}
 .typebox input.ok{border-color:var(--green); background:var(--green-tint)}
 .typebox input.no{border-color:var(--madder-soft); background:var(--madder-tint)}
-.feedback{min-height:26px; text-align:center; font-size:14.5px}
+.feedback{min-height:24px; text-align:center; font-size:var(--fs-4)}
 .feedback .good{color:var(--green-deep); font-weight:600}
 .feedback .bad{color:var(--madder); font-weight:600}
 .feedback .sol{color:var(--ink); font-family:var(--serif)}
@@ -578,140 +587,145 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
   100%{transform:translate(-50%,-50%) scale(7); opacity:0}
 }
 @media (prefers-reduced-motion: reduce){ .conf,.conf-ring{display:none} }
-.nav{display:flex; justify-content:center; gap:10px; margin-top:16px}
+.nav{display:flex; justify-content:center; gap:8px; margin-top:16px}
 
 /* Toast */
-.toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px); opacity:0; background:var(--green-deep); color:#eef4ea; padding:11px 18px; border-radius:5px; font-size:13.5px; box-shadow:0 8px 24px rgba(28,42,34,.3); transition:.25s; z-index:60; pointer-events:none; max-width:90vw}
+.toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px); opacity:0; background:var(--green-deep); color:#eef4ea; padding:12px 16px; border-radius:var(--r); font-size:var(--fs-3); box-shadow:0 8px 24px rgba(28,42,34,.3); transition:.25s; z-index:60; pointer-events:none; max-width:90vw}
 .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
 .toast.err{background:var(--madder)}
 
 /* Liste / Nachschlagen (durchsuchbar, kategorisiert) */
-.listsearchrow{display:flex; align-items:stretch; gap:8px; flex-wrap:wrap; margin:14px 0 10px;
+.listsearchrow{display:flex; align-items:stretch; gap:8px; flex-wrap:wrap; margin:16px 0 8px;
   position:sticky; top:0; z-index:40; background:var(--paper); padding:8px 0}
 .listsearchrow.stuck{box-shadow:0 6px 14px -6px var(--shadow); border-bottom:1px solid var(--rule-strong)}   /* dezent abheben, sobald sie beim Scrollen klebt */
-.searchbox{display:flex; align-items:center; gap:8px; border:1.4px solid var(--rule-strong); background:var(--card); border-radius:6px; padding:0 12px; flex:1; min-width:220px}
+.searchbox{display:flex; align-items:center; gap:8px; border:1.4px solid var(--rule-strong); background:var(--card); border-radius:var(--r); padding:0 12px; flex:1; min-width:220px}
 .listsearchrow:focus-within{border-color:var(--green)}
 .listsearchrow .lsic{width:17px; height:17px; color:var(--ink-faint); flex:none}
-.listsearch{flex:1; border:none; outline:none; background:transparent; padding:11px 4px; font-size:15px; color:var(--ink)}
+.listsearch{flex:1; border:none; outline:none; background:transparent; padding:12px 4px; font-size:var(--fs-4); color:var(--ink)}
 .listsearch::-webkit-search-cancel-button{cursor:pointer}
 /* Druckoptionen (Listenmodus): Spaltenauswahl + Namensherkunft */
 /* Filter-/Druck-Zeilen im Listen-Akkordeon (»Optionen«): Spalten-Pillen + schlichte Schalter */
 .po-cols{display:flex; flex-wrap:wrap; gap:6px}
-.pocol{display:inline-flex; align-items:center; gap:6px; border:1.2px solid var(--rule-strong); border-radius:999px; padding:4px 11px; font-size:12.5px; color:var(--ink-soft); cursor:pointer; user-select:none}
+.pocol{display:inline-flex; align-items:center; gap:6px; border:1.2px solid var(--rule-strong); border-radius:999px; padding:4px 12px; font-size:var(--fs-2); color:var(--ink-soft); cursor:pointer; user-select:none}
 .pocol.on{border-color:var(--green); background:var(--green-tint); color:var(--ink)}
 .pocol input{accent-color:var(--green); width:14px; height:14px; cursor:pointer}
-.po-ety{display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--ink-soft); cursor:pointer}
+.po-ety{display:inline-flex; align-items:center; gap:8px; font-size:var(--fs-2); color:var(--ink-soft); cursor:pointer}
 .po-ety input{accent-color:var(--green); width:15px; height:15px; cursor:pointer; flex:none}
 /* Listen-Steuerung: EIN Options-Akkordeon (Ansicht + Eingrenzen · Filter · Drucken).
    Geöffnet wird die ganze Klappe zu EINER Karte: Kopfzeile als Header mit Trennlinie,
    der Inhalt in klar getrennten Sektionen mit einheitlichen Überschriften. */
-.listcontrols{margin-top:12px}
+.listcontrols{margin-top:16px}
 .listcontrols[hidden]{display:none}
-.lc-toggle{display:flex; align-items:center; gap:10px; width:100%; text-align:left; border:1.3px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); border-radius:8px; padding:9px 13px; cursor:pointer; font-family:var(--sans); font-size:13.5px; transition:border-color .12s,background .12s}
+.lc-toggle{display:flex; align-items:center; gap:8px; width:100%; text-align:left; border:1.3px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); border-radius:var(--r); padding:8px 16px; cursor:pointer; font-family:var(--sans); font-size:var(--fs-3); transition:border-color .12s,background .12s}
 .lc-toggle:hover{border-color:var(--green); background:var(--card)}
 .lc-toggle .ic{width:16px; height:16px; color:var(--sepia); flex:none}
 .lc-title{font-weight:600}
-.lc-sub{font-family:var(--mono); font-size:11px; color:var(--sepia); margin-left:2px}
-.lc-caret{margin-left:auto; color:var(--ink-faint); transition:transform .15s}
+.lc-sub{font-size:var(--fs-2); color:var(--ink-soft); margin-left:2px}
+.lc-caret{margin-left:auto; color:var(--ink-faint); transition:transform .15s; line-height:0}
 .lc-toggle[aria-expanded="true"] .lc-caret{transform:rotate(180deg)}
-.listcontrols.open{border:1.3px solid var(--rule-strong); border-radius:12px; background:var(--card); box-shadow:var(--shadow-1); overflow:hidden}
+.listcontrols.open{border:1.3px solid var(--rule-strong); border-radius:var(--r); background:var(--card); box-shadow:var(--shadow-1); overflow:hidden}
 .listcontrols.open .lc-toggle{border:none; border-bottom:1px solid var(--rule); border-radius:0; background:var(--surface-2)}
-.lc-body{padding:2px 14px 14px}
+.lc-body{padding:0 16px 16px}
 .lc-body[hidden]{display:none}
-.lc-sec{padding:12px 0 2px}
+.lc-sec{padding:16px 0 0}
 .lc-sec + .lc-sec{border-top:1px solid var(--rule)}
-.lc-h{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); margin:0 0 8px}
-.lc-h.lc-h2{margin-top:12px; color:var(--ink-soft)}
+.lc-h{font-size:var(--fs-1); font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); margin:0 0 8px}
+.lc-h.lc-h2{margin-top:16px; color:var(--ink-soft)}
 .lc-checks{display:flex; flex-wrap:wrap; gap:8px 18px}
 .lc-sec .po-ety{margin-top:2px}
 .po-cols + .po-ety{margin-top:10px}
-.cattags{display:flex; flex-wrap:wrap; gap:6px}
-.cattag{font-family:var(--sans); font-size:12px; border:1.2px solid var(--rule-strong); background:var(--surface-2); color:var(--ink-soft); border-radius:16px; padding:4px 10px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:background .12s,border-color .12s,color .12s}
+.cattags{display:flex; flex-wrap:wrap; gap:8px}
+.cattag{font-family:var(--sans); font-size:var(--fs-2); border:1.2px solid var(--rule-strong); background:var(--surface-2); color:var(--ink-soft); border-radius:999px; padding:4px 12px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:background .12s,border-color .12s,color .12s}
 .cattag:hover{border-color:var(--green); color:var(--green-deep)}
 .cattag.on{background:var(--green); border-color:var(--green-deep); color:#f4f7f1; font-weight:600}
-.cattag .ct-n{font-family:var(--mono); font-size:10.5px; opacity:.7}
+.cattag .ct-n{font-size:var(--fs-1); opacity:.75; font-variant-numeric:tabular-nums}
 .cattag.on .ct-n{opacity:.85}
-.sortbtns{display:inline-flex; border:1.3px solid var(--rule-strong); border-radius:6px; overflow:hidden}
-.sortbtn{font-family:var(--sans); font-size:12.5px; border:none; border-right:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink-soft); padding:6px 12px; cursor:pointer; transition:background .12s,color .12s}
+.sortbtns{display:inline-flex; border:1.3px solid var(--rule-strong); border-radius:999px; overflow:hidden}
+.sortbtn{font-family:var(--sans); font-size:var(--fs-2); border:none; border-right:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink-soft); padding:8px 12px; cursor:pointer; transition:background .12s,color .12s}
 .sortbtn:last-child{border-right:none}
 .sortbtn:hover{background:var(--card); color:var(--green-deep)}
 .sortbtn.on{background:var(--green); color:#f4f7f1; font-weight:600}
-.listtop{font-family:var(--mono); font-size:11.5px; color:var(--ink-soft); margin:14px 2px 6px; letter-spacing:.02em}
+.listtop{font-size:var(--fs-2); color:var(--ink-soft); margin:16px 0 8px}
 /* Datenherkunft direkt an der Liste – hier werden die Namen nachgeschlagen */
-.listsrc{display:flex; gap:7px; align-items:flex-start; margin:0 2px 14px; font-size:11.5px; line-height:1.5; color:var(--ink-soft)}
+.listsrc{display:flex; gap:8px; align-items:flex-start; margin:0 0 16px; font-size:var(--fs-2); line-height:1.5; color:var(--ink-soft)}
 .listsrc>.ic{width:15px; height:15px; flex:none; margin-top:2px; color:var(--green-deep)}
-.catblock{margin-bottom:22px}
-.cathead{display:flex; align-items:center; gap:10px; font-family:var(--serif); font-size:18px; font-weight:600; color:var(--green-deep); padding-bottom:6px; margin-bottom:10px; border-bottom:1.5px solid var(--rule)}
-.cathead-i{margin-left:auto; flex:none; width:24px; height:24px; border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--green-deep); border-radius:50%; font-size:12px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:background .12s,border-color .12s,transform .05s}
+.catblock{margin-bottom:24px}
+.cathead{display:flex; align-items:center; gap:8px; font-family:var(--serif); font-size:var(--fs-5); font-weight:600; color:var(--green-deep); padding-bottom:8px; margin-bottom:8px; border-bottom:1.5px solid var(--rule)}
+.cathead-t{min-width:0; overflow-wrap:anywhere}   /* langer Familienname bricht nach »/« (wbr) statt ℹ aus dem Bild zu schieben */
+.cathead-i{margin-left:auto; flex:none; width:28px; height:28px; padding:0; border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--green-deep); border-radius:50%; line-height:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:background .12s,border-color .12s,transform .05s}
 .cathead-i:hover{background:var(--card); border-color:var(--green); transform:scale(1.08)}
+.cathead-i .ic{width:15px; height:15px}
 .mh-bot.fam{font-style:normal}
 .fambody{display:flex; flex-direction:column; gap:14px}
-.fam-sec h3{font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); margin:0 0 5px}
-.fam-sec p{font-size:14.5px; line-height:1.6; color:var(--ink); margin:0}
+.fam-sec h3{font-size:var(--fs-1); font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); margin:0 0 4px}
+.fam-sec p{font-size:var(--fs-3); line-height:1.6; color:var(--ink); margin:0}
 .fam-sec .fam-none{font-style:italic; color:var(--ink-soft)}
-.famfoot{margin-top:14px; padding-top:12px; border-top:1px solid var(--rule); font-size:12.5px; line-height:1.5; color:var(--ink-soft)}
-.catn{font-family:var(--mono); font-size:11px; font-weight:400; color:var(--sepia); background:var(--surface-2); border:1px solid var(--rule); border-radius:10px; padding:1px 8px}
+.famfoot{margin-top:16px; padding-top:16px; border-top:1px solid var(--rule); font-size:var(--fs-2); line-height:1.5; color:var(--ink-soft)}
+.catn{font-family:var(--sans); font-size:var(--fs-1); font-weight:600; font-variant-numeric:tabular-nums; color:var(--sepia); background:var(--surface-2); border:1px solid var(--rule); border-radius:999px; padding:2px 8px}
 .splist{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr 1fr; gap:8px}
 .splist>li{min-width:0; list-style:none}
 /* Zeile = echter <button> im <li> (vorher li[role=button] – ungültige Rolle, Liste ohne Listeneinträge; Audit) */
-.sprow{display:block; width:100%; text-align:left; font:inherit; color:inherit; appearance:none; -webkit-appearance:none; min-width:0; overflow:hidden; border:1px solid var(--rule-strong); background:var(--surface); border-radius:6px; padding:10px 12px; cursor:pointer; transition:background .12s,border-color .12s,transform .04s}
+.sprow{display:block; width:100%; text-align:left; font:inherit; color:inherit; appearance:none; -webkit-appearance:none; min-width:0; overflow:hidden; border:1px solid var(--rule-strong); background:var(--surface); border-radius:var(--r); padding:12px 16px; cursor:pointer; transition:background .12s,border-color .12s,transform .04s}
 .sprow:hover{background:var(--card); border-color:var(--green)}
 .sprow:active{transform:translateY(1px)}
-.sprow:focus-visible{outline:2px solid var(--madder); outline-offset:2px}
+.sprow:focus-visible{outline:2px solid var(--green); outline-offset:2px}
 .sp-main{display:flex; align-items:center; gap:8px; min-width:0}
-.sp-bot{font-family:var(--serif); font-size:15.5px; color:var(--ink); font-style:italic; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.sp-zp{font-family:var(--mono); font-size:9.5px; letter-spacing:.05em; color:var(--sepia); border:1px solid var(--sepia); border-radius:3px; padding:0 4px; flex:none}
-.zpnote{display:flex; align-items:center; gap:6px; margin:-6px 2px 14px; font-size:12px; color:var(--ink-soft)}
-.zpnote .sp-zp{font-size:9px}
-.sp-go{font-size:14px; color:var(--green); flex:none}
-.sp-sub{display:block; font-size:12.5px; color:var(--ink-soft); margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.sp-bot{font-family:var(--serif); font-size:var(--fs-4); color:var(--ink); font-style:italic; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.sp-zp{font-family:var(--sans); font-size:var(--fs-1); font-weight:600; letter-spacing:.04em; line-height:1.4; color:var(--sepia); border:1px solid var(--sepia); border-radius:4px; padding:0 5px; flex:none}
+.zpnote{display:flex; align-items:center; gap:8px; margin:-8px 0 16px; font-size:var(--fs-2); color:var(--ink-soft)}
+.sp-go{color:var(--green); flex:none; line-height:0}
+.sp-go .ic{width:16px; height:16px}
+.sp-sub{display:block; font-size:var(--fs-2); color:var(--ink-soft); margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .sp-fam{color:var(--sepia)}
 
 /* Info-Modal (Quellen-Deeplinks offline + optionale Online-Infos) */
 .scrim{position:fixed; inset:0; background:rgba(20,32,26,.55); display:flex; align-items:flex-start; justify-content:center; padding:5vh 16px; z-index:80; overflow:auto}
 .scrim[hidden]{display:none}
-.modal{background:var(--surface); border:1px solid var(--rule-strong); border-radius:8px; box-shadow:0 18px 50px rgba(20,32,26,.4); width:100%; max-width:560px; padding:22px 22px 20px; position:relative}
-.modal-x{position:absolute; top:8px; right:10px; border:none; background:transparent; font-size:24px; line-height:1; color:var(--ink-soft); cursor:pointer; padding:4px 9px; border-radius:4px}
+.modal{background:var(--surface); border:1px solid var(--rule-strong); border-radius:8px; box-shadow:0 18px 50px rgba(20,32,26,.4); width:100%; max-width:560px; padding:var(--sp-3); position:relative}
+/* Schließen: runder Icon-Knopf (SVG statt ×-Zeichen), 40 px, auf Touch 44 */
+.modal-x{position:absolute; top:8px; right:8px; width:40px; height:40px; border:none; background:transparent; line-height:0; color:var(--ink-soft); cursor:pointer; padding:0; border-radius:50%; display:inline-flex; align-items:center; justify-content:center}
+.modal-x .ic{width:20px; height:20px}
 .modal-x:hover{background:var(--surface-2); color:var(--ink)}
-.modal-head{border-bottom:1px solid var(--rule); padding:0 28px 12px 0; margin-bottom:14px}
-.mh-bot{font-family:var(--serif); font-size:22px; font-style:italic; color:var(--ink); line-height:1.15; overflow-wrap:anywhere}
-.mh-de{font-family:var(--serif); font-size:17px; color:var(--green-deep); margin-top:2px}
-.mh-fam{font-family:var(--mono); font-size:11px; letter-spacing:.04em; color:var(--sepia); text-transform:uppercase; margin-top:6px}
+.modal-head{border-bottom:1px solid var(--rule); padding:0 40px 16px 0; margin-bottom:16px}
+.mh-bot{font-family:var(--serif); font-size:var(--fs-6); font-style:italic; color:var(--ink); line-height:1.15; overflow-wrap:anywhere}
+.mh-de{font-family:var(--serif); font-size:var(--fs-4); color:var(--green-deep); margin-top:4px}
+.mh-fam{font-size:var(--fs-1); font-weight:600; letter-spacing:.06em; color:var(--sepia); text-transform:uppercase; margin-top:8px}
 /* Woher der Name stammt – im Kopf der Info-Karte, direkt an den Namen */
 .mh-src{display:flex; gap:6px; align-items:center; margin-top:8px;
-  font-family:var(--mono); font-size:10.5px; letter-spacing:.03em; color:var(--green-deep)}
+  font-size:var(--fs-1); color:var(--green-deep)}
 .mh-src>.ic{width:13px; height:13px; flex:none}
 /* Namensherleitung (Merkhilfe) – dezentes Akkordeon unter dem botanischen Namen */
-.etym{margin:0 0 14px; border:1px solid var(--rule); border-radius:10px; background:var(--surface-2); overflow:hidden}
-.etym>summary{cursor:pointer; list-style:none; padding:9px 13px; font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); user-select:none}
+.etym{margin:0 0 16px; border:1px solid var(--rule); border-radius:var(--r); background:var(--surface-2); overflow:hidden}
+.etym>summary{cursor:pointer; list-style:none; padding:8px 16px; font-size:var(--fs-1); font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); user-select:none}
 .etym>summary::-webkit-details-marker{display:none}
 .etym>summary:hover{color:var(--green-deep)}
 .etym[open]>summary{border-bottom:1px solid var(--rule); color:var(--green-deep)}
 .etym .etym-ic{width:14px; height:14px; margin-right:5px; vertical-align:-2px}
-.etym-list{margin:0; padding:10px 15px 6px 30px; display:flex; flex-direction:column; gap:5px}
-.etym-list li{font-family:var(--serif); font-size:14.5px; color:var(--ink); line-height:1.35}
+.etym-list{margin:0; padding:8px 16px 8px 32px; display:flex; flex-direction:column; gap:4px}
+.etym-list li{font-family:var(--serif); font-size:var(--fs-3); color:var(--ink); line-height:1.35}
 .etym-list li i{color:var(--green-deep)}
-.etym-note{padding:2px 15px 11px; font-size:11px; color:var(--ink-soft); font-style:italic}
+.etym-note{padding:0 16px 12px; font-size:var(--fs-1); color:var(--ink-soft); font-style:italic}
 /* Platzhalter »'Sorte'« in der Info-Karte: Erklärung + Beispiel-Sorten */
-.sorten{margin:0 0 14px; padding:9px 13px 8px; border:1px solid var(--rule); border-left:3px solid var(--gold); border-radius:10px; background:var(--surface-2); font-size:13px; line-height:1.5; color:var(--ink)}
-.sorten h3{margin:0 0 4px; font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); display:flex; align-items:center; gap:5px}
+.sorten{margin:0 0 16px; padding:8px 16px; border:1px solid var(--rule); border-left:3px solid var(--gold); border-radius:var(--r); background:var(--surface-2); font-size:var(--fs-3); line-height:1.5; color:var(--ink)}
+.sorten h3{margin:0 0 4px; font-size:var(--fs-1); font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); display:flex; align-items:center; gap:5px}
 .sorten .sorten-ic{width:14px; height:14px; flex:none}
 .sorten p{margin:4px 0}
-.sorten-bsp{font-family:var(--serif); font-size:14px}
-.sorten-note{margin-top:4px; font-size:11px; color:var(--ink-soft); font-style:italic}
-.srclabel{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--sepia); margin-bottom:8px}
+.sorten-bsp{font-family:var(--serif); font-size:var(--fs-3)}
+.sorten-note{margin-top:4px; font-size:var(--fs-1); color:var(--ink-soft); font-style:italic}
+.srclabel{font-size:var(--fs-1); font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); margin-bottom:8px}
 .srcgrid{display:flex; flex-wrap:wrap; gap:8px}
-.srcgrid a{display:inline-flex; align-items:center; gap:6px; text-decoration:none; border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); border-radius:5px; padding:7px 11px; font-size:13px; font-weight:500}
+.srcgrid a{display:inline-flex; align-items:center; gap:6px; text-decoration:none; border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); border-radius:var(--r); padding:8px 12px; font-size:var(--fs-3); font-weight:500}
 .srcgrid a:hover{background:var(--card); border-color:var(--green)}
-.srcgrid a .ext{font-family:var(--mono); font-size:11px; color:var(--ink-faint)}
-.wpblock{margin-top:16px; border-top:1px solid var(--rule); padding-top:14px}
-.wphost{margin-top:12px}
-.wphost img{float:left; width:132px; max-width:42%; height:auto; border-radius:5px; border:1px solid var(--rule); margin:2px 14px 8px 0}
-.wp-text{font-size:14px; color:var(--ink); line-height:1.5}
-.wp-src{clear:both; font-family:var(--mono); font-size:11px; color:var(--ink-soft); margin-top:12px}
+.srcgrid a .ext{color:var(--ink-faint); line-height:0}
+.srcgrid a .ext .ic{width:13px; height:13px}
+.wpblock{margin-top:16px; border-top:1px solid var(--rule); padding-top:16px}
+.wphost{margin-top:16px}
+.wphost img{float:left; width:132px; max-width:42%; height:auto; border-radius:var(--r); border:1px solid var(--rule); margin:2px 16px 8px 0}
+.wp-text{font-size:var(--fs-3); color:var(--ink); line-height:1.5}
+.wp-src{clear:both; font-size:var(--fs-1); color:var(--ink-soft); margin-top:16px}
 .wp-src a{color:var(--green-deep)}
-.wp-note{font-size:13px; color:var(--ink-soft); font-style:italic}
-.wp-taxon{clear:both; font-size:12.5px; color:var(--ink); line-height:1.45; margin:0 0 10px; padding:7px 10px; border-left:3px solid var(--gold); background:var(--surface-2); border-radius:0 6px 6px 0}
+.wp-note{font-size:var(--fs-3); color:var(--ink-soft); font-style:italic}
+.wp-taxon{clear:both; font-size:var(--fs-2); color:var(--ink); line-height:1.45; margin:0 0 8px; padding:8px 12px; border-left:3px solid var(--gold); background:var(--surface-2); border-radius:0 var(--r) var(--r) 0}
 
 @media (max-width:640px){
   /* Kopf bleibt auch schmal eine Zeile: Titel links, runder Hilfe-Knopf rechts */
@@ -719,9 +733,9 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
   .wphost img{float:none; display:block; width:100%; max-width:220px; margin:0 auto 12px}
   .splist{grid-template-columns:1fr}
   .scrim{padding:3vh 12px}
-  .modal{padding:18px 16px}
-  .mh-bot{font-size:20px}
-  .srcgrid a{font-size:12.5px; padding:7px 10px}
+  .modal{padding:var(--sp-2)}
+  .mh-bot{font-size:var(--fs-5)}
+  .srcgrid a{font-size:var(--fs-2); padding:8px 12px}
   .hdl{grid-template-columns:1fr; gap:2px 0}
   .hdl dt{margin-top:10px}
   /* Modus-Tabs: sauberes 2×2-Raster statt zufälligem Umbruch */
@@ -741,8 +755,8 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
   /* Sortier-Umschalter: Buttons dürfen umbrechen statt zu überlaufen */
   .sortbtns{flex-wrap:wrap}
   /* Ansicht-/Filter-Panel und Tags bleiben im Rahmen */
-  .cattags{gap:5px}
-  .cattag{font-size:11.5px; padding:4px 9px}
+  .cattags{gap:8px}
+  .cattag{font-size:var(--fs-1); padding:4px 10px}
 
 }
 /* ===== Fokus-Modus: die laufende Lektion füllt den ganzen Schirm (alle Viewports) =====
@@ -777,7 +791,7 @@ body{line-height:1.5}
 .wrap{padding:38px 22px 100px}
 .masthead{padding:20px var(--sp-2) 12px; box-shadow:0 1px 2px var(--shadow), 0 18px 40px -34px rgba(34,53,43,.55)}
 .setup{padding:var(--sp-2); gap:var(--sp-2)}
-#stage{margin-top:22px}
+#stage{margin-top:var(--sp-3)}
 .progress{padding:var(--sp-2)}
 .btn{transition:background .15s, border-color .15s, box-shadow .15s, transform .06s}
 .btn.primary:hover{box-shadow:0 8px 20px -10px var(--green-deep)}
@@ -811,7 +825,7 @@ body{line-height:1.5}
 .modal{animation:modalIn .26s cubic-bezier(.2,.7,.2,1) both; box-shadow:0 24px 60px -12px rgba(20,32,26,.5)}
 .srcgrid a{transition:background .14s, border-color .14s, transform .08s}
 .srcgrid a:hover{transform:translateY(-1px)}
-.toast{border-radius:8px}
+.toast{border-radius:var(--r)}
 
 @media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important; scroll-behavior:auto !important}}
 
@@ -902,19 +916,19 @@ body{line-height:1.5}
    Dunkelmodus); gesetzt wird das Attribut nirgends mehr. */
 
 /* Herbarium 2.0 – Lern-Tool: Radien, Tiefe, Glas */
-.masthead{border-radius:18px 18px 0 0}
-.setup{border-radius:0 0 18px 18px}
+.masthead{border-radius:16px 16px 0 0}
+.setup{border-radius:0 0 16px 16px}
 .progress,.helppanel,.stage-empty{border-radius:16px}
-.card{border-radius:18px; box-shadow:var(--shadow-1),var(--shadow-2)}
+.card{border-radius:16px; box-shadow:var(--shadow-1),var(--shadow-2)}
 .modes{border-radius:var(--r)}
 .btn{border-radius:10px}
-select,input[type=number],input[type=search],input[type=text]{border-radius:9px}
-.searchbox,.typebox input,.opt{border-radius:12px}
-.rate button{border-radius:12px}
+select,input[type=number],input[type=search],input[type=text]{border-radius:var(--r)}
+.searchbox,.typebox input,.opt{border-radius:var(--r)}
+.rate button{border-radius:var(--r)}
 .setopts,.listcontrols .lc-toggle{border-radius:var(--r)}
-.shareblock{border-radius:14px}
+.shareblock{border-radius:16px}
 .cattag,.sortbtn{border-radius:999px}
-.modal{border-radius:18px; background:var(--glass-m); backdrop-filter:blur(16px) saturate(1.15); -webkit-backdrop-filter:blur(16px) saturate(1.15); box-shadow:var(--shadow-2)}
+.modal{border-radius:16px; background:var(--glass-m); backdrop-filter:blur(16px) saturate(1.15); -webkit-backdrop-filter:blur(16px) saturate(1.15); box-shadow:var(--shadow-2)}
 .scrim{backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px)}
 .listsearchrow{background:var(--glass); backdrop-filter:blur(12px) saturate(1.1); -webkit-backdrop-filter:blur(12px) saturate(1.1)}
 body.stagefull .sessionbar{background:var(--glass); backdrop-filter:blur(12px) saturate(1.1); -webkit-backdrop-filter:blur(12px) saturate(1.1)}
@@ -1066,6 +1080,7 @@ body.stagefull #stage>.sessionbar{
    größerem Abstand; am Desktop bleibt die kompakte Optik unverändert. */
 @media (hover:none),(pointer:coarse),(max-width:640px){
   .btn,.modes button,.modal-x{min-height:44px}
+  .modal-x{min-width:44px}
   /* Audit: ℹ an der Fortschritts-Legende (19 px), Rang-/Herbarium-Chips (32 px), Profil-Selects (36 px),
      der Link im Herbarium und die Quellen-Links waren zu kleine Tippziele */
   .legend-i{min-width:44px; min-height:44px; padding:0; margin:-12px -6px; display:inline-flex; align-items:center; justify-content:center}
@@ -1084,7 +1099,7 @@ body.stagefull #stage>.sessionbar{
   .learnnote>summary{padding-top:11px; padding-bottom:11px}
   .lc-toggle{min-height:44px}
   .sortbtn,.cattag{min-height:44px; padding-top:9px; padding-bottom:9px}
-  .sortbtns,.cattags{gap:10px}
+  .sortbtns,.cattags{gap:8px}
   .setrow{gap:14px 18px}
   .srcgrid a{min-height:44px}
   .srcgrid{gap:10px}
@@ -1126,12 +1141,13 @@ body.stagefull #stage>.sessionbar{
   padding:18px; background:rgba(10,16,10,.82); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
   opacity:1; transition:opacity .28s ease }
 @starting-style{ .lbscrim{ opacity:0 } }
-.lbscrim .lb-img{ max-width:min(1400px,94vw); max-height:88vh; border-radius:14px; cursor:zoom-out;
+.lbscrim .lb-img{ max-width:min(1400px,94vw); max-height:88vh; border-radius:16px; cursor:zoom-out;
   box-shadow:0 24px 80px rgba(0,0,0,.5); transition:transform .34s cubic-bezier(.2,.9,.25,1.05) }
 @starting-style{ .lbscrim .lb-img{ transform:scale(.94) } }
-.lbscrim .lb-x{ position:absolute; top:14px; right:14px; min-width:44px; min-height:44px; border-radius:12px;
-  border:1px solid rgba(255,255,255,.28); background:rgba(255,255,255,.12); color:#fff; font-size:22px;
-  line-height:1; cursor:pointer }
+.lbscrim .lb-x{ position:absolute; top:16px; right:16px; width:44px; height:44px; border-radius:50%; padding:0;
+  border:1px solid rgba(255,255,255,.28); background:rgba(255,255,255,.12); color:#fff;
+  line-height:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center }
+.lbscrim .lb-x .ic,.lbscrim .lb-nav .ic{ width:24px; height:24px }
 .lbscrim .lb-x:hover{ background:rgba(255,255,255,.22) }
 @media (prefers-reduced-motion: reduce){ .lbscrim,.lbscrim .lb-img{ transition:none } }
 @media print{ .lbscrim{ display:none } }
@@ -1191,11 +1207,11 @@ body.stagefull #stage>.sessionbar{
   @container herb (max-width: 380px){
     .herbcard{padding:12px 8px 8px}
     .hc-art svg{width:44px; height:44px}
-    .hc-name{font-size:12px; min-height:2.2em}
+    .hc-name{font-size:var(--fs-2); min-height:2.2em}
   }
   @container herb (min-width: 640px){
     .hc-art svg{width:72px; height:72px}
-    .hc-name{font-size:15px}
+    .hc-name{font-size:var(--fs-4)}
   }
 }
 /* Rang-Popover: alle Stufen auf einen Blick, im Top-Layer am Rang-Namen verankert
@@ -1203,31 +1219,31 @@ body.stagefull #stage>.sessionbar{
    Anchor-Positioning können – sonst erklärt weiterhin der Tooltip. */
 #rankPop{margin:0; border:1px solid var(--rule-strong); background:var(--glass-m,var(--surface));
   backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
-  border-radius:14px; padding:12px 14px; box-shadow:var(--shadow-2); color:var(--ink); max-width:min(320px,90vw)}
+  border-radius:16px; padding:16px; box-shadow:var(--shadow-2); color:var(--ink); max-width:min(320px,90vw)}
 #rankPop::backdrop{background:transparent}
 @supports (anchor-name: --a){
   .rk-name{anchor-name:--rankchip}
   #rankPop{position-anchor:--rankchip; position-area:block-end span-inline-end; position-try-fallbacks:flip-block; margin-top:6px}
 }
-.rkp-h{font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--sepia); margin-bottom:8px}
-.rkp-row{display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 8px; font-size:13px; padding:4px 0; color:var(--ink-soft)}
+.rkp-h{font-size:var(--fs-1); font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); margin-bottom:8px}
+.rkp-row{display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 8px; font-size:var(--fs-3); padding:4px 0; color:var(--ink-soft)}
 .rkp-row.on{color:var(--green-deep); font-weight:700}
 .rkp-row .r-n{font-family:var(--serif); font-style:italic; flex:1}
-.rkp-row .r-x{font-family:var(--mono); font-size:11px}
-.rkp-row .r-d{flex:0 0 100%; font-size:11.5px; font-weight:400; line-height:1.3; color:var(--ink-soft)}
+.rkp-row .r-x{font-size:var(--fs-2)}
+.rkp-row .r-d{flex:0 0 100%; font-size:var(--fs-2); font-weight:400; line-height:1.3; color:var(--ink-soft)}
 .rkp-row.on .r-d{color:var(--green-deep)}
-.rkp-f{margin-top:10px; padding-top:8px; border-top:1px solid var(--rule); font-size:11.5px; line-height:1.4; color:var(--ink-soft)}
+.rkp-f{margin-top:16px; padding-top:8px; border-top:1px solid var(--rule); font-size:var(--fs-2); line-height:1.4; color:var(--ink-soft)}
 /* Laufbahn als Dialog (Fallback ohne Popover/Anchor, z. B. ältere Handys) */
 .rankmodal{max-width:460px}
-.rkp-list{margin:12px 0 4px}
-.rkp-list .rkp-row{padding:7px 10px; margin-bottom:6px; border:1px solid var(--rule); border-radius:10px; background:var(--surface-2)}
+.rkp-list{margin:16px 0 8px}
+.rkp-list .rkp-row{padding:8px 12px; margin-bottom:8px; border:1px solid var(--rule); border-radius:var(--r); background:var(--surface-2)}
 .rkp-list .rkp-row.on{border-color:var(--green); background:var(--green-tint)}
 .rk-name{cursor:pointer; text-decoration:underline dotted var(--rule-strong); text-underline-offset:3px}
 /* Lernstand in der Info-Karte: Stufe, Fälligkeit, Bilanz auf einen Blick.
    Sitzt am Fuß der Karte – oben steht die Pflanze, unten der eigene Stand. */
-.lstate{display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin:14px 0 0; padding:8px 11px;
-  border:1px solid var(--rule); border-radius:10px; background:var(--surface-2);
-  font-family:var(--mono); font-size:11.5px; color:var(--ink-soft)}
+.lstate{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:16px 0 0; padding:8px 12px;
+  border:1px solid var(--rule); border-radius:var(--r); background:var(--surface-2);
+  font-size:var(--fs-2); color:var(--ink-soft)}
 .lstate.fest{border-color:var(--green); background:var(--green-tint)}
 .lstate .pips{display:inline-flex; gap:4px; flex:none}
 .lstate .pips i{width:9px; height:9px; border-radius:50%; background:var(--rule); border:1px solid var(--rule-strong)}
@@ -1236,32 +1252,32 @@ body.stagefull #stage>.sessionbar{
 .lstate b{color:var(--green-deep)}
 .ls-t{flex:1; min-width:150px}
 .ls-due{color:var(--sepia)}
-.ls-b{color:var(--ink-faint)}
+.ls-b{color:var(--ink-soft)}
 /* Icon-Schutzregel: :where() hat Spezifität 0 – jede vorhandene Regel gewinnt,
    aber ein SVG ohne eigene Maße wuchert nicht mehr auf volle Breite. */
 :where(svg.ic){width:16px; height:16px; flex:none}
 /* Galerie in der Vollbild-Ansicht: Pfeile + Zähler (Tastatur: ← →) */
 .lbscrim .lb-nav{position:absolute; top:50%; transform:translateY(-50%); min-width:48px; min-height:64px;
-  border:1px solid rgba(255,255,255,.24); background:rgba(255,255,255,.10); color:#fff; font-size:30px;
-  line-height:1; border-radius:12px; cursor:pointer; backdrop-filter:blur(6px)}
+  border:1px solid rgba(255,255,255,.24); background:rgba(255,255,255,.10); color:#fff; padding:0;
+  line-height:0; border-radius:var(--r); cursor:pointer; backdrop-filter:blur(6px); display:inline-flex; align-items:center; justify-content:center}
 .lbscrim .lb-nav:hover{background:rgba(255,255,255,.2)}
 .lbscrim .lb-nav.prev{left:14px} .lbscrim .lb-nav.next{right:14px}
 .lbscrim .lb-count{position:absolute; bottom:16px; left:50%; transform:translateX(-50%); color:#fff;
-  font-family:var(--mono); font-size:12px; background:rgba(0,0,0,.45); border-radius:99px; padding:4px 12px}
-@media (max-width:640px){ .lbscrim .lb-nav{min-width:44px; min-height:56px; font-size:26px}
+  font-family:var(--mono); font-size:var(--fs-2); background:rgba(0,0,0,.45); border-radius:99px; padding:4px 12px}
+@media (max-width:640px){ .lbscrim .lb-nav{min-width:44px; min-height:56px}
   .lbscrim .lb-nav.prev{left:6px} .lbscrim .lb-nav.next{right:6px} }
 /* Ganze Ausweich-Kette gescheitert → Meldung statt leerem Rahmen */
-.lbscrim .lb-fail{max-width:min(520px,86vw); padding:18px 22px; border-radius:14px; text-align:center; color:#fff;
-  background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.22); font-size:14px; line-height:1.5}
+.lbscrim .lb-fail{max-width:min(520px,86vw); padding:16px 24px; border-radius:16px; text-align:center; color:#fff;
+  background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.22); font-size:var(--fs-3); line-height:1.5}
 .lbscrim .lb-fail a{color:#cfe3d2; text-decoration:underline}
 .lbscrim.lb-failed .lb-img{display:none}
 
 /* Hinweis »Neue Version geladen« (unten, über Toast-Ebene, unter Dialogen) + Versionsstempel in der Fußzeile */
 .swnote{position:fixed; left:50%; bottom:max(14px, env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:70;
   display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center; max-width:min(92vw,520px);
-  padding:10px 14px; border-radius:14px; border:1px solid var(--rule-strong); background:var(--surface);
-  color:var(--ink); font-size:13px; box-shadow:0 8px 28px rgba(0,0,0,.18)}
-.build{font-family:var(--mono); font-size:10.5px; letter-spacing:.04em; color:var(--ink-soft); white-space:nowrap}
+  padding:8px 16px; border-radius:var(--r); border:1px solid var(--rule-strong); background:var(--surface);
+  color:var(--ink); font-size:var(--fs-3); box-shadow:0 8px 28px rgba(0,0,0,.18)}
+.build{font-family:var(--mono); font-size:var(--fs-1); letter-spacing:.02em; color:var(--ink-soft); white-space:nowrap}
 @media print{.swnote{display:none}}
 </style>
 </head>
@@ -1283,7 +1299,7 @@ body.stagefull #stage>.sessionbar{
 
   <div class="scrim" id="profScrim" hidden>
     <div class="modal profmodal" role="dialog" aria-modal="true" aria-labelledby="pmTtl">
-      <button class="modal-x" id="profClose" aria-label="Schließen" title="Schließen">×</button>
+      <button class="modal-x" id="profClose" aria-label="Schließen" title="Schließen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       <h2 class="intro-h" id="pmTtl">Dein Beruf</h2>
       <p class="pm-lead">Danach richtet sich dein Lernstoff – die Pflanzenliste deiner Ausbildung.</p>
       <div class="profilerow">
@@ -1385,7 +1401,7 @@ body.stagefull #stage>.sessionbar{
 
   <div class="scrim helpscrim" id="helpScrim" hidden>
   <section class="modal helppanel" id="helpPanel" role="dialog" aria-modal="true" aria-labelledby="helpTtl">
-    <button class="modal-x" id="helpClose" aria-label="Schließen" title="Schließen (auch Esc oder Klick daneben)">×</button>
+    <button class="modal-x" id="helpClose" aria-label="Schließen" title="Schließen (auch Esc oder Klick daneben)"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     <div class="hscroll">
     <h2 class="hh" id="helpTtl">Hilfe · So lernst du mit dem Tool</h2>
     <p class="hlead">Übe die Pflanzen deiner Fachrichtung – mit Karteikarten, Quiz, Selbst eingeben und einer
@@ -1669,7 +1685,7 @@ body.stagefull #stage>.sessionbar{
   <div class="installbar" id="installBar" hidden></div>
 
   <footer class="foot">
-    <span>Pflanzenkenntnis · Lernen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 29.10.2026 · Version aabce1c</span></span>
+    <span>Pflanzenkenntnis · Lernen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 29.10.2026 · Version 8b9ca1b</span></span>
     <a class="legal" href="rechtliches.html">Impressum &amp; Datenschutz</a>
   </footer>
 </div>
@@ -1715,7 +1731,14 @@ const ICONS = {
   // Start-Knöpfe (dieselben Formen stehen als Inline-SVG in learn.html, wie bei den Modus-Tabs):
   play:   `<circle cx="12" cy="12" r="8.5"/><path d="M10.2 8.6v6.8l5.4-3.4z" fill="currentColor" stroke="none"/>`,
   sheet:  `<path d="M8 4.5H6.5a2 2 0 0 0-2 2v12.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V6.5a2 2 0 0 0-2-2H16"/><rect x="8" y="2.8" width="8" height="3.2" rx="1"/><path d="M8.5 11h7M8.5 14.5h7M8.5 18h4"/>`,
-  back:   `<path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/>`
+  back:   `<path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/>`,
+  // Teil 2 der Konsolidierung: Schließen, Blättern, Aufklappen und »öffnet neuen Tab« als Strich-Icons
+  // statt der Zeichen × ‹ › ▾ ↗ (↗ und ℹ rendern Handys als buntes Emoji)
+  x:      `<path d="M6 6l12 12M18 6L6 18"/>`,
+  prev:   `<path d="M15 5l-7 7 7 7"/>`,
+  next:   `<path d="M9 5l7 7-7 7"/>`,
+  chev:   `<path d="M6 9l6 6 6-6"/>`,
+  ext:    `<path d="M7 17L17 7"/><path d="M8 7h9v9"/>`
 };
 function ico(name, cls){                       // → <svg> im einheitlichen Strichstil
   const d = ICONS[name]; if(!d) return "";
@@ -2409,7 +2432,7 @@ function openRankModal(){
   const m=masteryBest(), r=rankOf(m), jetzt=r.i;
   const scrim = el("div","scrim"); scrim.id="infoScrim";
   scrim.innerHTML = `<div class="modal rankmodal" role="dialog" aria-modal="true" aria-label="Deine Laufbahn">
-     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">${ico("x")}</button>
      <div class="modal-head">
        <div class="mh-bot fam">Deine Laufbahn</div>
        <div class="mh-fam">${m.fest} von ${m.n} Arten sitzen · Rang: ${esc(RANKS[jetzt].n)}${r.next?` · bis ${esc(r.next)}: ${esc(r.needText || "gleich geschafft")}`:""}</div>
@@ -3255,8 +3278,8 @@ function shareBlockHTML(primaryLabel){
     <input id="duelName" class="duel-name" type="text" maxlength="40" placeholder="Dein Name (optional)" value="${name}" aria-label="Dein Name für die Herausforderung">
     <div class="share-btns">
       <button class="btn primary" id="btnShare">${esc(primaryLabel)}</button>
-      <button class="btn" id="btnWa" title="Herausforderung per WhatsApp schicken">WhatsApp</button>
-      <button class="btn ghost" id="btnCopy" title="Link in die Zwischenablage kopieren">Link kopieren</button>
+      <button class="btn outline" id="btnWa" title="Herausforderung per WhatsApp schicken">WhatsApp</button>
+      <button class="btn outline" id="btnCopy" title="Link in die Zwischenablage kopieren">Link kopieren</button>
     </div></div>`;
 }
 function wireShareBlock(){
@@ -3282,7 +3305,7 @@ function showChallengeBanner(ch){
     </div>
     <div class="duel-cta">
       <button class="btn primary" id="btnAcceptDuel">Herausforderung annehmen</button>
-      <button class="btn ghost" id="btnDeclineDuel" title="Herausforderung schließen und normal weiterlernen">schließen</button>
+      <button class="btn text" id="btnDeclineDuel" title="Herausforderung schließen und normal weiterlernen">schließen</button>
     </div>`;
   b.hidden=false;
   $("#btnAcceptDuel").onclick=startChallenge;
@@ -3406,7 +3429,7 @@ function sessionBar(){
     (examScoring()&&sess.pts?`<span class="spts" title="Punkte dieser Sitzung – ein Schreibfehler zählt halb, der Rest kommt bei der fehlerfreien Wiederholung dazu">${nfmt(sess.pts.sum)} / ${nfmt(sess.pts.max)} P.</span>`:``)+
     ((sess.combo||0)>=3?`<span class="scombo" title="Treffer in Folge – ab 3 gibt es Bonuspunkte, jede 5er-Stufe wird gefeiert">${sess.combo}× in Folge</span>`:``)+
     (scoreable()?`<span class="sclock" id="sclock" title="Denkzeit dieser Sitzung – die Uhr läuft nur, solange eine Frage offen ist">${ico("clock")}<span id="sclockT">${fmtDur(clockNow())}</span></span>`:``)+
-    `<button class="btn ghost" id="btnStop" title="Sitzung beenden">beenden</button></div>`;
+    `<button class="btn text" id="btnStop" title="Sitzung beenden">beenden</button></div>`;
 }
 /* Warum kommt DIESE Karte gerade so? Die geführte Lektion zeigt jede Pflanze als Bild,
    die Antwortart wechselt mit dem Lernstand (bis Stufe 2 Auswahl, ab Stufe 3 selbst
@@ -3529,14 +3552,14 @@ function finishSession(){
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6L9 17l-5-5"/></svg>
     <h2>${probe ? (aborted?"Probeprüfung abgebrochen":"Probeprüfung geschafft") : (aborted?"Sitzung beendet":"Sitzung geschafft")}</h2>
     <p>${probe ? `${sess.done} von ${sess.total} Pflanzen${probeZp?" (nur ZP-Arten)":""}${scoredN?` · ${sess.correct} ganz richtig`:""}`
-               : `${sess.done} Karten gelernt${auto ? (scoredN?` · ${sess.correct} richtig von ${scoredN} bewerteten (${accS} %)`:"") : (mode!=="cards"?` · ${sess.correct} richtig (${acc} %)`:"")}`}${sess.pts&&(auto||examScoring())&&!noteHTML?` · <b>${nfmt(sess.pts.sum)} von ${nfmt(sess.pts.max)} Punkten</b>`:""}${(auto?sess.ms:(scoreable()&&sess.ms))?` · Denkzeit ${fmtDur(sess.ms)}`:""}.</p>
+               : `${sess.done} ${sess.done===1?"Karte":"Karten"} gelernt${auto ? (scoredN?` · ${sess.correct} richtig von ${scoredN} bewerteten (${accS} %)`:"") : (mode!=="cards"?` · ${sess.correct} richtig (${acc} %)`:"")}`}${sess.pts&&(auto||examScoring())&&!noteHTML?` · <b>${nfmt(sess.pts.sum)} von ${nfmt(sess.pts.max)} Punkten</b>`:""}${(auto?sess.ms:(scoreable()&&sess.ms))?` · Denkzeit ${fmtDur(sess.ms)}`:""}.</p>
     ${noteHTML}
     ${(sess.comboMax>=3 && !probe)?`<p class="xpline">Beste Serie: ${sess.comboMax}× richtig in Folge</p>`:""}
     ${extra}
     ${share}
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px">
       <button class="btn primary" id="againBtn">${probe?"Neue Probeprüfung":"Weiter lernen"}</button>
-      <button class="btn ghost" id="btnOverview">Zur Übersicht</button>
+      <button class="btn text" id="btnOverview">Zur Übersicht</button>
     </div></div>`;
   wireShareBlock();
   const a=$("#againBtn"); if(a) a.onclick = probe ? ()=>startProbe({zp:probeZp}) : (auto ? startGuided : startSession);
@@ -3790,7 +3813,7 @@ function renderListControls(){
     <button class="lc-toggle" id="lcToggle" aria-expanded="${open?"true":"false"}">
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
       <span class="lc-title">Optionen</span><span class="lc-sub">${esc(sub)}</span>
-      <span class="lc-caret" aria-hidden="true">▾</span>
+      <span class="lc-caret" aria-hidden="true">${ico("chev")}</span>
     </button>
     <div class="lc-body"${open?"":" hidden"}>
       ${secAnsicht}
@@ -3830,7 +3853,7 @@ function renderList(){
       ? `${c.de?esc(c.de):""}${c.de&&c.fam?" · ":""}${c.fam?`<span class="sp-fam">${esc(c.fam)}</span>`:""}`
       : (c.de?esc(c.de):"");
     return `<li><button type="button" class="sprow" data-idx="${idx}" aria-label="${esc(botName(c))} – Infos öffnen">
-      <span class="sp-main"><span class="sp-bot">${esc(botName(c))}</span>${c.zp?'<span class="sp-zp" title="prüfungsrelevant (ZP)">ZP</span>':""}<span class="sp-go">ℹ</span></span>
+      <span class="sp-main"><span class="sp-bot">${esc(botName(c))}</span>${c.zp?'<span class="sp-zp" title="prüfungsrelevant (ZP)">ZP</span>':""}<span class="sp-go">${ico("info")}</span></span>
       ${sub?`<span class="sp-sub">${sub}</span>`:""}
     </button></li>`; };
   let html=`<div class="listtop">${p.length} ${p.length===1?"Art":"Arten"}${term?(" · Treffer für »"+esc(raw)+"«"):""} · sortiert nach ${SORT_LABEL[listSort]} · zum Nachschlagen antippen</div>`;
@@ -3862,8 +3885,8 @@ function renderList(){
       const rows=groups.get(k).slice().sort((a,b)=> norm(a.g+" "+a.a).localeCompare(norm(b.g+" "+b.a),"de"));
       // In der Familien-Ansicht: ℹ öffnet einen kurzen Familien-Steckbrief
       const fi = byFam && k!=="Ohne Familie"
-        ? `<button class="cathead-i" data-fam="${esc(k)}" title="Was diese Familie ausmacht – kurzer Steckbrief mit Lerntipp" aria-label="Familien-Steckbrief ${esc(famLatin(k))}">ℹ</button>` : "";
-      html+=`<div class="catblock"><div class="cathead">${esc(k)}<span class="catn">${rows.length}</span>${fi}</div><ul class="splist">`;
+        ? `<button class="cathead-i" data-fam="${esc(k)}" title="Was diese Familie ausmacht – kurzer Steckbrief mit Lerntipp" aria-label="Familien-Steckbrief ${esc(famLatin(k))}">${ico("info")}</button>` : "";
+      html+=`<div class="catblock"><div class="cathead"><span class="cathead-t">${esc(k).replace(/\//g,"/<wbr>")}</span><span class="catn">${rows.length}</span>${fi}</div><ul class="splist">`;
       rows.forEach(c=>{ html+=rowHtml(c); });
       html+=`</ul></div>`;
     }
@@ -5134,8 +5157,8 @@ function lbSync(){
   const sc=document.querySelector(".lbscrim"); if(!sc) return;
   const img=sc.querySelector(".lb-img");
   if(lbList.length>1 && !sc.querySelector(".lb-nav")){
-    img.insertAdjacentHTML("beforebegin", `<button class="lb-nav prev" aria-label="Vorheriges Bild">‹</button>`);
-    img.insertAdjacentHTML("afterend", `<button class="lb-nav next" aria-label="Nächstes Bild">›</button>`+
+    img.insertAdjacentHTML("beforebegin", `<button class="lb-nav prev" aria-label="Vorheriges Bild">${ico("prev")}</button>`);
+    img.insertAdjacentHTML("afterend", `<button class="lb-nav next" aria-label="Nächstes Bild">${ico("next")}</button>`+
       `<div class="lb-count" aria-live="polite"></div>`);
   }
   const z=sc.querySelector(".lb-count"); if(z) z.textContent = `${lbIdx+1} / ${lbList.length}`;
@@ -5225,7 +5248,7 @@ function openLightbox(src, alt, list, start, loader){
   lbIdx = Math.max(0, Math.min(lbList.length-1, start||0));
   const sc=el("div","lbscrim");
   sc.setAttribute("role","dialog"); sc.setAttribute("aria-modal","true"); sc.setAttribute("aria-label","Bild vergrößert");
-  sc.innerHTML=`<button class="lb-x" aria-label="Schließen">×</button><img class="lb-img" src="" alt="">`;
+  sc.innerHTML=`<button class="lb-x" aria-label="Schließen">${ico("x")}</button><img class="lb-img" src="" alt="">`;
   sc.addEventListener("click",e=>{
     if(lbSwiped){ lbSwiped=false; return; }             // Wisch-Geste, kein Klick
     if(e.target.closest(".lb-nav.prev")) return lbShow(lbIdx-1);
@@ -6276,8 +6299,8 @@ function photoImgFailed(card, p){
   const b = $("#stage").querySelector(".photobox"); if(!b) return;
   b.innerHTML = `<div class="ph-load">Bild konnte gerade nicht geladen werden.
     <div class="ph-actions"><button class="btn primary" id="phImgRetry">Nochmal versuchen</button>
-    <button class="btn ghost" id="phImgOther">Andere Art zeigen</button>
-    <button class="btn ghost" id="phImgQuiz" title="Nur diese eine Art ohne Bild als Auswahlfrage">Ohne Bild weiter</button></div></div>`;
+    <button class="btn outline" id="phImgOther">Andere Art zeigen</button>
+    <button class="btn text" id="phImgQuiz" title="Nur diese eine Art ohne Bild als Auswahlfrage">Ohne Bild weiter</button></div></div>`;
   $("#phImgRetry").onclick=()=>renderPhoto();
   $("#phImgOther").onclick=()=>{ sess.imgDefer = 0; if(deferPhotoCard("imgDefer")) nextCard(); else renderPhoto(); };
   $("#phImgQuiz").onclick=()=>{ mode="quiz"; renderQuiz(); showGuidedNote(); };   // nur diese Karte; nextCard stellt den Bilder-Modus wieder her
@@ -6337,8 +6360,8 @@ async function renderPhoto(){
       langsam oder weg. Sobald sie wieder da ist, geht es automatisch weiter.
       <div class="ph-dots" aria-hidden="true"><i></i><i></i><i></i></div>
       <div class="ph-actions"><button class="btn primary" id="phRetry">Jetzt nochmal versuchen</button>
-      <button class="btn ghost" id="phOther">Andere Art zeigen</button>
-      <button class="btn ghost" id="phQuiz" title="Für den Rest dieser Sitzung Auswahlfragen ohne Bild – nur wenn du es willst">Ohne Bilder weiterlernen</button></div>`);
+      <button class="btn outline" id="phOther">Andere Art zeigen</button>
+      <button class="btn text" id="phQuiz" title="Für den Rest dieser Sitzung Auswahlfragen ohne Bild – nur wenn du es willst">Ohne Bilder weiterlernen</button></div>`);
     $("#phRetry").onclick=()=>{ phWaitStop(); renderPhoto(); };
     $("#phOther").onclick=()=>{ phWaitStop(); if(deferPhotoCard()) nextCard(); else renderPhoto(); };
     $("#phQuiz").onclick=()=>{ phWaitStop(); sess.photoGiveUp=true; mode="quiz"; sess.ans=null; renderQuiz(); showGuidedNote(); };
@@ -6623,7 +6646,7 @@ function openInfo(card){
   if(!card) return;
   closeInfo();
   const links = deepLinks(card).map(l=>
-    `<a href="${esc(l.u)}" target="_blank" rel="noopener">${esc(l.n)}<span class="ext">↗</span></a>`).join("");
+    `<a href="${esc(l.u)}" target="_blank" rel="noopener">${esc(l.n)}<span class="ext">${ico("ext")}</span></a>`).join("");
   const fam = [card.fam, card.thema].filter(Boolean).join(" · ");
   const ety = nameEtymology(card.g, card.a);                       // Namensherleitung (Merkhilfe, offline)
   // Standardmäßig aufgeklappt; klappt man sie zu, merkt sich das Gerät den Zustand
@@ -6636,7 +6659,7 @@ function openInfo(card){
      </details>` : "";
   const scrim = el("div","scrim"); scrim.id="infoScrim";
   scrim.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Pflanzen-Info">
-     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">${ico("x")}</button>
      <div class="modal-head">
        <div class="mh-bot">${esc(botName(card))}</div>
        ${card.de?`<div class="mh-de">${esc(card.de)}</div>`:""}
@@ -6669,7 +6692,7 @@ function openInfo(card){
   infoReturnFocus = document.activeElement;                       // Fokus nach dem Schließen zurückgeben
   try{ $("#infoClose").focus(); }catch(e){}
 }
-const infoBtnHTML = label => `<button class="btn ghost infobtn" id="infoBtn" title="Quellen &amp; Online-Infos zu dieser Pflanze">ℹ ${esc(label||"Mehr")}</button>`;
+const infoBtnHTML = label => `<button class="btn text infobtn" id="infoBtn" title="Quellen &amp; Online-Infos zu dieser Pflanze">${ico("info")}${esc(label||"Mehr")}</button>`;
 function wireInfoBtn(){ const b=$("#infoBtn"); if(b) b.onclick=e=>{ e.stopPropagation(); openInfo(current); }; }
 
 /* Familien-Steckbrief als Modal (offline, kuratiert) – gemeinsame Merkmale + Lerntipp */
@@ -6685,7 +6708,7 @@ function openFamilyInfo(famStr){
        die Familie oft zuverlässiger als die Blütenfarbe.</p></div>`;
   const scrim = el("div","scrim"); scrim.id="infoScrim";
   scrim.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Familien-Steckbrief">
-     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">${ico("x")}</button>
      <div class="modal-head">
        <div class="mh-bot fam">${esc(lat)}</div>
        ${de?`<div class="mh-de">${esc(de)}</div>`:""}
@@ -6765,13 +6788,13 @@ function openHerbarium(){
        <div class="hc-name">${esc(t)}</div>
        <div class="hc-bar"><i style="width:${e.n?Math.round(e.fest/e.n*100):0}%"></i></div>
        <div class="hc-n">${e.fest}/${e.n} sitzt</div>
-       <button type="button" class="btn small hc-learn" data-t="${esc(t)}" title="Geführte Lektion nur mit den Arten dieses Themas">${fertig?"Wiederholen":"Thema üben"}</button>
+       <button type="button" class="btn small outline hc-learn" data-t="${esc(t)}" title="Geführte Lektion nur mit den Arten dieses Themas">${fertig?"Wiederholen":"Thema üben"}</button>
        ${zeigOffen?`<div class="hc-open"><div class="hc-open-h">Es fehlen noch</div>
          <ul>${liste}</ul>${e.offen.length>6?`<div class="hc-more">+ ${e.offen.length-6} weitere</div>`:""}</div>`:""}
      </div>`; }).join("");
   const scrim = el("div","scrim"); scrim.id="infoScrim";
   scrim.innerHTML = `<div class="modal herbmodal" role="dialog" aria-modal="true" aria-label="Mein Herbarium">
-     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">${ico("x")}</button>
      <div class="modal-head">
        <div class="mh-bot fam">Mein Herbarium</div>
        <div class="mh-fam">${done}/${rows.length} Themen gemeistert</div>
@@ -6817,7 +6840,7 @@ function openHowModal(){
   }).join("");
   const scrim = el("div","scrim"); scrim.id="infoScrim";
   scrim.innerHTML = `<div class="modal howmodal" role="dialog" aria-modal="true" aria-label="So wächst dein Fortschritt">
-     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">${ico("x")}</button>
      <div class="modal-head">
        <div class="mh-bot fam">So wächst dein Fortschritt</div>
        <div class="mh-fam">Fünf Stufen je Pflanze · ab Stufe 4 gilt sie als gemerkt</div>
@@ -7054,7 +7077,7 @@ function installBarHTML(){
   if(e.standalone || installDone) return "";
   if(!e.canPrompt && !e.mobile) return "";
   const btn = e.canPrompt ? `<button class="btn primary btn-install" type="button">App installieren</button>`
-                          : `<button class="btn btn-install-how" type="button">So geht's</button>`;
+                          : `<button class="btn outline btn-install-how" type="button">So geht's</button>`;
   return `${ico("leaf")}<div><b>Pflanze-BW als App aufs Handy</b> – startet vom Home-Bildschirm, auch ohne Netz.</div>${btn}`;
 }
 function installHTML(){                                  // Inhalt der Slots in Einführung und Hilfe
@@ -7085,7 +7108,7 @@ function openInstallHow(){
   const scrim = el("div","scrim"); scrim.id="infoScrim";
   const way = (you, titel, text) => `<div class="inst-way${you?" is-you":""}"><b>${titel}</b><span>${text}</span></div>`;
   scrim.innerHTML = `<div class="modal howmodal" role="dialog" aria-modal="true" aria-label="Als App installieren">
-     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">${ico("x")}</button>
      <div class="modal-head">
        <div class="mh-bot fam">Als App installieren</div>
        <div class="mh-fam">Danach startet Pflanze-BW vom Home-Bildschirm – auch ohne Netz</div>
@@ -7126,7 +7149,7 @@ function openIntro(auto, onClose){
   const prev = document.activeElement;
   const scrim = el("div","scrim"); scrim.id="introScrim";
   scrim.innerHTML = `<div class="modal intro" role="dialog" aria-modal="true" aria-labelledby="introTtl">
-    <button class="modal-x" id="introClose" aria-label="Schließen" title="Schließen">×</button>
+    <button class="modal-x" id="introClose" aria-label="Schließen" title="Schließen">${ico("x")}</button>
     <h2 class="intro-h" id="introTtl">Kurz erklärt – dann los</h2>
     <p class="intro-lead">Tippe auf <b>»Weiter lernen«</b>, mehr musst du nicht wissen: Jede Pflanze kommt als Bild – erst wählst du den Namen, später schreibst du ihn selbst. <b>»Probeprüfung«</b> ist der Ernstfall zum Üben: alle Felder des Bogens, am Ende die Note.</p>
     <p class="intro-sub">Lieber selbst wählen? Vier Stufen, von leicht bis prüfungsreif:</p>

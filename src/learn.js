@@ -32,7 +32,14 @@ const ICONS = {
   // Start-Knöpfe (dieselben Formen stehen als Inline-SVG in learn.html, wie bei den Modus-Tabs):
   play:   `<circle cx="12" cy="12" r="8.5"/><path d="M10.2 8.6v6.8l5.4-3.4z" fill="currentColor" stroke="none"/>`,
   sheet:  `<path d="M8 4.5H6.5a2 2 0 0 0-2 2v12.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V6.5a2 2 0 0 0-2-2H16"/><rect x="8" y="2.8" width="8" height="3.2" rx="1"/><path d="M8.5 11h7M8.5 14.5h7M8.5 18h4"/>`,
-  back:   `<path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/>`
+  back:   `<path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/>`,
+  // Teil 2 der Konsolidierung: Schließen, Blättern, Aufklappen und »öffnet neuen Tab« als Strich-Icons
+  // statt der Zeichen × ‹ › ▾ ↗ (↗ und ℹ rendern Handys als buntes Emoji)
+  x:      `<path d="M6 6l12 12M18 6L6 18"/>`,
+  prev:   `<path d="M15 5l-7 7 7 7"/>`,
+  next:   `<path d="M9 5l7 7-7 7"/>`,
+  chev:   `<path d="M6 9l6 6 6-6"/>`,
+  ext:    `<path d="M7 17L17 7"/><path d="M8 7h9v9"/>`
 };
 function ico(name, cls){                       // → <svg> im einheitlichen Strichstil
   const d = ICONS[name]; if(!d) return "";
@@ -726,7 +733,7 @@ function openRankModal(){
   const m=masteryBest(), r=rankOf(m), jetzt=r.i;
   const scrim = el("div","scrim"); scrim.id="infoScrim";
   scrim.innerHTML = `<div class="modal rankmodal" role="dialog" aria-modal="true" aria-label="Deine Laufbahn">
-     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">${ico("x")}</button>
      <div class="modal-head">
        <div class="mh-bot fam">Deine Laufbahn</div>
        <div class="mh-fam">${m.fest} von ${m.n} Arten sitzen · Rang: ${esc(RANKS[jetzt].n)}${r.next?` · bis ${esc(r.next)}: ${esc(r.needText || "gleich geschafft")}`:""}</div>
@@ -1572,8 +1579,8 @@ function shareBlockHTML(primaryLabel){
     <input id="duelName" class="duel-name" type="text" maxlength="40" placeholder="Dein Name (optional)" value="${name}" aria-label="Dein Name für die Herausforderung">
     <div class="share-btns">
       <button class="btn primary" id="btnShare">${esc(primaryLabel)}</button>
-      <button class="btn" id="btnWa" title="Herausforderung per WhatsApp schicken">WhatsApp</button>
-      <button class="btn ghost" id="btnCopy" title="Link in die Zwischenablage kopieren">Link kopieren</button>
+      <button class="btn outline" id="btnWa" title="Herausforderung per WhatsApp schicken">WhatsApp</button>
+      <button class="btn outline" id="btnCopy" title="Link in die Zwischenablage kopieren">Link kopieren</button>
     </div></div>`;
 }
 function wireShareBlock(){
@@ -1599,7 +1606,7 @@ function showChallengeBanner(ch){
     </div>
     <div class="duel-cta">
       <button class="btn primary" id="btnAcceptDuel">Herausforderung annehmen</button>
-      <button class="btn ghost" id="btnDeclineDuel" title="Herausforderung schließen und normal weiterlernen">schließen</button>
+      <button class="btn text" id="btnDeclineDuel" title="Herausforderung schließen und normal weiterlernen">schließen</button>
     </div>`;
   b.hidden=false;
   $("#btnAcceptDuel").onclick=startChallenge;
@@ -1723,7 +1730,7 @@ function sessionBar(){
     (examScoring()&&sess.pts?`<span class="spts" title="Punkte dieser Sitzung – ein Schreibfehler zählt halb, der Rest kommt bei der fehlerfreien Wiederholung dazu">${nfmt(sess.pts.sum)} / ${nfmt(sess.pts.max)} P.</span>`:``)+
     ((sess.combo||0)>=3?`<span class="scombo" title="Treffer in Folge – ab 3 gibt es Bonuspunkte, jede 5er-Stufe wird gefeiert">${sess.combo}× in Folge</span>`:``)+
     (scoreable()?`<span class="sclock" id="sclock" title="Denkzeit dieser Sitzung – die Uhr läuft nur, solange eine Frage offen ist">${ico("clock")}<span id="sclockT">${fmtDur(clockNow())}</span></span>`:``)+
-    `<button class="btn ghost" id="btnStop" title="Sitzung beenden">beenden</button></div>`;
+    `<button class="btn text" id="btnStop" title="Sitzung beenden">beenden</button></div>`;
 }
 /* Warum kommt DIESE Karte gerade so? Die geführte Lektion zeigt jede Pflanze als Bild,
    die Antwortart wechselt mit dem Lernstand (bis Stufe 2 Auswahl, ab Stufe 3 selbst
@@ -1846,14 +1853,14 @@ function finishSession(){
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6L9 17l-5-5"/></svg>
     <h2>${probe ? (aborted?"Probeprüfung abgebrochen":"Probeprüfung geschafft") : (aborted?"Sitzung beendet":"Sitzung geschafft")}</h2>
     <p>${probe ? `${sess.done} von ${sess.total} Pflanzen${probeZp?" (nur ZP-Arten)":""}${scoredN?` · ${sess.correct} ganz richtig`:""}`
-               : `${sess.done} Karten gelernt${auto ? (scoredN?` · ${sess.correct} richtig von ${scoredN} bewerteten (${accS} %)`:"") : (mode!=="cards"?` · ${sess.correct} richtig (${acc} %)`:"")}`}${sess.pts&&(auto||examScoring())&&!noteHTML?` · <b>${nfmt(sess.pts.sum)} von ${nfmt(sess.pts.max)} Punkten</b>`:""}${(auto?sess.ms:(scoreable()&&sess.ms))?` · Denkzeit ${fmtDur(sess.ms)}`:""}.</p>
+               : `${sess.done} ${sess.done===1?"Karte":"Karten"} gelernt${auto ? (scoredN?` · ${sess.correct} richtig von ${scoredN} bewerteten (${accS} %)`:"") : (mode!=="cards"?` · ${sess.correct} richtig (${acc} %)`:"")}`}${sess.pts&&(auto||examScoring())&&!noteHTML?` · <b>${nfmt(sess.pts.sum)} von ${nfmt(sess.pts.max)} Punkten</b>`:""}${(auto?sess.ms:(scoreable()&&sess.ms))?` · Denkzeit ${fmtDur(sess.ms)}`:""}.</p>
     ${noteHTML}
     ${(sess.comboMax>=3 && !probe)?`<p class="xpline">Beste Serie: ${sess.comboMax}× richtig in Folge</p>`:""}
     ${extra}
     ${share}
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px">
       <button class="btn primary" id="againBtn">${probe?"Neue Probeprüfung":"Weiter lernen"}</button>
-      <button class="btn ghost" id="btnOverview">Zur Übersicht</button>
+      <button class="btn text" id="btnOverview">Zur Übersicht</button>
     </div></div>`;
   wireShareBlock();
   const a=$("#againBtn"); if(a) a.onclick = probe ? ()=>startProbe({zp:probeZp}) : (auto ? startGuided : startSession);
@@ -2107,7 +2114,7 @@ function renderListControls(){
     <button class="lc-toggle" id="lcToggle" aria-expanded="${open?"true":"false"}">
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
       <span class="lc-title">Optionen</span><span class="lc-sub">${esc(sub)}</span>
-      <span class="lc-caret" aria-hidden="true">▾</span>
+      <span class="lc-caret" aria-hidden="true">${ico("chev")}</span>
     </button>
     <div class="lc-body"${open?"":" hidden"}>
       ${secAnsicht}
@@ -2147,7 +2154,7 @@ function renderList(){
       ? `${c.de?esc(c.de):""}${c.de&&c.fam?" · ":""}${c.fam?`<span class="sp-fam">${esc(c.fam)}</span>`:""}`
       : (c.de?esc(c.de):"");
     return `<li><button type="button" class="sprow" data-idx="${idx}" aria-label="${esc(botName(c))} – Infos öffnen">
-      <span class="sp-main"><span class="sp-bot">${esc(botName(c))}</span>${c.zp?'<span class="sp-zp" title="prüfungsrelevant (ZP)">ZP</span>':""}<span class="sp-go">ℹ</span></span>
+      <span class="sp-main"><span class="sp-bot">${esc(botName(c))}</span>${c.zp?'<span class="sp-zp" title="prüfungsrelevant (ZP)">ZP</span>':""}<span class="sp-go">${ico("info")}</span></span>
       ${sub?`<span class="sp-sub">${sub}</span>`:""}
     </button></li>`; };
   let html=`<div class="listtop">${p.length} ${p.length===1?"Art":"Arten"}${term?(" · Treffer für »"+esc(raw)+"«"):""} · sortiert nach ${SORT_LABEL[listSort]} · zum Nachschlagen antippen</div>`;
@@ -2179,8 +2186,8 @@ function renderList(){
       const rows=groups.get(k).slice().sort((a,b)=> norm(a.g+" "+a.a).localeCompare(norm(b.g+" "+b.a),"de"));
       // In der Familien-Ansicht: ℹ öffnet einen kurzen Familien-Steckbrief
       const fi = byFam && k!=="Ohne Familie"
-        ? `<button class="cathead-i" data-fam="${esc(k)}" title="Was diese Familie ausmacht – kurzer Steckbrief mit Lerntipp" aria-label="Familien-Steckbrief ${esc(famLatin(k))}">ℹ</button>` : "";
-      html+=`<div class="catblock"><div class="cathead">${esc(k)}<span class="catn">${rows.length}</span>${fi}</div><ul class="splist">`;
+        ? `<button class="cathead-i" data-fam="${esc(k)}" title="Was diese Familie ausmacht – kurzer Steckbrief mit Lerntipp" aria-label="Familien-Steckbrief ${esc(famLatin(k))}">${ico("info")}</button>` : "";
+      html+=`<div class="catblock"><div class="cathead"><span class="cathead-t">${esc(k).replace(/\//g,"/<wbr>")}</span><span class="catn">${rows.length}</span>${fi}</div><ul class="splist">`;
       rows.forEach(c=>{ html+=rowHtml(c); });
       html+=`</ul></div>`;
     }
@@ -3451,8 +3458,8 @@ function lbSync(){
   const sc=document.querySelector(".lbscrim"); if(!sc) return;
   const img=sc.querySelector(".lb-img");
   if(lbList.length>1 && !sc.querySelector(".lb-nav")){
-    img.insertAdjacentHTML("beforebegin", `<button class="lb-nav prev" aria-label="Vorheriges Bild">‹</button>`);
-    img.insertAdjacentHTML("afterend", `<button class="lb-nav next" aria-label="Nächstes Bild">›</button>`+
+    img.insertAdjacentHTML("beforebegin", `<button class="lb-nav prev" aria-label="Vorheriges Bild">${ico("prev")}</button>`);
+    img.insertAdjacentHTML("afterend", `<button class="lb-nav next" aria-label="Nächstes Bild">${ico("next")}</button>`+
       `<div class="lb-count" aria-live="polite"></div>`);
   }
   const z=sc.querySelector(".lb-count"); if(z) z.textContent = `${lbIdx+1} / ${lbList.length}`;
@@ -3542,7 +3549,7 @@ function openLightbox(src, alt, list, start, loader){
   lbIdx = Math.max(0, Math.min(lbList.length-1, start||0));
   const sc=el("div","lbscrim");
   sc.setAttribute("role","dialog"); sc.setAttribute("aria-modal","true"); sc.setAttribute("aria-label","Bild vergrößert");
-  sc.innerHTML=`<button class="lb-x" aria-label="Schließen">×</button><img class="lb-img" src="" alt="">`;
+  sc.innerHTML=`<button class="lb-x" aria-label="Schließen">${ico("x")}</button><img class="lb-img" src="" alt="">`;
   sc.addEventListener("click",e=>{
     if(lbSwiped){ lbSwiped=false; return; }             // Wisch-Geste, kein Klick
     if(e.target.closest(".lb-nav.prev")) return lbShow(lbIdx-1);
@@ -4593,8 +4600,8 @@ function photoImgFailed(card, p){
   const b = $("#stage").querySelector(".photobox"); if(!b) return;
   b.innerHTML = `<div class="ph-load">Bild konnte gerade nicht geladen werden.
     <div class="ph-actions"><button class="btn primary" id="phImgRetry">Nochmal versuchen</button>
-    <button class="btn ghost" id="phImgOther">Andere Art zeigen</button>
-    <button class="btn ghost" id="phImgQuiz" title="Nur diese eine Art ohne Bild als Auswahlfrage">Ohne Bild weiter</button></div></div>`;
+    <button class="btn outline" id="phImgOther">Andere Art zeigen</button>
+    <button class="btn text" id="phImgQuiz" title="Nur diese eine Art ohne Bild als Auswahlfrage">Ohne Bild weiter</button></div></div>`;
   $("#phImgRetry").onclick=()=>renderPhoto();
   $("#phImgOther").onclick=()=>{ sess.imgDefer = 0; if(deferPhotoCard("imgDefer")) nextCard(); else renderPhoto(); };
   $("#phImgQuiz").onclick=()=>{ mode="quiz"; renderQuiz(); showGuidedNote(); };   // nur diese Karte; nextCard stellt den Bilder-Modus wieder her
@@ -4654,8 +4661,8 @@ async function renderPhoto(){
       langsam oder weg. Sobald sie wieder da ist, geht es automatisch weiter.
       <div class="ph-dots" aria-hidden="true"><i></i><i></i><i></i></div>
       <div class="ph-actions"><button class="btn primary" id="phRetry">Jetzt nochmal versuchen</button>
-      <button class="btn ghost" id="phOther">Andere Art zeigen</button>
-      <button class="btn ghost" id="phQuiz" title="Für den Rest dieser Sitzung Auswahlfragen ohne Bild – nur wenn du es willst">Ohne Bilder weiterlernen</button></div>`);
+      <button class="btn outline" id="phOther">Andere Art zeigen</button>
+      <button class="btn text" id="phQuiz" title="Für den Rest dieser Sitzung Auswahlfragen ohne Bild – nur wenn du es willst">Ohne Bilder weiterlernen</button></div>`);
     $("#phRetry").onclick=()=>{ phWaitStop(); renderPhoto(); };
     $("#phOther").onclick=()=>{ phWaitStop(); if(deferPhotoCard()) nextCard(); else renderPhoto(); };
     $("#phQuiz").onclick=()=>{ phWaitStop(); sess.photoGiveUp=true; mode="quiz"; sess.ans=null; renderQuiz(); showGuidedNote(); };
@@ -4940,7 +4947,7 @@ function openInfo(card){
   if(!card) return;
   closeInfo();
   const links = deepLinks(card).map(l=>
-    `<a href="${esc(l.u)}" target="_blank" rel="noopener">${esc(l.n)}<span class="ext">↗</span></a>`).join("");
+    `<a href="${esc(l.u)}" target="_blank" rel="noopener">${esc(l.n)}<span class="ext">${ico("ext")}</span></a>`).join("");
   const fam = [card.fam, card.thema].filter(Boolean).join(" · ");
   const ety = nameEtymology(card.g, card.a);                       // Namensherleitung (Merkhilfe, offline)
   // Standardmäßig aufgeklappt; klappt man sie zu, merkt sich das Gerät den Zustand
@@ -4953,7 +4960,7 @@ function openInfo(card){
      </details>` : "";
   const scrim = el("div","scrim"); scrim.id="infoScrim";
   scrim.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Pflanzen-Info">
-     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">${ico("x")}</button>
      <div class="modal-head">
        <div class="mh-bot">${esc(botName(card))}</div>
        ${card.de?`<div class="mh-de">${esc(card.de)}</div>`:""}
@@ -4986,7 +4993,7 @@ function openInfo(card){
   infoReturnFocus = document.activeElement;                       // Fokus nach dem Schließen zurückgeben
   try{ $("#infoClose").focus(); }catch(e){}
 }
-const infoBtnHTML = label => `<button class="btn ghost infobtn" id="infoBtn" title="Quellen &amp; Online-Infos zu dieser Pflanze">ℹ ${esc(label||"Mehr")}</button>`;
+const infoBtnHTML = label => `<button class="btn text infobtn" id="infoBtn" title="Quellen &amp; Online-Infos zu dieser Pflanze">${ico("info")}${esc(label||"Mehr")}</button>`;
 function wireInfoBtn(){ const b=$("#infoBtn"); if(b) b.onclick=e=>{ e.stopPropagation(); openInfo(current); }; }
 
 /* Familien-Steckbrief als Modal (offline, kuratiert) – gemeinsame Merkmale + Lerntipp */
@@ -5002,7 +5009,7 @@ function openFamilyInfo(famStr){
        die Familie oft zuverlässiger als die Blütenfarbe.</p></div>`;
   const scrim = el("div","scrim"); scrim.id="infoScrim";
   scrim.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Familien-Steckbrief">
-     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">${ico("x")}</button>
      <div class="modal-head">
        <div class="mh-bot fam">${esc(lat)}</div>
        ${de?`<div class="mh-de">${esc(de)}</div>`:""}
@@ -5082,13 +5089,13 @@ function openHerbarium(){
        <div class="hc-name">${esc(t)}</div>
        <div class="hc-bar"><i style="width:${e.n?Math.round(e.fest/e.n*100):0}%"></i></div>
        <div class="hc-n">${e.fest}/${e.n} sitzt</div>
-       <button type="button" class="btn small hc-learn" data-t="${esc(t)}" title="Geführte Lektion nur mit den Arten dieses Themas">${fertig?"Wiederholen":"Thema üben"}</button>
+       <button type="button" class="btn small outline hc-learn" data-t="${esc(t)}" title="Geführte Lektion nur mit den Arten dieses Themas">${fertig?"Wiederholen":"Thema üben"}</button>
        ${zeigOffen?`<div class="hc-open"><div class="hc-open-h">Es fehlen noch</div>
          <ul>${liste}</ul>${e.offen.length>6?`<div class="hc-more">+ ${e.offen.length-6} weitere</div>`:""}</div>`:""}
      </div>`; }).join("");
   const scrim = el("div","scrim"); scrim.id="infoScrim";
   scrim.innerHTML = `<div class="modal herbmodal" role="dialog" aria-modal="true" aria-label="Mein Herbarium">
-     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">${ico("x")}</button>
      <div class="modal-head">
        <div class="mh-bot fam">Mein Herbarium</div>
        <div class="mh-fam">${done}/${rows.length} Themen gemeistert</div>
@@ -5134,7 +5141,7 @@ function openHowModal(){
   }).join("");
   const scrim = el("div","scrim"); scrim.id="infoScrim";
   scrim.innerHTML = `<div class="modal howmodal" role="dialog" aria-modal="true" aria-label="So wächst dein Fortschritt">
-     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">${ico("x")}</button>
      <div class="modal-head">
        <div class="mh-bot fam">So wächst dein Fortschritt</div>
        <div class="mh-fam">Fünf Stufen je Pflanze · ab Stufe 4 gilt sie als gemerkt</div>
@@ -5371,7 +5378,7 @@ function installBarHTML(){
   if(e.standalone || installDone) return "";
   if(!e.canPrompt && !e.mobile) return "";
   const btn = e.canPrompt ? `<button class="btn primary btn-install" type="button">App installieren</button>`
-                          : `<button class="btn btn-install-how" type="button">So geht's</button>`;
+                          : `<button class="btn outline btn-install-how" type="button">So geht's</button>`;
   return `${ico("leaf")}<div><b>Pflanze-BW als App aufs Handy</b> – startet vom Home-Bildschirm, auch ohne Netz.</div>${btn}`;
 }
 function installHTML(){                                  // Inhalt der Slots in Einführung und Hilfe
@@ -5402,7 +5409,7 @@ function openInstallHow(){
   const scrim = el("div","scrim"); scrim.id="infoScrim";
   const way = (you, titel, text) => `<div class="inst-way${you?" is-you":""}"><b>${titel}</b><span>${text}</span></div>`;
   scrim.innerHTML = `<div class="modal howmodal" role="dialog" aria-modal="true" aria-label="Als App installieren">
-     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <button class="modal-x" id="infoClose" aria-label="Schließen" title="Schließen">${ico("x")}</button>
      <div class="modal-head">
        <div class="mh-bot fam">Als App installieren</div>
        <div class="mh-fam">Danach startet Pflanze-BW vom Home-Bildschirm – auch ohne Netz</div>
@@ -5443,7 +5450,7 @@ function openIntro(auto, onClose){
   const prev = document.activeElement;
   const scrim = el("div","scrim"); scrim.id="introScrim";
   scrim.innerHTML = `<div class="modal intro" role="dialog" aria-modal="true" aria-labelledby="introTtl">
-    <button class="modal-x" id="introClose" aria-label="Schließen" title="Schließen">×</button>
+    <button class="modal-x" id="introClose" aria-label="Schließen" title="Schließen">${ico("x")}</button>
     <h2 class="intro-h" id="introTtl">Kurz erklärt – dann los</h2>
     <p class="intro-lead">Tippe auf <b>»Weiter lernen«</b>, mehr musst du nicht wissen: Jede Pflanze kommt als Bild – erst wählst du den Namen, später schreibst du ihn selbst. <b>»Probeprüfung«</b> ist der Ernstfall zum Üben: alle Felder des Bogens, am Ende die Note.</p>
     <p class="intro-sub">Lieber selbst wählen? Vier Stufen, von leicht bis prüfungsreif:</p>

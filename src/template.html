@@ -321,7 +321,8 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
    sichtbar, sobald es im DOM hängt. Wikipedia lädt nur auf Knopfdruck (JSONP). */
 .infoscrim{position:fixed; inset:0; background:var(--scrimdim,rgba(28,42,34,.55)); display:flex; align-items:flex-start; justify-content:center; padding:5vh 16px; z-index:80; overflow:auto; animation:h2FadeIn .18s ease both; backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px)}
 .infobox{background:var(--surface); border:1px solid var(--rule-strong); border-radius:16px; box-shadow:var(--shadow-2,0 18px 50px rgba(28,42,34,.28)); width:100%; max-width:560px; padding:22px 22px 20px; position:relative; animation:h2ModalIn .3s cubic-bezier(.16,1,.3,1) both}
-.infobox-x{position:absolute; top:8px; right:10px; border:none; background:transparent; font-size:24px; line-height:1; color:var(--ink-soft); cursor:pointer; padding:4px 9px; border-radius:8px}
+.infobox-x{position:absolute; top:8px; right:8px; width:40px; height:40px; border:none; background:transparent; line-height:0; color:var(--ink-soft); cursor:pointer; padding:0; border-radius:50%; display:inline-flex; align-items:center; justify-content:center}
+.infobox-x .ic{width:20px; height:20px}
 .infobox-x:hover{background:var(--surface-2); color:var(--ink)}
 .infobox .modal-head{border-bottom:1px solid var(--rule); padding:0 28px 12px 0; margin-bottom:14px}
 .infobox .mh-bot{font-family:var(--serif); font-size:22px; font-style:italic; color:var(--ink); line-height:1.15; overflow-wrap:anywhere}
@@ -341,7 +342,8 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .infobox .srcgrid{display:flex; flex-wrap:wrap; gap:8px}
 .infobox .srcgrid a{display:inline-flex; align-items:center; gap:6px; text-decoration:none; border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); border-radius:8px; padding:7px 11px; font-size:13px; font-weight:500; transition:background .14s, border-color .14s, transform .08s}
 .infobox .srcgrid a:hover{background:var(--card); border-color:var(--green); transform:translateY(-1px)}
-.infobox .srcgrid a .ext{font-family:var(--mono); font-size:11px; color:var(--ink-faint)}
+.infobox .srcgrid a .ext{color:var(--ink-faint); line-height:0}
+.infobox .srcgrid a .ext .ic{width:13px; height:13px}
 .infobox .wpblock{margin-top:16px; border-top:1px solid var(--rule); padding-top:14px}
 .infobox .wphost{margin-top:12px}
 .infobox .wphost img{float:left; width:132px; max-width:42%; height:auto; border-radius:8px; border:1px solid var(--rule); margin:2px 14px 8px 0}
@@ -777,9 +779,10 @@ body{overflow-x:clip}
 .lbscrim .lb-img{ max-width:min(1400px,94vw); max-height:88vh; border-radius:14px; cursor:zoom-out;
   box-shadow:0 24px 80px rgba(0,0,0,.5); transition:transform .34s cubic-bezier(.2,.9,.25,1.05) }
 @starting-style{ .lbscrim .lb-img{ transform:scale(.94) } }
-.lbscrim .lb-x{ position:absolute; top:14px; right:14px; min-width:44px; min-height:44px; border-radius:12px;
-  border:1px solid rgba(255,255,255,.28); background:rgba(255,255,255,.12); color:#fff; font-size:22px;
-  line-height:1; cursor:pointer }
+.lbscrim .lb-x{ position:absolute; top:16px; right:16px; width:44px; height:44px; border-radius:50%; padding:0;
+  border:1px solid rgba(255,255,255,.28); background:rgba(255,255,255,.12); color:#fff;
+  line-height:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center }
+.lbscrim .lb-x .ic,.lbscrim .lb-nav .ic{ width:24px; height:24px }
 .lbscrim .lb-x:hover{ background:rgba(255,255,255,.22) }
 @media (prefers-reduced-motion: reduce){ .lbscrim,.lbscrim .lb-img{ transition:none } }
 @media print{ .lbscrim{ display:none } }
@@ -849,13 +852,13 @@ body{overflow-x:clip}
 :where(svg.ic){width:16px; height:16px; flex:none}
 /* Galerie in der Vollbild-Ansicht: Pfeile + Zähler (Tastatur: ← →) */
 .lbscrim .lb-nav{position:absolute; top:50%; transform:translateY(-50%); min-width:48px; min-height:64px;
-  border:1px solid rgba(255,255,255,.24); background:rgba(255,255,255,.10); color:#fff; font-size:30px;
-  line-height:1; border-radius:12px; cursor:pointer; backdrop-filter:blur(6px)}
+  border:1px solid rgba(255,255,255,.24); background:rgba(255,255,255,.10); color:#fff; padding:0;
+  line-height:0; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(6px)}
 .lbscrim .lb-nav:hover{background:rgba(255,255,255,.2)}
 .lbscrim .lb-nav.prev{left:14px} .lbscrim .lb-nav.next{right:14px}
 .lbscrim .lb-count{position:absolute; bottom:16px; left:50%; transform:translateX(-50%); color:#fff;
   font-family:var(--mono); font-size:12px; background:rgba(0,0,0,.45); border-radius:99px; padding:4px 12px}
-@media (max-width:640px){ .lbscrim .lb-nav{min-width:44px; min-height:56px; font-size:26px}
+@media (max-width:640px){ .lbscrim .lb-nav{min-width:44px; min-height:56px}
   .lbscrim .lb-nav.prev{left:6px} .lbscrim .lb-nav.next{right:6px} }
 /* Ganze Ausweich-Kette gescheitert → Meldung statt leerem Rahmen */
 .lbscrim .lb-fail{max-width:min(520px,86vw); padding:18px 22px; border-radius:14px; text-align:center; color:#fff;
