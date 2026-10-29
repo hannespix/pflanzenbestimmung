@@ -15,6 +15,9 @@ Zwei Arten von Korrekturen:
 
   CORRECTIONS  – füllt ausschließlich LEERE Felder, nie vorhandene Angaben;
                  greift nur, wenn Gattung UND Art der Zielzeile exakt passen.
+  Jeder Eintrag trägt als letztes Element eine Begründung in ganzen Sätzen –
+  daraus erzeugt tools/fehlermeldung.py die Meldung an die zuständige Stelle
+  (docs/quelllisten-fehlermeldung.md).
   REPLACEMENTS – ersetzt Felder einer Zeile, die als Ganzes (alle vier
                  Textfelder) exakt dem dokumentierten Fehler entspricht; die
                  Zeile bleibt erhalten (Nummer, ZP-Kennzeichnung, Synonyme),
@@ -46,7 +49,8 @@ CORRECTIONS = {
     "garten_und_landschaftsbau_gaertner": [
         # Familie fehlt in der Excel. Calycanthaceae (Gewürzstrauchgewächse) ist
         # botanisch eindeutig und steht im Baumschul-Seed derselben Art bereits so.
-        ("Chimonanthus", "praecox", FAMILIE, "Calycanthaceae"),
+        ("Chimonanthus", "praecox", FAMILIE, "Calycanthaceae",
+         "Das Feld »Familie« ist in der Excel leer. Calycanthaceae (Gewürzstrauchgewächse) ist botanisch eindeutig und steht in der Baumschul-Gärtner-Liste bei derselben Art."),
     ],
 }
 
@@ -66,7 +70,8 @@ REPLACEMENTS = {
         # steht und dieses Synonym dort bereits trägt – ein Übertragungsfehler.
         (("Salvia", "abrotanoides", "Hydrangeaceae/Hortensiengewächse",
           "Bauernjasmin, Gewöhnlicher Pfeifenstrauch, Falscher Jasmin"),
-         {GATTUNG: "Philadelphus", ART: "coronarius"}),
+         {GATTUNG: "Philadelphus", ART: "coronarius"},
+         "Familie (Hydrangeaceae) und deutsche Namen (Bauernjasmin, Gewöhnlicher Pfeifenstrauch, Falscher Jasmin) gehören zum Pfeifenstrauch Philadelphus coronarius – so führt ihn die Fachwerker-Liste derselben Fachrichtung (Nr. 50). »Salvia abrotanoides« ist das Synonym der Blauraute (Perovskia abrotanoides), die eine Zeile darüber (Nr. 206) steht und dieses Synonym dort bereits trägt – ein Übertragungsfehler."),
     ],
 }
 
@@ -78,39 +83,51 @@ REPLACEMENTS = {
 TYPOS = {
     "baumschule_fachwerker": [
         (("Juniperus", "communis 'Hibernika'", "Cupressaceae", "Irischer Säulenwacholder"),
-         {ART: "communis 'Hibernica'"}),          # Sorte 'Hibernica' (lat. »irisch«), so in der Baumschul-Gärtner-Liste
+         {ART: "communis 'Hibernica'"},
+         "Die Sorte heißt 'Hibernica' (lateinisch »irisch«); so steht sie auch in der Baumschul-Gärtner-Liste."),
     ],
     "baumschule_gaertner": [
         (("Lagererstroemia", "indica", "Lythraceae", "Kreppmyrte"),
-         {GATTUNG: "Lagerstroemia"}),             # nach M. von Lagerström
+         {GATTUNG: "Lagerstroemia"},
+         "Die Gattung ist nach Magnus von Lagerström benannt und heißt Lagerstroemia; im Namen ist eine Silbe verdoppelt."),
         (("Olea", "europea", "Oleaceae", "Echte Olive"),
-         {ART: "europaea"}),                      # so in zwei anderen Listen
+         {ART: "europaea"},
+         "Der gültige Name lautet Olea europaea; so steht er in zwei anderen Listen."),
     ],
     "friedhofsgaertnerei_fachwerker": [
         (("Antirrinum", "majus", "Scrophulariaceae", "Löwenmäulchen"),
-         {GATTUNG: "Antirrhinum"}),               # so in drei anderen Listen
+         {GATTUNG: "Antirrhinum"},
+         "Die Gattung heißt Antirrhinum; so steht sie in drei anderen Listen."),
         (("Gypsohila", "paniculata", "Caryophyllaceae", "Schleierkraut"),
-         {GATTUNG: "Gypsophila"}),                # so in fünf anderen Listen
+         {GATTUNG: "Gypsophila"},
+         "Die Gattung heißt Gypsophila; so steht sie in fünf anderen Listen."),
         (("Urtica", "dioca", "Urticaceae", "Brennnessel"),
-         {ART: "dioica"}),                        # so in sieben anderen Listen
+         {ART: "dioica"},
+         "Die Art heißt Urtica dioica; so steht sie in sieben anderen Listen."),
         (("Thymus", "serphyllum", "Lamiaceae", "Thymian"),
-         {ART: "serpyllum"}),                     # so in drei anderen Listen
+         {ART: "serpyllum"},
+         "Die Art heißt Thymus serpyllum; so steht sie in drei anderen Listen."),
         (("Chameacyparis", "obtusa 'Nana Gracilis'", "Cupressaceae", "Muschel-Scheinzypresse"),
-         {GATTUNG: "Chamaecyparis"}),             # so in vier anderen Listen (acht Einträge)
+         {GATTUNG: "Chamaecyparis"},
+         "Die Gattung heißt Chamaecyparis; so steht sie in vier anderen Listen (acht Einträge)."),
         (("Chameacypris", "lawsoniana 'Glauca'", "Cupressaceae", "Blaue Scheinzypresse"),
-         {GATTUNG: "Chamaecyparis"}),
+         {GATTUNG: "Chamaecyparis"},
+         "Die Gattung heißt Chamaecyparis; so steht sie in vier anderen Listen (acht Einträge)."),
     ],
     "friedhofsgaertnerei_gaertner": [
         (("Hosta", "Cultivars Fortuei Aurea'", "Asparagaceae", "Frühlingsgold-Funkie"),
-         {ART: "Cultivars Fortunei Aurea'"}),     # Sorte 'Fortunei Aurea'; nur der Buchstabe
+         {ART: "Cultivars Fortunei Aurea'"},
+         "Die Sorte heißt 'Fortunei Aurea' (Buchstabendreher). Außerdem fehlt in der Liste das öffnende Anführungszeichen des Sortennamens – das wurde nicht verändert."),
     ],
     "gemuesebau_gaertner": [
         (("Amaranthus", "retoflexus", "Amaranthaceae", "Zurückgekr. Fuchsschwanz, Amarant"),
-         {ART: "retroflexus"}),                   # so in zwei anderen Listen
+         {ART: "retroflexus"},
+         "Die Art heißt Amaranthus retroflexus; so steht sie in zwei anderen Listen."),
     ],
     "zierpflanzenbau_gaertner": [
         (("Petunie", "x atkinsiana", "Solanaceae", "Garten-Petunie"),
-         {GATTUNG: "Petunia"}),                   # »Petunie« ist der deutsche Name; Petunia in drei anderen Listen
+         {GATTUNG: "Petunia"},
+         "»Petunie« ist der deutsche Name; die Gattung heißt Petunia (so in drei anderen Listen)."),
     ],
 }
 for _pid, _items in TYPOS.items():                # dieselbe Mechanik wie REPLACEMENTS
@@ -138,7 +155,7 @@ def apply_corrections(check=False):
         if rows is None:
             continue
         touched = 0
-        for gattung, art, idx, val in corr:
+        for gattung, art, idx, val, *_begr in corr:
             for r in rows:
                 if r[GATTUNG] == gattung and r[ART] == art:
                     if str(r[idx]).strip():
@@ -164,7 +181,7 @@ def apply_replacements(check=False):
         if rows is None:
             continue
         touched = 0
-        for wrong, new in repl:
+        for wrong, new, *_begr in repl:
             key = lambda r: (r[GATTUNG], r[ART], r[FAMILIE], r[DTNAME])
             fixed = list(wrong)
             for idx, val in new.items():

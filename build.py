@@ -12,7 +12,7 @@ Ergebnisse:
   dist/rechtliches.html        Impressum & Datenschutz (statisch)
   + versionierte Verteilkopien aller Dateien im Repo-Root
 """
-import pathlib, json, sys, hashlib, shutil, subprocess, datetime
+import pathlib, json, sys, hashlib, shutil, subprocess, datetime, re
 
 ROOT = pathlib.Path(__file__).parent
 
@@ -38,7 +38,7 @@ def build_stamp(seeds_json):
     Änderung ergibt denselben Stempel, eine Aktualisierung eine andere Kennung.
     So lässt sich auf jedem Gerät ablesen, ob die neue Ausgabe schon aktiv ist."""
     h = hashlib.sha256()
-    for f in ["src/learn.html", "src/learn.js", "src/template.html", "src/app.js", "src/recht.html"]:
+    for f in ["src/shared.js", "src/learn.html", "src/learn.js", "src/template.html", "src/app.js", "src/recht.html"]:
         if (ROOT / f).exists():
             h.update(read(f).encode("utf-8"))
     h.update(seeds_json.encode("utf-8"))
@@ -52,6 +52,23 @@ def build_stamp(seeds_json):
     except Exception:
         datum = ""
     return (f"Stand {datum} · " if datum else "") + f"Version {kennung}"
+
+DECL_RE = re.compile(r'^(?:async\s+)?(?:function|const|let|var|class)\s+([A-Za-z_$][\w$]*)', re.M)
+
+def with_shared(name):
+    """Gemeinsamen Code beider Werkzeuge (src/shared.js: DOM-Helfer, Speicher, Icons, JSONP,
+    Wikipedia-Kandidaten, Namensherleitung, Sorten-/Taxon-Erkennung, Lightbox, Versions-Hinweis)
+    dem Werkzeug-Skript voranstellen – ein <script>, ein Geltungsbereich. Ein Name, der in
+    shared.js UND in der Werkzeug-Datei auf oberster Ebene deklariert ist, wäre im Browser ein
+    SyntaxError (doppeltes const/let) – deshalb bricht der Build dann ab."""
+    own = read(name)
+    if not (ROOT / "src/shared.js").exists():
+        return own
+    shared = read("src/shared.js")
+    dup = sorted(set(DECL_RE.findall(shared)) & set(DECL_RE.findall(own)))
+    if dup:
+        print(f"FEHLER: {name} deklariert Namen aus src/shared.js doppelt: {dup}", file=sys.stderr); sys.exit(1)
+    return shared + "\n" + own
 
 def render(tpl, app, seeds_json, xlsx=None, stamp=""):
     out = tpl
@@ -136,7 +153,7 @@ def main():
     print(f"Versionsstempel: {stamp}")
 
     # Prüfungswerkzeug (inkl. SheetJS für den Excel-Import)
-    exam = render(read("src/template.html"), read("src/app.js"), seeds_json,
+    exam = render(read("src/template.html"), with_shared("src/app.js"), seeds_json,
                   xlsx=read("lib/xlsx.full.min.js"), stamp=stamp)
     write_out(exam, "pflanzenkenntnis.html"); outputs.append(exam)
 
@@ -151,7 +168,7 @@ def main():
     # gar nicht erst zu sehen bekommen. Beide Namen tragen dieselbe Datei, damit
     # bestehende Links, Lesezeichen und die PWA-Verknüpfung weiter funktionieren.
     if (ROOT / "src/learn.html").exists() and (ROOT / "src/learn.js").exists():
-        learn = render(read("src/learn.html"), read("src/learn.js"), seeds_json, stamp=stamp)
+        learn = render(read("src/learn.html"), with_shared("src/learn.js"), seeds_json, stamp=stamp)
         write_out(learn, "pflanzen-lernen.html"); outputs.append(learn)
         write_out(learn, "index.html")          # Wurzel = Lern-Tool (gleiche Datei)
 

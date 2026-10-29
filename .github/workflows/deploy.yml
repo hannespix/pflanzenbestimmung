@@ -59,7 +59,7 @@ jobs:
       # Die Pflanzendaten müssen sich byte-genau aus den amtlichen Excel-Listen in
       # data/ ergeben (wie in build.yml). Weichen sie ab, wird gar nicht erst gebaut.
       - name: Pflanzendaten = amtliche Listen (Seeds aus data/ reproduzierbar)
-        run: bash tools/rebuild_seeds.sh && git diff --exit-code seeds/
+        run: bash tools/rebuild_seeds.sh && git diff --exit-code seeds/ docs/quelllisten-fehlermeldung.md
 
       - name: Build (Single-File HTML + PWA-Dateien)
         run: python3 build.py

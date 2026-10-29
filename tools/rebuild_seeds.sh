@@ -37,3 +37,7 @@ python3 tools/categorize_seeds.py
 # Läuft nach categorize_seeds.py; die Wuchsform einer ersetzten Zeile bestimmt
 # das Skript mit denselben Regeln selbst neu.
 python3 tools/fix_source_gaps.py
+
+# Meldung der berichtigten Fehler an die zuständige Stelle aus denselben Tabellen erzeugen
+# (docs/quelllisten-fehlermeldung.md; die CI prüft mit --check, dass sie zu den Tabellen passt).
+python3 tools/fehlermeldung.py

@@ -38,7 +38,7 @@ jobs:
       # Aussage »unverändert aus den amtlichen Prüfungslisten« in Hilfe/Hinweis/Rechtlichem
       # bleibt so überprüfbar wahr.
       - name: Pflanzendaten = amtliche Listen (Seeds aus data/ reproduzierbar)
-        run: bash tools/rebuild_seeds.sh && git diff --exit-code seeds/
+        run: bash tools/rebuild_seeds.sh && git diff --exit-code seeds/ docs/quelllisten-fehlermeldung.md
       - name: Puppeteer (inkl. Chromium) installieren
         run: npm install --no-save puppeteer@23
       - name: Puppeteer-Smoke-Test Prüfungswerkzeug (gegen dist/)

@@ -58,11 +58,12 @@ eine verzweigende Startseite gibt es bewusst **nicht mehr**:
 
 ```
                           ┌────► dist/pflanzenkenntnis.html  Prüfungswerkzeug (Prüfende)
-seeds/*.json  ────────────┤      (template.html + app.js  + Seeds + SheetJS inline)
-src/{template,app}.js  ───┤      + dist/pruefung/index.html  hübsche Adresse /pruefung (Weiterleitung)
+seeds/*.json  ────────────┤      (template.html + shared.js + app.js + Seeds + SheetJS inline)
+src/shared.js  ───────────┤      + dist/pruefung/index.html  hübsche Adresse /pruefung (Weiterleitung)
+src/{template,app}.js  ───┤
 src/{learn.html,learn.js} ┼────► dist/pflanzen-lernen.html   Lern-Tool (Azubis)
 lib/xlsx.full.min.js  ────┘      dist/index.html             DASSELBE Lern-Tool (= Wurzel)
-                                 (learn.html    + learn.js + Seeds, OHNE SheetJS)
+                                 (learn.html + shared.js + learn.js + Seeds, OHNE SheetJS)
 
 src/recht.html  ──────────────► dist/rechtliches.html      Impressum & Datenschutz
                                  (statisch, ohne Seeds/JS; von beiden Werkzeugen verlinkt)
@@ -98,6 +99,21 @@ keine Noten):
 - Baut nur, wenn **beide** Dateien existieren; nutzt dieselben `SEEDS`.
 
 **Gemeinsam:**
+- **`src/shared.js`** — der in **beiden** Werkzeugen wortgleich gebrauchte Code (79 Deklarationen,
+  ~900 Zeilen): DOM-Helfer (`$`, `el`, `esc`, `norm`), `store` (localStorage-Wrapper), Icon-Set
+  (`ICONS`/`ico`), JSONP (`jsonpGet`, `wikiJSONP`), Wikipedia-Kandidaten (`wikiCandidates`,
+  `wikiGenusCandidates`, `deArticleTitles`), Namensherleitung (`LAT_*`, `nameEtymology`),
+  Sorten-/Taxon-Erkennung (`cultivarName`, `binomEpithet`, `taxonName`, `synCards`), Lightbox
+  (`openLightbox`, `lbBig`, `lbChain`, `lbSwipe` …), `toast`, `vt`, `swUpdate`. `build.py` stellt die
+  Datei beiden Skripten voran (`with_shared()` – **ein** `<script>`, **ein** Geltungsbereich) und
+  **bricht ab**, wenn ein Name dort *und* in `app.js`/`learn.js` auf oberster Ebene deklariert ist.
+  Regeln: nur wortgleicher Code; app-spezifische Namen (`LS_PREFIX`, Profile, `toast`-Ziele …)
+  bleiben in den Werkzeug-Dateien; ein `const`/`let` in `shared.js` darf im Initialisierer nichts aus
+  `app.js`/`learn.js` benutzen (Temporal Dead Zone – deshalb prüft `store` die Schreibbarkeit mit
+  dem festen Schlüssel `pflanze-bw.__probe`). Gleichnamige, aber **unterschiedliche** Funktionen
+  (`openInfo`, `loadWiki`, `renderWiki`, `taxonNote`, `genusNote`, `wikiGallery`, `openHelp`,
+  `swIdle`, `loadProfile`, `renderList`, `wire`, `LS_PREFIX`, `KAT_ALIAS`, `NIVEAUS`, `FIELD_*`)
+  bleiben bewusst je Werkzeug.
 - **`seeds/<profil-id>.json`** — eine Pflanzenliste je Profil. Dateiname = Profil-ID.
   `build.py` sammelt automatisch **alle** Dateien aus `seeds/` in das globale
   Objekt `SEEDS = { "<profil-id>": [ [gattung, art, familie, dt_name, kategorie, zp, synonyme], … ] }`.
@@ -3043,6 +3059,41 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Musterlösung `sol-look eco`, Leerbogen nie `eco`, gemerkt, Druckmedium ohne Kopf-Fläche/Zebra,
       Rücknahme.
 
+- [x] **Gemeinsamer Code als `src/shared.js` + versandfertige Fehlermeldung an die zuständige
+      Stelle** (die beiden offenen TODO-Punkte, auf »alle anderen offenen Punkte umsetzen«).
+      **(1) `src/shared.js`:** Ein Migrationsskript hat die Top-Level-Deklarationen beider Dateien
+      mit einem kleinen JS-Scanner (Strings, Kommentare, Regex, Templates) exakt ausgeschnitten,
+      zuerst die **nur in Kommentar/Form abweichenden** Blöcke angeglichen (`store`, `slug`,
+      `jsonp`, `profileId`, `cultivarName`, `lbBig`, `lbList`, `lbLoad`, `lbShow`, `lbSwipe`,
+      `printEcoOn` aus dem Lern-Tool – jeweils Obermenge; `toast` mit Screenreader-Rolle und
+      `todayISO` als Funktion aus dem Prüfungswerkzeug; `APPICONS`/`ico` durch das eine `ICONS`),
+      dann die **79 byte-identischen Blöcke (~900 Zeilen)** in Reihenfolge von `learn.js` nach
+      `src/shared.js` geschrieben und aus beiden Dateien entfernt (`app.js` 2927 → 2171,
+      `learn.js` 5647 → 4835 Zeilen). `build.py` (`with_shared()`) stellt die Datei beiden
+      Skripten voran – ein `<script>`, ein Geltungsbereich – und **bricht den Build ab**, wenn ein
+      Name in `shared.js` und in einer Werkzeug-Datei doppelt deklariert ist; `shared.js` zählt
+      zum Versionsstempel. **Zwei Fallen gefunden und gelöst:** (a) **Temporal Dead Zone** – ein
+      `const` in `shared.js` wird vor `app.js`/`learn.js` initialisiert und darf dort nichts
+      benutzen; `store` prüfte die Schreibbarkeit mit `LS_PREFIX+"__probe"` → jetzt fester
+      Schlüssel `pflanze-bw.__probe` (das Skript prüft alle shared-Initialisierer auf
+      app-eigene `const`/`let`); (b) die Lern-Fassung von `store` hatte kein `remove()` – der
+      Smoke-Test fiel mit »store.remove is not a function« um → Obermenge mit `remove`. Bewusst
+      je Werkzeug bleiben die gleichnamigen, aber unterschiedlichen `openInfo`, `loadWiki`,
+      `renderWiki`, `taxonNote`, `genusNote`, `wikiGallery`, `openHelp`, `swIdle`, `loadProfile`,
+      `renderList`, `wire`, `LS_PREFIX`, `KAT_ALIAS`, `NIVEAUS`, `FIELD_*`. Architektur-Abschnitt
+      oben, README-Dateibaum und Technik-Doku nachgezogen.
+      **(2) Fehlermeldung:** `tools/fix_source_gaps.py` trägt zu jeder Berichtigung jetzt eine
+      **Begründung in ganzen Sätzen** als letztes Tupel-Element (`apply_*` tolerieren es);
+      `tools/fehlermeldung.py` erzeugt daraus **`docs/quelllisten-fehlermeldung.md`** – ein
+      versandfertiges Anschreiben an die zuständige Stelle mit Tabellen je Liste (Eintrag wie in
+      der Liste · Berichtigung · Begründung; 14 Berichtigungen in 7 Listen), Quelldatei, Hinweisen
+      ohne Berichtigung (Blutpflaume, leere Art-Felder bei Hybriden-Sammeleinträgen, Platzhalter
+      'Sorte', Formanpassungen) und Absender-Platzhalter. `tools/rebuild_seeds.sh` erzeugt die
+      Meldung mit; **die CI vergleicht** (`git diff --exit-code seeds/ docs/quelllisten-fehlermeldung.md`
+      in `build.yml` und `deploy.yml`), damit eine neue Berichtigung ohne aktualisierte Meldung
+      nicht durchgeht (`--check`-Modus ignoriert die Datumszeile). Der Versand selbst ist Sache
+      des Betreibers. Build, Offline-Check, alle drei Puppeteer-Suiten und Seeds-Abgleich grün.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.
@@ -3050,16 +3101,16 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Familien-Lücke zu *Chimonanthus praecox*; dazu kam der aus einer Rückmeldung bekannte
       Übertragungsfehler »Salvia abrotanoides · Bauernjasmin« (berichtigt, siehe Erledigt), und der
       Bildcheck förderte zwölf Rechtschreibfehler in botanischen Namen zutage (berichtigt über
-      `TYPOS`). Die Liste der berichtigten Fehler sollte der Betreiber an die zuständige Stelle melden.
+      `TYPOS`). **Die Meldung an die zuständige Stelle liegt versandfertig in
+      `docs/quelllisten-fehlermeldung.md`** (erzeugt von `tools/fehlermeldung.py` aus den Tabellen
+      samt Begründungen; der Versand selbst ist Sache des Betreibers).
       Künftige Lücken über die `CORRECTIONS`-Tabelle, nachweislich falsche Felder über die
       `REPLACEMENTS`-Tabelle in `tools/fix_source_gaps.py` (nicht direkt im Seed – die CI
-      lehnt Hand-Edits in `seeds/` ab). Jeder neue Eingriff gehört zusätzlich in die
-      Offenlegung (`.learnnote`, Hilfe »Datenherkunft«, `recht.html#datenquellen`,
-      `docs/technik-kurzbeschreibung.md`) und in die Tests (`tests/learn.mjs`, `tests/smoke.mjs`).
-- [ ] Gemeinsamer Code beider Werkzeuge (Info-Karte, Lightbox, JSONP, Icons – ~40 identische
-      Blöcke in `app.js`/`learn.js`) könnte beim Build aus einer Datei `src/shared.js` eingefügt
-      werden. Bewusst zurückgestellt (Audit-Fund 41): Refactoring mit Regressionsrisiko, ohne
-      Nutzen für Nutzer; bei der nächsten größeren Änderung an einem der Blöcke erwägen.
+      lehnt Hand-Edits in `seeds/` ab) – **jeweils mit Begründung als letztem Element**, dann
+      `python3 tools/fehlermeldung.py` (die CI prüft die Meldung gegen die Tabellen). Jeder neue
+      Eingriff gehört zusätzlich in die Offenlegung (`.learnnote`, Hilfe »Datenherkunft«,
+      `recht.html#datenquellen`, `docs/technik-kurzbeschreibung.md`) und in die Tests
+      (`tests/learn.mjs`, `tests/smoke.mjs`).
 - [ ] Bei künftigen Listen-Updates: Excel nach `data/<profil-id>.<ext>` legen,
       `tools/rebuild_seeds.sh` (oder Konverter je Datei) laufen lassen, bauen,
       Offline-Check + Smoke-Test.
