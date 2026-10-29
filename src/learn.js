@@ -1218,7 +1218,9 @@ function renderProgress(){
   const m=masteryBest(), r=rankOf(m), st=streakState(), goal=streakGoal(), done=Math.min(st.n||0, goal);
   const bis = r.next ? `bis ${r.next}: ${r.needText||"gleich geschafft"}` : "höchste Stufe erreicht";
   $("#progress").hidden = false;
-  // EINE Fortschrittskarte: Rang-Zeile (Lernstand in Worten) · Balken · Legende + Serie + Herbarium
+  // EINE Fortschrittskarte: Rang-Zeile (Lernstand in Worten) · Balken · Legende · Serie + Herbarium.
+  // Herbarium ist eine Aktion (öffnet die Sammlung) und steht deshalb als Textzeile (dritte Stufe)
+  // rechts neben dem Serien-Chip – der Chip zeigt nur Status.
   $("#progress").innerHTML =
     `<div class="phead">
        <button class="rankline" id="rankName" title="Dein Rang richtet sich nach dem Lernstand – ${m.fest} von ${m.n} Arten sitzen · ${esc(bis)}. Antippen zeigt alle Stufen.">
@@ -1239,7 +1241,7 @@ function renderProgress(){
        <div class="statusrow" id="streakRow">
          <span class="chip flamechip${(st.s||0)>0?" on":""}" title="Lernserie: an so vielen Tagen in Folge hast du ${goal} Karten bearbeitet (etwa eine Lektion). Heute: ${done} von ${goal}. Rekord: ${st.b||0} ${(st.b||0)===1?"Tag":"Tage"}.">
            <span class="sflame${(st.s||0)>0?" on":""}">${ico("flame")}<b>${st.s||0}</b></span><span class="sr-n">· ${done}/${goal} heute</span></span>
-         <button class="chip" id="btnHerb" title="Deine Themen-Sammlung: Jedes gemeisterte Thema legt eine gepresste Pflanze ins Herbarium.">${ico("leaf")}Herbarium</button>
+         <button class="tlink" id="btnHerb" title="Deine Themen-Sammlung: Jedes gemeisterte Thema legt eine gepresste Pflanze ins Herbarium.">${ico("leaf")}Herbarium</button>
        </div>
      </div>`;
   wireRankPopover();

@@ -327,8 +327,65 @@ async function main() {
   const wideSplit = await page.evaluate(() => { const q = (s) => document.querySelector(s); const ex = q("#btnExam").getBoundingClientRect(), zp = q("#btnExamZp").getBoundingClientRect();
     return { dir: getComputedStyle(q("#examSplit")).flexDirection, rechts: zp.left >= ex.right - 0.5, gleichHoch: Math.abs(ex.height - zp.height) < 1, exRad: getComputedStyle(q("#btnExam")).borderRadius, exH: Math.round(ex.height) }; });
   await page.setViewport({ width: 800, height: 600 });
-  assert(wideSplit.dir === "row" && wideSplit.rechts && wideSplit.gleichHoch && /^10px 0px 0px 10px$/.test(wideSplit.exRad) && wideSplit.exH <= 80,
+  assert(wideSplit.dir === "row" && wideSplit.rechts && wideSplit.gleichHoch && /^10px 0px 0px 10px$/.test(wideSplit.exRad) && wideSplit.exH <= 90,   // zwei Zeilen Unterzeile (12,5 px Sans seit der Design-Konsolidierung)
     "Breit (1000 px): »nur ZP« rechts neben der Probeprüfung, gleich hoch, Ecken verbunden: " + JSON.stringify(wideSplit));
+
+  // Design-Konsolidierung (nach der Rückmeldung »zu viele verschiedene Button-Styles«): der
+  // Startbildschirm hat genau DREI Knopf-Stufen (gefüllt · umrandet grün · Text mit Symbol), eine
+  // leise Profil-Zeile statt der Pille, zwei Schriftfamilien (Serif nur Titel + Rang), eine
+  // Größenskala (11 / 12,5 / 14 / 16 / 20 / 24), einen Kontroll-Radius (10 px; Pille nur für den
+  // Status-Chip, Kreis nur für Icon-Knöpfe), ein 8-px-Raster (8 in der Gruppe, 16 dazwischen)
+  // und einen Kopf ohne Eyebrow mit dem Hilfe-Knopf rechts neben dem Titel.
+  const design = await page.evaluate(() => {
+    const q = (s) => document.querySelector(s), cs = (e) => getComputedStyle(e), rc = (e) => e.getBoundingClientRect();
+    const fam = (f) => /mono|courier/i.test(f) ? "mono" : (/serif/i.test(f) && !/sans/i.test(f) ? "serif" : "sans");
+    const transparent = (c) => c === "rgba(0, 0, 0, 0)" || c === "transparent";
+    const h1 = q(".masthead h1"), help = q("#btnHelp"), prof = q("#profileChip"), go = q("#btnGo"), ex = q("#btnExam"), zp = q("#btnExamZp"), list = q("#btnList"),
+      chooseS = q("#chooseWrap>summary"), intro = q("#btnIntro"), herb = q("#btnHerb"), chip = q(".flamechip"), cat = q("#cat");
+    const o = {};
+    o.kopf = { eyebrow: !!q(".eyebrow"), h1: h1.textContent.trim(), helpRound: cs(help).borderRadius === "50%", helpLabel: help.getAttribute("aria-label"),
+      helpRechts: rc(help).left > rc(h1).right, helpZeile: Math.abs((rc(help).top + rc(help).height / 2) - (rc(h1).top + rc(h1).height / 2)) < 8,
+      h1Serif: fam(cs(h1).fontFamily) === "serif", h1Px: parseFloat(cs(h1).fontSize) };
+    o.profil = { imSetup: !!prof.closest(".setup"), vorKnoepfen: !!(prof.compareDocumentPosition(go) & Node.DOCUMENT_POSITION_FOLLOWING),
+      keinePille: !/999|99px/.test(cs(prof).borderRadius), ohneRand: parseFloat(cs(prof).borderTopWidth) === 0 && transparent(cs(prof).backgroundColor),
+      sans: fam(cs(prof).fontFamily) === "sans", buendig: Math.abs(rc(q("#profChipText")).left - rc(go).left) <= 1, aendern: /ändern/.test(prof.textContent) };
+    const look = (e) => ({ bg: cs(e).backgroundColor, bc: cs(e).borderTopColor, bw: parseFloat(cs(e).borderTopWidth), color: cs(e).color });
+    const outl = [ex, zp, list].map(look), tert = [chooseS, intro, herb].map(look);
+    o.stufen = { gefuellt: !transparent(look(go).bg) && look(go).bg !== look(ex).bg,
+      umrandetGleich: outl.every((l) => l.bc === outl[0].bc && l.bg === outl[0].bg && l.bw === outl[0].bw && l.color === outl[0].color && l.bw >= 1),
+      tertiaerGleich: tert.every((l) => transparent(l.bg) && l.bw === 0 && l.color === tert[0].color),
+      herbKeinChip: !herb.classList.contains("chip") && herb.classList.contains("tlink"), chipPille: /99/.test(cs(chip).borderRadius),
+      summaryTlink: chooseS.classList.contains("tlink") };
+    // Schriften + Skala: alle sichtbaren Textknoten des Startbereichs (ohne zugeklappte Klappen-Inhalte, Fußzeile, Bühne)
+    const leaves = [...document.querySelectorAll(".wrap *")].filter((e) => e.children.length === 0 && (e.textContent || "").trim() &&
+      !e.closest(".foot,#installBar,#stage,script,style") && !e.closest("details:not([open]) > :not(summary)") && rc(e).width > 0);
+    const fams = {}, sizes = new Set(), serifWo = new Set(), monoWo = new Set();
+    for (const e of leaves) { const f = fam(cs(e).fontFamily); fams[f] = (fams[f] || 0) + 1;
+      if (!e.closest(".masthead h1")) sizes.add(Math.round(parseFloat(cs(e).fontSize) * 2) / 2);   // der Titel ist fließend (clamp 24–32 px) und oben eigens geprüft
+      if (f === "serif") serifWo.add(e.closest(".masthead h1, .rk-name") ? "ok" : (e.tagName + "." + e.className)); if (f === "mono") monoWo.add(e.tagName + "." + e.className); }
+    const skala = [11, 12.5, 14, 16, 20, 24];
+    o.schrift = { fams, mono: monoWo.size, serifNurTitelRang: [...serifWo].every((w) => w === "ok"), sizes: [...sizes].sort((a, b) => a - b), inSkala: [...sizes].every((v) => skala.includes(v)) };
+    // Radien der Bedienelemente
+    const r10 = (e) => /^10px( 10px 0px 0px| 0px 0px 10px|)$|^0px 0px 10px 10px$|^10px 10px 0px 0px$/.test(cs(e).borderRadius);
+    o.radien = { knoepfe: [go, ex, zp, list, cat].every(r10), tlinks: [chooseS, intro, herb, prof].every((e) => cs(e).borderRadius === "10px"), icons: [help, q("#btnHow")].every((e) => cs(e).borderRadius === "50%") };
+    // 8-px-Raster in der Setup-Karte
+    const gap = (a, b) => Math.round(rc(b).top - rc(a).bottom);
+    o.raster = { profGo: gap(prof, go), goExam: gap(go, q("#examSplit")), examList: gap(q("#examSplit"), list), listChoose: gap(list, q("#chooseWrap")) };
+    o.glyphen = !/[▾›]/.test(chooseS.textContent + q("#setOpts>summary").textContent + intro.textContent);
+    return o;
+  });
+  assert(!design.kopf.eyebrow && design.kopf.h1 === "Pflanzenkenntnis" && design.kopf.helpRound && design.kopf.helpLabel === "Hilfe" && design.kopf.helpRechts && design.kopf.helpZeile && design.kopf.h1Serif && design.kopf.h1Px >= 24,
+    "Kopf: kein Eyebrow, Titel »Pflanzenkenntnis« (Serif ≥ 24 px), Hilfe als runder Icon-Knopf rechts daneben: " + JSON.stringify(design.kopf));
+  assert(Object.values(design.profil).every(Boolean),
+    "Profil: leise Zeile in der Setup-Karte über den Knöpfen (keine Pille, kein Rand, Sans, bündig, »ändern«): " + JSON.stringify(design.profil));
+  assert(Object.values(design.stufen).every(Boolean),
+    "Drei Knopf-Stufen: ein gefüllter, drei gleich umrandete, Textzeilen gleich (Klappe, Lernpfad, Herbarium); Chip nur Status: " + JSON.stringify(design.stufen));
+  assert(design.schrift.mono === 0 && design.schrift.serifNurTitelRang && design.schrift.inSkala && design.schrift.sizes.length <= 6,
+    "Schrift: keine Mono im Startbereich, Serif nur Titel + Rang, alle Größen aus der Skala 11/12,5/14/16/20/24: " + JSON.stringify(design.schrift));
+  assert(design.radien.knoepfe && design.radien.tlinks && design.radien.icons,
+    "Radien: Knöpfe/Felder 10 px, Textzeilen 10 px, Icon-Knöpfe rund: " + JSON.stringify(design.radien));
+  assert(Math.abs(design.raster.profGo - 16) <= 1 && Math.abs(design.raster.goExam - 8) <= 1 && Math.abs(design.raster.examList - 16) <= 1 && Math.abs(design.raster.listChoose - 16) <= 1 && design.glyphen,
+    "8-px-Raster (16 · 8 · 16 · 16) in der Setup-Karte, SVG-Chevrons statt ▾/›-Zeichen: " + JSON.stringify(design.raster) + " glyphen=" + design.glyphen);
 
   // Lernpfad: Modi nach Schwierigkeit sortiert (Bilder zuerst) mit Schwierigkeits-Tags;
   // Erst-Einweisung über »So funktioniert der Lernpfad« öffnen/schließen (merkt »gesehen«).
@@ -4683,7 +4740,7 @@ async function main() {
     out.dead = typeof promptSub === "undefined" && typeof startQuizWith === "undefined" && typeof printColOn === "undefined";
     out.esc = esc("a'b");
     out.noToggle = !document.querySelector(".themetoggle, #btnTheme");
-    out.h1 = /\u00a0·/.test(document.querySelector(".masthead h1").textContent);
+    out.h1 = document.querySelector(".masthead h1").textContent.trim() === "Pflanzenkenntnis";   // Design-Konsolidierung: Titel ohne Zusatz, kein Eyebrow
     out.csp = !!document.querySelector('meta[http-equiv="Content-Security-Policy"]');
     const vorher = profileId, ziel = vorher === "baumschule_gaertner" ? "gemuesebau_gaertner" : "baumschule_gaertner";
     const parts = vorher.match(/^(.*)_(gaertner|fachwerker)$/);

@@ -2944,6 +2944,40 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       #163 misst die verbundene Kante je nach Layout. Screenshots 390 hell/dunkel, 1000, 1500,
       Listenmodus verifiziert.
 
+- [x] **Design-Konsolidierung des Startbildschirms** (Nutzerfrage »zu viele verschiedene Button-
+      Styles? Was sagt die gute fachliche Praxis?« – Bewertung bestätigt, Umsetzung freigegeben).
+      **Befund, gemessen bei 390 px:** 13 Bedienelemente in **10** Erscheinungsbildern, **6** Eckenradien
+      (0 / 3 / 8 / 10 / 50 % / Pille), **3** Schriftfamilien (Mono 16 von 49 Textknoten), **13**
+      Schriftgrößen zwischen 10 und 23 px, Abstände 10 / 26 / 28 / 46 px; der Profil-Chip (weiß,
+      Serif fett, Pille, zentriert) war das lauteste Element, zwei verschiedene »umrandet«-Stile
+      (Probeprüfung grün, Liste grau), »Selbst wählen« als Karte = vierter Knopf, Herbarium als Aktion im
+      Status-Chip-Kostüm, doppelter Titel (Eyebrow »Pflanzen lernen« + »Pflanzenkenntnis · Lernen«).
+      **Umsetzung (nur Lern-Tool, `learn.html`/`learn.js`):** (1) **Drei Knopf-Stufen:** gefüllt nur
+      »Weiter lernen«; **umrandet grün** (`.btn.outline`, 1,4 px `--green`) für Probeprüfung, »nur ZP« und
+      Liste; **Text + Symbol** (`.tlink`: kein Rand, keine Fläche, `--green-deep`, 14 px, negativer
+      Außenabstand → bündig) für »Selbst wählen« (Summary), »So funktioniert der Lernpfad« und
+      Herbarium (jetzt rechts neben dem Serien-Chip in `#streakRow`; Chips nur noch Status). (2) **Profil
+      als leise Zeile** (`.profchip` umgebaut: Sans 14 px, kein Rand, Pfeil-Symbol + »ändern« als nicht
+      umbrechende Einheit) **in der Setup-Karte über den Knöpfen**, nicht mehr im Kopf. (3) **Kopf:** Eyebrow
+      gestrichen, `<h1>` nur noch »Pflanzenkenntnis« (24 px; mit »· Lernen« passte der Hilfe-Knopf bei
+      390 px nicht in die Titelzeile), **Hilfe als runder 44-px-Icon-Knopf** (`.helplink`, `aria-label`)
+      rechts neben dem Titel; die Mobil-Regel `.mast-top{flex-direction:column}` entfällt. (4) **Tokens**
+      `--fs-1…6` (11 / 12,5 / 14 / 16 / 20 / 24), `--r` (10 px), `--sp-1…3` (8 / 16 / 24): Serif nur Titel
+      + Rangname, **Mono raus aus dem Startbereich** (Unterzeilen, Legende, Chip, Rang-Zahl, Optionen-
+      Labels, Modus-Tags, Profil-Modal; `input.mini` mit `tabular-nums`), Radius 10 px für Knöpfe, Felder,
+      Klappen und Modus-Tabs (Pille nur Status-Chip, Kreis nur Icon-Knöpfe), SVG-Chevrons statt »▾«/»›«.
+      (5) **8-px-Raster:** Setup-Karte `gap:16`, Start-Reihe `gap:8`, Karten-Polster 16 (≥ 1440 px 24),
+      Fortschritt/Datenherkunft `margin-top:24`; die Herbarium-2.0-Ebene (`.setup{padding:18px 20px}`)
+      machte vorher 4 px Versatz zwischen Titel und Knöpfen. Lektion, Liste und Dialoge behalten ihre
+      Mono-Zahlen (Uhr, Punkte) – bewusst nicht angefasst. **Ergebnis, gemessen:** 2 Schriftfamilien
+      (Serif 2 Knoten), **5** Größen (11 / 12,5 / 14 / 16 / 24), Radien 10 px · 50 % · Pille, Abstände
+      16 / 8 / 16 / 16, alle Textkanten bei x = 39 (vorher 35–57). `tests/learn.mjs`: Block »design«
+      (Kopf ohne Eyebrow, Titel, runder Hilfe-Knopf rechts in der Titelzeile; Profil-Zeile in der Setup-
+      Karte, keine Pille, bündig; ein gefüllter, drei gleich umrandete, Textzeilen gleich; Herbarium kein
+      Chip; keine Mono, Serif nur Titel + Rang, Größen aus der Skala; Radien; Raster 16 · 8 · 16 · 16;
+      keine ▾/›-Glyphen); der h1-Test aus Audit-Paket 4 prüft jetzt »Pflanzenkenntnis«. Screenshots
+      390 hell/dunkel, 1000, 1500, Klappe offen, Profil-Modal verifiziert.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.
