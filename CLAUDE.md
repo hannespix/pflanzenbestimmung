@@ -3114,6 +3114,49 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       ≈10pt Lücke (Thema und A–Z), mit `.pbrk` kein Abstand, sparsam ≈8pt ohne Fläche; der Sparsam-
       Test misst die Band-Fläche jetzt am `.pcat-h`.
 
+- [x] **Druckliste: eine Tabelle je Thema/Familie – das Band wiederholt sich auf Folgeseiten – und
+      der Listentitel als Dokumenttitel beim Druck** (Rückfrage »findest du das so gut?« zum
+      Ausdruck nach #171: Seite 9 begann mit *Larix*, ohne dass irgendwo »Nadelbäume« stand, und die
+      Browser-Kopfzeile nannte den App-Titel; beide Vorschläge freigegeben). **(1) Gruppen-
+      Tabellen:** In den Ansichten **Thema** und **Familie** baut `buildPrintList` je Gruppe eine
+      **eigene `<table class="ptab">`**, deren `<thead>` die Spaltenköpfe (`tr.pcols`) **und** das
+      Band (`tr.pcat` mit `h2.pcat-h`) enthält – der Browser wiederholt den Tabellenkopf auf jeder
+      Folgeseite, also steht dort oben Kopf **und** Thema (Puppeteer-PDF: jede Fortsetzungsseite
+      beginnt mit dem Band, keine verwaisten Köpfe). Folge-Gruppen (`.cont`) bekommen einen
+      **kompakten Spaltenkopf** (eine Zeile, 8pt, ohne Punktangabe – die steht auf Seite 1); der
+      Abstand zwischen den Gruppen ist der **Tabellen-Außenabstand** (`table.ptab+table.ptab`
+      10pt, sparsam 8pt, bei `.pbrk` 0 – die Option »jede Gruppe auf neuer Seite« setzt `.pbrk`
+      jetzt auf die Tabelle). **Bündige Spalten:** `table-layout:fixed` + ein `<colgroup>` je
+      Tabelle mit **gleichen Breiten**, die aus dem Inhalt kommen – je Datenspalte das 95. Perzentil
+      der Zellbreite **in den Druckschriften gemessen** (Canvas `measureText`, kursiv für die
+      Botanik; mindestens die Beschriftung; Rückfall ohne Canvas: Zeichenzahl), Nummer/ZP/Abhaken
+      fest (4 / 4,5 / 7 %), Rest an die letzte Datenspalte, damit die Summe exakt 100 % ist. So
+      verteilt sich der Platz wie bei einer automatisch gesetzten Tabelle, aber für alle Gruppen
+      gleich (Zeichenzahl-Gewichte hatten GaLaBau eine Seite gekostet, weil der deutsche Name dort
+      sehr breit ist). **A–Z** bleibt **eine** Tabelle mit den Buchstaben-Bändern im Körper und dem
+      Zellen-Polster als Abstand (ein Buchstabe braucht keine Fortsetzungs-Überschrift; 26
+      wiederholte Köpfe kosteten nur Papier). **Falle beim Bau:** Die Kopfzeile hieß zuerst
+      `tr.phead` – die Klasse gehört bereits der Fortschrittskarte (`display:flex`), die Zellen
+      zerfielen zu Blöcken und die Liste wuchs auf die doppelte Seitenzahl; jetzt `tr.pcols`.
+      **Seitenzahlen (Puppeteer-PDF, alt → neu):** Gemüsebau Thema 6 → 6, sparsam 5 → 5, Umbruch
+      10 → 10, Familie 7 → 7, A–Z 7 → 6; Baumschule-FW Thema 4 → 4; GaLaBau Thema mit
+      Namensherkunft 17 → 18, Familie 14 → 16 (≈70 Familien, viele mit ein bis zwei Arten – jede
+      mit kompaktem Kopf), A–Z 11 → 11. **Lesezeichen:** headless Chrome mit `outline` baut aus den
+      h2 weiterhin die Gliederung; bei einem Band, das über eine Seite läuft, steht der Text im
+      Lesezeichen doppelt (der Kopf wird ja zweimal gerendert) – kosmetisch, nur dort.
+      **(2) Dokumenttitel:** `printList()` setzt `document.title` während des Drucks auf den
+      Listentitel (`printTitle`, aus `buildPrintList`: »Lernliste · Gemüsebau · Gärtner/in · nach
+      Thema« + aktive Filter) – Browser schreiben ihn in die Kopfzeile jeder Seite und schlagen ihn
+      beim »Als PDF speichern« als Dateinamen vor; `afterprint` stellt den App-Titel zurück
+      (Sicherheitsnetz 120 s, falls das Ereignis ausbleibt – mobile Browser drucken asynchron).
+      `tests/learn.mjs`: Thema/Familie = je Gruppe eine Tabelle (Kopf = `pcols` + `pcat` mit
+      `<h2>`, Zelle ohne Fläche, `fixed`, `colgroup` = Spaltenzahl), erste ohne Abstand mit vollem
+      Kopf, jede weitere ≈10pt Abstand + kompakter Kopf ohne Punktangabe, Spalten bündig (gleiche
+      x-Position der zweiten Spalte in allen Tabellen), `.pbrk` auf den Tabellen ohne Abstand,
+      sparsam ≈8pt ohne Band-Fläche; A–Z eine Tabelle mit Körper-Bändern (erstes ohne, weitere mit
+      Polster, `.pbrk` am `tr`); Druck-Titel mit gestubbtem `window.print` (nennt die Liste, bleibt
+      bis `afterprint`, dann zurück); `catRows` zählt Bänder in `thead` und `tbody`.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.
