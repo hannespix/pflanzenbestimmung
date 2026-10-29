@@ -4289,7 +4289,7 @@ async function main() {
     const host = document.querySelector("#printList");
     const html = host.innerHTML;
     const dataRows = host.querySelectorAll(".ptab tbody tr:not(.pcat)").length;
-    const catRows = host.querySelectorAll(".ptab tbody tr.pcat").length;
+    const catRows = host.querySelectorAll(".ptab tr.pcat").length;     // Bänder: Thema/Familie im thead je Gruppen-Tabelle, A–Z im Körper
     const firstCells = [...host.querySelectorAll(".ptab tbody tr:not(.pcat)")[0].children].map((td) => td.textContent.trim());
     // Suchfilter wirkt auch auf den Druck
     const s = document.querySelector("#listSearch");
@@ -4731,31 +4731,39 @@ async function main() {
   assert(pcol.deStays && pcol.hasOneCol, "Druckoptionen: die letzte Bogen-Spalte darf nicht abwählbar sein");
   assert(pcol.restored, "Druckoptionen: Wiedereinschalten stellt die Spalten nicht her");
 
-  // Opt-in »jede Gruppe auf neuer Seite«: Checkbox im Drucken-Block; aktiv trägt in der
-  // Druckliste jedes Gruppen-Band außer dem ersten einen Seitenumbruch (.pbrk); Standard aus.
+  // Opt-in »jede Gruppe auf neuer Seite«: Checkbox im Drucken-Block; aktiv trägt in der Druckliste
+  // jede Gruppen-Tabelle außer der ersten einen Seitenumbruch (.pbrk) – in den A–Z-Ansichten (eine
+  // Tabelle) jedes Buchstaben-Band im Körper außer dem ersten; Standard aus.
   const pbrk = await page.evaluate(() => {
     const setBreak = (v) => { const cb = document.querySelector("#printBreak"); cb.checked = v; cb.dispatchEvent(new Event("change")); };
     const inPanel = !!document.querySelector("#listControls #printBreak");
     const themaBtn = document.querySelector('.sortbtn[data-sort="thema"]'); if (themaBtn) themaBtn.click();
     buildPrintList();                                       // Standard: keine Umbruch-Klassen
-    const bandsDefault = document.querySelectorAll("#printList .ptab tr.pcat").length;
-    const brkDefault = document.querySelectorAll("#printList .ptab tr.pcat.pbrk").length;
+    const tabsDefault = document.querySelectorAll("#printList table.ptab").length;
+    const brkDefault = document.querySelectorAll("#printList table.ptab.pbrk, #printList tr.pcat.pbrk").length;
     setBreak(true); buildPrintList();
-    const bands = [...document.querySelectorAll("#printList .ptab tr.pcat")];
-    const brkOn = bands.filter((b) => b.classList.contains("pbrk")).length;
-    const firstFree = bands.length > 0 && !bands[0].classList.contains("pbrk");
+    const tabs = [...document.querySelectorAll("#printList table.ptab")];
+    const brkOn = tabs.filter((t) => t.classList.contains("pbrk")).length;
+    const firstFree = tabs.length > 0 && !tabs[0].classList.contains("pbrk");
     const stored = localStorage.getItem("pflanzenlernen.printbreak") === "1";
+    document.querySelector('.sortbtn[data-sort="bot"]').click(); buildPrintList();
+    const azTabs = document.querySelectorAll("#printList table.ptab").length;
+    const azBands = [...document.querySelectorAll("#printList table.ptab tbody tr.pcat")];
+    const azBrk = azBands.filter((b) => b.classList.contains("pbrk")).length, azFirstFree = azBands.length > 0 && !azBands[0].classList.contains("pbrk");
+    document.querySelector('.sortbtn[data-sort="thema"]').click();
     setBreak(false); buildPrintList();
-    const brkOff = document.querySelectorAll("#printList .ptab tr.pcat.pbrk").length;
-    return { inPanel, bandsDefault, brkDefault, nBands: bands.length, brkOn, firstFree, stored, brkOff };
+    const brkOff = document.querySelectorAll("#printList table.ptab.pbrk, #printList tr.pcat.pbrk").length;
+    return { inPanel, tabsDefault, brkDefault, nTabs: tabs.length, brkOn, firstFree, stored, azTabs, nAz: azBands.length, azBrk, azFirstFree, brkOff };
   });
   assert(pbrk.inPanel, "Druckoptionen: Checkbox »jede Gruppe auf neuer Seite« fehlt im Drucken-Block");
-  assert(pbrk.bandsDefault > 1 && pbrk.brkDefault === 0,
+  assert(pbrk.tabsDefault > 1 && pbrk.brkDefault === 0,
     "Seitenumbruch je Gruppe muss standardmäßig AUS sein: " + JSON.stringify(pbrk));
-  assert(pbrk.brkOn === pbrk.nBands - 1 && pbrk.firstFree,
-    "Mit Option: jedes Band außer dem ersten braucht .pbrk (Umbruch davor): " + JSON.stringify(pbrk));
+  assert(pbrk.brkOn === pbrk.nTabs - 1 && pbrk.firstFree,
+    "Mit Option: jede Gruppen-Tabelle außer der ersten braucht .pbrk (Umbruch davor): " + JSON.stringify(pbrk));
+  assert(pbrk.azTabs === 1 && pbrk.nAz > 1 && pbrk.azBrk === pbrk.nAz - 1 && pbrk.azFirstFree,
+    "A–Z: eine Tabelle, jedes Buchstaben-Band außer dem ersten mit .pbrk: " + JSON.stringify(pbrk));
   assert(pbrk.stored, "Die Wahl »jede Gruppe auf neuer Seite« muss gespeichert werden");
-  assert(pbrk.brkOff === 0, "Nach Abwahl darf kein Band mehr .pbrk tragen: " + JSON.stringify(pbrk));
+  assert(pbrk.brkOff === 0, "Nach Abwahl darf nichts mehr .pbrk tragen: " + JSON.stringify(pbrk));
 
   // »Sparsam drucken« (opt-in, Drucken-Block): Druckliste ohne Farbflächen – kein grüner Kopf, keine Zebra-
   // streifen, keine Bänder-Flächen, schwarze Schrift, engere Zeilen; gemerkt; Standard aus.
@@ -4790,48 +4798,84 @@ async function main() {
   assert(!ecoCss.ohne.thBg && !ecoCss.ohne.bandBg && !ecoCss.ohne.eco && ecoCss.ohne.stored === "0",
     "Nach Abwahl: grüner Kopf und Band-Fläche wieder da, keine eco-Klasse: " + JSON.stringify(ecoCss.ohne));
 
-  // Abstand vor jedem Gliederungs-Band (Nutzerwunsch: »bei neuem Thema-Abschnitt eine Leerzeile«):
-  // Im Druck beginnt jedes Band außer dem ersten mit einer Lücke (Zellen-Polster ≈ 10pt, die Zelle
-  // selbst ohne Fläche); die Beschriftung steckt in einem <h2> (Gliederung → PDF-Lesezeichen);
-  // bei »jede Gruppe auf neuer Seite« (.pbrk) entfällt der Abstand; sparsam = knapper (8pt).
+  // Gliederung im Druck (Nutzerwunsch: Leerzeile vor jedem Abschnitt; auf Folgeseiten soll das
+  // Thema stehen): Thema/Familie = eine Tabelle je Gruppe, deren Kopf Spaltenköpfe + Band
+  // (<h2>, Gliederung → PDF-Lesezeichen) enthält und sich damit je Seite wiederholt; Abstand =
+  // Tabellen-Außenabstand (≈10pt, sparsam 8pt; nicht vor der ersten, nicht bei .pbrk); Folge-
+  // Gruppen mit kompaktem Spaltenkopf (ohne Punktangabe); table-layout:fixed + gleiche <col>-
+  // Breiten → alle Gruppen bündig. A–Z = EINE Tabelle, Buchstaben-Bänder im Körper mit
+  // Zellen-Polster als Abstand (erstes ohne, .pbrk ohne).
   await page.emulateMediaType("print");
   const pgap = await page.evaluate(() => {
     const setBreak = (v) => { const cb = document.querySelector("#printBreak"); cb.checked = v; cb.dispatchEvent(new Event("change")); };
     const setEco = (v) => { const cb = document.querySelector("#printEco"); cb.checked = v; cb.dispatchEvent(new Event("change")); };
     const tr = (c) => c === "rgba(0, 0, 0, 0)" || c === "transparent";
-    const measure = () => {
+    const measureTabs = () => {
       buildPrintList();
-      return [...document.querySelectorAll("#printList table.ptab tr.pcat")].map((b) => {
-        const td = b.querySelector("td"), h = b.querySelector("td > h2.pcat-h"), prev = b.previousElementSibling;
-        const gap = h && prev ? Math.round(h.getBoundingClientRect().top - prev.getBoundingClientRect().bottom) : -1;
-        return { h2: !!h, text: h ? h.textContent.trim() : "", gap, pad: parseFloat(getComputedStyle(td).paddingTop),
-          tdBg: tr(getComputedStyle(td).backgroundColor), hBg: h ? tr(getComputedStyle(h).backgroundColor) : null,
+      const tabs = [...document.querySelectorAll("#printList table.ptab")];
+      return tabs.map((t, i) => {
+        const prev = tabs[i - 1], head = t.querySelectorAll("thead tr"), h = t.querySelector("thead tr.pcat td > h2.pcat-h");
+        const ths = t.querySelectorAll("thead tr.pcols th"), th = ths[1], pp = th && th.querySelector(".pp");
+        return { rows: head.length, pcolsFirst: !!head[0] && head[0].classList.contains("pcols"), h2: !!h, text: h ? h.textContent.trim() : "",
+          layout: getComputedStyle(t).tableLayout, cols: t.querySelectorAll("colgroup col").length, ths: ths.length,
+          mt: parseFloat(getComputedStyle(t).marginTop), gap: prev ? Math.round(t.getBoundingClientRect().top - prev.getBoundingClientRect().bottom) : -1,
+          cont: t.classList.contains("cont"), pbrk: t.classList.contains("pbrk"), ppDisp: pp ? getComputedStyle(pp).display : "", thFs: th ? parseFloat(getComputedStyle(th).fontSize) : 0,
+          x2: th ? Math.round(th.getBoundingClientRect().left) : -1,
+          tdBg: tr(getComputedStyle(t.querySelector("thead tr.pcat td")).backgroundColor), hBg: h ? tr(getComputedStyle(h).backgroundColor) : null,
           hDisp: h ? getComputedStyle(h).display : "", hMargin: h ? getComputedStyle(h).marginTop : "" };
       });
     };
+    document.querySelector('.sortbtn[data-sort="thema"]').click(); setBreak(false); setEco(false);
+    const thema = measureTabs();
+    document.querySelector('.sortbtn[data-sort="familie"]').click(); const fam = measureTabs();
     document.querySelector('.sortbtn[data-sort="thema"]').click();
-    setBreak(false); setEco(false);
-    const thema = measure();
-    document.querySelector('.sortbtn[data-sort="bot"]').click();
-    const az = measure();
-    document.querySelector('.sortbtn[data-sort="thema"]').click();
-    setBreak(true); const brk = measure(); setBreak(false);
-    setEco(true); const eco = measure(); setEco(false);
-    buildPrintList();
-    return { thema, az, brk, eco };
+    setBreak(true); const brk = measureTabs(); setBreak(false);
+    setEco(true); const eco = measureTabs(); setEco(false);
+    document.querySelector('.sortbtn[data-sort="bot"]').click(); buildPrintList();
+    const azTabs = document.querySelectorAll("#printList table.ptab").length;
+    const az = [...document.querySelectorAll("#printList table.ptab tbody tr.pcat")].map((b) => {
+      const td = b.querySelector("td"), h = b.querySelector("td > h2.pcat-h"), prev = b.previousElementSibling;
+      return { h2: !!h, pad: parseFloat(getComputedStyle(td).paddingTop), gap: h && prev ? Math.round(h.getBoundingClientRect().top - prev.getBoundingClientRect().bottom) : -1, tdBg: tr(getComputedStyle(td).backgroundColor) };
+    });
+    setBreak(true); buildPrintList();
+    const azBrk = [...document.querySelectorAll("#printList table.ptab tbody tr.pcat")].map((b) => parseFloat(getComputedStyle(b.querySelector("td")).paddingTop));
+    setBreak(false);
+    document.querySelector('.sortbtn[data-sort="thema"]').click(); buildPrintList();
+    return { thema, fam, brk, eco, azTabs, az, azBrk };
   });
   await page.emulateMediaType("screen");
   const rest = (a) => a.slice(1);
-  assert(pgap.thema.length > 2 && pgap.thema.every((b) => b.h2 && b.text && b.hDisp === "block" && b.hMargin === "0px" && b.tdBg && !b.hBg),
-    "Band: Beschriftung als <h2 class=pcat-h> (Block, ohne Außenabstand), Zelle ohne Fläche, Überschrift mit Fläche: " + JSON.stringify(pgap.thema.slice(0, 3)));
-  assert(pgap.thema[0].pad === 0 && rest(pgap.thema).every((b) => b.pad >= 12 && b.gap >= 11),
-    "Thema-Ansicht: erstes Band ohne Abstand, jedes weitere mit ≈10pt Leerzeile davor: " + JSON.stringify(pgap.thema.slice(0, 3)));
-  assert(pgap.az.length > 2 && pgap.az[0].pad === 0 && rest(pgap.az).every((b) => b.h2 && b.pad >= 12 && b.gap >= 11),
-    "A–Z-Ansicht: Buchstaben-Bänder ebenso mit Abstand: " + JSON.stringify(pgap.az.slice(0, 3)));
-  assert(pgap.brk.every((b) => b.pad === 0),
-    "Mit »jede Gruppe auf neuer Seite« darf kein Band einen Abstand tragen (Seite beginnt frisch): " + JSON.stringify(pgap.brk.slice(0, 3)));
-  assert(pgap.eco[0].pad === 0 && rest(pgap.eco).every((b) => b.pad >= 10 && b.pad < 12 && b.gap >= 9 && b.hBg && b.tdBg),
+  assert(pgap.thema.length > 2 && pgap.thema.every((t) => t.rows === 2 && t.pcolsFirst && t.h2 && t.text && t.layout === "fixed" && t.cols === t.ths && t.hDisp === "block" && t.hMargin === "0px" && t.tdBg && !t.hBg),
+    "Thema: je Gruppe eine Tabelle mit Kopf = Spaltenköpfe + Band (<h2>, Block, Zelle ohne Fläche, Band mit Fläche), fixed + colgroup: " + JSON.stringify(pgap.thema.slice(0, 2)));
+  assert(pgap.thema[0].mt === 0 && !pgap.thema[0].cont && pgap.thema[0].ppDisp === "block" && rest(pgap.thema).every((t) => t.mt >= 12 && t.gap >= 11 && t.cont && t.ppDisp === "none" && t.thFs <= 11),
+    "Thema: erste Tabelle ohne Abstand mit vollem Kopf, jede weitere ≈10pt Leerzeile davor und kompakter Kopf ohne Punktangabe: " + JSON.stringify(pgap.thema.slice(0, 3)));
+  assert(new Set(pgap.thema.map((t) => t.x2)).size === 1, "Thema: Spalten aller Gruppen-Tabellen müssen bündig stehen: " + JSON.stringify(pgap.thema.map((t) => t.x2)));
+  assert(pgap.fam.length > 2 && rest(pgap.fam).every((t) => t.cont && t.mt >= 12 && t.gap >= 11 && t.h2) && new Set(pgap.fam.map((t) => t.x2)).size === 1,
+    "Familie: ebenso Gruppen-Tabellen mit Abstand, bündig: " + JSON.stringify(pgap.fam.slice(0, 3)));
+  assert(!pgap.brk[0].pbrk && rest(pgap.brk).every((t) => t.pbrk && t.mt === 0),
+    "Mit »jede Gruppe auf neuer Seite«: jede weitere Tabelle .pbrk ohne Abstand (Seite beginnt frisch): " + JSON.stringify(pgap.brk.slice(0, 3)));
+  assert(pgap.eco[0].mt === 0 && rest(pgap.eco).every((t) => t.mt >= 10 && t.mt < 12 && t.hBg && t.tdBg),
     "Sparsam: knapperer Abstand (≈8pt), Band ohne Fläche: " + JSON.stringify(pgap.eco.slice(0, 3)));
+  assert(pgap.azTabs === 1 && pgap.az.length > 2 && pgap.az[0].pad === 0 && rest(pgap.az).every((b) => b.h2 && b.pad >= 12 && b.gap >= 11 && b.tdBg),
+    "A–Z: eine Tabelle, Buchstaben-Bänder im Körper – erstes ohne, jedes weitere mit ≈10pt Leerzeile: " + JSON.stringify(pgap.az.slice(0, 3)));
+  assert(pgap.azBrk.every((v) => v === 0), "A–Z mit Seitenumbruch: kein Band mit Abstand: " + JSON.stringify(pgap.azBrk.slice(0, 3)));
+
+  // Dokumenttitel während des Drucks = Listentitel (Browser-Kopfzeile jeder Seite, Dateiname beim
+  // »Als PDF speichern«); bleibt stehen, bis afterprint kommt (mobile Browser drucken asynchron), dann zurück.
+  const ptitle = await page.evaluate(() => {
+    const orig = document.title; let seen = null; const realPrint = window.print;
+    window.print = () => { seen = document.title; };
+    document.querySelector('.sortbtn[data-sort="thema"]').click();
+    document.querySelector("#btnPrintList").click();
+    const during = seen, still = document.title;
+    window.dispatchEvent(new Event("afterprint"));
+    const after = document.title; window.print = realPrint;
+    return { orig, during, still, after };
+  });
+  assert(/^Lernliste · Gemüsebau · Gärtner\/in · nach Thema$/.test(ptitle.during) && ptitle.still === ptitle.during,
+    "Druck: Dokumenttitel muss die Liste nennen und bis afterprint stehen bleiben: " + JSON.stringify(ptitle));
+  assert(ptitle.after === ptitle.orig && /Pflanzenkenntnis/.test(ptitle.orig),
+    "Druck: nach afterprint muss der App-Titel zurück sein: " + JSON.stringify(ptitle));
 
   // Disclaimer: dezenter Hinweis (RP-Bezug, Stand, KI-Kategorien, keine Gewähr)
   const disc = await page.evaluate(() => {

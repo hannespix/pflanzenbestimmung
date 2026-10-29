@@ -2202,11 +2202,34 @@ function buildPrintList(){
   const wantEty = printEtyOn();                                   // opt-in: Namensherkunft-Merkzeile je Pflanze
   const wantBreak = printBreakOn();                               // opt-in: jede Gruppe auf neuer Seite (mehr Papier, übersichtlicher)
   const wantEco = printEcoOn();                                   // opt-in: sparsam (keine Farbflächen, schwarze Schrift, engere Zeilen)
-  let n=0, rows="", bandN=0;
-  const band = label => { bandN++;                                // erstes Band ohne Umbruch (sonst leere erste Seite)
-    // Überschrift als <h2> (Gliederung – ein PDF-Drucker kann daraus Lesezeichen bauen); der kleine
-    // Abstand (»Leerzeile«) vor jedem weiteren Band sitzt im Print-CSS (tr.pcat td, learn.html)
-    return `<tr class="pcat${wantBreak&&bandN>1?" pbrk":""}"><td colspan="${tCols}"><h2 class="pcat-h">${esc(label)}</h2></td></tr>`; };
+  // Feste Spaltenbreiten (table-layout:fixed): Jede Gruppe ist eine eigene Tabelle – nur mit
+  // gleichen <col>-Breiten stehen alle bündig untereinander. Die Breite einer Datenspalte folgt
+  // ihrem Inhalt, gemessen in den Druckschriften (Canvas): 95. Perzentil der Zellbreite über die
+  // gedruckten Arten, mindestens die Breite der Beschriftung – so verteilt sich der Platz wie bei
+  // einer automatisch gesetzten Tabelle, aber für alle Gruppen gleich; Nummer/ZP/Abhaken fest.
+  const W_FIX={pnum:4, pzp:4.5, pchk:7};
+  const fixedW = W_FIX.pnum + (showZP?W_FIX.pzp:0) + (showChk?W_FIX.pchk:0);
+  const cellText = (c,k) => k==="a" ? artShown(c.a) : (c[k]||"");
+  const SERIF="'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua',Georgia,serif", SANS="'Segoe UI',system-ui,sans-serif";
+  let textW = (t,f) => t.length*5;                              // Rückfall ohne Canvas: ~5pt je Zeichen
+  try { const cx=document.createElement("canvas").getContext("2d"); if(cx) textW=(t,f)=>{ cx.font=f; return cx.measureText(t).width; }; } catch(e){}
+  const weights = cols.map(k=>{
+    const bodyFont=(k[0]==="g"||k[0]==="a" ? "italic " : "")+"10pt "+SERIF;
+    const L=p.map(c=>textW(cellText(c,k[0]), bodyFont)).sort((x,y)=>x-y);
+    const body = L.length ? L[Math.min(L.length-1, Math.floor(L.length*0.95))] : 0;
+    return Math.max(textW(k[1], "600 9pt "+SANS), body, 30) + 16;   // + Zellen-Polster 2×8pt
+  });
+  const wsum = weights.reduce((s,w)=>s+w,0) || 1;
+  const shares = weights.map(w=>Math.round((100-fixedW)*w/wsum*10)/10);
+  shares[shares.length-1] = Math.round(((100-fixedW) - shares.slice(0,-1).reduce((s,w)=>s+w,0))*10)/10;   // Rest an die letzte Datenspalte: Summe exakt 100 %
+  const colgroup = `<colgroup><col style="width:${W_FIX.pnum}%">`+
+    shares.map(w=>`<col style="width:${w}%">`).join("")+
+    (showZP?`<col style="width:${W_FIX.pzp}%">`:"")+(showChk?`<col style="width:${W_FIX.pchk}%">`:"")+`</colgroup>`;
+  let n=0;
+  // Gruppen-Band als Überschrift (<h2> → Gliederung, PDF-Lesezeichen). Es steht im <thead> der
+  // Gruppen-Tabelle und wiederholt sich damit – wie die Spaltenköpfe – auf jeder Folgeseite:
+  // Auch eine Fortsetzungsseite sagt, zu welchem Thema ihre Zeilen gehören.
+  const band = (label, brk) => `<tr class="pcat${brk?" pbrk":""}"><td colspan="${tCols}"><h2 class="pcat-h">${esc(label)}</h2></td></tr>`;
   const rowFor = c => { n++;
     const cls = wantEty ? ` class="pmain${n%2===0?" pz":""}"` : "";
     let tr = `<tr${cls}><td class="pnum">${n}</td>`+
@@ -2224,29 +2247,43 @@ function buildPrintList(){
     return tr;
   };
 
-  // Gruppierung/Reihenfolge folgt der in der Liste gewählten Ansicht (listSort)
+  // Gruppierung/Reihenfolge folgt der in der Liste gewählten Ansicht (listSort); je Gruppe
+  // (Thema, Familie oder Anfangsbuchstabe) entsteht eine eigene Tabelle
+  const groups=[];
   if(listSort==="bot" || listSort==="de"){
     // flach, alphabetisch, mit Anfangsbuchstaben-Bändern
     const keyf = listSort==="bot" ? (c=>norm(c.g+" "+c.a)) : (c=>norm(c.de)||norm(c.g+" "+c.a));
     const arr=p.slice().sort((a,b)=> keyf(a).localeCompare(keyf(b),"de"));
-    let letter="";
+    let cur=null;
     for(const c of arr){
       const L=(deacc(keyf(c)).charAt(0)||"·").toUpperCase();
-      if(L!==letter){ letter=L; rows+=band(L); }
-      rows+=rowFor(c);
+      if(!cur || cur.label!==L){ cur={label:L, cards:[]}; groups.push(cur); }
+      cur.cards.push(c);
     }
   } else {
     // nach Thema oder botanischer Familie gruppieren
     const byFam=listSort==="familie";
-    const groups=new Map();
-    p.forEach(c=>{ const k=dimKey(c); if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(c); });
-    const keys=[...groups.keys()].sort((a,b)=> byFam ? a.localeCompare(b,"de") : (themeRank(a)-themeRank(b) || a.localeCompare(b,"de")));
+    const gm=new Map();
+    p.forEach(c=>{ const k=dimKey(c); if(!gm.has(k)) gm.set(k,[]); gm.get(k).push(c); });
+    const keys=[...gm.keys()].sort((a,b)=> byFam ? a.localeCompare(b,"de") : (themeRank(a)-themeRank(b) || a.localeCompare(b,"de")));
     for(const k of keys){
-      const arr=groups.get(k).slice().sort((a,b)=> norm(a.g+" "+a.a).localeCompare(norm(b.g+" "+b.a),"de"));
-      rows+=band(`${k} · ${arr.length} ${arr.length===1?"Art":"Arten"}`);
-      for(const c of arr) rows+=rowFor(c);
+      const arr=gm.get(k).slice().sort((a,b)=> norm(a.g+" "+a.a).localeCompare(norm(b.g+" "+b.a),"de"));
+      groups.push({label:`${k} · ${arr.length} ${arr.length===1?"Art":"Arten"}`, cards:arr});
     }
   }
+  // Thema/Familie: eine Tabelle je Gruppe, Kopf = Spaltenköpfe + Band (wiederholt sich je Seite –
+  // eine Fortsetzungsseite nennt so ihr Thema). Folge-Gruppen (.cont) bekommen den kompakten
+  // Spaltenkopf; .pbrk = Opt-in »jede Gruppe auf neuer Seite« (ab der zweiten Gruppe, sonst
+  // entstünde eine leere erste Seite). A–Z: EINE Tabelle mit den Buchstaben-Bändern im Körper –
+  // ein Buchstabe braucht keine Fortsetzungs-Überschrift (die Reihenfolge erklärt sich selbst),
+  // und 26 wiederholte Spaltenköpfe kosteten nur Papier.
+  const tcls = "ptab"+(wantEty?" ety":"")+(wantEco?" eco":"");
+  const tables = (listSort==="bot" || listSort==="de")
+    ? `<table class="${tcls}">${colgroup}<thead><tr class="pcols">${heads}</tr></thead><tbody>`+
+      groups.map((grp,i)=>band(grp.label, wantBreak&&i>0)+grp.cards.map(rowFor).join("")).join("")+`</tbody></table>`
+    : groups.map((grp,i)=>
+      `<table class="${tcls}${i>0?" cont":""}${wantBreak&&i>0?" pbrk":""}">${colgroup}<thead><tr class="pcols">${heads}</tr>${band(grp.label)}</thead>`+
+      `<tbody>${grp.cards.map(rowFor).join("")}</tbody></table>`).join("");
   const hasZP = p.some(c=>c.zp);
   const showBot = cols.some(c=>c[0]==="g"||c[0]==="a");            // botanischer Name überhaupt gedruckt?
   const legend=[
@@ -2263,13 +2300,22 @@ function buildPrintList(){
     ${fam==="fw"?`<div class="psub">Gartenbaufachwerker/in</div>`:""}
     <div class="pmeta">Fachrichtung ${esc(frLabel)} · ${esc(nivLabel)} · ${n} ${n===1?"Art":"Arten"}
       · sortiert nach ${esc(SORT_LABEL[listSort]||"Thema")}${filt.length?` · ${esc(filt.join(" · "))}`:""} · Stand ${esc(heute)}</div>
-    <table class="ptab${wantEty?" ety":""}${wantEco?" eco":""}"><thead><tr>${heads}</tr></thead><tbody>${rows}</tbody></table>
+    ${tables}
     <div class="pfoot">${legend}</div>`;
+  // Dokumenttitel für den Druck: Browser schreiben ihn in die Kopfzeile jeder Seite und schlagen
+  // ihn beim »Als PDF speichern« als Dateinamen vor – die Liste, nicht der App-Name
+  printTitle = `Lernliste · ${frLabel} · ${nivLabel} · nach ${SORT_LABEL[listSort]||"Thema"}${filt.length?" · "+filt.join(" · "):""}`;
   return n;
 }
+let printTitle="";
 function printList(){
   const n=buildPrintList();
   if(!n){ toast("Keine Arten im aktuellen Filter",true); return; }
+  const prev=document.title, t=printTitle;
+  const restore=()=>{ window.removeEventListener("afterprint",restore); clearTimeout(tm); if(document.title===t) document.title=prev; };
+  window.addEventListener("afterprint",restore);
+  const tm=setTimeout(restore,120000);        // Sicherheitsnetz, falls afterprint ausbleibt (mobile Browser)
+  document.title=t;
   window.print();
 }
 
