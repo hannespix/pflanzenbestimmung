@@ -30,6 +30,10 @@
   --serif:'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua','URW Palladio L',Georgia,'Times New Roman',serif;
   --sans:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   --mono:'SFMono-Regular','Cascadia Code',Menlo,Consolas,'Liberation Mono',monospace;
+  /* Design-Konsolidierung (Startbildschirm): EINE Schriftskala, EIN Kontroll-Radius, 8-px-Raster.
+     Serif nur im Titel (und beim Rang), Sans für alles Bedienbare, Mono nur noch für reine Zahlen. */
+  --fs-1:11px; --fs-2:12.5px; --fs-3:14px; --fs-4:16px; --fs-5:20px; --fs-6:24px;
+  --r:10px; --sp-1:8px; --sp-2:16px; --sp-3:24px;
 }
 *{box-sizing:border-box}
 [hidden]{display:none !important}   /* damit .progress/.startrow/.listsearchrow (display:flex) das hidden-Attribut respektieren */
@@ -44,23 +48,30 @@ input,select{font-family:inherit; color:inherit}
 /* Kopf */
 .masthead{background:var(--surface); border:1px solid var(--rule-strong); border-radius:4px; padding:20px 22px; box-shadow:0 1px 0 var(--shadow); position:relative; overflow:hidden}
 .masthead::before{content:""; position:absolute; left:0; top:0; bottom:0; width:6px; background:repeating-linear-gradient(180deg,var(--green) 0 10px,var(--green-deep) 10px 20px)}
-.mast-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px 14px; flex-wrap:wrap}
-.eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:var(--sepia); margin:0 0 6px 8px}
-.masthead h1{font-family:var(--serif); font-weight:600; font-size:clamp(23px,4vw,32px); margin:0 0 2px 8px; letter-spacing:-.01em; line-height:1.05}
+.mast-top{display:flex; justify-content:space-between; align-items:center; gap:14px}
+.mast-title{min-width:0}
+.masthead h1{font-family:var(--serif); font-weight:600; font-size:clamp(24px,4vw,32px); margin:0; letter-spacing:-.01em; line-height:1.05}
 .profilerow{display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px; margin:14px 0 2px 8px}
 .pfield{display:flex; flex-direction:column; gap:4px}
-.pfield label{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia)}
-.pfield select{border:1.4px solid var(--green); background:var(--card); border-radius:4px; padding:9px 30px 9px 12px; font-size:15px; font-family:var(--serif); font-weight:600; color:var(--green-deep);
+.pfield label{font-size:var(--fs-1); letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); font-weight:600}
+.pfield select{border:1.4px solid var(--green); background:var(--card); border-radius:var(--r); padding:9px 30px 9px 12px; font-size:var(--fs-4); font-family:inherit; font-weight:600; color:var(--green-deep);
   appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%232b4f38' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 11px center}
-.profsub{font-family:var(--mono); font-size:12px; color:var(--ink-soft); padding-bottom:9px}
+.profsub{font-size:var(--fs-2); color:var(--ink-soft); padding-bottom:9px}
 .mast-right{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-/* »Hilfe« bewusst dezent oben rechts (einziges Bedienelement im Kopf) */
-.helplink{display:inline-flex; align-items:center; gap:5px; border:1px solid transparent; background:none;
-  color:var(--ink-soft); padding:5px 8px; border-radius:8px; font-size:12.5px; font-family:inherit; cursor:pointer}
-.helplink .ic{width:14px; height:14px; flex:none; opacity:.85}
+/* »Hilfe« als runder Icon-Knopf oben rechts (einziges Bedienelement im Kopf; wie das ℹ an der Legende) */
+.helplink{display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border:1px solid transparent; background:none;
+  color:var(--ink-soft); padding:0; margin:-4px -8px -4px 0; border-radius:50%; font-family:inherit; cursor:pointer}
+.helplink .ic{width:22px; height:22px; flex:none}
+/* Dritte Knopf-Stufe: Text + Symbol, ohne Rand und Fläche – für alles, was nur öffnet oder erklärt
+   (Klappe »Selbst wählen«, Lernpfad, Herbarium). Negativer Außenabstand: der Text steht bündig. */
+.tlink{display:inline-flex; align-items:center; gap:6px; border:0; background:none; padding:6px 8px; margin:0 -8px; border-radius:var(--r);
+  color:var(--green-deep); font-family:inherit; font-size:var(--fs-3); font-weight:500; line-height:1.3; cursor:pointer; text-align:left; text-decoration:none}
+.tlink:hover{background:var(--surface-2)}
+.tlink .ic{width:16px; height:16px; flex:none}
+.tlink .chev{margin-left:auto; color:var(--ink-faint); transition:transform .15s}
 .helplink:hover{color:var(--green-deep); background:var(--surface-2)}
 .helplink.active{color:var(--green-deep); background:var(--green-tint); border-color:var(--green)}
-.disclaimer{margin:40px 2px 0; padding-top:16px; border-top:1px solid var(--rule); color:var(--ink-soft); font-size:12px; line-height:1.65; max-width:760px}
+.disclaimer{margin:40px 2px 0; padding-top:16px; border-top:1px solid var(--rule); color:var(--ink-soft); font-size:var(--fs-2); line-height:1.65; max-width:760px}
 .disclaimer + .foot{margin-top:14px; padding-top:14px}
 .foot{margin-top:40px; padding-top:18px; border-top:1px solid var(--rule); display:flex; flex-wrap:wrap; gap:8px 16px; justify-content:space-between; align-items:center; color:var(--ink-soft); font-family:var(--mono); font-size:11.5px; letter-spacing:.03em}
 .foot .legal{color:var(--sepia); text-decoration:none; border-bottom:1px solid var(--rule); transition:color .12s,border-color .12s}
@@ -176,24 +187,27 @@ input,select{font-family:inherit; color:inherit}
 .duel-win{color:var(--green-deep)} .duel-lose{color:var(--madder)}
 
 /* Buttons */
-.btn{border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); padding:8px 13px; border-radius:3px; font-size:13.5px; font-weight:500; display:inline-flex; align-items:center; gap:7px; transition:background .12s,border-color .12s,transform .04s; text-decoration:none}
+.btn{border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); padding:8px 13px; border-radius:var(--r); font-size:var(--fs-3); font-weight:500; display:inline-flex; align-items:center; gap:7px; transition:background .12s,border-color .12s,transform .04s; text-decoration:none}
 .btn:hover{background:var(--card); border-color:var(--green)}
 .btn:active{transform:translateY(1px)}
 .btn.primary{background:var(--green); border-color:var(--green-deep); color:#f4f7f1}
 .btn.primary:hover{background:var(--green-deep)}
 .btn.ghost{background:transparent; border-color:transparent}
 .btn.ghost:hover{background:var(--surface-2); border-color:var(--rule)}
-.btn.big{font-size:15px; padding:11px 20px}
+/* Zweite Knopf-Stufe (umrandet grün) – Probeprüfung, »nur ZP« und Liste tragen denselben Rand */
+.btn.outline{background:var(--surface-2); color:var(--green-deep); border:1.4px solid var(--green)}
+.btn.outline:hover{background:var(--green-tint); border-color:var(--green)}
+.btn.big{font-size:var(--fs-4); padding:11px 20px}
 .btn:disabled{opacity:.4; cursor:not-allowed}
 :where(button,a,select,input,textarea,summary,[role="button"]):focus-visible{outline:2px solid var(--madder); outline-offset:2px}
 
 /* Setup */
-.setup{background:var(--surface); border:1px solid var(--rule-strong); border-top:none; border-radius:0 0 4px 4px; padding:16px 18px; margin-top:-1px; display:flex; flex-direction:column; gap:14px}
+.setup{background:var(--surface); border:1px solid var(--rule-strong); border-top:none; border-radius:0 0 4px 4px; padding:var(--sp-2); margin-top:-1px; display:flex; flex-direction:column; gap:var(--sp-2)}
 .setrow{display:flex; flex-wrap:wrap; gap:12px 16px; align-items:center}
 .field{display:flex; align-items:center; gap:7px}
-.field label{font-size:12px; color:var(--sepia); font-family:var(--mono); letter-spacing:.04em}
-select.mini,input.mini{border:1px solid var(--rule-strong); background:var(--surface-2); border-radius:3px; padding:8px 26px 8px 10px; font-size:14px; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2356604f' stroke-width='1.4'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center}
-input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mono); background-image:none}
+.field label{font-size:var(--fs-2); color:var(--sepia)}
+select.mini,input.mini{border:1px solid var(--rule-strong); background:var(--surface-2); border-radius:var(--r); padding:8px 26px 8px 10px; font-size:14px; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2356604f' stroke-width='1.4'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center}
+input.mini{width:64px; padding:8px 10px; text-align:center; font-variant-numeric:tabular-nums; background-image:none}
 .switch{display:inline-flex; align-items:center; gap:8px; font-size:13.5px; cursor:pointer; user-select:none}
 .switch input{position:absolute; opacity:0; width:0; height:0}
 .switch .track{width:34px; height:19px; border-radius:19px; background:var(--rule-strong); position:relative; transition:background .15s; flex:none}
@@ -202,15 +216,15 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .switch input:checked + .track::after{transform:translateX(15px)}
 .switch input:focus-visible + .track{outline:2px solid var(--madder); outline-offset:2px}
 /* Modus-Umschalter */
-.modes{display:flex; gap:0; border:1px solid var(--rule-strong); border-radius:5px; overflow:hidden; width:fit-content; max-width:100%; flex-wrap:wrap}
-.modes button{border:none; background:var(--surface-2); color:var(--ink-soft); padding:9px 15px; font-size:13.5px; border-right:1px solid var(--rule-strong); display:inline-flex; align-items:center; gap:7px}
+.modes{display:flex; gap:0; border:1px solid var(--rule-strong); border-radius:var(--r); overflow:hidden; width:fit-content; max-width:100%; flex-wrap:wrap}
+.modes button{border:none; background:var(--surface-2); color:var(--ink-soft); padding:9px 15px; font-size:var(--fs-3); border-right:1px solid var(--rule-strong); display:inline-flex; align-items:center; gap:7px}
 .modes button:last-child{border-right:none}
 .modes button:hover{background:var(--card)}
 .modes button.on{background:var(--green); color:#f4f7f1; font-weight:600}
 .modes .ic{width:15px; height:15px}
 /* Lernpfad: Modi nach Schwierigkeit, mit dezentem Schwierigkeits-Tag unter dem Namen */
 .modes button{flex-wrap:wrap; justify-content:center; row-gap:1px}
-.mdiff{flex-basis:100%; text-align:center; font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); line-height:1.2; margin-top:1px}   /* Audit: 9 px Sepia war zu klein/zu schwach */
+.mdiff{flex-basis:100%; text-align:center; font-size:var(--fs-1); font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); line-height:1.2; margin-top:1px}   /* Audit: 9 px Sepia war zu klein/zu schwach */
 .modes button.on .mdiff{color:#e2efdd}
 /* Dunkelmodus: der gefüllt-grüne Tab kam nur auf 3,6:1 (Audit) – dort tonig statt gefüllt */
 :root[data-theme="dark"] .modes button.on{background:var(--green-tint); color:var(--green-deep); box-shadow:inset 0 0 0 1px var(--green-deep)}
@@ -218,8 +232,7 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]) .modes button.on{background:var(--green-tint); color:var(--green-deep); box-shadow:inset 0 0 0 1px var(--green-deep)}
   :root:not([data-theme="light"]) .modes button.on .mdiff{color:var(--green-deep)}}
-.introlink{display:inline-block; margin:8px 0 0; padding:2px 0; border:none; background:none; cursor:pointer; font-size:12.5px; color:var(--green-deep); text-decoration:underline; text-underline-offset:2px; font-family:inherit}
-.introlink:hover{color:var(--green)}
+.introlink{margin-top:var(--sp-1)}   /* Lernpfad-Link = dritte Stufe (.tlink) */
 /* Erst-Einweisung (einmalig, danach über den Link erreichbar) */
 .modal.intro{max-width:460px}
 .intro-h{font-family:var(--serif); font-size:20px; color:var(--green-deep); margin:0 30px 4px 0}
@@ -228,7 +241,7 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .intro-steps li{display:flex; gap:11px; align-items:flex-start; font-size:13px; line-height:1.4}
 .intro-steps .is-ic{flex:none; width:26px; height:26px; padding:5px; border-radius:7px; background:var(--surface-2); border:1px solid var(--rule-strong); color:var(--green-deep); display:flex; align-items:center; justify-content:center; font-size:14px; margin-top:1px}
 .intro-steps b{color:var(--ink)}
-.is-tag{font-family:var(--mono); font-size:8.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--sepia); border:1px solid var(--rule-strong); border-radius:3px; padding:0 4px; margin-left:5px; white-space:nowrap}
+.is-tag{font-size:var(--fs-1); letter-spacing:.06em; text-transform:uppercase; color:var(--sepia); border:1px solid var(--rule-strong); border-radius:3px; padding:0 4px; margin-left:5px; white-space:nowrap}
 .intro-tip{margin:12px 0 0; padding:0 2px; font-size:12.5px; color:var(--ink-soft); line-height:1.45}
 .intro-tip b{color:var(--ink)}
 .intro-foot{margin:11px 0 0; font-size:12.5px; color:var(--ink-soft); background:var(--surface-2); border-radius:6px; padding:10px 12px; line-height:1.45}
@@ -260,8 +273,8 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
   border-radius:0 8px 8px 0; font-size:13.5px; line-height:1.5; color:var(--ink)}
 .startrow{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
 /* Hinweis vor dem Lernen: automatisch/KI-erzeugte Inhalte, keine Gewähr */
-.learnnote{margin:14px 0 0; padding:9px 12px; border-left:3px solid var(--gold); border-radius:0 5px 5px 0;
-  background:var(--surface-2); color:var(--ink-soft); font-size:11.5px; line-height:1.55; max-width:660px}
+.learnnote{margin:var(--sp-3) 0 0; padding:9px 12px; border-left:3px solid var(--gold); border-radius:0 var(--r) var(--r) 0;
+  background:var(--surface-2); color:var(--ink-soft); font-size:var(--fs-2); line-height:1.55; max-width:660px}
 .learnnote b{color:var(--ink)}
 .learnnote>summary{list-style:none; cursor:pointer; user-select:none}
 .learnnote>summary::-webkit-details-marker{display:none}
@@ -273,33 +286,31 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .learnnote .ln-row>.ic{width:16px; height:16px; flex:none; margin-top:2px}
 .learnnote .ln-src>.ic{color:var(--green-deep)}
 .learnnote .ln-gen>.ic{color:var(--gold)}
-.learnnote .ln-foot{margin:11px 0 0; padding-top:8px; border-top:1px solid var(--rule); font-size:11px}
+.learnnote .ln-foot{margin:11px 0 0; padding-top:8px; border-top:1px solid var(--rule); font-size:var(--fs-1)}
 .learnnote a{color:var(--green-deep); text-underline-offset:2px}
 .startrow .hint{font-size:12.5px; color:var(--ink-soft)}
 /* Optionen (einklappbar) – hält die Startansicht ruhig, alle Einstellungen bleiben einen Klick entfernt */
-.setopts{border:1px solid var(--rule); border-radius:6px; background:var(--surface-2); overflow:hidden}
-.setopts>summary{list-style:none; cursor:pointer; display:flex; align-items:center; gap:9px; padding:9px 13px; font-size:13px; color:var(--ink-soft); user-select:none}
+.setopts{border:1px solid var(--rule); border-radius:var(--r); background:var(--surface-2); overflow:hidden}
+.setopts>summary{list-style:none; cursor:pointer; display:flex; align-items:center; gap:9px; padding:9px 13px; font-size:var(--fs-3); color:var(--ink-soft); user-select:none}
 .setopts>summary::-webkit-details-marker{display:none}
 .setopts>summary .ic{width:15px; height:15px; flex:none; color:var(--sepia)}
 .setopts .opts-title{font-weight:600; color:var(--ink)}
-.setopts .opts-sub{color:var(--ink-soft); font-size:12px}
+.setopts .opts-sub{color:var(--ink-soft); font-size:var(--fs-2)}
 .setopts .opts-sub.active{color:var(--green-deep); font-weight:600}
 .setopts .opts-caret{margin-left:auto; color:var(--ink-faint); transition:transform .15s}
 .setopts>summary:hover{background:var(--surface)}
 .setopts[open]>summary{border-bottom:1px solid var(--rule)}
 .setopts .optbody{padding:12px 13px 13px}
 .og+.og{margin-top:12px; padding-top:12px; border-top:1px dashed var(--rule)}
-.og-h{font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); margin:0 0 8px}
+.og-h{font-size:var(--fs-1); font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--sepia); margin:0 0 8px}
 /* Ein-Knopf-Start + »Selbst wählen«-Klappe */
 /* Zwei Start-Knöpfe nebeneinander (am Handy untereinander), jeder mit eigener Unterzeile */
-.gorow{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:2px 0 10px}
+.gorow{display:grid; grid-template-columns:1fr 1fr; gap:var(--sp-1); margin:0}
 .gorow .btn.go{display:flex; flex-direction:row; align-items:center; gap:12px; padding:13px 18px; text-align:left; min-height:64px}
 .gorow .btn .go-ic{width:22px; height:22px; flex:none}   /* schlägt .btn .ic (gleiche Spezifität, später) */
 .gorow .go-txt{display:flex; flex-direction:column; align-items:flex-start; gap:3px; min-width:0}
-.gorow .go-l{font-size:16.5px; font-weight:600; line-height:1.2}
-.gorow .go-s{font-family:var(--mono); font-size:10.5px; letter-spacing:.03em; font-weight:400; opacity:.85; line-height:1.3}
-.gorow .btn.go.exam{background:var(--surface-2); color:var(--green-deep); border:1.4px solid var(--green)}
-.gorow .btn.go.exam:hover{background:var(--green-tint)}
+.gorow .go-l{font-size:var(--fs-4); font-weight:600; line-height:1.2}
+.gorow .go-s{font-size:var(--fs-2); font-weight:400; opacity:.85; line-height:1.3}
 /* Probeprüfung als geteilter Knopf: links die ganze Liste, rechts das Segment »nur ZP« (nur die
    für die Zwischenprüfung markierten Arten) – kein dritter großer Knopf, der Start bleibt ruhig.
    Ohne ZP-Markierung in der Liste fehlt das Segment (hidden, aus renderProgress) und der
@@ -318,26 +329,29 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
   .gosplit:not(.solo) #btnExam{border-top-right-radius:10px; border-right-width:1.4px; border-bottom-left-radius:0; border-bottom-width:0}
   .gosplit .btn.go.zp{border-top-left-radius:0; border-top-right-radius:0; border-bottom-left-radius:10px; min-height:44px; padding:8px 18px}
   .gosplit .btn.go.zp .go-txt{flex-direction:row; align-items:baseline; gap:8px}
-  .gosplit .btn.go.zp .go-l{font-size:14.5px}
+  .gosplit .btn.go.zp .go-l{font-size:var(--fs-3)}
 }
-.quickrow{display:flex; gap:10px; flex-wrap:wrap; margin:0 0 12px}
-.quickrow .btn.list{color:var(--green-deep); padding:9px 15px}
-.quickrow .btn.list .ic{width:17px; height:17px}
-.choose{border:1px solid var(--rule); border-radius:6px; background:var(--surface-2); overflow:hidden; margin:0 0 12px}
-.choose>summary{list-style:none; cursor:pointer; display:flex; align-items:center; gap:9px; padding:9px 13px; font-size:13px; color:var(--ink-soft); user-select:none}
+.quickrow{display:flex; gap:var(--sp-1); flex-wrap:wrap; margin:0}
+.quickrow .btn.list{padding:9px 15px}
+/* »Selbst wählen«: eine Klappe in der dritten Stufe (Textzeile mit Symbol), kein vierter Knopf;
+   erst der aufgeklappte Inhalt bekommt einen Rahmen */
+.choose{border:0; background:none; margin:0}
+.choose>summary{list-style:none; user-select:none; display:flex; align-items:center; gap:8px; width:calc(100% + 16px)}
+.choose .ch-txt{flex:1 1 auto; min-width:0; line-height:1.35}
 .choose>summary::-webkit-details-marker{display:none}
-.choose>summary .ic{width:15px; height:15px; flex:none; color:var(--sepia)}
-.choose .opts-title{font-weight:600; color:var(--ink)}
-.choose>.chbody{padding:12px 13px 13px}
-.choose>summary:hover{background:var(--surface)}
-.choose[open]>summary{border-bottom:1px solid var(--rule)}
-.choose .setopts{margin-top:10px}
-.choose .startrow{margin-top:12px}
-/* Profil-Chip + Modal */
-.profchip{display:inline-flex; align-items:center; gap:8px; margin:12px 0 2px 8px; border:1.4px solid var(--green);
-  background:var(--card); color:var(--green-deep); border-radius:999px; padding:8px 15px;
-  font-family:var(--serif); font-weight:600; font-size:15px; cursor:pointer; transition:background .12s}
-.profchip:hover{background:var(--green-tint)}
+.choose .opts-title{font-weight:500}
+.choose .opts-sub{color:var(--ink-soft); font-size:var(--fs-2); font-weight:400; margin-left:6px}
+.choose[open]>summary .chev{transform:rotate(180deg)}
+.choose>.chbody{margin-top:var(--sp-1); padding:var(--sp-2); border:1px solid var(--rule); border-radius:var(--r); background:var(--surface-2)}
+.choose .setopts{margin-top:var(--sp-2)}
+.choose .startrow{margin-top:var(--sp-2)}
+/* Beruf: leise Zeile über den Knöpfen (eine Einstellung – kein Knopf im Knopf-System, keine Pille) */
+.profchip{display:inline-flex; align-items:center; flex-wrap:wrap; gap:4px 8px; margin:0 -8px; border:0; background:none; padding:4px 8px;
+  color:var(--ink); border-radius:var(--r); font-family:inherit; font-size:var(--fs-3); font-weight:500; line-height:1.35; cursor:pointer; text-align:left; transition:background .12s}
+.profchip .pc-edit{display:inline-flex; align-items:center; gap:4px; color:var(--green-deep); white-space:nowrap}
+.profchip .pc-edit .ic{width:14px; height:14px; flex:none}
+.profchip:hover{background:var(--surface-2)}
+.profchip:hover .pc-edit{text-decoration:underline; text-underline-offset:3px}
 .profchip .ic{width:14px; height:14px; flex:none; opacity:.7}
 .profmodal .profilerow{margin:10px 0 2px 0}
 .profmodal .profsub{display:block; padding:0; margin:10px 0 0}
@@ -346,32 +360,32 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .setopts .setrow{padding:13px}
 
 /* Fortschritt */
-.progress{display:flex; flex-direction:column; gap:9px; margin:16px 0 0; padding:12px 16px; border:1px solid var(--rule); border-radius:4px; background:var(--surface)}
+.progress{display:flex; flex-direction:column; gap:var(--sp-1); margin:var(--sp-3) 0 0; padding:var(--sp-2); border:1px solid var(--rule); border-radius:4px; background:var(--surface)}
 /* Kopfzeile: der Rang (= Lernstand in Worten) als Knopf, öffnet die Laufbahn */
-.phead{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.phead{display:flex; align-items:center; justify-content:space-between; gap:4px 12px; flex-wrap:wrap}
 .rankline{display:inline-flex; align-items:center; gap:7px; border:0; background:none; cursor:pointer; padding:2px 0; font-family:var(--serif); color:var(--green-deep); text-align:left}
 .rankline .ic{width:16px; height:16px; flex:none}
-.rankline .rk-name{font-size:15.5px; font-weight:600; font-style:italic}
-.rankline .rk-sub{font-family:var(--mono); font-size:11px; color:var(--ink-soft); font-style:normal; letter-spacing:.02em}
+.rankline .rk-name{font-size:var(--fs-4); font-weight:600; font-style:italic}
+.rankline .rk-sub{font-family:var(--sans); font-size:var(--fs-2); color:var(--ink-soft); font-style:normal}
 .rankline:hover .rk-name{text-decoration:underline; text-underline-offset:3px}
 .pfoot{display:flex; align-items:center; justify-content:space-between; gap:8px 14px; flex-wrap:wrap}
 .pbar{width:100%; height:12px; border-radius:7px; background:var(--surface-2); border:1px solid var(--rule); overflow:hidden; display:flex}
 .pbar span{height:100%}
 .pbar .b-neu{background:var(--rule-strong)} .pbar .b-lern{background:var(--gold)} .pbar .b-fest{background:var(--green)}
-.plegend{display:flex; gap:12px; font-family:var(--mono); font-size:10.5px; color:var(--ink-soft); flex-wrap:wrap}
+.plegend{display:flex; gap:12px; font-size:var(--fs-2); color:var(--ink-soft); flex-wrap:wrap}
 .plegend i{display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:5px; vertical-align:middle}
-/* Status-Chips: Lernserie · Herbarium (der Rang steht in der Kopfzeile des Fortschritts) */
-.statusrow{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+/* Status-Chip: Lernserie (Herbarium ist eine Aktion → Textzeile .tlink daneben; der Rang steht in der Kopfzeile) */
+.statusrow{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap}
 .chip{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--rule-strong);
   background:var(--surface-2); color:var(--ink-soft); border-radius:99px; padding:5px 11px;
-  font-family:var(--mono); font-size:11px; cursor:default; min-height:32px}
+  font-size:var(--fs-2); cursor:default; min-height:32px}
 button.chip{cursor:pointer}
 button.chip:hover{background:var(--green-tint); border-color:var(--green); color:var(--green-deep)}
 .chip .ic{width:15px; height:15px; flex:none}
 .sflame{display:inline-flex; align-items:center; gap:4px; color:var(--rule-strong)}
 .sflame.on{color:#d0862f}
 .sflame .ic{fill:currentColor; stroke:none}
-.sflame b{font-size:13px; color:var(--ink)}
+.sflame b{font-size:var(--fs-3); color:var(--ink)}
 .flamechip.on{border-color:#d0862f55}
 /* ℹ neben der Legende öffnet die grafische Stufen-Erklärung (kein Erklärabsatz mehr) */
 .legend-i{border:0; background:none; color:var(--sepia); cursor:pointer; padding:2px; line-height:0;
@@ -700,7 +714,7 @@ input.near{border-color:var(--sepia)!important; background:#fdf8ec}
 .wp-taxon{clear:both; font-size:12.5px; color:var(--ink); line-height:1.45; margin:0 0 10px; padding:7px 10px; border-left:3px solid var(--gold); background:var(--surface-2); border-radius:0 6px 6px 0}
 
 @media (max-width:640px){
-  .mast-top{flex-direction:column; align-items:stretch}
+  /* Kopf bleibt auch schmal eine Zeile: Titel links, runder Hilfe-Knopf rechts */
   .rate button{min-width:0}
   .wphost img{float:none; display:block; width:100%; max-width:220px; margin:0 auto 12px}
   .splist{grid-template-columns:1fr}
@@ -761,10 +775,10 @@ body.stagefull .stage-empty{flex:1 0 auto; display:flex; flex-direction:column; 
 html{scroll-behavior:smooth}
 body{line-height:1.5}
 .wrap{padding:38px 22px 100px}
-.masthead{padding:24px 26px; box-shadow:0 1px 2px var(--shadow), 0 18px 40px -34px rgba(34,53,43,.55)}
-.setup{padding:18px 20px; gap:16px}
+.masthead{padding:20px var(--sp-2) 12px; box-shadow:0 1px 2px var(--shadow), 0 18px 40px -34px rgba(34,53,43,.55)}
+.setup{padding:var(--sp-2); gap:var(--sp-2)}
 #stage{margin-top:22px}
-.progress{padding:14px 18px}
+.progress{padding:var(--sp-2)}
 .btn{transition:background .15s, border-color .15s, box-shadow .15s, transform .06s}
 .btn.primary:hover{box-shadow:0 8px 20px -10px var(--green-deep)}
 .modes button{transition:background .15s, color .15s, box-shadow .15s}
@@ -892,12 +906,12 @@ body{line-height:1.5}
 .setup{border-radius:0 0 18px 18px}
 .progress,.helppanel,.stage-empty{border-radius:16px}
 .card{border-radius:18px; box-shadow:var(--shadow-1),var(--shadow-2)}
-.modes{border-radius:12px}
+.modes{border-radius:var(--r)}
 .btn{border-radius:10px}
 select,input[type=number],input[type=search],input[type=text]{border-radius:9px}
 .searchbox,.typebox input,.opt{border-radius:12px}
 .rate button{border-radius:12px}
-.setopts,.listcontrols .lc-toggle{border-radius:12px}
+.setopts,.listcontrols .lc-toggle{border-radius:var(--r)}
 .shareblock{border-radius:14px}
 .cattag,.sortbtn{border-radius:999px}
 .modal{border-radius:18px; background:var(--glass-m); backdrop-filter:blur(16px) saturate(1.15); -webkit-backdrop-filter:blur(16px) saturate(1.15); box-shadow:var(--shadow-2)}
@@ -1060,10 +1074,9 @@ body.stagefull #stage>.sessionbar{
   .linklike{min-height:44px; display:inline-flex; align-items:center}
   .wp-src a,.mh-src a,.listsrc a,.famfoot a{display:inline-block; padding:12px 2px; margin:-12px 0}
   .cathead-i{min-width:44px; min-height:44px}
-  .helplink{min-height:44px; padding:8px 12px}
-  .profchip{min-height:44px}
+  .helplink{min-height:44px}
+  .profchip,.tlink{min-height:44px}
   .rankline{min-height:44px}
-  .introlink{min-height:44px; display:inline-flex; align-items:center; padding:8px 4px}
   select.mini,input.mini,.listsearch{min-height:44px}
   .switch,.po-ety{min-height:44px; align-items:center}
   .setopts>summary,.choose>summary,.etym>summary{min-height:44px; display:flex; align-items:center}
@@ -1082,12 +1095,11 @@ body.stagefull #stage>.sessionbar{
    Lese-Spalte bleibt, wirkt aber nicht verloren auf 1440 px + */
 @media (min-width:1440px){
   .wrap{max-width:920px; padding:48px 28px 110px}
-  .masthead{padding:26px 30px}
-  .gorow{margin:6px 0 16px}
-  .gorow .btn.go{font-size:17.5px; padding:15px 28px; gap:14px}
+  .masthead{padding:var(--sp-3) var(--sp-3) var(--sp-2)}
+  .gorow .btn.go{padding:15px 28px; gap:14px}
   .gorow .btn .go-ic{width:26px; height:26px}
   .gosplit .btn.go.zp{padding:15px 18px}
-  .setup{padding:22px 24px}
+  .setup{padding:var(--sp-3)}
   .stage-empty{padding:44px 24px}
 }
 /* ── Herbarium 2.0 · Stufe 4: Cross-Doc-Übergänge, Scroll-Dynamik, Lightbox, Typo ──
@@ -1258,22 +1270,15 @@ body.stagefull #stage>.sessionbar{
   <header class="masthead">
     <div class="mast-top">
       <div class="mast-title">
-        <p class="eyebrow">Pflanzen lernen · Gärtnerberufe</p>
-        <h1>Pflanzenkenntnis&nbsp;· Lernen</h1>
+        <h1>Pflanzenkenntnis</h1>
       </div>
       <div class="mast-right">
         <!-- Bewusst KEIN Link zur Prüfungsversion: pflanze-bw.de führt direkt hierher;
              das Prüfungswerkzeug hat seine eigene Adresse (/pruefung) und geht Azubis
              nichts an. Impressum/Datenschutz bleibt über die Fußzeile erreichbar. -->
-        <button class="helplink" id="btnHelp" type="button" aria-pressed="false" title="Kurzanleitung und Erklärung aller Modi und Einstellungen ein- oder ausblenden"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5"/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/></svg>Hilfe</button>
+        <button class="helplink" id="btnHelp" type="button" aria-pressed="false" aria-label="Hilfe" title="Hilfe – kurzanleitung und Erklärung aller Modi und Einstellungen ein- oder ausblenden"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.3a2.8 2.8 0 015.5.7c0 1.9-2.8 2.5-2.8 2.5"/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/></svg></button>
       </div>
     </div>
-    <!-- Beruf einmal wählen, danach nur noch ein Chip: die beiden Auswahlfelder
-         stecken im Profil-Modal darunter (IDs unverändert – Logik/Tests bleiben). -->
-    <button class="profchip" id="profileChip" type="button" title="Beruf ändern: Fachrichtung und Ausbildung bestimmen deinen Lernstoff (die amtliche Pflanzenliste)">
-      <span id="profChipText">Beruf wählen</span>
-      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h4L18 10l-4-4L4 16zM14 6l4 4"/></svg>
-    </button>
   </header>
 
   <div class="scrim" id="profScrim" hidden>
@@ -1294,6 +1299,12 @@ body.stagefull #stage>.sessionbar{
 
   <main>
   <div class="setup">
+    <!-- Beruf einmal wählen, danach eine leise Zeile über den Knöpfen: die beiden Auswahlfelder
+         stecken im Profil-Modal (IDs unverändert – Logik/Tests bleiben). -->
+    <button class="profchip" id="profileChip" type="button" title="Beruf ändern: Fachrichtung und Ausbildung bestimmen deinen Lernstoff (die amtliche Pflanzenliste)">
+      <span id="profChipText">Beruf wählen</span>
+      <span class="pc-edit"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L18 10l-4-4L4 16zM14 6l4 4"/></svg>ändern</span>
+    </button>
     <!-- Ein-Knopf-Start: »Weiter lernen« startet eine GEFÜHRTE Sitzung (jede Pflanze als
          Bild, Antwortart nach Lernstand). Alles Weitere – Modi einzeln + Feineinstellungen –
          steckt dahinter in der zugeklappten »Selbst wählen«-Klappe. Keine Funktion entfällt. -->
@@ -1308,10 +1319,10 @@ body.stagefull #stage>.sessionbar{
         <svg class="ic go-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M10.2 8.6v6.8l5.4-3.4z" fill="currentColor" stroke="none"/></svg>
         <span class="go-txt"><span class="go-l" id="goLabel">Weiter lernen</span><span class="go-s" id="goHint"></span></span></button>
       <div class="gosplit" id="examSplit">
-        <button class="btn big go exam" id="btnExam" type="button" title="Probeprüfung wie am Prüfungstag: so viele Pflanzen wie auf dem Bogen, zufällig aus deiner Liste, jede als Bild – zu jeder gibst du alle bewerteten Felder ein. Am Ende Punkte, Prozent und Note (Notenschlüssel Baden-Württemberg). Braucht Internet.">
+        <button class="btn big go exam outline" id="btnExam" type="button" title="Probeprüfung wie am Prüfungstag: so viele Pflanzen wie auf dem Bogen, zufällig aus deiner Liste, jede als Bild – zu jeder gibst du alle bewerteten Felder ein. Am Ende Punkte, Prozent und Note (Notenschlüssel Baden-Württemberg). Braucht Internet.">
           <svg class="ic go-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4.5H6.5a2 2 0 0 0-2 2v12.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V6.5a2 2 0 0 0-2-2H16"/><rect x="8" y="2.8" width="8" height="3.2" rx="1"/><path d="M8.5 11h7M8.5 14.5h7M8.5 18h4"/></svg>
           <span class="go-txt"><span class="go-l">Probeprüfung</span><span class="go-s" id="examHint"></span></span></button>
-        <button class="btn big go exam zp" id="btnExamZp" type="button" title="Probeprüfung nur mit den ZP-relevanten Arten deiner Liste (für die Zwischenprüfung markiert) – sonst gleich: jede Pflanze als Bild, alle Felder des Bogens, am Ende die Note. Braucht Internet.">
+        <button class="btn big go exam zp outline" id="btnExamZp" type="button" title="Probeprüfung nur mit den ZP-relevanten Arten deiner Liste (für die Zwischenprüfung markiert) – sonst gleich: jede Pflanze als Bild, alle Felder des Bogens, am Ende die Note. Braucht Internet.">
           <span class="go-txt"><span class="go-l">nur ZP</span><span class="go-s">Zwischenprüfung</span></span></button>
       </div>
     </div>
@@ -1319,13 +1330,13 @@ body.stagefull #stage>.sessionbar{
          »ghost« mehr, der sah zwischen den Karten wie ein loser Textlink aus. Inhalt setzt applyMode
          (im Listenmodus Pfeil-Symbol + »Zurück zum Lernen«). -->
     <div class="quickrow">
-      <button class="btn list" id="btnList" type="button" title="Alle Arten zum Nachschlagen: durchsuchbar, nach Thema/Familie/A–Z, mit Steckbriefen und Quellen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1" fill="currentColor" stroke="none"/></svg><span>Liste zum Nachschlagen</span></button>
+      <button class="btn list outline" id="btnList" type="button" title="Alle Arten zum Nachschlagen: durchsuchbar, nach Thema/Familie/A–Z, mit Steckbriefen und Quellen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1" fill="currentColor" stroke="none"/></svg><span>Liste zum Nachschlagen</span></button>
     </div>
     <details class="choose" id="chooseWrap">
-      <summary title="Modus und Feineinstellungen selbst wählen">
+      <summary class="tlink" title="Modus und Feineinstellungen selbst wählen">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
-        <span class="opts-title">Selbst wählen</span><span class="opts-sub">Modus · Optionen · eigene Sitzung</span>
-        <span class="opts-caret" aria-hidden="true">▾</span>
+        <span class="ch-txt"><span class="opts-title">Selbst wählen</span><span class="opts-sub">Modus · Optionen · eigene Sitzung</span></span>
+        <svg class="ic chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
       </summary>
       <div class="chbody">
     <div class="modes" id="modeTabs">
@@ -1335,12 +1346,12 @@ body.stagefull #stage>.sessionbar{
       <button data-mode="type" title="Selbst eingeben: die Namen per Tastatur selbst schreiben – ein Feld je bewerteter Spalte, tippfehler-tolerant, mit Punkten wie in der Prüfung."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8"/></svg>Selbst eingeben<small class="mdiff">prüfungsnah</small></button>
       <button data-mode="list" title="Liste zum Nachschlagen: alle Arten nach Thema, Familie oder A–Z sortiert, durchsuchbar; zum Öffnen von Quellen und Infos antippen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>Liste<small class="mdiff">nachschlagen</small></button>
     </div>
-    <button class="introlink" id="btnIntro" type="button" title="Kurze Einführung: der Lernpfad von leicht bis prüfungsreif">So funktioniert der Lernpfad&nbsp;›</button>
+    <button class="tlink introlink" id="btnIntro" type="button" title="Kurze Einführung: der Lernpfad von leicht bis prüfungsreif">So funktioniert der Lernpfad<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
     <details class="setopts" id="setOpts">
       <summary title="Optionale Feineinstellungen ein- oder ausklappen">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
         <span class="opts-title">Optionen</span><span class="opts-sub">Abfrage · Lernstoff · ZP · Sitzungslänge</span>
-        <span class="opts-caret" aria-hidden="true">▾</span>
+        <svg class="ic opts-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
       </summary>
       <div class="optbody">
         <div class="og">
@@ -1658,7 +1669,7 @@ body.stagefull #stage>.sessionbar{
   <div class="installbar" id="installBar" hidden></div>
 
   <footer class="foot">
-    <span>Pflanzenkenntnis · Lernen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 28.10.2026 · Version 241a558</span></span>
+    <span>Pflanzenkenntnis · Lernen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 29.10.2026 · Version aabce1c</span></span>
     <a class="legal" href="rechtliches.html">Impressum &amp; Datenschutz</a>
   </footer>
 </div>
@@ -2890,7 +2901,9 @@ function renderProgress(){
   const m=masteryBest(), r=rankOf(m), st=streakState(), goal=streakGoal(), done=Math.min(st.n||0, goal);
   const bis = r.next ? `bis ${r.next}: ${r.needText||"gleich geschafft"}` : "höchste Stufe erreicht";
   $("#progress").hidden = false;
-  // EINE Fortschrittskarte: Rang-Zeile (Lernstand in Worten) · Balken · Legende + Serie + Herbarium
+  // EINE Fortschrittskarte: Rang-Zeile (Lernstand in Worten) · Balken · Legende · Serie + Herbarium.
+  // Herbarium ist eine Aktion (öffnet die Sammlung) und steht deshalb als Textzeile (dritte Stufe)
+  // rechts neben dem Serien-Chip – der Chip zeigt nur Status.
   $("#progress").innerHTML =
     `<div class="phead">
        <button class="rankline" id="rankName" title="Dein Rang richtet sich nach dem Lernstand – ${m.fest} von ${m.n} Arten sitzen · ${esc(bis)}. Antippen zeigt alle Stufen.">
@@ -2911,7 +2924,7 @@ function renderProgress(){
        <div class="statusrow" id="streakRow">
          <span class="chip flamechip${(st.s||0)>0?" on":""}" title="Lernserie: an so vielen Tagen in Folge hast du ${goal} Karten bearbeitet (etwa eine Lektion). Heute: ${done} von ${goal}. Rekord: ${st.b||0} ${(st.b||0)===1?"Tag":"Tage"}.">
            <span class="sflame${(st.s||0)>0?" on":""}">${ico("flame")}<b>${st.s||0}</b></span><span class="sr-n">· ${done}/${goal} heute</span></span>
-         <button class="chip" id="btnHerb" title="Deine Themen-Sammlung: Jedes gemeisterte Thema legt eine gepresste Pflanze ins Herbarium.">${ico("leaf")}Herbarium</button>
+         <button class="tlink" id="btnHerb" title="Deine Themen-Sammlung: Jedes gemeisterte Thema legt eine gepresste Pflanze ins Herbarium.">${ico("leaf")}Herbarium</button>
        </div>
      </div>`;
   wireRankPopover();
