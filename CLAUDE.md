@@ -2978,6 +2978,49 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       keine ▾/›-Glyphen); der h1-Test aus Audit-Paket 4 prüft jetzt »Pflanzenkenntnis«. Screenshots
       390 hell/dunkel, 1000, 1500, Klappe offen, Profil-Modal verifiziert.
 
+- [x] **Design-Konsolidierung Teil 2: Lektion, Liste und alle Dialoge** (Fortsetzung von #167 auf
+      »Mache alles perfekt«). Gemessen mit einem Audit-Skript über 26 Ansichten (Quiz · Karteikarte ·
+      Selbst eingeben · Bilder-Quiz mit Auswahl und »wie in der Prüfung« · geführte Lektion · Abschluss +
+      Teilen · Duell-Banner · Liste in drei Ansichten · Hilfe · Einführung · Stufen-Leiter · Laufbahn ·
+      Herbarium · Info-Karte · Familien-Steckbrief · Installation · Profil · Lightbox · Fußzeile).
+      **Vorher:** 179 Mono-Textknoten allein in der Liste (Zähler, Kopfzeilen, ZP-Marker), 13 Größen
+      zwischen 9 und 22 px, Radien 3/5/6/8/9/12/14/18 px, `btn ghost` an acht Stellen, Fokusring in
+      **Rot** (ein roter Ring um »Weiter« nach einer falschen Antwort las sich wie ein Fehler), die
+      Zeichen ℹ ↗ × ‹ › ▾ als Knopf-Beschriftung (ℹ und ↗ rendern Handys als buntes Emoji).
+      **Regeln (Fortschreibung der Tokens in `learn.html`):** Serif nur für Titel und Pflanzennamen, Sans
+      für alles Bedienbare und jede Beschriftung, **Mono nur für laufende Zahlen** (Uhr `#sclockT`,
+      Combo, Lightbox-Zähler, Duell-Zahlen, Versionsstempel); Größen aus der Skala (Display-Größen wie
+      Karten-Vorderseite/Frage/Antwort/Dialog-Titel bleiben fließend); **Radien nach Rolle:** Fläche/
+      Dialog/Karte 16 (masthead, setup, card, modal, shareblock, duelbanner, installbar, Rang-Popover,
+      Lightbox-Bild) · Kontrolle und Kasten 10 (`--r`: Optionen, Bewertung, Felder, Listenzeilen, Quellen-
+      Links, how-row, etym, sorten, lstate, herbcard, toast …) · Badge 4 (`.opt .k`, `.sp-zp`, `.is-tag`,
+      `.np-tag`) · Chip Pille (`.catn`, `.cattag`, `.sortbtns`, `.gnote`, Fortschrittsbalken) · Icon-Knopf
+      Kreis (`.modal-x`, `.lb-x`, `.cathead-i`, `.is-ic`); **drei Knopf-Stufen** auch in Lektion/
+      Abschluss: gefüllt (Weiter, Prüfen, Teilen, Annehmen) · `btn outline` (WhatsApp, Link kopieren,
+      Thema üben, Andere Art zeigen, So geht's) · neu **`btn text`** (gleiche Optik wie `.tlink`, ohne
+      negative Außenabstände: beenden, Zur Übersicht, schließen, Mehr zur Pflanze, Ohne Bild weiter) –
+      `.btn.ghost` ist entfernt; Auswahl-Flächen (Optionen, Bewertung, Listenzeilen, Quellen-Links)
+      behalten bewusst den neutralen grauen Rand (sie sind Inhalte, keine Aktionen); 8-px-Raster in
+      Abständen und Innenabständen; **Fokusring grün** (`--green`, Rot bleibt Fehlern/Löschen).
+      **Icons statt Zeichen:** `ICONS.x/prev/next/chev/ext` in `learn.js` (Schließen, Blättern,
+      Aufklappen, »öffnet neuen Tab«), ℹ → `ico("info")` in `#infoBtn`, `.sp-go`, `.cathead-i`; Hilfe-
+      Klappen bekommen den Chevron als **SVG-Maske in currentColor** (`::after` + `mask`, folgt dem
+      Dunkelmodus); die statischen ×-Knöpfe in `learn.html` sind Inline-SVG. **Beide Werkzeuge
+      synchron:** Lightbox (`lb-x`, `lb-nav`) und Info-Karte (`.ext`, `infobox-x`) in `app.js`/
+      `template.html` 1:1 nachgezogen (`APPICONS` um x/prev/next/ext ergänzt), damit die Kopien für das
+      geplante `shared.js` identisch bleiben. **Nebenbei:** langer Familienname in der Listen-Kopfzeile
+      (»Adoxaceae/Moschuskrautgewächse«) schob das ℹ aus dem Bild – Titel jetzt in `.cathead-t` mit
+      `<wbr>` nach »/«; Abschluss sagt »1 Karte gelernt« statt »1 Karten«; `.herbcard`-Namen in den
+      Container-Queries ebenfalls aus der Skala. **Nachher (gemessen):** Mono nur noch Uhr/Zähler/Stempel,
+      alle Größen ∈ {11, 12,5, 14, 16, 20, 24} (plus Display-Größen), kein `ghost`, kein ℹ/↗/‹/›/▾ im
+      Text. `tests/learn.mjs` (Block »Design-Konsolidierung Teil 2«): Quiz (Mono nur Uhr, Skala,
+      Text-Stufe, Optionen 10/16 px, Badge 4 px, ℹ als SVG, Fokusring-Regeln grün), Abschluss (zwei
+      gleich umrandete + Text-Stufe, 10/16 px, Einzahl), Karteikarte (Sans-Labels, 10/16 px), Liste bei
+      390 px (SVG-Knöpfe rund, ZP-Badge, Zähler-Pille, langer Familienname im Bild, keine Glyphen), Hilfe
+      (Sans 14 px, kein ▾, × rund als SVG), Info-Karte (Sans, ↗ als SVG, Links 10 px, Titel 24 px),
+      Herbarium, Stufen-Leiter + Laufbahn, Lightbox, Fußzeile. Screenshots 390 hell/dunkel und 1000 px
+      über alle Ansichten verifiziert.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.

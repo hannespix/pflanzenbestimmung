@@ -387,6 +387,144 @@ async function main() {
   assert(Math.abs(design.raster.profGo - 16) <= 1 && Math.abs(design.raster.goExam - 8) <= 1 && Math.abs(design.raster.examList - 16) <= 1 && Math.abs(design.raster.listChoose - 16) <= 1 && design.glyphen,
     "8-px-Raster (16 · 8 · 16 · 16) in der Setup-Karte, SVG-Chevrons statt ▾/›-Zeichen: " + JSON.stringify(design.raster) + " glyphen=" + design.glyphen);
 
+  // Design-Konsolidierung Teil 2 (Lektion, Liste, Dialoge): Mono nur noch für laufende Zahlen (Uhr,
+  // Zähler, Versionsstempel), alle Beschriftungen Sans aus der Skala, Radien nach Rolle (Kontrolle 10 ·
+  // Badge 4 · Chip Pille · Icon-Knopf Kreis), drei Knopf-Stufen auch in Lektion/Abschluss (kein »ghost«
+  // mehr), SVG-Icons statt der Zeichen ℹ × ‹ › ▾ ↗ (die Handys teils als Emoji rendern), grüner Fokusring.
+  const d2 = { modeVorher: await page.evaluate(() => document.querySelector(".modes button.on").dataset.mode) };
+  // 1) Quiz: Sitzungsleiste, Optionen, Rückmeldung, Navigation
+  await page.evaluate(() => { document.querySelector('.modes button[data-mode="quiz"]').click(); startSession(); });
+  await page.evaluate(() => document.querySelector("#stage .opt").click());
+  await new Promise((r) => setTimeout(r, 60));
+  d2.quiz = await page.evaluate(() => {
+    const q = (s) => document.querySelector(s), cs = (e) => getComputedStyle(e);
+    const fam = (f) => /mono|courier/i.test(f) ? "mono" : (/serif/i.test(f) && !/sans/i.test(f) ? "serif" : "sans");
+    const transparent = (c) => c === "rgba(0, 0, 0, 0)" || c === "transparent";
+    const skala = [11, 12.5, 14, 16, 20, 24];
+    const leaves = [...q("#stage").querySelectorAll("*")].filter((e) => (e.textContent || "").trim() && [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) && e.getBoundingClientRect().width > 0);
+    const mono = leaves.filter((e) => fam(cs(e).fontFamily) === "mono" && !e.closest("#sclockT")).map((e) => e.className + ":" + e.textContent.trim().slice(0, 16));
+    const off = leaves.filter((e) => !skala.includes(Math.round(parseFloat(cs(e).fontSize) * 2) / 2) && !e.closest(".qprompt")).map((e) => e.className + ":" + cs(e).fontSize);
+    const stop = q("#btnStop"), opt = q("#stage .opt"), k = q("#stage .opt .k"), info = q("#infoBtn");
+    const fv = [...document.styleSheets].flatMap((sh) => { try { return [...sh.cssRules]; } catch (e) { return []; } }).filter((r) => r.selectorText && /focus-visible/.test(r.selectorText));
+    const fokusGruen = fv.length >= 3 && fv.every((r) => !/madder/.test(r.cssText)) && fv.some((r) => /outline:\s*2px solid var\(--green\)/.test(r.cssText));
+    return { mono, off, bar: fam(cs(q(".sessionbar")).fontFamily), uhrMono: fam(cs(q("#sclockT")).fontFamily) === "mono",
+      stopText: stop.classList.contains("text") && transparent(cs(stop).backgroundColor) && transparent(cs(stop).borderTopColor) && fam(cs(stop).fontFamily) === "sans",
+      keinGhost: document.querySelectorAll(".btn.ghost").length === 0, optR: cs(opt).borderRadius, optPx: parseFloat(cs(opt).fontSize),
+      kSans: fam(cs(k).fontFamily) === "sans", kR: cs(k).borderRadius, infoSvg: !!info.querySelector("svg.ic") && !/ℹ/.test(info.textContent),
+      fokusGruen, stepSans: fam(cs(q(".stepline")).fontFamily) === "sans" };
+  });
+  assert(d2.quiz.mono.length === 0 && d2.quiz.off.length === 0 && d2.quiz.bar === "sans" && d2.quiz.uhrMono && d2.quiz.stepSans,
+    "Lektion (Quiz): keine Mono außer der Uhr, alle Größen aus der Skala, Sitzungsleiste/Stufenzeile Sans: " + JSON.stringify(d2.quiz));
+  assert(d2.quiz.stopText && d2.quiz.keinGhost && d2.quiz.optR === "10px" && d2.quiz.optPx === 16 && d2.quiz.kSans && d2.quiz.kR === "4px" && d2.quiz.infoSvg && d2.quiz.fokusGruen,
+    "Lektion (Quiz): »beenden« = Text-Stufe, kein .ghost, Optionen 10 px/16 px, Kennbuchstabe Sans mit 4-px-Badge, ℹ als SVG, Fokusring grün: " + JSON.stringify(d2.quiz));
+  // 2) Abschluss + Teilen: drei Stufen (gefüllt · umrandet · Text)
+  await page.evaluate(() => document.querySelector("#btnStop").click());
+  await new Promise((r) => setTimeout(r, 60));
+  d2.finish = await page.evaluate(() => {
+    const q = (s) => document.querySelector(s), cs = (e) => getComputedStyle(e);
+    const transparent = (c) => c === "rgba(0, 0, 0, 0)" || c === "transparent";
+    const look = (e) => cs(e).backgroundColor + "|" + cs(e).borderTopColor + "|" + cs(e).borderTopWidth + "|" + cs(e).color;
+    const wa = q("#btnWa"), cp = q("#btnCopy"), ov = q("#btnOverview"), sh = q("#btnShare"), name = q("#duelName");
+    return { umrandetGleich: wa.classList.contains("outline") && cp.classList.contains("outline") && look(wa) === look(cp) && parseFloat(cs(wa).borderTopWidth) >= 1 && cs(wa).backgroundColor !== cs(sh).backgroundColor,
+      overviewText: ov.classList.contains("text") && transparent(cs(ov).backgroundColor), nameR: cs(name).borderRadius, blockR: cs(q("#shareBlock")).borderRadius, einzahl: /1 Karte gelernt/.test(q("#stage").textContent) };
+  });
+  assert(d2.finish.umrandetGleich && d2.finish.overviewText && d2.finish.nameR === "10px" && d2.finish.blockR === "16px" && d2.finish.einzahl,
+    "Abschluss: WhatsApp + Link kopieren gleich umrandet, »Zur Übersicht« Text-Stufe, Namensfeld 10 px, Teilen-Block 16 px, »1 Karte gelernt«: " + JSON.stringify(d2.finish));
+  await page.evaluate(() => document.querySelector("#btnOverview").click());
+  // 3) Karteikarte: Beschriftungen Sans, Bewertungs-Knöpfe 10 px
+  await page.evaluate(() => { document.querySelector('.modes button[data-mode="cards"]').click(); startSession(); document.querySelector("#stage .card").click(); });
+  await new Promise((r) => setTimeout(r, 60));
+  d2.karte = await page.evaluate(() => {
+    const q = (s) => document.querySelector(s), cs = (e) => getComputedStyle(e);
+    const fam = (f) => /mono|courier/i.test(f) ? "mono" : (/serif/i.test(f) && !/sans/i.test(f) ? "serif" : "sans");
+    return { label: fam(cs(q(".card .side-label")).fontFamily), mf: fam(cs(q(".card .mf b")).fontFamily), small: fam(cs(q(".rate small")).fontFamily), rateR: cs(q(".rate button")).borderRadius, cardR: cs(q("#card")).borderRadius };
+  });
+  assert(d2.karte.label === "sans" && d2.karte.mf === "sans" && d2.karte.small === "sans" && d2.karte.rateR === "10px" && d2.karte.cardR === "16px",
+    "Karteikarte: Seitenlabel/Feldnamen/Fälligkeit Sans, Bewertungs-Knöpfe 10 px, Karte 16 px: " + JSON.stringify(d2.karte));
+  await page.evaluate(() => { document.querySelector("#btnStop").click(); const ov = document.querySelector("#btnOverview"); if (ov) ov.click(); });
+  // 4) Liste (Familien-Ansicht, 390 px): ℹ-Knöpfe als SVG, Badges/Zähler, langer Familienname schiebt nichts aus dem Bild
+  await page.setViewport({ width: 390, height: 844 });
+  d2.sortVorher = await page.evaluate(() => listSort);   // Listen-Ansicht nachher wiederherstellen (spätere Tests erwarten den Standard »Thema«)
+  await page.evaluate(() => { document.querySelector('.modes button[data-mode="list"]').click(); document.querySelector('#listControls .sortbtn[data-sort="familie"]').click(); });
+  await new Promise((r) => setTimeout(r, 120));
+  d2.liste = await page.evaluate(() => {
+    const q = (s) => document.querySelector(s), cs = (e) => getComputedStyle(e), rc = (e) => e.getBoundingClientRect();
+    const fam = (f) => /mono|courier/i.test(f) ? "mono" : (/serif/i.test(f) && !/sans/i.test(f) ? "serif" : "sans");
+    const heads = [...document.querySelectorAll(".cathead")], ci = q(".cathead-i"), go = q(".sp-go"), zp = q(".sp-zp"), catn = q(".catn");
+    const lang = heads.find((h) => (h.querySelector(".cathead-t") || h).textContent.length >= 28) || heads[0];
+    return { ciSvg: !!ci && !!ci.querySelector("svg.ic") && ci.textContent.trim() === "", ciRund: ci && cs(ci).borderRadius === "50%", goSvg: !!go && !!go.querySelector("svg.ic") && go.textContent.trim() === "",
+      zpSans: zp && fam(cs(zp).fontFamily) === "sans", zpR: zp && cs(zp).borderRadius, catnPille: catn && /99/.test(cs(catn).borderRadius) && fam(cs(catn).fontFamily) === "sans",
+      topSans: fam(cs(q(".listtop")).fontFamily) === "sans", subSans: fam(cs(q("#lcToggle .lc-sub")).fontFamily) === "sans", caretSvg: !!q(".lc-caret svg.ic") && !/▾/.test(q("#lcToggle").textContent),
+      kopfImBild: !!lang && [...lang.children].every((c) => rc(c).right <= innerWidth + 0.5 && rc(c).left >= 0), langText: lang && lang.textContent.trim().slice(0, 40),
+      keinGlyph: !/[ℹ↗‹›▾]/.test(q("#stage").textContent) };
+  });
+  assert(Object.entries(d2.liste).every(([k, v]) => k === "langText" || k === "zpR" ? true : !!v) && d2.liste.zpR === "4px",
+    "Liste: ℹ/Pfeil-Knöpfe als SVG (rund), ZP-Badge Sans 4 px, Zähler als Sans-Pille, Kopfzeilen Sans, SVG-Chevron, langer Familienname bleibt im Bild: " + JSON.stringify(d2.liste));
+  await page.evaluate((srt) => document.querySelector('#listControls .sortbtn[data-sort="' + srt + '"]').click(), d2.sortVorher);
+  await page.setViewport({ width: 800, height: 600 });
+  await page.evaluate((m) => document.querySelector('.modes button[data-mode="' + m + '"]').click(), d2.modeVorher);
+  // 5) Dialoge: Hilfe, Info-Karte, Herbarium, Stufen-Leiter, Laufbahn, Lightbox
+  await page.evaluate(() => document.querySelector("#btnHelp").click());
+  await new Promise((r) => setTimeout(r, 80));
+  d2.hilfe = await page.evaluate(() => {
+    const q = (s) => document.querySelector(s), cs = (e) => getComputedStyle(e);
+    const fam = (f) => /mono|courier/i.test(f) ? "mono" : (/serif/i.test(f) && !/sans/i.test(f) ? "serif" : "sans");
+    const sum = q("#helpScrim .hsec>summary"), x = q("#helpClose");
+    return { sumSans: fam(cs(sum).fontFamily) === "sans", sumPx: parseFloat(cs(sum).fontSize), keinCaretZeichen: !/▾/.test(cs(sum, "::after").content) && !/▾/.test(sum.textContent), afterContent: cs(sum, "::after").content,
+      xSvg: !!x.querySelector("svg.ic") && x.textContent.trim() === "", xRund: cs(x).borderRadius === "50%", h4Sans: fam(cs(q("#helpScrim h4") || sum).fontFamily) === "sans", modalR: cs(q("#helpScrim .modal")).borderRadius };
+  });
+  await page.keyboard.press("Escape");
+  assert(d2.hilfe.sumSans && d2.hilfe.sumPx === 14 && d2.hilfe.keinCaretZeichen && d2.hilfe.xSvg && d2.hilfe.xRund && d2.hilfe.h4Sans && d2.hilfe.modalR === "16px",
+    "Hilfe-Dialog: Klappen-Titel Sans 14 px mit SVG-Chevron (kein ▾), Schließen rund als SVG, Dialog 16 px: " + JSON.stringify(d2.hilfe));
+  await page.evaluate(() => openInfo(allCards.find((c) => /'Sorte'/.test(c.a)) || allCards[0]));
+  await new Promise((r) => setTimeout(r, 80));
+  d2.info = await page.evaluate(() => {
+    const q = (s) => document.querySelector(s), cs = (e) => getComputedStyle(e);
+    const fam = (f) => /mono|courier/i.test(f) ? "mono" : (/serif/i.test(f) && !/sans/i.test(f) ? "serif" : "sans");
+    const ext = q("#infoScrim .srcgrid a .ext"), x = q("#infoClose");
+    const sans = [".mh-fam", ".mh-src", ".etym>summary", ".sorten h3", ".srclabel", ".lstate"].map((s) => q("#infoScrim " + s)).filter(Boolean).every((e) => fam(cs(e).fontFamily) === "sans");
+    return { sans, extSvg: !!ext && !!ext.querySelector("svg.ic") && !/↗/.test(q("#infoScrim .srcgrid").textContent), xSvg: !!x.querySelector("svg.ic") && x.textContent.trim() === "",
+      linkR: cs(q("#infoScrim .srcgrid a")).borderRadius, botPx: parseFloat(cs(q("#infoScrim .mh-bot")).fontSize), keinGlyph: !/[ℹ↗‹›▾]/.test(q("#infoScrim").textContent) };
+  });
+  await page.evaluate(() => closeInfo());
+  assert(d2.info.sans && d2.info.extSvg && d2.info.xSvg && d2.info.linkR === "10px" && d2.info.botPx === 24 && d2.info.keinGlyph,
+    "Info-Karte: Beschriftungen Sans, »öffnet neuen Tab« als SVG (kein ↗), Schließen als SVG, Quellen-Links 10 px, Titel 24 px: " + JSON.stringify(d2.info));
+  await page.evaluate(() => openHerbarium());
+  await new Promise((r) => setTimeout(r, 80));
+  d2.herb = await page.evaluate(() => {
+    const q = (s) => document.querySelector(s), cs = (e) => getComputedStyle(e);
+    const fam = (f) => /mono|courier/i.test(f) ? "mono" : (/serif/i.test(f) && !/sans/i.test(f) ? "serif" : "sans");
+    const n = q("#infoScrim .hc-n"), l = q("#infoScrim .hc-learn");
+    return { nSans: fam(cs(n).fontFamily) === "sans", learnOutline: l.classList.contains("outline") && parseFloat(cs(l).borderTopWidth) >= 1, cardR: cs(q("#infoScrim .herbcard")).borderRadius, famSans: fam(cs(q("#infoScrim .mh-fam")).fontFamily) === "sans" };
+  });
+  await page.evaluate(() => closeInfo());
+  assert(d2.herb.nSans && d2.herb.learnOutline && d2.herb.cardR === "10px" && d2.herb.famSans,
+    "Herbarium: Zähler Sans, »Thema üben« umrandet, Sammelkarte 10 px, Unterzeile Sans: " + JSON.stringify(d2.herb));
+  await page.evaluate(() => document.querySelector("#btnHow").click());
+  await new Promise((r) => setTimeout(r, 80));
+  d2.how = await page.evaluate(() => {
+    const q = (s) => document.querySelector(s), cs = (e) => getComputedStyle(e);
+    const fam = (f) => /mono|courier/i.test(f) ? "mono" : (/serif/i.test(f) && !/sans/i.test(f) ? "serif" : "sans");
+    return { intSans: fam(cs(q("#infoScrim .how-int")).fontFamily) === "sans", labSans: fam(cs(q("#infoScrim .how-lab")).fontFamily) === "sans", rowR: cs(q("#infoScrim .how-row")).borderRadius,
+      rkpSans: fam(cs(q("#rankPop .rkp-h")).fontFamily) === "sans" && fam(cs(q("#rankPop .r-x")).fontFamily) === "sans", rkpR: cs(q("#rankPop")).borderRadius };
+  });
+  await page.evaluate(() => closeInfo());
+  assert(d2.how.intSans && d2.how.labSans && d2.how.rowR === "10px" && d2.how.rkpSans && d2.how.rkpR === "16px",
+    "Stufen-Leiter + Laufbahn: Intervalle/Labels Sans, Zeilen 10 px, Popover Sans/16 px: " + JSON.stringify(d2.how));
+  await page.evaluate((GIF) => openLightbox(GIF, "Bild", [{ src: GIF, label: "1" }, { src: GIF, label: "2" }], 0), "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==");
+  await new Promise((r) => setTimeout(r, 120));
+  d2.lb = await page.evaluate(() => {
+    const q = (s) => document.querySelector(s), cs = (e) => getComputedStyle(e);
+    const x = q(".lbscrim .lb-x"), p = q(".lbscrim .lb-nav.prev"), n = q(".lbscrim .lb-nav.next");
+    return { xSvg: !!x && !!x.querySelector("svg.ic") && x.textContent.trim() === "", xRund: x && cs(x).borderRadius === "50%", navSvg: !!p && !!n && !!p.querySelector("svg.ic") && !!n.querySelector("svg.ic") && (p.textContent + n.textContent).trim() === "",
+      navR: p && cs(p).borderRadius, countMono: /mono|courier/i.test(cs(q(".lbscrim .lb-count")).fontFamily) };
+  });
+  await page.keyboard.press("Escape");
+  assert(d2.lb.xSvg && d2.lb.xRund && d2.lb.navSvg && d2.lb.navR === "10px" && d2.lb.countMono,
+    "Lightbox: Schließen rund + SVG, Pfeile als SVG (10 px), Zähler Mono: " + JSON.stringify(d2.lb));
+  d2.fuss = await page.evaluate(() => { const cs = (e) => getComputedStyle(e); const fam = (f) => /mono|courier/i.test(f) ? "mono" : "sans"; return { foot: fam(cs(document.querySelector(".foot")).fontFamily), build: fam(cs(document.querySelector("#buildStamp")).fontFamily) }; });
+  assert(d2.fuss.foot === "sans" && d2.fuss.build === "mono", "Fußzeile Sans, nur der Versionsstempel bleibt Mono: " + JSON.stringify(d2.fuss));
+
   // Lernpfad: Modi nach Schwierigkeit sortiert (Bilder zuerst) mit Schwierigkeits-Tags;
   // Erst-Einweisung über »So funktioniert der Lernpfad« öffnen/schließen (merkt »gesehen«).
   const lp = await page.evaluate(() => {
@@ -1593,7 +1731,7 @@ async function main() {
     __setPhotoSource(null);
     return out;
   }, PX);
-  assert(abbruch.quiz.done === 1 && abbruch.quiz.correct === 1 && /1 Karten gelernt · 1 richtig \(100 %\)/.test(abbruch.quiz.text) && /Sitzung beendet/.test(abbruch.quiz.titel),
+  assert(abbruch.quiz.done === 1 && abbruch.quiz.correct === 1 && /1 Karte gelernt · 1 richtig \(100 %\)/.test(abbruch.quiz.text) && /Sitzung beendet/.test(abbruch.quiz.titel),
     "Beantwortet + beenden ohne »Weiter«: die Karte zählt als gelernt (1 von 1, 100 %): " + JSON.stringify(abbruch.quiz));
   assert(abbruch.keinFormular === undefined && abbruch.duel.done === 2 && abbruch.duel.scored === 2 && abbruch.duel.correct === 2 && /2 von 20 Pflanzen · 2 ganz richtig/.test(abbruch.duel.text)
     && abbruch.duel.du === "100 %" && abbruch.duel.duRaw === "2/2" && /Probeprüfung abgebrochen/.test(abbruch.duel.titel),

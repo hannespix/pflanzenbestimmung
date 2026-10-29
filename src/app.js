@@ -13,6 +13,7 @@ const esc = s => (s==null?"":String(s)).replace(/[&<>"']/g,m=>({"&":"&amp;","<":
 /* Strich-Icons statt bunter Emojis (die werden je nach Gerät unterschiedlich
    gerendert und wirken unprofessionell). Gleicher Stil wie die übrigen Icons. */
 const APPICONS = {
+  x:`<path d="M6 6l12 12M18 6L6 18"/>`, prev:`<path d="M15 5l-7 7 7 7"/>`, next:`<path d="M9 5l7 7-7 7"/>`, ext:`<path d="M7 17L17 7"/><path d="M8 7h9v9"/>`,   // wie im Lern-Tool: Strich-Icons statt × ‹ › ↗
   globe:`<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 2.5 14.4 0 17M12 3.5c-2.5 2.6-2.5 14.4 0 17"/>`,
   book:`<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H19v3H6.5"/>`
 };
@@ -2147,8 +2148,8 @@ function lbSync(){
   const sc=document.querySelector(".lbscrim"); if(!sc) return;
   const img=sc.querySelector(".lb-img");
   if(lbList.length>1 && !sc.querySelector(".lb-nav")){
-    img.insertAdjacentHTML("beforebegin", `<button class="lb-nav prev" aria-label="Vorheriges Bild">‹</button>`);
-    img.insertAdjacentHTML("afterend", `<button class="lb-nav next" aria-label="Nächstes Bild">›</button>`+
+    img.insertAdjacentHTML("beforebegin", `<button class="lb-nav prev" aria-label="Vorheriges Bild">${ico("prev")}</button>`);
+    img.insertAdjacentHTML("afterend", `<button class="lb-nav next" aria-label="Nächstes Bild">${ico("next")}</button>`+
       `<div class="lb-count" aria-live="polite"></div>`);
   }
   const z=sc.querySelector(".lb-count"); if(z) z.textContent = `${lbIdx+1} / ${lbList.length}`;
@@ -2237,7 +2238,7 @@ function openLightbox(src, alt, list, start, loader){
   lbIdx = Math.max(0, Math.min(lbList.length-1, start||0));
   const sc=el("div","lbscrim");
   sc.setAttribute("role","dialog"); sc.setAttribute("aria-modal","true"); sc.setAttribute("aria-label","Bild vergrößert");
-  sc.innerHTML=`<button class="lb-x" aria-label="Schließen">×</button><img class="lb-img" src="" alt="">`;
+  sc.innerHTML=`<button class="lb-x" aria-label="Schließen">${ico("x")}</button><img class="lb-img" src="" alt="">`;
   sc.addEventListener("click",e=>{
     if(lbSwiped){ lbSwiped=false; return; }             // Wisch-Geste, kein Klick
     if(e.target.closest(".lb-nav.prev")) return lbShow(lbIdx-1);
@@ -2452,7 +2453,7 @@ function openInfo(card){
   if(!card) return;
   closeInfo();
   const links = deepLinks(card).map(l=>
-    `<a href="${esc(l.u)}" target="_blank" rel="noopener">${esc(l.n)}<span class="ext">↗</span></a>`).join("");
+    `<a href="${esc(l.u)}" target="_blank" rel="noopener">${esc(l.n)}<span class="ext">${ico("ext")}</span></a>`).join("");
   const fam = [card.fam, card.thema].filter(Boolean).join(" · ");
   const ety = nameEtymology(card.g, card.a);                       // Namensherleitung (Merkhilfe, offline)
   // Standardmäßig aufgeklappt; klappt man sie zu, merkt sich das Gerät den Zustand
@@ -2465,7 +2466,7 @@ function openInfo(card){
      </details>` : "";
   const scrim = el("div","infoscrim"); scrim.id="infoScrim";
   scrim.innerHTML = `<div class="infobox" role="dialog" aria-modal="true" aria-label="Pflanzen-Info">
-     <button class="infobox-x" id="infoClose" aria-label="Schließen" title="Schließen">×</button>
+     <button class="infobox-x" id="infoClose" aria-label="Schließen" title="Schließen">${ico("x")}</button>
      <div class="modal-head">
        <div class="mh-bot">${esc(norm(card.g+" "+card.a))}</div>
        ${card.de?`<div class="mh-de">${esc(card.de)}</div>`:""}
