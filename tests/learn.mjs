@@ -4777,10 +4777,10 @@ async function main() {
   await page.emulateMediaType("print");
   const ecoCss = await page.evaluate(() => {
     const cs = (s) => getComputedStyle(document.querySelector(s)), tr = (c) => c === "rgba(0, 0, 0, 0)" || c === "transparent";
-    const th = cs("#printList table.ptab thead th"), band = cs("#printList table.ptab tr.pcat td"), even = cs("#printList table.ptab tbody tr:nth-of-type(even):not(.pcat) td"), bot = cs("#printList table.ptab td.bot");
+    const th = cs("#printList table.ptab thead th"), band = cs("#printList table.ptab tr.pcat .pcat-h"), even = cs("#printList table.ptab tbody tr:nth-of-type(even):not(.pcat) td"), bot = cs("#printList table.ptab td.bot");
     const mit = { thBg: tr(th.backgroundColor), thColor: th.color, bandBg: tr(band.backgroundColor), bandLeft: band.borderLeftWidth, evenBg: tr(even.backgroundColor), botColor: bot.color, adjust: cs("#printList").printColorAdjust || cs("#printList").webkitPrintColorAdjust };
     const cb = document.querySelector("#printEco"); cb.checked = false; cb.dispatchEvent(new Event("change")); buildPrintList();
-    const th2 = cs("#printList table.ptab thead th"), band2 = cs("#printList table.ptab tr.pcat td");
+    const th2 = cs("#printList table.ptab thead th"), band2 = cs("#printList table.ptab tr.pcat .pcat-h");
     const ohne = { thBg: tr(th2.backgroundColor), bandBg: tr(band2.backgroundColor), eco: document.querySelector("#printList").classList.contains("eco"), stored: localStorage.getItem("pflanzenlernen.printeco") };
     return { mit, ohne };
   });
@@ -4789,6 +4789,49 @@ async function main() {
     "Sparsam (Druckmedium): Kopf/Band/Zebra ohne Fläche, Band ohne Akzentstreifen, botanischer Name schwarz, print-color-adjust economy: " + JSON.stringify(ecoCss.mit));
   assert(!ecoCss.ohne.thBg && !ecoCss.ohne.bandBg && !ecoCss.ohne.eco && ecoCss.ohne.stored === "0",
     "Nach Abwahl: grüner Kopf und Band-Fläche wieder da, keine eco-Klasse: " + JSON.stringify(ecoCss.ohne));
+
+  // Abstand vor jedem Gliederungs-Band (Nutzerwunsch: »bei neuem Thema-Abschnitt eine Leerzeile«):
+  // Im Druck beginnt jedes Band außer dem ersten mit einer Lücke (Zellen-Polster ≈ 10pt, die Zelle
+  // selbst ohne Fläche); die Beschriftung steckt in einem <h2> (Gliederung → PDF-Lesezeichen);
+  // bei »jede Gruppe auf neuer Seite« (.pbrk) entfällt der Abstand; sparsam = knapper (8pt).
+  await page.emulateMediaType("print");
+  const pgap = await page.evaluate(() => {
+    const setBreak = (v) => { const cb = document.querySelector("#printBreak"); cb.checked = v; cb.dispatchEvent(new Event("change")); };
+    const setEco = (v) => { const cb = document.querySelector("#printEco"); cb.checked = v; cb.dispatchEvent(new Event("change")); };
+    const tr = (c) => c === "rgba(0, 0, 0, 0)" || c === "transparent";
+    const measure = () => {
+      buildPrintList();
+      return [...document.querySelectorAll("#printList table.ptab tr.pcat")].map((b) => {
+        const td = b.querySelector("td"), h = b.querySelector("td > h2.pcat-h"), prev = b.previousElementSibling;
+        const gap = h && prev ? Math.round(h.getBoundingClientRect().top - prev.getBoundingClientRect().bottom) : -1;
+        return { h2: !!h, text: h ? h.textContent.trim() : "", gap, pad: parseFloat(getComputedStyle(td).paddingTop),
+          tdBg: tr(getComputedStyle(td).backgroundColor), hBg: h ? tr(getComputedStyle(h).backgroundColor) : null,
+          hDisp: h ? getComputedStyle(h).display : "", hMargin: h ? getComputedStyle(h).marginTop : "" };
+      });
+    };
+    document.querySelector('.sortbtn[data-sort="thema"]').click();
+    setBreak(false); setEco(false);
+    const thema = measure();
+    document.querySelector('.sortbtn[data-sort="bot"]').click();
+    const az = measure();
+    document.querySelector('.sortbtn[data-sort="thema"]').click();
+    setBreak(true); const brk = measure(); setBreak(false);
+    setEco(true); const eco = measure(); setEco(false);
+    buildPrintList();
+    return { thema, az, brk, eco };
+  });
+  await page.emulateMediaType("screen");
+  const rest = (a) => a.slice(1);
+  assert(pgap.thema.length > 2 && pgap.thema.every((b) => b.h2 && b.text && b.hDisp === "block" && b.hMargin === "0px" && b.tdBg && !b.hBg),
+    "Band: Beschriftung als <h2 class=pcat-h> (Block, ohne Außenabstand), Zelle ohne Fläche, Überschrift mit Fläche: " + JSON.stringify(pgap.thema.slice(0, 3)));
+  assert(pgap.thema[0].pad === 0 && rest(pgap.thema).every((b) => b.pad >= 12 && b.gap >= 11),
+    "Thema-Ansicht: erstes Band ohne Abstand, jedes weitere mit ≈10pt Leerzeile davor: " + JSON.stringify(pgap.thema.slice(0, 3)));
+  assert(pgap.az.length > 2 && pgap.az[0].pad === 0 && rest(pgap.az).every((b) => b.h2 && b.pad >= 12 && b.gap >= 11),
+    "A–Z-Ansicht: Buchstaben-Bänder ebenso mit Abstand: " + JSON.stringify(pgap.az.slice(0, 3)));
+  assert(pgap.brk.every((b) => b.pad === 0),
+    "Mit »jede Gruppe auf neuer Seite« darf kein Band einen Abstand tragen (Seite beginnt frisch): " + JSON.stringify(pgap.brk.slice(0, 3)));
+  assert(pgap.eco[0].pad === 0 && rest(pgap.eco).every((b) => b.pad >= 10 && b.pad < 12 && b.gap >= 9 && b.hBg && b.tdBg),
+    "Sparsam: knapperer Abstand (≈8pt), Band ohne Fläche: " + JSON.stringify(pgap.eco.slice(0, 3)));
 
   // Disclaimer: dezenter Hinweis (RP-Bezug, Stand, KI-Kategorien, keine Gewähr)
   const disc = await page.evaluate(() => {

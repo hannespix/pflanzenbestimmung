@@ -866,11 +866,17 @@ body{line-height:1.5}
   /* Abhak-Spalte zum Selbstlernen: leeres Kästchen ankreuzen, wenn es sitzt */
   table.ptab th.pchk,table.ptab td.pchk{text-align:center; width:8%; vertical-align:middle}
   table.ptab td.pchk .box{display:inline-block; width:9pt; height:9pt; border:.9pt solid #9aa88c; border-radius:2pt}
-  /* Themen-/Buchstaben-Band: linker Akzentstreifen, Versalien, scannbar */
-  table.ptab tr.pcat td{font-family:'Segoe UI',system-ui,sans-serif; font-weight:700; font-size:8.5pt;
-    letter-spacing:.05em; text-transform:uppercase; color:#264a34; background:#e6eede !important;
-    border-bottom:.5pt solid #c2cdb1; border-left:3pt solid #2f5339; padding:5pt 8pt 5pt 9pt}
-  table.ptab tr.pcat{break-inside:avoid; break-after:avoid}   /* Band nie allein am Seitenende */
+  /* Themen-/Buchstaben-Band: Überschrift (<h2> → Gliederung, PDF-Lesezeichen) mit linkem
+     Akzentstreifen, Versalien, scannbar. Davor eine »Leerzeile«: Der Abstand sitzt als Polster
+     in der Zelle, die selbst ohne Fläche bleibt – so beginnt jeder Abschnitt im Ausdruck sichtbar
+     abgesetzt. Kein Abstand vor dem ersten Band (direkt unter dem Kopf) und vor einem Band auf
+     neuer Seite (.pbrk). */
+  table.ptab tr.pcat td{padding:10pt 0 0; border:0; background:none !important}
+  table.ptab tbody tr.pcat:first-child td,table.ptab tr.pcat.pbrk td{padding-top:0}
+  table.ptab tr.pcat .pcat-h{display:block; margin:0; font-family:'Segoe UI',system-ui,sans-serif; font-weight:700;
+    font-size:8.5pt; line-height:1.34; letter-spacing:.05em; text-transform:uppercase; color:#264a34;
+    background:#e6eede; border-bottom:.5pt solid #c2cdb1; border-left:3pt solid #2f5339; padding:5pt 8pt 5pt 9pt}
+  table.ptab tr.pcat{break-inside:avoid; break-after:avoid}   /* Band (samt Abstand) nie allein am Seitenende */
   /* Opt-in »jede Gruppe auf neuer Seite«: ab dem zweiten Band Seitenumbruch davor
      (buildPrintList setzt .pbrk); der Tabellenkopf wiederholt sich ohnehin je Seite */
   table.ptab tr.pcat.pbrk{break-before:page; page-break-before:always}
@@ -902,7 +908,9 @@ body{line-height:1.5}
   table.ptab.eco td.pnum{color:#333}
   table.ptab.eco td.pzp .zpdot{background:#000}
   table.ptab.eco td.pchk .box{border-color:#000}
-  table.ptab.eco tr.pcat td{background:none !important; border-left:none; border-bottom:1pt solid #000; color:#000; padding:5pt 6pt 2pt}
+  table.ptab.eco tr.pcat td{padding-top:8pt}                      /* Abstand vor dem Band etwas knapper */
+  table.ptab.eco tbody tr.pcat:first-child td,table.ptab.eco tr.pcat.pbrk td{padding-top:0}
+  table.ptab.eco tr.pcat .pcat-h{background:none; border-left:none; border-bottom:1pt solid #000; color:#000; padding:5pt 6pt 2pt}
   table.ptab.eco.ety td.pety-c{color:#333}
   table.ptab.eco.ety td.pety-c i{color:#000}
   table.ptab.eco.ety td.pety-c .pety-lab{color:#333}
@@ -1708,7 +1716,7 @@ body.stagefull #stage>.sessionbar{
   <div class="installbar" id="installBar" hidden></div>
 
   <footer class="foot">
-    <span>Pflanzenkenntnis · Lernen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 29.10.2026 · Version 2aa3f77</span></span>
+    <span>Pflanzenkenntnis · Lernen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 29.10.2026 · Version 6f8cb4c</span></span>
     <a class="legal" href="rechtliches.html">Impressum &amp; Datenschutz</a>
   </footer>
 </div>
@@ -4823,7 +4831,9 @@ function buildPrintList(){
   const wantEco = printEcoOn();                                   // opt-in: sparsam (keine Farbflächen, schwarze Schrift, engere Zeilen)
   let n=0, rows="", bandN=0;
   const band = label => { bandN++;                                // erstes Band ohne Umbruch (sonst leere erste Seite)
-    return `<tr class="pcat${wantBreak&&bandN>1?" pbrk":""}"><td colspan="${tCols}">${esc(label)}</td></tr>`; };
+    // Überschrift als <h2> (Gliederung – ein PDF-Drucker kann daraus Lesezeichen bauen); der kleine
+    // Abstand (»Leerzeile«) vor jedem weiteren Band sitzt im Print-CSS (tr.pcat td, learn.html)
+    return `<tr class="pcat${wantBreak&&bandN>1?" pbrk":""}"><td colspan="${tCols}"><h2 class="pcat-h">${esc(label)}</h2></td></tr>`; };
   const rowFor = c => { n++;
     const cls = wantEty ? ` class="pmain${n%2===0?" pz":""}"` : "";
     let tr = `<tr${cls}><td class="pnum">${n}</td>`+
