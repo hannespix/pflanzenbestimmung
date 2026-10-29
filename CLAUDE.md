@@ -3094,6 +3094,26 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       nicht durchgeht (`--check`-Modus ignoriert die Datumszeile). Der Versand selbst ist Sache
       des Betreibers. Build, Offline-Check, alle drei Puppeteer-Suiten und Seeds-Abgleich grün.
 
+- [x] **Druckliste: Abstand (»Leerzeile«) vor jedem Gliederungs-Band + Bänder als Überschriften**
+      (Nutzerwunsch: »beim Listendruck bei neuem Thema-Abschnitt eine Leerzeile oder einen kleinen
+      Abstand lassen«). Bisher saß das nächste Band (Thema, Familie oder Anfangsbuchstabe) direkt
+      unter der letzten Zeile des vorigen Abschnitts. Jetzt beginnt jeder Abschnitt im Ausdruck/PDF
+      sichtbar abgesetzt: Der Abstand sitzt als **Polster in der Band-Zelle** (`table.ptab tr.pcat td`
+      – 10pt, sparsam 8pt; die Zelle selbst ohne Fläche und Rahmen), die Band-Optik (Fläche,
+      Akzentstreifen, Versalien, Linie) trägt die **Beschriftung als `<h2 class="pcat-h">`** – damit
+      ist die Liste auch semantisch gegliedert, und ein PDF-Drucker, der aus Überschriften
+      Lesezeichen baut (headless Chrome mit `outline`, verifiziert: h1 + neun Themen-Bänder als
+      Gliederung im PDF), bekommt die Themen als Gliederung. **Kein** Abstand vor dem ersten Band
+      (direkt unter dem Tabellenkopf) und vor einem Band auf neuer Seite (`.pbrk`, Option »jede
+      Gruppe auf neuer Seite«). Spacer-Zeilen bewusst **nicht** gewählt (sie hätten Zebra-Parität
+      und die `tr:not(.pcat)`-Zählungen verschoben); die Tabelle bleibt `border-collapse:collapse`.
+      Seitenzahl unverändert (Gemüsebau/Thema: 6 Seiten, sparsam 5, mit Umbruch 10). Alle vier
+      Ansichten (Thema, Familie, A–Z botanisch/deutsch) und beide Druckstile betroffen; Musterlösung
+      des Prüfungswerkzeugs unberührt (keine Bänder). `tests/learn.mjs`: im Druckmedium je Band
+      `<h2>` (Block, ohne Außenabstand), Zelle ohne Fläche, erstes Band ohne Abstand, alle weiteren
+      ≈10pt Lücke (Thema und A–Z), mit `.pbrk` kein Abstand, sparsam ≈8pt ohne Fläche; der Sparsam-
+      Test misst die Band-Fläche jetzt am `.pcat-h`.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.

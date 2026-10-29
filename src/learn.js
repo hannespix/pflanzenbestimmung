@@ -2204,7 +2204,9 @@ function buildPrintList(){
   const wantEco = printEcoOn();                                   // opt-in: sparsam (keine Farbflächen, schwarze Schrift, engere Zeilen)
   let n=0, rows="", bandN=0;
   const band = label => { bandN++;                                // erstes Band ohne Umbruch (sonst leere erste Seite)
-    return `<tr class="pcat${wantBreak&&bandN>1?" pbrk":""}"><td colspan="${tCols}">${esc(label)}</td></tr>`; };
+    // Überschrift als <h2> (Gliederung – ein PDF-Drucker kann daraus Lesezeichen bauen); der kleine
+    // Abstand (»Leerzeile«) vor jedem weiteren Band sitzt im Print-CSS (tr.pcat td, learn.html)
+    return `<tr class="pcat${wantBreak&&bandN>1?" pbrk":""}"><td colspan="${tCols}"><h2 class="pcat-h">${esc(label)}</h2></td></tr>`; };
   const rowFor = c => { n++;
     const cls = wantEty ? ` class="pmain${n%2===0?" pz":""}"` : "";
     let tr = `<tr${cls}><td class="pnum">${n}</td>`+
