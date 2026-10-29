@@ -885,6 +885,27 @@ body{line-height:1.5}
   table.ptab.ety td.pety-c .pety-lab{color:#8a7a5c; font-style:normal; font-size:7.5pt}
   .pfoot{font-family:'Segoe UI',system-ui,sans-serif; font-size:7.5pt; margin-top:8pt; padding-top:6pt;
     border-top:1pt solid #cdd6c4; color:#8a7a5c; text-align:center}
+  /* Sparsam drucken (opt-in, Optionen-Klappe »Drucken«): keine Farbflächen, schwarze Schrift,
+     engere Zeilen – für Toner und Papier. Die Gliederung (Bänder, Kopf, ZP-Punkt, Abhak-Kästchen)
+     bleibt über Linien und Schriftschnitt lesbar; print-color-adjust:economy lässt dem Browser
+     ausdrücklich frei, Hintergründe wegzulassen. */
+  #printList.eco{color:#000; print-color-adjust:economy; -webkit-print-color-adjust:economy; line-height:1.25}
+  #printList.eco .ptitle,#printList.eco .psub{color:#000}
+  #printList.eco .pmeta,#printList.eco .pfoot{color:#333; border-color:#999}
+  table.ptab.eco{font-size:9.5pt}
+  table.ptab.eco th,table.ptab.eco td{padding:2pt 6pt; border-bottom:.4pt solid #bbb}
+  table.ptab.eco thead th{background:none !important; color:#000; border-bottom:1pt solid #000; padding:3pt 6pt}
+  table.ptab.eco thead th .pp{color:#333}
+  table.ptab.eco:not(.ety) tbody tr:nth-of-type(even) td{background:none}
+  table.ptab.eco.ety tr.pz>td{background:none}
+  table.ptab.eco td.bot{color:#000}
+  table.ptab.eco td.pnum{color:#333}
+  table.ptab.eco td.pzp .zpdot{background:#000}
+  table.ptab.eco td.pchk .box{border-color:#000}
+  table.ptab.eco tr.pcat td{background:none !important; border-left:none; border-bottom:1pt solid #000; color:#000; padding:5pt 6pt 2pt}
+  table.ptab.eco.ety td.pety-c{color:#333}
+  table.ptab.eco.ety td.pety-c i{color:#000}
+  table.ptab.eco.ety td.pety-c .pety-lab{color:#333}
 }
 
 /* ===== Herbarium 2.0 (2026-Refresh): Design-Token, Dark Mode, Glas & Tiefe =====
@@ -1519,8 +1540,10 @@ body.stagefull #stage>.sessionbar{
         Prüfungsbogens, mit hervorgehobenem botanischem Namen (dem Lernziel) und einer
         <b>»gelernt«-Spalte zum Abhaken</b>. In der Zeile <b>»Drucken«</b> der Optionen-Klappe wählst du,
         <b>welche Spalten</b> gedruckt werden (nicht alle müssen aufs Blatt – z. B. Familie oder ZP
-        weglassen), und ob zu jeder Pflanze eine <b>Merkzeile zur Namensherkunft</b> erscheint
-        (Bedeutung des botanischen Namens, Latein/Griechisch → Deutsch, kuratiert – ohne Gewähr).</dd>
+        weglassen), ob zu jeder Pflanze eine <b>Merkzeile zur Namensherkunft</b> erscheint
+        (Bedeutung des botanischen Namens, Latein/Griechisch → Deutsch, kuratiert – ohne Gewähr), ob jede
+        Gruppe auf einer neuen Seite beginnt – und <b>»sparsam drucken«</b>: ohne Farbflächen (kein grüner
+        Tabellenkopf, keine Zebrastreifen), schwarze Schrift, engere Zeilen – spart Toner und Papier.</dd>
     </dl>
     </div></details>
     <details class="hsec"><summary>Einstellungen</summary><div class="hbody">

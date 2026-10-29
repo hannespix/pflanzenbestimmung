@@ -51,7 +51,8 @@ Arbeitsanweisungen für die Weiterentwicklung mit Claude Code stehen in
 - **Einstellungen:** Kopf des Bogens anpassbar – Titel, **zuständige Stelle**
   (zwei Zeilen) und der Vermerk auf der Musterlösung; damit auch andere zuständige
   Stellen als das RP Freiburg das Werkzeug nutzen können (geräteweit gespeichert).
-- **Druck:** Prüfungsbogen (leer) und Musterlösung (gefüllt, mit Punktespalte).
+- **Druck:** Prüfungsbogen (leer) und Musterlösung (gefüllt, mit Punktespalte); die Musterlösung
+  auf Wunsch **sparsam** (ohne Farbflächen, kompakt – Schalter im Druck-Dialog, wird gemerkt).
   Spalten und Punkte richten sich nach dem Prüfungsschema des Profils.
 - **Prüfungen speichern (nach Prüfungsdatum):** eine gezogene Liste als
   Momentaufnahme (samt Schema) unter einem Prüfungsdatum sichern – im Tool
