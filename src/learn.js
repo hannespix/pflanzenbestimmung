@@ -28,7 +28,11 @@ const ICONS = {
   list:   `<path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1" fill="currentColor" stroke="none"/>`,
   sliders:`<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/>`,
   trophy: `<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.5 4M17 6h2.5a2.5 2.5 0 0 1-2.5 4"/><path d="M12 14v3M9 20h6M10 17h4"/>`,
-  clock:  `<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>`
+  clock:  `<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>`,
+  // Start-Knöpfe (dieselben Formen stehen als Inline-SVG in learn.html, wie bei den Modus-Tabs):
+  play:   `<circle cx="12" cy="12" r="8.5"/><path d="M10.2 8.6v6.8l5.4-3.4z" fill="currentColor" stroke="none"/>`,
+  sheet:  `<path d="M8 4.5H6.5a2 2 0 0 0-2 2v12.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V6.5a2 2 0 0 0-2-2H16"/><rect x="8" y="2.8" width="8" height="3.2" rx="1"/><path d="M8.5 11h7M8.5 14.5h7M8.5 18h4"/>`,
+  back:   `<path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/>`
 };
 function ico(name, cls){                       // → <svg> im einheitlichen Strichstil
   const d = ICONS[name]; if(!d) return "";
@@ -2352,14 +2356,14 @@ function applyMode(){
   const sr=$("#startRow"), lsr=$("#listSearchRow"), lc=$("#listControls");
   if(sr) sr.hidden = isList;
   const gr=$("#goRow"); if(gr) gr.hidden = isList;          // die beiden Start-Knöpfe nur außerhalb der Liste
-  const bl=$("#btnList");                                   // Schnellzugriff wird zum Rückweg
-  if(bl) bl.textContent = isList ? "← Zurück zum Lernen" : "Liste zum Nachschlagen";
+  const bl=$("#btnList");                                   // Schnellzugriff wird zum Rückweg (Symbol + Text, kein Pfeil-Zeichen)
+  if(bl) bl.innerHTML = isList ? ico("back")+"<span>Zurück zum Lernen</span>" : ico("list")+"<span>Liste zum Nachschlagen</span>";
   const ln=$("#learnNote"); if(ln) ln.hidden = isList;   // Hinweis gehört zu den Lektionen, nicht zur Liste
   const cf=$("#cat") && $("#cat").closest(".field"); if(cf) cf.hidden = isList;  // »Auswahl«-Scope filtert die Liste nicht – im Listenmodus ausblenden (Suche + Ansicht-Tags reichen)
   // Im Listenmodus gibt es EIN Options-Akkordeon: die Sitzungs-Optionen sind ausgeblendet,
   // ihre listenrelevanten Schalter (ZP, Prüfungsstoff) stehen gespiegelt im Listen-Akkordeon.
   const so=$("#setOpts"); if(so) so.hidden = isList;
-  const cw=$("#chooseWrap"); if(cw) cw.hidden = isList;   // Audit: die Sitzungs-Klappe »Selbst wählen« hat in der Nachschlage-Liste nichts verloren – zurück geht es über »← Zurück zum Lernen«
+  const cw=$("#chooseWrap"); if(cw) cw.hidden = isList;   // Audit: die Sitzungs-Klappe »Selbst wählen« hat in der Nachschlage-Liste nichts verloren – zurück geht es über »Zurück zum Lernen«
   if(lsr) lsr.hidden = !isList;
   if(lc) lc.hidden = !isList;
   syncDirUI(); syncOptsSummary();

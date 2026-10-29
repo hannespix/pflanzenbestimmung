@@ -2915,6 +2915,35 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       geht's« → Modal (Teilen, Home-Bildschirm, iPhone markiert) → schließen; mit Angebot echter
       Knopf; als App weg; am Rechner ohne Angebot weg.
 
+- [x] **Start-Knöpfe mit Symbol + Listen-Knopf als echter Knopf** (Rückmeldung: »Liste zum
+      Nachschlagen mit einem passenden Symbol versehen, ebenso Weiter lernen – warum sind manche
+      Buttons nur einfache Links?«). Befund: Der Startbildschirm hat drei Stufen – **gefüllt**
+      (»Weiter lernen«), **umrandet grün** (»Probeprüfung«) und **leise** (Hilfe, »So funktioniert
+      der Lernpfad ›«). »Liste zum Nachschlagen« stand als `btn ghost` (transparent, ohne Rand) auf
+      der leisesten Stufe und las sich zwischen den Karten wie ein loser Textlink – obwohl er ein
+      vollwertiger dritter Weg ist. Jetzt: (1) **Symbole** aus dem Strich-Set, links vor der
+      Text-Spalte: Abspielen (`ICONS.play`) vor »Weiter lernen/Loslegen«, Bogen (`ICONS.sheet`) vor
+      »Probeprüfung«, Liste (`ICONS.list`, dasselbe wie im Modus-Tab) vor »Liste zum Nachschlagen«;
+      im Listenmodus Pfeil (`ICONS.back`) + »Zurück zum Lernen« statt des »←«-Zeichens. Die Formen
+      stehen als Inline-SVG in `learn.html` (wie die Modus-Tabs) und in `ICONS` (für `applyMode`).
+      Die großen Knöpfe sind jetzt `row`-Flex: Symbol (`.go-ic`, 22 px, ≥1440 px 26 px – Regel
+      `.gorow .btn .go-ic`, weil `.btn .ic` gleiche Spezifität hat und später steht) + Text-Spalte
+      `.go-txt` (`.go-l` + `.go-s`); `renderProgress` schreibt nur in `#goLabel`, das Symbol bleibt.
+      (2) **Listen-Knopf** = normaler umrandeter `.btn` (`btn list`, `--green-deep`, 17-px-Symbol),
+      kein `ghost` mehr. Die leisen Links bleiben bewusst leise (Hilfe/Lernpfad öffnen Erklärungen,
+      keine Lernwege). (3) **Handy-Layout:** Mit Symbol blieben der Probeprüfungs-Unterzeile neben
+      dem »nur ZP«-Segment nur ~100 px (vier Zeilen, 105 px hoher Knopf). Bis **820 px** (die `.wrap`
+      ist erst ab ~860 px breit genug für zwei zweizeilige Knöpfe; vorher 640) ist die Start-Reihe
+      einspaltig und das Segment rutscht als **schmale Zeile unter die Probeprüfung** (`.gosplit`
+      → `column`, Ecken unten/oben verbunden, `nur ZP · Zwischenprüfung` in einer Zeile, ≥ 44 px);
+      breit steht es wie bisher rechts daneben. Vermessen bei 360/390/640/641–800 (Probeprüfung
+      77 px statt 105–119 px). `tests/learn.mjs`: Symbole vor den Texten (Abspielen/Bogen/Liste,
+      ZP-Segment ohne), 20–28 px, nach `renderProgress` noch da, Listen-Knopf umrandet (kein
+      ghost), Listenmodus Pfeil + »Zurück zum Lernen« ohne ←, zurück Listen-Symbol; gestapelt bei
+      800 px (Segment unten, Ecken, ≤ 80 px) und nebeneinander bei 1000 px; der Segment-Test aus
+      #163 misst die verbundene Kante je nach Layout. Screenshots 390 hell/dunkel, 1000, 1500,
+      Listenmodus verifiziert.
+
 ## Offene Aufgaben (TODO)
 
 - [ ] Fehlende oder fehlerhafte Einzelangaben aus den Quelllisten prüfen/berichtigen.
