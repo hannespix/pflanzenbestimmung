@@ -293,7 +293,9 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 /* Ein-Knopf-Start + »Selbst wählen«-Klappe */
 /* Zwei Start-Knöpfe nebeneinander (am Handy untereinander), jeder mit eigener Unterzeile */
 .gorow{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:2px 0 10px}
-.gorow .btn.go{display:flex; flex-direction:column; align-items:flex-start; gap:3px; padding:13px 18px; text-align:left; min-height:64px}
+.gorow .btn.go{display:flex; flex-direction:row; align-items:center; gap:12px; padding:13px 18px; text-align:left; min-height:64px}
+.gorow .btn .go-ic{width:22px; height:22px; flex:none}   /* schlägt .btn .ic (gleiche Spezifität, später) */
+.gorow .go-txt{display:flex; flex-direction:column; align-items:flex-start; gap:3px; min-width:0}
 .gorow .go-l{font-size:16.5px; font-weight:600; line-height:1.2}
 .gorow .go-s{font-family:var(--mono); font-size:10.5px; letter-spacing:.03em; font-weight:400; opacity:.85; line-height:1.3}
 .gorow .btn.go.exam{background:var(--surface-2); color:var(--green-deep); border:1.4px solid var(--green)}
@@ -307,8 +309,20 @@ input.mini{width:64px; padding:8px 10px; text-align:center; font-family:var(--mo
 .gosplit:not(.solo) #btnExam{border-top-right-radius:0; border-bottom-right-radius:0; border-right-width:0}
 .gosplit .btn.go.zp{flex:0 0 auto; border-top-left-radius:0; border-bottom-left-radius:0; padding:13px 13px}
 .gosplit .btn.go.zp[hidden]{display:none}
-@media (max-width:640px){ .gorow{grid-template-columns:1fr} }
+@media (max-width:820px){
+  /* Eine Spalte bis 820 px (die .wrap ist erst ab ~860 px breit genug für zwei 2-zeilige Knöpfe);
+     das »nur ZP«-Segment rutscht dann als schmale Zeile UNTER die Probeprüfung – nebeneinander
+     blieben der Unterzeile neben dem Symbol nur ~100 px (vier Zeilen, 105 px hoher Knopf). */
+  .gorow{grid-template-columns:1fr}
+  .gosplit{flex-direction:column}
+  .gosplit:not(.solo) #btnExam{border-top-right-radius:10px; border-right-width:1.4px; border-bottom-left-radius:0; border-bottom-width:0}
+  .gosplit .btn.go.zp{border-top-left-radius:0; border-top-right-radius:0; border-bottom-left-radius:10px; min-height:44px; padding:8px 18px}
+  .gosplit .btn.go.zp .go-txt{flex-direction:row; align-items:baseline; gap:8px}
+  .gosplit .btn.go.zp .go-l{font-size:14.5px}
+}
 .quickrow{display:flex; gap:10px; flex-wrap:wrap; margin:0 0 12px}
+.quickrow .btn.list{color:var(--green-deep); padding:9px 15px}
+.quickrow .btn.list .ic{width:17px; height:17px}
 .choose{border:1px solid var(--rule); border-radius:6px; background:var(--surface-2); overflow:hidden; margin:0 0 12px}
 .choose>summary{list-style:none; cursor:pointer; display:flex; align-items:center; gap:9px; padding:9px 13px; font-size:13px; color:var(--ink-soft); user-select:none}
 .choose>summary::-webkit-details-marker{display:none}
@@ -1070,7 +1084,8 @@ body.stagefull #stage>.sessionbar{
   .wrap{max-width:920px; padding:48px 28px 110px}
   .masthead{padding:26px 30px}
   .gorow{margin:6px 0 16px}
-  .gorow .btn.go{font-size:17.5px; padding:15px 32px}
+  .gorow .btn.go{font-size:17.5px; padding:15px 28px; gap:14px}
+  .gorow .btn .go-ic{width:26px; height:26px}
   .gosplit .btn.go.zp{padding:15px 18px}
   .setup{padding:22px 24px}
   .stage-empty{padding:44px 24px}
@@ -1286,17 +1301,25 @@ body.stagefull #stage>.sessionbar{
          Lernstand) und »Probeprüfung« (wie am Prüfungstag: 20/15 Pflanzen, alle Bogenfelder, Note).
          Jeder Knopf trägt seine Unterzeile selbst – keine losen Hinweiszeilen mehr. -->
     <div class="gorow" id="goRow">
+      <!-- Jeder Start-Knopf trägt links ein Strich-Symbol (Formen = ICONS.play/.sheet/.list in learn.js):
+         Start = Abspielen, Probeprüfung = Bogen, Liste = Liste. Die Text-Spalte (.go-txt) hält
+         Beschriftung + Unterzeile; renderProgress schreibt nur in #goLabel, das Symbol bleibt. -->
       <button class="btn primary big go" id="btnGo" title="Geführte Lektion starten: jede Pflanze kommt als Bild – neue wählst du aus vier Namen, ab Stufe 3 gibst du die Namen selbst ein wie in der Prüfung.">
-        <span class="go-l" id="goLabel">Weiter lernen</span><span class="go-s" id="goHint"></span></button>
+        <svg class="ic go-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M10.2 8.6v6.8l5.4-3.4z" fill="currentColor" stroke="none"/></svg>
+        <span class="go-txt"><span class="go-l" id="goLabel">Weiter lernen</span><span class="go-s" id="goHint"></span></span></button>
       <div class="gosplit" id="examSplit">
         <button class="btn big go exam" id="btnExam" type="button" title="Probeprüfung wie am Prüfungstag: so viele Pflanzen wie auf dem Bogen, zufällig aus deiner Liste, jede als Bild – zu jeder gibst du alle bewerteten Felder ein. Am Ende Punkte, Prozent und Note (Notenschlüssel Baden-Württemberg). Braucht Internet.">
-          <span class="go-l">Probeprüfung</span><span class="go-s" id="examHint"></span></button>
+          <svg class="ic go-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4.5H6.5a2 2 0 0 0-2 2v12.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V6.5a2 2 0 0 0-2-2H16"/><rect x="8" y="2.8" width="8" height="3.2" rx="1"/><path d="M8.5 11h7M8.5 14.5h7M8.5 18h4"/></svg>
+          <span class="go-txt"><span class="go-l">Probeprüfung</span><span class="go-s" id="examHint"></span></span></button>
         <button class="btn big go exam zp" id="btnExamZp" type="button" title="Probeprüfung nur mit den ZP-relevanten Arten deiner Liste (für die Zwischenprüfung markiert) – sonst gleich: jede Pflanze als Bild, alle Felder des Bogens, am Ende die Note. Braucht Internet.">
-          <span class="go-l">nur ZP</span><span class="go-s">Zwischenprüfung</span></button>
+          <span class="go-txt"><span class="go-l">nur ZP</span><span class="go-s">Zwischenprüfung</span></span></button>
       </div>
     </div>
+    <!-- Dritter Weg, eine Stufe leiser: ein normaler (umrandeter) Knopf mit Listen-Symbol – kein
+         »ghost« mehr, der sah zwischen den Karten wie ein loser Textlink aus. Inhalt setzt applyMode
+         (im Listenmodus Pfeil-Symbol + »Zurück zum Lernen«). -->
     <div class="quickrow">
-      <button class="btn ghost" id="btnList" type="button" title="Alle Arten zum Nachschlagen: durchsuchbar, nach Thema/Familie/A–Z, mit Steckbriefen und Quellen">Liste zum Nachschlagen</button>
+      <button class="btn list" id="btnList" type="button" title="Alle Arten zum Nachschlagen: durchsuchbar, nach Thema/Familie/A–Z, mit Steckbriefen und Quellen"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1" fill="currentColor" stroke="none"/></svg><span>Liste zum Nachschlagen</span></button>
     </div>
     <details class="choose" id="chooseWrap">
       <summary title="Modus und Feineinstellungen selbst wählen">

@@ -280,6 +280,56 @@ async function main() {
   assert(quickList.inList && /Zurück/.test(quickList.label) && quickList.back,
     "»Liste zum Nachschlagen« muss ohne Klappe in den Listenmodus und zurück führen: " + JSON.stringify(quickList));
 
+  // Start-Knöpfe mit Symbol (Nutzerwunsch: »Liste zum Nachschlagen« und »Weiter lernen« mit passendem
+  // Symbol; die Liste sah als »ghost« wie ein loser Textlink aus): Start = Abspielen, Probeprüfung =
+  // Bogen, Liste = Liste – als svg.ic VOR dem Text; renderProgress darf das Symbol nicht wegschreiben;
+  // der Listen-Knopf ist ein echter umrandeter Knopf; im Listenmodus trägt er Pfeil-Symbol + »Zurück
+  // zum Lernen« (ohne »←«-Zeichen) und danach wieder das Listen-Symbol. Auf schmalen Viewports
+  // (Standard 800 px < 820) stapelt die Probeprüfung ihr »nur ZP«-Segment darunter, breit (1000 px)
+  // stehen beide nebeneinander.
+  const startIcons = await page.evaluate(async () => {
+    const q = (s) => document.querySelector(s);
+    const iconFirst = (btn) => { const f = btn.firstElementChild; return !!f && f.matches("svg.ic") && !!btn.querySelector("svg.ic + span"); };
+    const pathOf = (btn) => [...btn.querySelectorAll("svg.ic path")].map((p) => p.getAttribute("d")).join("|");
+    const cs = getComputedStyle(q("#btnList"));
+    const o = {
+      goIcon: iconFirst(q("#btnGo")), examIcon: iconFirst(q("#btnExam")), zpNoIcon: !q("#btnExamZp svg"),
+      goPlay: /M10\.2 8\.6v6\.8l5\.4-3\.4z/.test(pathOf(q("#btnGo"))), examSheet: /M8\.5 11h7/.test(pathOf(q("#btnExam"))),
+      listIcon: iconFirst(q("#btnList")), listGhost: q("#btnList").classList.contains("ghost"),
+      listBg: cs.backgroundColor, listBorder: cs.borderTopColor, listBw: parseFloat(cs.borderTopWidth),
+      goIco: [...document.querySelectorAll("#goRow svg.ic")].map((s) => Math.round(s.getBoundingClientRect().width)),
+      icoFns: ["play", "sheet", "back"].map((n) => /<svg class="ic/.test(ico(n)))
+    };
+    renderProgress();
+    o.goAfterRender = iconFirst(q("#btnGo")) && /^(Loslegen|Weiter lernen)$/.test(q("#goLabel").textContent.trim());
+    const split = (w) => { const ex = q("#btnExam").getBoundingClientRect(), zp = q("#btnExamZp").getBoundingClientRect();
+      return { dir: getComputedStyle(q("#examSplit")).flexDirection, unten: zp.top >= ex.bottom - 0.5, rechts: zp.left >= ex.right - 0.5, exH: Math.round(ex.height), zpH: Math.round(zp.height), exRad: getComputedStyle(q("#btnExam")).borderRadius }; };
+    o.narrow = split();
+    q("#btnList").click(); await new Promise((r) => setTimeout(r, 60));
+    const bl = q("#btnList");
+    o.list = { icon: iconFirst(bl), text: bl.textContent.trim(), arrowChar: /←/.test(bl.textContent), back: /M11 6l-6 6 6 6/.test(pathOf(bl)) };
+    bl.click(); await new Promise((r) => setTimeout(r, 60));
+    o.again = { icon: iconFirst(bl), text: bl.textContent.trim(), listPath: /M8 6h12M8 12h12M8 18h12/.test(pathOf(bl)) };
+    return o;
+  });
+  assert(startIcons.goIcon && startIcons.goPlay && startIcons.examIcon && startIcons.examSheet && startIcons.zpNoIcon && startIcons.icoFns.every(Boolean),
+    "Start-Knöpfe: Abspielen-Symbol vor »Weiter lernen«, Bogen-Symbol vor »Probeprüfung«, kein Symbol im ZP-Segment: " + JSON.stringify(startIcons));
+  assert(startIcons.goIco.every((w) => w >= 20 && w <= 28) && startIcons.goAfterRender,
+    "Start-Symbole 20–28 px groß und nach renderProgress noch da (Beschriftung unverändert): " + JSON.stringify(startIcons));
+  assert(startIcons.listIcon && !startIcons.listGhost && startIcons.listBw >= 1 && startIcons.listBorder !== "rgba(0, 0, 0, 0)" && startIcons.listBg !== "rgba(0, 0, 0, 0)",
+    "»Liste zum Nachschlagen« muss ein umrandeter Knopf mit Listen-Symbol sein (kein ghost/Textlink): " + JSON.stringify(startIcons));
+  assert(startIcons.list.icon && startIcons.list.back && startIcons.list.text === "Zurück zum Lernen" && !startIcons.list.arrowChar
+    && startIcons.again.icon && startIcons.again.listPath && startIcons.again.text === "Liste zum Nachschlagen",
+    "Listenmodus: Pfeil-Symbol + »Zurück zum Lernen« ohne ←-Zeichen, danach wieder Listen-Symbol: " + JSON.stringify(startIcons));
+  assert(startIcons.narrow.dir === "column" && startIcons.narrow.unten && startIcons.narrow.exH <= 80 && startIcons.narrow.zpH >= 44 && /^10px 10px 0px 0px$/.test(startIcons.narrow.exRad),
+    "Schmal (800 px): »nur ZP« als Zeile unter der Probeprüfung (Ecken verbunden, Knopf ≤ 80 px hoch): " + JSON.stringify(startIcons.narrow));
+  await page.setViewport({ width: 1000, height: 900 });
+  const wideSplit = await page.evaluate(() => { const q = (s) => document.querySelector(s); const ex = q("#btnExam").getBoundingClientRect(), zp = q("#btnExamZp").getBoundingClientRect();
+    return { dir: getComputedStyle(q("#examSplit")).flexDirection, rechts: zp.left >= ex.right - 0.5, gleichHoch: Math.abs(ex.height - zp.height) < 1, exRad: getComputedStyle(q("#btnExam")).borderRadius, exH: Math.round(ex.height) }; });
+  await page.setViewport({ width: 800, height: 600 });
+  assert(wideSplit.dir === "row" && wideSplit.rechts && wideSplit.gleichHoch && /^10px 0px 0px 10px$/.test(wideSplit.exRad) && wideSplit.exH <= 80,
+    "Breit (1000 px): »nur ZP« rechts neben der Probeprüfung, gleich hoch, Ecken verbunden: " + JSON.stringify(wideSplit));
+
   // Lernpfad: Modi nach Schwierigkeit sortiert (Bilder zuerst) mit Schwierigkeits-Tags;
   // Erst-Einweisung über »So funktioniert der Lernpfad« öffnen/schließen (merkt »gesehen«).
   const lp = await page.evaluate(() => {
@@ -1369,7 +1419,11 @@ async function main() {
     __setPhotoSource((card) => Promise.resolve({ thumb: PX, title: card.g, file: "T.jpg", url: "https://x/y" }));
     const zb = document.querySelector("#btnExamZp"), sp = document.querySelector("#examSplit"), ex = document.querySelector("#btnExam");
     const out = { da: !!zb && !zb.hidden && !sp.classList.contains("solo") && zb.offsetParent !== null, text: zb.textContent.replace(/\s+/g, " ").trim(),
-      eckeLinks: getComputedStyle(ex).borderTopRightRadius, eckeRechts: getComputedStyle(zb).borderTopLeftRadius };
+      // verbundene Kante ohne Rundung – schmal (≤ 820 px, hier 800) stapelt das Segment UNTER der
+      // Probeprüfung (unten/oben), breit steht es rechts daneben (rechts/links)
+      gestapelt: getComputedStyle(sp).flexDirection === "column",
+      eckeLinks: getComputedStyle(sp).flexDirection === "column" ? getComputedStyle(ex).borderBottomLeftRadius : getComputedStyle(ex).borderTopRightRadius,
+      eckeRechts: getComputedStyle(zb).borderTopLeftRadius };
     zb.click();
     { const t0 = Date.now(); while (Date.now() - t0 < 4000 && !document.querySelector("#examForm")) await new Promise((r) => setTimeout(r, 25)); }
     out.probe = !!sess.probe; out.zp = !!sess.probeZp; out.total = sess.total; out.alleZp = sess.cards.every((c) => c.zp);
@@ -1406,7 +1460,7 @@ async function main() {
     return out;
   }, PX);
   assert(zpBtn.da && /^nur ZP/.test(zpBtn.text) && zpBtn.eckeLinks === "0px" && zpBtn.eckeRechts === "0px",
-    "Segment »nur ZP« neben der Probeprüfung (geteilter Knopf, innen ohne Rundung): " + JSON.stringify(zpBtn));
+    "Segment »nur ZP« an der Probeprüfung (geteilter Knopf, verbundene Kante ohne Rundung): " + JSON.stringify(zpBtn));
   assert(zpBtn.probe && zpBtn.zp && zpBtn.total === 20 && zpBtn.alleZp && zpBtn.zpInListe > 20 && zpBtn.zpInListe < zpBtn.liste,
     "»nur ZP« zieht 20 ZP-relevante Arten als Probeprüfung: " + JSON.stringify(zpBtn));
   assert(/Probeprüfung geschafft/.test(zpBtn.titel) && /nur ZP-Arten/.test(zpBtn.text2) && zpBtn.link.pr && zpBtn.link.pz && zpBtn.link.n === 20 && /Probeprüfung · nur ZP-Arten/.test(zpBtn.nachricht),
