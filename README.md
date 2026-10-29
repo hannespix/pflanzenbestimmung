@@ -325,10 +325,13 @@ python3 build.py
 ├─ pflanzen-lernen.html      Verteilkopie Lern-Tool (versioniert)
 ├─ rechtliches.html          Verteilkopie Impressum & Datenschutz (versioniert)
 ├─ src/
+│  ├─ shared.js              gemeinsamer Code beider Werkzeuge (DOM-Helfer, Speicher, Icons, JSONP,
+│  │                         Wikipedia-Kandidaten, Namensherleitung, Sorten-/Taxon-Erkennung, Lightbox) –
+│  │                         build.py stellt ihn app.js und learn.js voran (ein Skript, ein Geltungsbereich)
 │  ├─ template.html          HTML-Gerüst Prüfungswerkzeug (CSS, Platzhalter)
-│  ├─ app.js                 gesamte Logik Prüfungswerkzeug (Vanilla JS)
+│  ├─ app.js                 Logik Prüfungswerkzeug (Vanilla JS; der geteilte Teil liegt in shared.js)
 │  ├─ learn.html             HTML-Gerüst Lern-Tool (CSS, Platzhalter)
-│  ├─ learn.js               gesamte Logik Lern-Tool (Vanilla JS)
+│  ├─ learn.js               Logik Lern-Tool (Vanilla JS; der geteilte Teil liegt in shared.js)
 │  └─ recht.html             Impressum & Datenschutz (statisch, ohne Seeds/JS)
 ├─ seeds/
 │  └─ <profil-id>.json       Pflanzenliste je Profil (14 Dateien, Name = Profil-ID)
@@ -339,6 +342,7 @@ python3 build.py
 │  ├─ rebuild_seeds.sh       alle Seeds aus data/<id>.<ext> neu erzeugen
 │  ├─ categorize_seeds.py    Wuchsform-Kategorien für Listen ohne eigene Kategorien (offengelegt)
 │  ├─ fix_source_gaps.py     offengelegte Ergänzungen/Berichtigungen der Quelllisten
+│  ├─ fehlermeldung.py       erzeugt daraus docs/quelllisten-fehlermeldung.md (Meldung an die zuständige Stelle)
 │  ├─ bildcheck.mjs          Bildcheck: echte Quiz-Bildsuche für alle Arten (Bericht + Kontaktbogen)
 │  └─ check_offline.py       CI-Check: keine externen Ressourcen (Datei als Argument)
 ├─ tests/

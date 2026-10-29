@@ -30,7 +30,9 @@ Prüfungswerkzeug — der einzige interne Verweis führt auf Impressum/Datenschu
   müsste — ein beliebiger Webserver, der Dateien ausliefert, genügt.
 - **Kein Framework, keine Nachlade-Dienste (CDN).** HTML, CSS und JavaScript ohne React,
   Vue o. ä. Einzige eingebettete Fremdbibliothek: SheetJS für den Excel-Import, nur im
-  Prüfungswerkzeug.
+  Prüfungswerkzeug. Den Code, den beide Anwendungen gleichermaßen brauchen (Speicher-Wrapper,
+  Symbole, Wikipedia-Abruf, Namensherleitung, Bild-Großansicht), gibt es nur einmal
+  (`src/shared.js`); der Build stellt ihn beiden Anwendungen voran.
 - **Installierbar und offline nutzbar** (PWA): Nach dem ersten Aufruf funktioniert die
   Anwendung ohne Internet und lässt sich auf dem Startbildschirm ablegen.
 - **Automatisierte Prüfungen** bei jeder Änderung: Ein Testlauf verweigert die
@@ -137,6 +139,11 @@ Trennung dort, wo die Namen gelesen werden – im Hinweis vor den Lektionen, an 
 der Info-Karte jeder Pflanze und auf der gedruckten Lernliste. Prüfungsbogen, Musterlösung und
 Notenberechnung enthalten keine automatisch erzeugten Inhalte. **Verbindlich sind allein die
 amtlichen Prüfungslisten.** Für Richtigkeit und Vollständigkeit wird keine Gewähr übernommen.
+
+**Rückmeldung an die zuständige Stelle.** Die berichtigten Einzelangaben (fehlende Familie,
+Übertragungsfehler, zwölf Schreibfehler) sind mit Begründung in einer versandfertigen Meldung
+zusammengestellt (`docs/quelllisten-fehlermeldung.md`, automatisch aus denselben Tabellen erzeugt,
+aus denen auch die Berichtigung läuft – beides bleibt dadurch deckungsgleich).
 
 Der Quelltext liegt in einem Versionsverwaltungssystem; jede Änderung ist nachvollziehbar
 und kann bei Bedarf offengelegt werden.
