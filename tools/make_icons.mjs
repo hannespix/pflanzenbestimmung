@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: GPL-3.0-or-later · Copyright (C) 2026 Hannes Pix (siehe LICENSE)
 /*
  * make_icons.mjs – erzeugt die PWA-Icons (einmalig, Ergebnis wird committet).
  * Rendert ein Blatt-Motiv (Herbarium-Look, wie das Favicon) über Chromium zu PNG.

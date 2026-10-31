@@ -1,3 +1,10 @@
+/* Pflanzenkenntnis (Pflanze-BW) – Copyright (C) 2026 Hannes Pix
+   SPDX-License-Identifier: GPL-3.0-or-later
+   Dieses Programm ist freie Software: Sie dürfen es unter den Bedingungen der GNU General Public
+   License, Version 3 oder (nach Ihrer Wahl) jeder späteren Version, weitergeben und verändern –
+   OHNE JEDE GEWÄHR, auch ohne die stillschweigende Gewähr der Marktgängigkeit oder der Eignung für
+   einen bestimmten Zweck. Lizenztext: Datei LICENSE im Quellcode (https://github.com/hannespix/
+   pflanzenbestimmung) oder https://www.gnu.org/licenses/. Drittmaterial: THIRD-PARTY-NOTICES.md. */
 /* ============================================================
    Gemeinsamer Code beider Werkzeuge (Prüfungswerkzeug app.js + Lern-Tool learn.js).
    build.py stellt diese Datei beiden Skripten voran (ein <script>, ein Geltungsbereich):

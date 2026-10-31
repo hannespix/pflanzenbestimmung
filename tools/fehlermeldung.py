@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later · Copyright (C) 2026 Hannes Pix (siehe LICENSE)
 """
 Meldung der berichtigten Fehler in den amtlichen Prüfungslisten – zum Versand an die
 zuständige Stelle (Regierungspräsidium). Quelle sind die Tabellen in tools/fix_source_gaps.py
@@ -112,5 +113,12 @@ if __name__ == "__main__":
         print(f"OK: {OUT.relative_to(ROOT)} entspricht den Tabellen")
     else:
         OUT.parent.mkdir(exist_ok=True)
+        # Das Datum der Stand-Zeile bleibt das der letzten inhaltlichen Änderung: Ist die Meldung bis auf
+        # die Datumszeile unverändert, wird die Datei nicht angefasst. Sonst trüge jeder Neubau an einem
+        # anderen Tag ein neues Datum ein – und die CI (git diff nach rebuild_seeds.sh) wäre ab dem
+        # Folgetag jedes Commits rot, obwohl sich an den Berichtigungen nichts geändert hat.
+        strip = lambda t: "\n".join(l for l in t.split("\n") if not l.startswith("*Stand: "))
+        if OUT.exists() and strip(OUT.read_text(encoding="utf-8")) == strip(text):
+            print(f"unverändert: {OUT.relative_to(ROOT)}"); sys.exit(0)
         OUT.write_text(text, encoding="utf-8")
         print(f"geschrieben: {OUT.relative_to(ROOT)}")

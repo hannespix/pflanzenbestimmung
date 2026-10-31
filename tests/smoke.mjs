@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: GPL-3.0-or-later · Copyright (C) 2026 Hannes Pix (siehe LICENSE)
 /*
  * smoke.mjs – Funktions-Smoke-Test gegen die gebaute Offline-Datei (file://).
  *
@@ -1220,9 +1221,24 @@ async function main() {
     return { main: document.querySelectorAll("main").length, inMain: !!document.querySelector("main #datenschutz"),
       odr: /consumers\/odr/.test(document.documentElement.innerHTML), start: /Startseite/.test(t),
       theme: /pbw\.theme/.test(t), name: /pflanzenlernen\.name/.test(t), wa: /WhatsApp/.test(t) && /wa\.me/.test(t),
-      vsbg: /§ 36 VSBG/.test(t), btn: !!document.querySelector("#btnTheme, .themebtn"), back: h(".back"), csp: !!document.querySelector('meta[http-equiv="Content-Security-Policy"]') };
+      vsbg: /§ 36 VSBG/.test(t), btn: !!document.querySelector("#btnTheme, .themebtn"), back: h(".back"), csp: !!document.querySelector('meta[http-equiv="Content-Security-Policy"]'),
+      // Open Source: Abschnitt »Lizenz & Quellcode« (GPL-3.0-or-later, Copyright, ohne Gewähr, Lizenztext + Quellcode verlinkt, Ausnahmen)
+      lizenz: !!document.querySelector("main #lizenz h2"), gpl: /General Public License, Version 3/.test(t) && /Copyright © 2026 Hannes Pix/.test(t) && /ohne jede Gewähr/.test(t),
+      gnu: !!document.querySelector('#lizenz a[href^="https://www.gnu.org/licenses/gpl-3.0"]'), src: !!document.querySelector('#lizenz a[href="https://github.com/hannespix/pflanzenbestimmung"]'),
+      ausnahmen: /amtlichen Prüfungslisten/.test(document.querySelector("#lizenz").textContent) && /SheetJS/.test(document.querySelector("#lizenz").textContent) && /iNaturalist/.test(document.querySelector("#lizenz").textContent),
+      h1: document.querySelector("h1").textContent };
   });
   await rp.close();
+  assert(recht.lizenz && recht.gpl && recht.gnu && recht.src && recht.ausnahmen && /Lizenz/.test(recht.h1),
+    "Rechtliches: Abschnitt »Lizenz & Quellcode« mit GPL v3, Copyright, Gewährausschluss, gnu.org- und GitHub-Link, Ausnahmen (Listen, SheetJS, iNaturalist): " + JSON.stringify(recht));
+  // SPDX-Lizenzhinweis steht in jeder gebauten Seite (direkt hinter dem Doctype) und die Fußzeile nennt die Lizenz
+  for (const f of ["index.html", "pflanzen-lernen.html", "pflanzenkenntnis.html", "rechtliches.html"]) {
+    const html = fs.readFileSync(path.join(ROOT, "dist", f), "utf8");
+    assert(/^<!DOCTYPE html>\n<!-- Pflanzenkenntnis \(Pflanze-BW\) · Copyright \(C\) 2026 Hannes Pix · SPDX-License-Identifier: GPL-3\.0-or-later/.test(html), "SPDX-Lizenzhinweis fehlt am Anfang von dist/" + f);
+    assert(/SPDX-License-Identifier: GPL-3\.0-or-later[\s\S]*Lizenztext: Datei LICENSE/.test(html) || f === "rechtliches.html", "Voller GPL-Hinweis (shared.js) fehlt in dist/" + f);
+  }
+  const footLic = await page.evaluate(() => (document.querySelector('.pagefoot a.legal[href="rechtliches.html"]') || {}).textContent || "");
+  assert(/Impressum · Datenschutz · Lizenz/.test(footLic), "Fußzeile des Prüfungswerkzeugs muss Impressum · Datenschutz · Lizenz verlinken: " + footLic);
   assert(rerrs.length === 0, "Rechtliches: Konsolenfehler: " + rerrs.join(" | "));
   assert(recht.main === 1 && recht.inMain && !recht.odr && !recht.start && !recht.theme && recht.name && recht.wa && recht.vsbg,
     "Rechtliches: <main>, ODR raus, keine Startseite, Datenschutz ohne pbw.theme, sonst vollständig: " + JSON.stringify(recht));

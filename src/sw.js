@@ -1,3 +1,5 @@
+/* Pflanzenkenntnis (Pflanze-BW) – Copyright (C) 2026 Hannes Pix · SPDX-License-Identifier: GPL-3.0-or-later
+   (vollständiger Hinweis in src/shared.js, Lizenztext in LICENSE) */
 /* Service Worker – macht das Werkzeug installierbar (PWA) und offline-fest.
    Der Kern funktioniert ohnehin ohne Netz; dieser Worker legt die Dateien beim
    ersten Besuch in den Cache, sodass Startseite, Lern-Tool, Prüfungswerkzeug und

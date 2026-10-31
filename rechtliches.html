@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- Pflanzenkenntnis (Pflanze-BW) · Copyright (C) 2026 Hannes Pix · SPDX-License-Identifier: GPL-3.0-or-later
+     Freie Software ohne jede Gewähr (GNU GPL v3 oder später). Lizenz und Quellcode: https://github.com/hannespix/pflanzenbestimmung -->
 <html lang="de">
 <head>
 <!-- CSP: Bilder pauschal von *.wikimedia.org/*.wikipedia.org – Wikimedia zieht Vorschaubilder von upload. nach
@@ -189,7 +191,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--green)}
 <div class="wrap">
   <header class="masthead">
     <p class="eyebrow">Pflanzenkenntnis · Gärtnerberufe</p>
-    <h1>Impressum &amp; Datenschutz</h1>
+    <h1>Impressum, Datenschutz &amp; Lizenz</h1>
     <a class="back" href="index.html" onclick="if(history.length>1){history.back();return false}">← zurück</a>
   </header>
 
@@ -452,6 +454,45 @@ input[type=checkbox],input[type=radio]{accent-color:var(--green)}
 
     <p class="note">Hinweis: Dieses Impressum und diese Datenschutzerklärung sind nach bestem Wissen erstellt,
       ersetzen aber keine Rechtsberatung.</p>
+  </section>
+
+  <section class="doc" id="lizenz">
+    <h2>Lizenz &amp; Quellcode</h2>
+
+    <h3>Freie Software (GNU GPL)</h3>
+    <p><b>Pflanzenkenntnis (Pflanze-BW)</b> · Copyright © 2026 Hannes Pix.</p>
+    <p>Beide Werkzeuge sind <b>freie Software</b>: Du darfst sie unter den Bedingungen der
+      <b>GNU General Public License, Version 3</b> oder (nach deiner Wahl) jeder späteren Version weitergeben
+      und verändern – auch für eigene Zwecke, etwa für andere Bundesländer, Berufe oder Pflanzenlisten.
+      Die Weitergabe erfolgt <b>ohne jede Gewähr</b>, auch ohne die stillschweigende Gewähr der Marktgängigkeit
+      oder der Eignung für einen bestimmten Zweck; Einzelheiten regelt die Lizenz. Den vollständigen Lizenztext
+      findest du in der Datei <span class="hint">LICENSE</span> des Quellcodes und unter
+      <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noreferrer">gnu.org/licenses/gpl-3.0</a>
+      (<a href="https://www.gnu.org/licenses/gpl-3.0.de.html" target="_blank" rel="noreferrer">deutsche Übersetzung</a>,
+      unverbindlich – verbindlich ist das englische Original).</p>
+    <p>Der <b>Quellcode</b> liegt offen auf GitHub:
+      <a href="https://github.com/hannespix/pflanzenbestimmung" target="_blank" rel="noreferrer">github.com/hannespix/pflanzenbestimmung</a>.
+      Jede ausgelieferte Seite enthält ihren Programmcode unverändert und lesbar (eine HTML-Datei ohne Minifizierung –
+      nur die Excel-Bibliothek ist komprimiert); der Lizenzhinweis steht am Anfang jeder Datei. Wer das Werkzeug
+      weitergibt oder verändert, gibt Lizenzhinweis und Quellcode mit – so will es die GPL.</p>
+
+    <h3>Was die Lizenz nicht umfasst</h3>
+    <ul>
+      <li><b>Die amtlichen Prüfungslisten und Leerbögen</b> der Regierungspräsidien Baden-Württemberg
+        (im Quellcode unter <span class="hint">data/</span>, daraus erzeugt <span class="hint">seeds/</span>).
+        Sie sind Material der zuständigen Stelle und stehen nicht unter der GPL; ich nutze sie als Grundlage
+        dieses Lernwerkzeugs (siehe <a href="#datenquellen">Datenquellen &amp; Inhalte</a>). Wer sie weiterverwendet,
+        hält sich an das, was die zuständige Stelle erlaubt.</li>
+      <li><b>SheetJS Community Edition</b> (Excel-Import im Prüfungswerkzeug, <span class="hint">lib/xlsx.full.min.js</span>),
+        © SheetJS LLC, lizenziert unter der
+        <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noreferrer">Apache License 2.0</a> –
+        mit der GPL vereinbar; der Lizenztext liegt dem Quellcode bei.</li>
+      <li><b>Inhalte aus Wikipedia, Wikimedia Commons und iNaturalist</b>, die das Lern-Tool auf deinen Wunsch lädt,
+        bleiben unter ihren eigenen Lizenzen (Wikipedia-Texte CC BY-SA 4.0; Bilder je Datei – Urheber und Lizenz stehen
+        am Bild). Sie sind kein Teil des Quellcodes.</li>
+    </ul>
+    <p class="note">Beiträge zum Quellcode (Pull Requests) stehen unter derselben Lizenz. Die Übersicht über
+      Drittmaterial steht im Quellcode in der Datei <span class="hint">THIRD-PARTY-NOTICES.md</span>.</p>
   </section>
   </main>
 </div>

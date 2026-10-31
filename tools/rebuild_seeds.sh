@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later · Copyright (C) 2026 Hannes Pix (siehe LICENSE)
 # rebuild_seeds.sh – erzeugt alle Seeds neu aus data/<profil-id>.<ext>.
 #
 # Konvention: jede Quell-Excel in data/ ist nach ihrer Profil-ID benannt,
@@ -39,5 +40,6 @@ python3 tools/categorize_seeds.py
 python3 tools/fix_source_gaps.py
 
 # Meldung der berichtigten Fehler an die zuständige Stelle aus denselben Tabellen erzeugen
-# (docs/quelllisten-fehlermeldung.md; die CI prüft mit --check, dass sie zu den Tabellen passt).
+# (docs/quelllisten-fehlermeldung.md; die CI prüft per git diff, dass sie zu den Tabellen passt –
+# die Datumszeile bleibt stehen, solange sich inhaltlich nichts ändert).
 python3 tools/fehlermeldung.py

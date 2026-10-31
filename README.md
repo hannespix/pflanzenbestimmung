@@ -401,6 +401,29 @@ Roadmap siehe TODO-Liste in [`CLAUDE.md`](./CLAUDE.md).
 
 ---
 
+## Lizenz
+
+Der Quellcode steht unter der **GNU General Public License, Version 3 oder später**
+(`SPDX-License-Identifier: GPL-3.0-or-later`; Volltext in [`LICENSE`](./LICENSE)).
+Copyright © 2026 Hannes Pix. Freie Software **ohne jede Gewähr**: weitergeben, ändern,
+anpassen (andere Bundesländer, andere Berufe, eigene Listen) – unter derselben Lizenz,
+mit Quellcode und Lizenzhinweis. Die ausgelieferten HTML-Dateien enthalten den
+Programmcode unverändert; der Lizenzhinweis steht am Anfang jeder Datei, und die Seite
+`rechtliches.html` (Fußzeile beider Werkzeuge) erklärt ihn den Nutzern.
+
+**Nicht unter der GPL** (Einzelheiten in [`THIRD-PARTY-NOTICES.md`](./THIRD-PARTY-NOTICES.md)):
+
+- die **amtlichen Prüfungslisten und Leerbögen** der Regierungspräsidien
+  Baden-Württemberg (`data/`, daraus `seeds/`, `data/leerboegen/`) – Material der
+  zuständigen Stelle, hier als Grundlage genutzt;
+- **SheetJS Community Edition 0.18.5** (`lib/xlsx.full.min.js`, Excel-Import) –
+  Apache License 2.0, mit der GPL vereinbar; Text in `lib/LICENSE.Apache-2.0.txt`;
+- Inhalte, die das Lern-Tool auf Wunsch von **Wikipedia/Wikimedia Commons** (CC BY-SA
+  bzw. Lizenz je Datei) und **iNaturalist** (Lizenz je Foto) lädt – sie bleiben unter
+  ihren eigenen Lizenzen.
+
+---
+
 ## Entstehung (Zusammenfassung der Entwicklung)
 
 Das Tool ist iterativ entstanden; die Architektur hat sich dabei bewusst vereinfacht:

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: GPL-3.0-or-later · Copyright (C) 2026 Hannes Pix (siehe LICENSE)
 /*
  * xlsx_to_seed.mjs – wandelt eine Pflanzenlisten-Excel in eine Seed-JSON um.
  *
