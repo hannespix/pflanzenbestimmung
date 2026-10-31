@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: GPL-3.0-or-later · Copyright (C) 2026 Hannes Pix (siehe LICENSE)
 /* Bildcheck – findet das Bilder-Quiz für JEDE Art ein Bild?
 
    Führt die ECHTE Bildsuche des Lern-Tools (wikiPhoto aus dist/pflanzen-lernen.html –

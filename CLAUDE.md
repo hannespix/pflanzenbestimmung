@@ -45,6 +45,13 @@ Bitte alle Antworten und Commit-/PR-Texte **auf Deutsch**.
 - **Einzige Runtime-Bibliothek: SheetJS** (`lib/xlsx.full.min.js`), nur für den
   Excel-Import. Nicht ersetzen, nicht per CDN laden.
 - **Keine Secrets committen.** Keine API-Keys, keine Tokens im Repo.
+- **Lizenz: GPL-3.0-or-later** (`LICENSE`, Copyright Hannes Pix; das Repository ist öffentlich).
+  Jede neue Quelldatei bekommt die SPDX-Kopfzeile `GPL-3.0-or-later`; Drittcode nur mit
+  GPL-vereinbarer Lizenz und Eintrag in `THIRD-PARTY-NOTICES.md` (derzeit nur SheetJS,
+  Apache-2.0, Text in `lib/LICENSE.Apache-2.0.txt`). **Nicht unter der GPL:** die amtlichen
+  Listen und Leerbögen (`data/`, `seeds/`) – Material der zuständigen Stelle – und zur Laufzeit
+  geladene Wikipedia-/Commons-/iNaturalist-Inhalte. Die Nutzer sehen den Lizenzhinweis auf
+  `rechtliches.html#lizenz` (Fußzeile beider Werkzeuge) – nicht entfernen.
 - Deutschsprachige Oberfläche. BW-Kontext. Offizielle Texte in der Ich-Perspektive
   (»meine Empfehlung«, »ich«) — nicht »wir«.
 
@@ -3186,6 +3193,32 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       abgelehnt, Zusammenführen (Stufe/Fälligkeit/Zähler/Herbarium/Serie), Ersetzen mit Rückfrage
       (nein → unverändert, ja → ersetzt + Name), Übernehmen mit Berufswechsel, Hash-Rückfall,
       Abweisung fremder Dateien; `tests/smoke.mjs` 9g: Prüfungswerkzeug weist `PBWL1:` ab.
+
+- [x] **Open Source: GPL-3.0-or-later** (Nutzerfrage »soll Open Source sein, GNU Public etc. – was
+      muss ich ändern, oder ist das schon so?«). Befund: Das Repository war öffentlich, trug aber
+      keine Lizenz – ohne Lizenz gilt »alle Rechte vorbehalten«, also noch nicht Open Source.
+      Jetzt: `LICENSE` = GNU GPL v3 (Volltext, SHA-256 geprüft), `package.json` mit `license`/
+      `author`/`repository`, **SPDX-Kopfzeile** in allen Quelldateien (JS mit vollem Hinweis in
+      `shared.js`, HTML-Kommentar direkt hinter dem Doctype – landet in jeder ausgelieferten Seite –,
+      Python/Node/Shell je eine Zeile hinter dem Shebang), `THIRD-PARTY-NOTICES.md` (SheetJS CE
+      0.18.5 Apache-2.0 mit Text in `lib/LICENSE.Apache-2.0.txt`; amtliche Listen/Leerbögen
+      ausdrücklich **nicht** unter der GPL; Laufzeit-Inhalte von Wikipedia/Commons/iNaturalist;
+      puppeteer nur Entwicklung), README-Abschnitt »Lizenz«, Technik-Doku Abschnitt 8 und ein
+      Abschnitt **»Lizenz & Quellcode«** auf `rechtliches.html#lizenz` (Copyright, GPL,
+      Gewährausschluss, Link auf Lizenztext und Quellcode, Ausnahmen) – die »Appropriate Legal
+      Notices« der GPL für ein interaktives Programm; die Fußzeile beider Werkzeuge heißt jetzt
+      »Impressum · Datenschutz · Lizenz« (Seitentitel »Impressum, Datenschutz & Lizenz«).
+      **Offen bleibt die Rechtslage der amtlichen Listen** (Material der Regierungspräsidien; der
+      Betreiber klärt die Weiterverwendung mit der zuständigen Stelle, z. B. zusammen mit der
+      Fehlermeldung). Tests: `tests/smoke.mjs` (Rechtliches: `#lizenz` mit GPL, GitHub- und
+      gnu.org-Link; Fußzeile nennt »Lizenz«; SPDX-Kommentar in allen fünf gebauten Seiten),
+      `tests/learn.mjs` (Fußzeile »Lizenz«, SPDX in der Lern-Seite, Sackgasse unverändert).
+      **Dabei entschärft – CI-Datumsfalle:** `tools/fehlermeldung.py` schrieb bei jedem Lauf das
+      Tagesdatum in die Stand-Zeile, und die CI vergleicht die Datei nach `rebuild_seeds.sh` byte-genau
+      (`git diff --exit-code … docs/quelllisten-fehlermeldung.md`) – ab dem Folgetag des letzten
+      Commits wäre jeder PR rot gewesen (bisher lief jede CI am Tag ihres Commits). Jetzt bleibt die
+      Datei unangetastet, solange sich nur die Datumszeile ändern würde; das Datum ist damit das der
+      letzten inhaltlichen Änderung, `--check` bleibt wie gehabt.
 
 ## Offene Aufgaben (TODO)
 

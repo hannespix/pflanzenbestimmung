@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: GPL-3.0-or-later · Copyright (C) 2026 Hannes Pix (siehe LICENSE)
 /*
  * learn.mjs – Smoke-Test für das Azubi-Lern-Tool (dist/pflanzen-lernen.html).
  * Prüft: Boot ohne Konsolenfehler · Lernstoff geladen · Modiwechsel ·
@@ -701,6 +702,7 @@ async function main() {
       noHomeLink: !document.querySelector('.mast-right a[href="index.html"], .mast-right .homelink'),
       noExamText: !/Prüfungsversion|Werkzeug für Prüfende/.test(document.body.textContent),
       legalKept: !!document.querySelector('.foot a[href="rechtliches.html"]'),
+      legalText: (document.querySelector('.foot a[href="rechtliches.html"]') || {}).textContent || "",
       helpDezent: !!(help && help.id === "btnHelp"),
       noToggle: !document.querySelector(".themetoggle, #btnTheme")
     };
@@ -709,6 +711,10 @@ async function main() {
     "Lern-Tool darf nicht auf das Prüfungswerkzeug verweisen (Azubis sollen es nicht sehen): " + JSON.stringify(head));
   assert(head.noHomeLink, "Lern-Tool ist selbst die Startseite – kein Startseite-Link im Kopf: " + JSON.stringify(head));
   assert(head.legalKept, "Impressum/Datenschutz muss über die Fußzeile erreichbar bleiben: " + JSON.stringify(head));
+  assert(/Impressum · Datenschutz · Lizenz/.test(head.legalText), "Fußzeile muss auch die Lizenz nennen (GPL, rechtliches.html#lizenz): " + head.legalText);
+  // Open Source: SPDX-Lizenzhinweis direkt hinter dem Doctype der gebauten Lern-Seite (GPL-3.0-or-later)
+  assert(/^<!DOCTYPE html>\n<!-- Pflanzenkenntnis \(Pflanze-BW\) · Copyright \(C\) 2026 Hannes Pix · SPDX-License-Identifier: GPL-3\.0-or-later/.test(fs.readFileSync(path.join(ROOT, "dist", "pflanzen-lernen.html"), "utf8")),
+    "SPDX-Lizenzhinweis fehlt am Anfang von dist/pflanzen-lernen.html");
   assert(head.helpDezent, "»Hilfe« muss als dezenter .helplink im Kopf stehen: " + JSON.stringify(head));
   assert(head.noToggle, "Kein Design-Schalter mehr – Hell/Dunkel folgt dem System: " + JSON.stringify(head));
 

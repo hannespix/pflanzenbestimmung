@@ -1,3 +1,5 @@
+/* Pflanzenkenntnis (Pflanze-BW) – Copyright (C) 2026 Hannes Pix · SPDX-License-Identifier: GPL-3.0-or-later
+   (vollständiger Hinweis in src/shared.js, Lizenztext in LICENSE) */
 /* ============================================================
    Pflanzenkenntnis · Lernen (für Azubis der Gärtnerberufe)
    Karteikarten mit Leitner/Spaced-Repetition, Multiple-Choice-Quiz und Tippen.

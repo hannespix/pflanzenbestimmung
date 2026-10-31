@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: GPL-3.0-or-later · Copyright (C) 2026 Hannes Pix (siehe LICENSE)
 /*
  * pwa.mjs – prüft die PWA-Installierbarkeit und den Offline-Cache.
  * Serviert dist/ über einen lokalen HTTP-Server (http://127.0.0.1 = secure context,

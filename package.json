@@ -2,6 +2,12 @@
   "name": "pflanzenkenntnis-pruefungslisten",
   "version": "1.0.0",
   "description": "Offline-Prüfungslisten-Werkzeug für die Pflanzenkenntnis-Prüfung der grünen Berufe",
+  "license": "GPL-3.0-or-later",
+  "author": "Hannes Pix",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hannespix/pflanzenbestimmung.git"
+  },
   "private": true,
   "type": "module",
   "scripts": {

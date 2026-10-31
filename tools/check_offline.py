@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later · Copyright (C) 2026 Hannes Pix (siehe LICENSE)
 """
 check_offline.py – stellt sicher, dass die gebaute HTML keine externen
 Ressourcen lädt (Zero-Trust / kein CDN). Bricht mit Fehlercode ab, wenn

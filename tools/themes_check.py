@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later · Copyright (C) 2026 Hannes Pix (siehe LICENSE)
 # themes_check.py – Referenz & Prüfwerkzeug für die Lern-Themen (M2/M3/M4).
 # Bildet die krautigen Seed-Kategorien (Stauden/Gemüse/Zimmer, plus Obst-Sammel-
 # kategorien) auf die feineren

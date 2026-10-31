@@ -150,3 +150,14 @@ aus denen auch die Berichtigung läuft – beides bleibt dadurch deckungsgleich)
 
 Der Quelltext liegt in einem Versionsverwaltungssystem; jede Änderung ist nachvollziehbar
 und kann bei Bedarf offengelegt werden.
+
+## 8. Lizenz
+
+Der Quellcode ist **freie Software** unter der GNU General Public License, Version 3 oder
+später (Copyright © 2026 Hannes Pix; Volltext in `LICENSE`, offen auf
+github.com/hannespix/pflanzenbestimmung). Er darf weitergegeben und verändert werden – etwa für
+andere Bundesländer oder Berufe –, unter derselben Lizenz und ohne Gewähr. Nicht unter der GPL
+stehen die amtlichen Prüfungslisten und Leerbögen (Material der zuständigen Stelle), die
+eingebettete Excel-Bibliothek SheetJS (Apache License 2.0, GPL-vereinbar) und die auf Wunsch
+geladenen Inhalte von Wikipedia, Wikimedia Commons und iNaturalist (eigene Lizenzen, Nachweis
+am Bild). Die Nutzer sehen den Lizenzhinweis auf der Seite »Impressum, Datenschutz & Lizenz«.
