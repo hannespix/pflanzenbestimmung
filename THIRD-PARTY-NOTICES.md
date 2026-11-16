@@ -7,8 +7,8 @@ erfasst und behält seine eigenen Bedingungen:
 ## SheetJS Community Edition 0.18.5 — `lib/xlsx.full.min.js`
 
 Copyright (C) 2013-present SheetJS LLC · https://sheetjs.com · Lizenz: **Apache License 2.0**
-(Text: `lib/LICENSE.Apache-2.0.txt`). Wird nur im Prüfungswerkzeug für den Excel-Import inline
-eingebettet; die Kopfzeile mit dem Copyright-Hinweis bleibt dabei erhalten. Die Datei enthält
+(Text: `lib/LICENSE.Apache-2.0.txt`). Wird nur im Prüfungswerkzeug für den Excel-Import und den
+Excel-Export der Prüfungsliste inline eingebettet; die Kopfzeile mit dem Copyright-Hinweis bleibt dabei erhalten. Die Datei enthält
 außerdem `cptable` (Codepage-Tabellen, derselbe Urheber, dieselbe Lizenz). Die Apache-Lizenz ist
 mit der GPL 3 vereinbar.
 

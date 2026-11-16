@@ -373,7 +373,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .rcard-btn{background:var(--surface-2); text-align:left; width:100%; align-items:center; font:inherit; color:inherit; transition:background .12s,border-color .12s}
 .rcard-btn:hover{border-color:var(--green); background:var(--card)}
 .rcard-btn .ic{width:24px; height:24px; color:var(--green-deep); flex:none}
-.rcard-btn:last-child .ic{color:var(--madder)}
+.rcard-btn.sol .ic{color:var(--madder)}
 
 /* ---------- Toast ---------- */
 .toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px); opacity:0;
@@ -958,9 +958,16 @@ body{overflow-x:clip}
             <b>Kategorie</b> oder „nur ZP-relevant" eingrenzen. Ein aktiver Filter bleibt in der Filter-Zeile sichtbar.</li>
           <li><b>Anzahl</b> festlegen und <b>Zufällig ziehen</b> – oder Arten in der Liste unten einzeln anhaken.</li>
           <li><b>Vorschau · bearbeiten</b>: Reihenfolge per ▲▼ ändern, Arten bearbeiten, ergänzen oder entfernen.</li>
-          <li><b>Bogen drucken</b>: im Dialog Prüfungsbogen (leer) oder Musterlösung (mit Antworten) wählen.
-            Dort ist <b>»Als Prüfung speichern«</b> bereits angehakt – die Auswahl wird beim Drucken automatisch
-            unter dem Prüfungsdatum abgelegt (Panel »Prüfungen«); eine geladene Prüfung wird stattdessen aktualisiert.
+          <li><b>Bogen drucken</b>: im Dialog Prüfungsbogen (leer), Musterlösung (mit Antworten) oder
+            <b>Excel-Liste (.xlsx)</b> wählen. Die Excel-Datei (<i>pruefung_&lt;Profil&gt;_&lt;Datum&gt;.xlsx</i>)
+            hat drei Blätter: <b>Pflanzenliste</b> (die Pflanzen der Prüfung mit Gattung, Art, Familie, deutschem Name,
+            Kategorie, ZP und Synonymen – filterbar, zum Weiterverarbeiten in Excel oder LibreOffice), <b>Bogen</b> (leerer
+            Bogen in Schema-Reihenfolge mit Punktespalte; darunter Gesamtpunkte, Prozent und Note nach dem linearen
+            BW-Schlüssel als Formeln – zum digitalen Auswerten) und <b>Info</b> (Titel, Fachrichtung, Datum, Bewertung,
+            Notenschlüssel, zuständige Stelle). Sie enthält die Lösung und ist wie die Musterlösung nur für Prüfende;
+            es wird nichts ins Netz geladen. Dort ist <b>»Als Prüfung speichern«</b> bereits angehakt – die Auswahl wird
+            beim Drucken oder Exportieren automatisch unter dem Prüfungsdatum abgelegt (Panel »Prüfungen«); eine geladene
+            Prüfung wird stattdessen aktualisiert.
             <b>»Musterlösung sparsam drucken«</b> druckt die Musterlösung ohne Farbflächen (kein grüner Kopf,
             keine Zebrastreifen), mit schwarzer Schrift und engeren Zeilen – spart Toner; die Wahl wird gemerkt.
             Der Prüfungsbogen selbst bleibt davon unberührt – er ist immer das amtliche Formular.</li>
@@ -975,7 +982,7 @@ body{overflow-x:clip}
           <dt>Prüfungsschema</dt><dd>Legt fest, welche Spalten (Gattung, Art, Familie, deutscher Name) mit wie vielen Punkten bewertet werden, in welcher Reihenfolge (▲▼ = Spaltenfolge auf dem Bogen) und wie viele Pflanzen je Prüfung. Punkte dürfen Nachkommastellen haben (z. B. 0,5). Gilt pro Profil.</dd>
           <dt>Notenrechner</dt><dd>Rechnet erreichte Punkte in eine Note um – gleichmäßige (lineare) Baden-Württemberg-Skala. Notengrenzen sind einstellbar; angezeigt werden Note, Prozent, Dezimalnote und die Punktschwellen.</dd>
           <dt>Prüfungen</dt><dd>Speichert die gezogene Liste als Momentaufnahme (samt Schema) unter einem <b>Prüfungsdatum</b>.
-            Am schnellsten geht das direkt beim <b>Drucken</b> (Häkchen »Als Prüfung speichern« im Druck-Dialog). Von dort: laden, <b>kopieren</b> (z. B. für den nächsten Prüfungstag), nach dem Bearbeiten <b>aktualisieren</b>, drucken oder als <b>.json</b> herunterladen. Die .json-Datei lässt sich auf einem <b>anderen Gerät</b> über »Prüfung importieren« (im Prüfungen-Panel) oder »JSON laden« einlesen; beim »Laden« dort fehlende Arten werden automatisch in die Liste übernommen.</dd>
+            Am schnellsten geht das direkt beim <b>Drucken</b> (Häkchen »Als Prüfung speichern« im Druck-Dialog). Von dort: laden, <b>kopieren</b> (z. B. für den nächsten Prüfungstag), nach dem Bearbeiten <b>aktualisieren</b>, drucken (Bogen, Musterlösung oder <b>Excel-Liste</b>) oder als <b>.json</b> herunterladen. Die .json-Datei lässt sich auf einem <b>anderen Gerät</b> über »Prüfung importieren« (im Prüfungen-Panel) oder »JSON laden« einlesen; beim »Laden« dort fehlende Arten werden automatisch in die Liste übernommen.</dd>
           <dt>Einstellungen</dt><dd>Passt den Druckbogen an: Titel, <b>Fußzeile</b> (zuständige Stelle, zwei Zeilen) und den Vermerk auf der Musterlösung – so ist das Werkzeug für jede zuständige Stelle nutzbar. Gilt geräteweit.</dd>
         </dl>
 
@@ -1063,7 +1070,7 @@ body{overflow-x:clip}
       <button class="btn" id="btnShuffle" title="Reihenfolge der gezogenen Arten neu mischen (ändert nur die Reihenfolge auf dem Bogen, nicht die Auswahl)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 3h5v5M4 20l17-17M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>Mischen</button>
       <button class="btn" id="btnPreview" title="Auswahl als Bogen-Vorschau öffnen: Reihenfolge ändern, Arten bearbeiten (mit Rückschreiben in die Liste), entfernen oder ergänzen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.5"/></svg>Vorschau · bearbeiten</button>
       <button class="btn ghost" id="btnClear" title="Die aktuelle Auswahl vollständig leeren (die Liste selbst bleibt unverändert).">Auswahl leeren</button>
-      <button class="btn primary" id="btnPrint" title="Prüfungsbogen (leer) oder Musterlösung (mit Antworten) drucken – Variante im Dialog wählen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>Bogen drucken</button>
+      <button class="btn primary" id="btnPrint" title="Prüfungsbogen (leer) oder Musterlösung (mit Antworten) drucken oder die Pflanzenliste als Excel-Datei speichern – Variante im Dialog wählen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>Bogen drucken</button>
     </div>
   </div>
 
@@ -1121,7 +1128,7 @@ body{overflow-x:clip}
           <button class="btn" id="exUpdate" hidden title="Die geladene Prüfung mit der aktuellen Auswahl überschreiben">Aktualisieren</button>
           <button class="btn ghost" id="exImport" title="Eine als .json heruntergeladene Prüfung importieren – z. B. von einem anderen Gerät oder von Kolleg/innen. Sie erscheint danach in der Liste unten; die Pflanzenliste des Profils bleibt unverändert."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21V9m0 0l-4 4m4-4l4 4M4 7V5a2 2 0 012-2h12a2 2 0 012 2v2"/></svg>Prüfung importieren (.json)</button>
         </div>
-        <p class="gnote">Die gezogene Liste wird als Momentaufnahme (samt Schema) gespeichert – so bleibt die Prüfung exakt reproduzierbar, auch wenn die Profil-Liste später geändert wird. »Laden« stellt die Auswahl wieder her (auf einem anderen Gerät fehlende Arten werden dabei automatisch in die Liste übernommen), »Drucken« erzeugt Bogen oder Musterlösung, »JSON« lädt die Prüfung als Datei herunter – zum Weitergeben oder für ein anderes Gerät (dort über »Prüfung importieren« einlesen).</p>
+        <p class="gnote">Die gezogene Liste wird als Momentaufnahme (samt Schema) gespeichert – so bleibt die Prüfung exakt reproduzierbar, auch wenn die Profil-Liste später geändert wird. »Laden« stellt die Auswahl wieder her (auf einem anderen Gerät fehlende Arten werden dabei automatisch in die Liste übernommen), »Drucken« erzeugt Bogen oder Musterlösung oder speichert die Pflanzenliste als Excel-Datei, »JSON« lädt die Prüfung als Datei herunter – zum Weitergeben oder für ein anderes Gerät (dort über »Prüfung importieren« einlesen).</p>
         <div class="exlist" id="examList"></div>
       </div>
     </div>
@@ -1156,7 +1163,7 @@ body{overflow-x:clip}
           <button class="btn small" id="pvAddBtn" title="Die im Feld gewählte Art zur Auswahl hinzufügen.">Hinzufügen</button>
           <button class="btn small ghost" id="pvAddNew" title="Eine neue Art anlegen und direkt zur Auswahl hinzufügen (wird auch in die Liste übernommen).">Neue Art anlegen</button>
           <span class="spacer"></span>
-          <button class="btn small primary" id="pvPrint" title="Prüfungsbogen oder Musterlösung dieser Auswahl drucken (Variante im Dialog).">Bogen drucken</button>
+          <button class="btn small primary" id="pvPrint" title="Prüfungsbogen oder Musterlösung dieser Auswahl drucken oder als Excel-Liste speichern (Variante im Dialog).">Bogen drucken</button>
         </div>
       </div>
     </div>
@@ -1230,20 +1237,24 @@ body{overflow-x:clip}
 <!-- ========== Druck-Dialog ========== -->
 <div class="scrim" id="printScrim">
   <div class="modal">
-    <div class="mhead"><h3>Bogen drucken</h3><p>Welche Variante möchtest du drucken?</p></div>
+    <div class="mhead"><h3>Bogen drucken</h3><p>Prüfungsbogen oder Musterlösung drucken – oder die Pflanzenliste als Excel-Datei speichern.</p></div>
     <div class="body">
       <div class="radio-cards">
         <button class="rcard rcard-btn" id="printBlank">
           <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>
           <div><b>Prüfungsbogen</b><span>Leer, zum Ausfüllen durch die Prüflinge.</span></div>
         </button>
-        <button class="rcard rcard-btn" id="printSolution">
+        <button class="rcard rcard-btn sol" id="printSolution">
           <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
           <div><b>Musterlösung</b><span>Mit Antworten und Punktespalte — nur für Prüfende.</span></div>
         </button>
+        <button class="rcard rcard-btn" id="printXlsx" title="Lädt eine .xlsx-Datei herunter (Excel, LibreOffice …): Blatt »Pflanzenliste« = die Pflanzen dieser Prüfung mit Gattung, Art, Familie, deutschem Name, Kategorie, ZP und Synonymen; Blatt »Bogen« = leerer Bogen in Schema-Reihenfolge mit Punktespalte, Summe, Prozent und Note als Formeln; Blatt »Info« = Angaben zur Prüfung. Enthält die Lösung – nur für Prüfende.">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1z"/><path d="M4 10h16M4 15h16M10 4v16"/></svg>
+          <div><b>Excel-Liste (.xlsx)</b><span>Pflanzenliste dieser Prüfung als Tabelle zum Weiterverarbeiten – mit leerem Bogen und Angaben zur Prüfung. Enthält die Lösung, nur für Prüfende.</span></div>
+        </button>
       </div>
       <div class="prsave" id="prSaveRow">
-        <label class="switch" title="Beim Drucken die aktuelle Auswahl automatisch unter dem Prüfungsdatum ablegen (Panel »Prüfungen«). Ist bereits eine gespeicherte Prüfung geladen, wird sie stattdessen aktualisiert – es entsteht kein Duplikat."><input type="checkbox" id="prSaveChk" checked><span class="track"></span><span id="prSaveLbl">Als Prüfung speichern</span></label>
+        <label class="switch" title="Beim Drucken oder Exportieren die aktuelle Auswahl automatisch unter dem Prüfungsdatum ablegen (Panel »Prüfungen«). Ist bereits eine gespeicherte Prüfung geladen, wird sie stattdessen aktualisiert – es entsteht kein Duplikat."><input type="checkbox" id="prSaveChk" checked><span class="track"></span><span id="prSaveLbl">Als Prüfung speichern</span></label>
         <div class="prfields">
           <input type="date" id="prDate" title="Prüfungsdatum, unter dem die Auswahl gespeichert wird (Vorgabe: heute bzw. Datum der geladenen Prüfung).">
           <input type="text" id="prLabel" placeholder="Bezeichnung (optional)" title="Freie Bezeichnung zur Unterscheidung, z. B. Ausschuss oder Uhrzeit – optional.">

@@ -43,7 +43,8 @@ Bitte alle Antworten und Commit-/PR-Texte **auf Deutsch**.
   bewusst entfernt (siehe README, Abschnitt „Entstehung"). Daten sind ein reines
   JS-Array, Persistenz läuft über `localStorage`. **sql.js/WASM nicht wieder einführen.**
 - **Einzige Runtime-Bibliothek: SheetJS** (`lib/xlsx.full.min.js`), nur für den
-  Excel-Import. Nicht ersetzen, nicht per CDN laden.
+  Excel-Import und den Excel-Export der Prüfungsliste (Druck-Dialog). Nicht ersetzen,
+  nicht per CDN laden.
 - **Keine Secrets committen.** Keine API-Keys, keine Tokens im Repo.
 - **Lizenz: GPL-3.0-or-later** (`LICENSE`, Copyright Hannes Pix; das Repository ist öffentlich).
   Jede neue Quelldatei bekommt die SPDX-Kopfzeile `GPL-3.0-or-later`; Drittcode nur mit
@@ -3219,6 +3220,39 @@ behält seine dort gespeicherte Schema-Kopie — der neue Default greift erst na
       Commits wäre jeder PR rot gewesen (bisher lief jede CI am Tag ihres Commits). Jetzt bleibt die
       Datei unangetastet, solange sich nur die Datumszeile ändern würde; das Datum ist damit das der
       letzten inhaltlichen Änderung, `--check` bleibt wie gehabt.
+
+- [x] **Excel-Export der Prüfung im Druck-Dialog** (Nutzerwunsch: »Pflanzenlisten (Prüfungen) beim
+      Drucken auch einen Export als Excel-Liste anbieten«). Der Druck-Dialog (`#printScrim`) hat eine
+      dritte Karte **»Excel-Liste (.xlsx)«** (`#printXlsx`, Tabellen-Icon; die Musterlösung trägt ihr rotes
+      Icon jetzt über die Klasse `.sol` statt `:last-child`). Sie läuft durch denselben Weg wie die beiden
+      Druckvarianten: `printChoose("xlsx", ex)` → `printSheet("xlsx")` → `exportXlsx(ctx)`; damit gilt
+      **»Als Prüfung speichern«** auch beim Export (Datum/Bezeichnung landen in der Datei), und über
+      `printExam` (Prüfungen-Panel → »Drucken«) lässt sich auch eine **gespeicherte Prüfung** exportieren
+      (`examCtx` führt jetzt `label` und `profileId` mit; `examSnapshot` zusätzlich `synonyme`, additiv).
+      **Datei** `pruefung_<profil>_<datum>.xlsx` (wie die Prüfungs-JSON), geschrieben mit dem ohnehin
+      eingebetteten **SheetJS** (`ensureXLSX()` → `XLSX.write(…,{type:"array"})` → `downloadText` mit
+      xlsx-MIME) – kein Netz, keine neue Bibliothek, `check_offline.py` grün. **Drei Blätter:**
+      »Pflanzenliste« (Nr. · Gattung · Art · Familie · Deutscher Name · Kategorie · ZP · Synonyme, Autofilter,
+      Spaltenbreiten), »Bogen« (Spalten und Beschriftungen wie der Prüfungsbogen der Formular-Familie
+      inkl. Punkten, Zeilen leer bis auf die Nummer, Punktespalte; darunter **Formeln** Gesamtpunkte =
+      `SUM`, Prozent = `ROUND(·*100/max,1)`, Note = verschachteltes `IF` nach dem linearen BW-Schlüssel
+      aus `schema.scale`, plus Schlüsseltext) und »Info« (Titel, Fachrichtung, Ausbildung, Prüfungsdatum,
+      Bezeichnung, Pflanzen, Bewertung je Pflanze, Maximum, Notenschlüssel, GALA-Hinweis, zuständige
+      Stelle, Exportdatum, Hinweis »nur für Prüfende«). **SheetJS-Falle:** 0.18.5 schreibt Zellen **ohne
+      Wert** nicht (auch nicht mit `f`) – Formelzellen tragen deshalb den Startwert des leeren Bogens
+      (0 Punkte, 0 %, Note 6); Excel/LibreOffice rechnen beim Eintragen neu. Titel und Schlüsseltext der
+      Musterlösung sind in `sheetTitleFor(fam)`/`gradeKeyText(scale,maxP)`/`scaleLin` ausgelagert (eine
+      Quelle für Bogen und Export). Hilfe (Schritt 5 + »Prüfungen«), Tooltips, README, Technik-Doku,
+      THIRD-PARTY-NOTICES und `rechtliches.html` nennen Import **und** Export; die Regel »SheetJS nur
+      für den Excel-Import« oben entsprechend erweitert. `tests/smoke.mjs` 6a3 fängt `downloadText`
+      ab, liest die Mappe mit `XLSX.read` zurück und prüft: drei Karten, Icon-Farben, Dialog schließt +
+      speichert, Name/MIME/Größe, Toast, Blattnamen, Kopf/20 Zeilen/erste Zeile/Autofilter, Bogen-Kopf
+      der Produktions-Familie, Formeln samt Startwerten und Schlüsseltext, Info-Felder, gespeicherte
+      Prüfung (Kontext, Speichern-Zeile verborgen, kein Duplikat), leere Auswahl → kein Export.
+      **Testharnisch:** Chromium ≥ 150 meldet unter `file://` den Manifest-Abruf als CORS-Fehler in der
+      Konsole (Origin »null«) – `manifestNoise()` in `tests/smoke.mjs`/`tests/learn.mjs` blendet genau
+      diese zwei Meldungen aus (das Manifest prüft `tests/pwa.mjs` über HTTP); CI (puppeteer@23 mit
+      eigenem Chromium) war nicht betroffen, lokale Läufe mit aktuellem Chromium schon.
 
 ## Offene Aufgaben (TODO)
 

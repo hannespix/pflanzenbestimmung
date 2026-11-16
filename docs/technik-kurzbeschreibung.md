@@ -23,14 +23,14 @@ Prüfungswerkzeug — der einzige interne Verweis führt auf Impressum/Datenschu
 - **Statische Dateien, kein Server.** Jede Anwendung ist **eine einzige HTML-Datei**, die
   Programm, Gestaltung und Pflanzendaten vollständig enthält: Lernanwendung rund 670 KB,
   Prüfungswerkzeug rund 1,3 MB (davon 624 KB Excel-Bibliothek, die erst beim ersten Import
-  ausgewertet wird), Rechtliches rund 32 KB; komprimiert gehen etwa 205 KB bzw. 445 KB über
+  oder Export ausgewertet wird), Rechtliches rund 32 KB; komprimiert gehen etwa 205 KB bzw. 445 KB über
   die Leitung.
 - **Kein Backend, keine Datenbank, keine Anmeldung, keine Nutzerkonten.** Alles rechnet im
   Browser. Es gibt keinen Serverprozess, der betrieben, aktualisiert oder abgesichert werden
   müsste — ein beliebiger Webserver, der Dateien ausliefert, genügt.
 - **Kein Framework, keine Nachlade-Dienste (CDN).** HTML, CSS und JavaScript ohne React,
-  Vue o. ä. Einzige eingebettete Fremdbibliothek: SheetJS für den Excel-Import, nur im
-  Prüfungswerkzeug. Den Code, den beide Anwendungen gleichermaßen brauchen (Speicher-Wrapper,
+  Vue o. ä. Einzige eingebettete Fremdbibliothek: SheetJS für den Excel-Import und den
+  Excel-Export der Prüfungsliste, nur im Prüfungswerkzeug. Den Code, den beide Anwendungen gleichermaßen brauchen (Speicher-Wrapper,
   Symbole, Wikipedia-Abruf, Namensherleitung, Bild-Großansicht), gibt es nur einmal
   (`src/shared.js`); der Build stellt ihn beiden Anwendungen voran.
 - **Installierbar und offline nutzbar** (PWA): Nach dem ersten Aufruf funktioniert die
@@ -139,8 +139,8 @@ Wikimedia Commons, ersatzweise von iNaturalist, selten historische Pflanzentafel
 KI-erzeugt) stammen nicht aus den
 Prüfungslisten. Die Anwendung kennzeichnet diese
 Trennung dort, wo die Namen gelesen werden – im Hinweis vor den Lektionen, an der Artenliste, in
-der Info-Karte jeder Pflanze und auf der gedruckten Lernliste. Prüfungsbogen, Musterlösung und
-Notenberechnung enthalten keine automatisch erzeugten Inhalte. **Verbindlich sind allein die
+der Info-Karte jeder Pflanze und auf der gedruckten Lernliste. Prüfungsbogen, Musterlösung,
+Excel-Export und Notenberechnung enthalten keine automatisch erzeugten Inhalte. **Verbindlich sind allein die
 amtlichen Prüfungslisten.** Für Richtigkeit und Vollständigkeit wird keine Gewähr übernommen.
 
 **Rückmeldung an die zuständige Stelle.** Die berichtigten Einzelangaben (fehlende Familie,
