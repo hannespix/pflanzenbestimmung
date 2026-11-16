@@ -373,7 +373,7 @@ select{border:1px solid var(--rule-strong); background:var(--surface-2); border-
 .rcard-btn{background:var(--surface-2); text-align:left; width:100%; align-items:center; font:inherit; color:inherit; transition:background .12s,border-color .12s}
 .rcard-btn:hover{border-color:var(--green); background:var(--card)}
 .rcard-btn .ic{width:24px; height:24px; color:var(--green-deep); flex:none}
-.rcard-btn:last-child .ic{color:var(--madder)}
+.rcard-btn.sol .ic{color:var(--madder)}
 
 /* ---------- Toast ---------- */
 .toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px); opacity:0;
@@ -958,9 +958,16 @@ body{overflow-x:clip}
             <b>Kategorie</b> oder „nur ZP-relevant" eingrenzen. Ein aktiver Filter bleibt in der Filter-Zeile sichtbar.</li>
           <li><b>Anzahl</b> festlegen und <b>Zufällig ziehen</b> – oder Arten in der Liste unten einzeln anhaken.</li>
           <li><b>Vorschau · bearbeiten</b>: Reihenfolge per ▲▼ ändern, Arten bearbeiten, ergänzen oder entfernen.</li>
-          <li><b>Bogen drucken</b>: im Dialog Prüfungsbogen (leer) oder Musterlösung (mit Antworten) wählen.
-            Dort ist <b>»Als Prüfung speichern«</b> bereits angehakt – die Auswahl wird beim Drucken automatisch
-            unter dem Prüfungsdatum abgelegt (Panel »Prüfungen«); eine geladene Prüfung wird stattdessen aktualisiert.
+          <li><b>Bogen drucken</b>: im Dialog Prüfungsbogen (leer), Musterlösung (mit Antworten) oder
+            <b>Excel-Liste (.xlsx)</b> wählen. Die Excel-Datei (<i>pruefung_&lt;Profil&gt;_&lt;Datum&gt;.xlsx</i>)
+            hat drei Blätter: <b>Pflanzenliste</b> (die Pflanzen der Prüfung mit Gattung, Art, Familie, deutschem Name,
+            Kategorie, ZP und Synonymen – filterbar, zum Weiterverarbeiten in Excel oder LibreOffice), <b>Bogen</b> (leerer
+            Bogen in Schema-Reihenfolge mit Punktespalte; darunter Gesamtpunkte, Prozent und Note nach dem linearen
+            BW-Schlüssel als Formeln – zum digitalen Auswerten) und <b>Info</b> (Titel, Fachrichtung, Datum, Bewertung,
+            Notenschlüssel, zuständige Stelle). Sie enthält die Lösung und ist wie die Musterlösung nur für Prüfende;
+            es wird nichts ins Netz geladen. Dort ist <b>»Als Prüfung speichern«</b> bereits angehakt – die Auswahl wird
+            beim Drucken oder Exportieren automatisch unter dem Prüfungsdatum abgelegt (Panel »Prüfungen«); eine geladene
+            Prüfung wird stattdessen aktualisiert.
             <b>»Musterlösung sparsam drucken«</b> druckt die Musterlösung ohne Farbflächen (kein grüner Kopf,
             keine Zebrastreifen), mit schwarzer Schrift und engeren Zeilen – spart Toner; die Wahl wird gemerkt.
             Der Prüfungsbogen selbst bleibt davon unberührt – er ist immer das amtliche Formular.</li>
@@ -975,7 +982,7 @@ body{overflow-x:clip}
           <dt>Prüfungsschema</dt><dd>Legt fest, welche Spalten (Gattung, Art, Familie, deutscher Name) mit wie vielen Punkten bewertet werden, in welcher Reihenfolge (▲▼ = Spaltenfolge auf dem Bogen) und wie viele Pflanzen je Prüfung. Punkte dürfen Nachkommastellen haben (z. B. 0,5). Gilt pro Profil.</dd>
           <dt>Notenrechner</dt><dd>Rechnet erreichte Punkte in eine Note um – gleichmäßige (lineare) Baden-Württemberg-Skala. Notengrenzen sind einstellbar; angezeigt werden Note, Prozent, Dezimalnote und die Punktschwellen.</dd>
           <dt>Prüfungen</dt><dd>Speichert die gezogene Liste als Momentaufnahme (samt Schema) unter einem <b>Prüfungsdatum</b>.
-            Am schnellsten geht das direkt beim <b>Drucken</b> (Häkchen »Als Prüfung speichern« im Druck-Dialog). Von dort: laden, <b>kopieren</b> (z. B. für den nächsten Prüfungstag), nach dem Bearbeiten <b>aktualisieren</b>, drucken oder als <b>.json</b> herunterladen. Die .json-Datei lässt sich auf einem <b>anderen Gerät</b> über »Prüfung importieren« (im Prüfungen-Panel) oder »JSON laden« einlesen; beim »Laden« dort fehlende Arten werden automatisch in die Liste übernommen.</dd>
+            Am schnellsten geht das direkt beim <b>Drucken</b> (Häkchen »Als Prüfung speichern« im Druck-Dialog). Von dort: laden, <b>kopieren</b> (z. B. für den nächsten Prüfungstag), nach dem Bearbeiten <b>aktualisieren</b>, drucken (Bogen, Musterlösung oder <b>Excel-Liste</b>) oder als <b>.json</b> herunterladen. Die .json-Datei lässt sich auf einem <b>anderen Gerät</b> über »Prüfung importieren« (im Prüfungen-Panel) oder »JSON laden« einlesen; beim »Laden« dort fehlende Arten werden automatisch in die Liste übernommen.</dd>
           <dt>Einstellungen</dt><dd>Passt den Druckbogen an: Titel, <b>Fußzeile</b> (zuständige Stelle, zwei Zeilen) und den Vermerk auf der Musterlösung – so ist das Werkzeug für jede zuständige Stelle nutzbar. Gilt geräteweit.</dd>
         </dl>
 
@@ -1063,7 +1070,7 @@ body{overflow-x:clip}
       <button class="btn" id="btnShuffle" title="Reihenfolge der gezogenen Arten neu mischen (ändert nur die Reihenfolge auf dem Bogen, nicht die Auswahl)."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 3h5v5M4 20l17-17M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>Mischen</button>
       <button class="btn" id="btnPreview" title="Auswahl als Bogen-Vorschau öffnen: Reihenfolge ändern, Arten bearbeiten (mit Rückschreiben in die Liste), entfernen oder ergänzen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.5"/></svg>Vorschau · bearbeiten</button>
       <button class="btn ghost" id="btnClear" title="Die aktuelle Auswahl vollständig leeren (die Liste selbst bleibt unverändert).">Auswahl leeren</button>
-      <button class="btn primary" id="btnPrint" title="Prüfungsbogen (leer) oder Musterlösung (mit Antworten) drucken – Variante im Dialog wählen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>Bogen drucken</button>
+      <button class="btn primary" id="btnPrint" title="Prüfungsbogen (leer) oder Musterlösung (mit Antworten) drucken oder die Pflanzenliste als Excel-Datei speichern – Variante im Dialog wählen."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>Bogen drucken</button>
     </div>
   </div>
 
@@ -1121,7 +1128,7 @@ body{overflow-x:clip}
           <button class="btn" id="exUpdate" hidden title="Die geladene Prüfung mit der aktuellen Auswahl überschreiben">Aktualisieren</button>
           <button class="btn ghost" id="exImport" title="Eine als .json heruntergeladene Prüfung importieren – z. B. von einem anderen Gerät oder von Kolleg/innen. Sie erscheint danach in der Liste unten; die Pflanzenliste des Profils bleibt unverändert."><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21V9m0 0l-4 4m4-4l4 4M4 7V5a2 2 0 012-2h12a2 2 0 012 2v2"/></svg>Prüfung importieren (.json)</button>
         </div>
-        <p class="gnote">Die gezogene Liste wird als Momentaufnahme (samt Schema) gespeichert – so bleibt die Prüfung exakt reproduzierbar, auch wenn die Profil-Liste später geändert wird. »Laden« stellt die Auswahl wieder her (auf einem anderen Gerät fehlende Arten werden dabei automatisch in die Liste übernommen), »Drucken« erzeugt Bogen oder Musterlösung, »JSON« lädt die Prüfung als Datei herunter – zum Weitergeben oder für ein anderes Gerät (dort über »Prüfung importieren« einlesen).</p>
+        <p class="gnote">Die gezogene Liste wird als Momentaufnahme (samt Schema) gespeichert – so bleibt die Prüfung exakt reproduzierbar, auch wenn die Profil-Liste später geändert wird. »Laden« stellt die Auswahl wieder her (auf einem anderen Gerät fehlende Arten werden dabei automatisch in die Liste übernommen), »Drucken« erzeugt Bogen oder Musterlösung oder speichert die Pflanzenliste als Excel-Datei, »JSON« lädt die Prüfung als Datei herunter – zum Weitergeben oder für ein anderes Gerät (dort über »Prüfung importieren« einlesen).</p>
         <div class="exlist" id="examList"></div>
       </div>
     </div>
@@ -1156,7 +1163,7 @@ body{overflow-x:clip}
           <button class="btn small" id="pvAddBtn" title="Die im Feld gewählte Art zur Auswahl hinzufügen.">Hinzufügen</button>
           <button class="btn small ghost" id="pvAddNew" title="Eine neue Art anlegen und direkt zur Auswahl hinzufügen (wird auch in die Liste übernommen).">Neue Art anlegen</button>
           <span class="spacer"></span>
-          <button class="btn small primary" id="pvPrint" title="Prüfungsbogen oder Musterlösung dieser Auswahl drucken (Variante im Dialog).">Bogen drucken</button>
+          <button class="btn small primary" id="pvPrint" title="Prüfungsbogen oder Musterlösung dieser Auswahl drucken oder als Excel-Liste speichern (Variante im Dialog).">Bogen drucken</button>
         </div>
       </div>
     </div>
@@ -1174,7 +1181,7 @@ body{overflow-x:clip}
   </main>
 
   <footer class="pagefoot">
-    <span>Pflanzenkenntnis · Prüfen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 30.10.2026 · Version 1134d0f</span></span>
+    <span>Pflanzenkenntnis · Prüfen · läuft im Browser, auch ohne Internet · <span class="build" id="buildStamp" title="Versionskennung dieser Ausgabe – ändert sich mit jeder Aktualisierung">Stand 31.10.2026 · Version 6c733c8</span></span>
     <a class="legal" href="rechtliches.html">Impressum · Datenschutz · Lizenz</a>
   </footer>
 </div>
@@ -1230,20 +1237,24 @@ body{overflow-x:clip}
 <!-- ========== Druck-Dialog ========== -->
 <div class="scrim" id="printScrim">
   <div class="modal">
-    <div class="mhead"><h3>Bogen drucken</h3><p>Welche Variante möchtest du drucken?</p></div>
+    <div class="mhead"><h3>Bogen drucken</h3><p>Prüfungsbogen oder Musterlösung drucken – oder die Pflanzenliste als Excel-Datei speichern.</p></div>
     <div class="body">
       <div class="radio-cards">
         <button class="rcard rcard-btn" id="printBlank">
           <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>
           <div><b>Prüfungsbogen</b><span>Leer, zum Ausfüllen durch die Prüflinge.</span></div>
         </button>
-        <button class="rcard rcard-btn" id="printSolution">
+        <button class="rcard rcard-btn sol" id="printSolution">
           <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
           <div><b>Musterlösung</b><span>Mit Antworten und Punktespalte — nur für Prüfende.</span></div>
         </button>
+        <button class="rcard rcard-btn" id="printXlsx" title="Lädt eine .xlsx-Datei herunter (Excel, LibreOffice …): Blatt »Pflanzenliste« = die Pflanzen dieser Prüfung mit Gattung, Art, Familie, deutschem Name, Kategorie, ZP und Synonymen; Blatt »Bogen« = leerer Bogen in Schema-Reihenfolge mit Punktespalte, Summe, Prozent und Note als Formeln; Blatt »Info« = Angaben zur Prüfung. Enthält die Lösung – nur für Prüfende.">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1z"/><path d="M4 10h16M4 15h16M10 4v16"/></svg>
+          <div><b>Excel-Liste (.xlsx)</b><span>Pflanzenliste dieser Prüfung als Tabelle zum Weiterverarbeiten – mit leerem Bogen und Angaben zur Prüfung. Enthält die Lösung, nur für Prüfende.</span></div>
+        </button>
       </div>
       <div class="prsave" id="prSaveRow">
-        <label class="switch" title="Beim Drucken die aktuelle Auswahl automatisch unter dem Prüfungsdatum ablegen (Panel »Prüfungen«). Ist bereits eine gespeicherte Prüfung geladen, wird sie stattdessen aktualisiert – es entsteht kein Duplikat."><input type="checkbox" id="prSaveChk" checked><span class="track"></span><span id="prSaveLbl">Als Prüfung speichern</span></label>
+        <label class="switch" title="Beim Drucken oder Exportieren die aktuelle Auswahl automatisch unter dem Prüfungsdatum ablegen (Panel »Prüfungen«). Ist bereits eine gespeicherte Prüfung geladen, wird sie stattdessen aktualisiert – es entsteht kein Duplikat."><input type="checkbox" id="prSaveChk" checked><span class="track"></span><span id="prSaveLbl">Als Prüfung speichern</span></label>
         <div class="prfields">
           <input type="date" id="prDate" title="Prüfungsdatum, unter dem die Auswahl gespeichert wird (Vorgabe: heute bzw. Datum der geladenen Prüfung).">
           <input type="text" id="prLabel" placeholder="Bezeichnung (optional)" title="Freie Bezeichnung zur Unterscheidung, z. B. Ausschuss oder Uhrzeit – optional.">
@@ -2887,6 +2898,19 @@ const SHEET_COL_W={ // Spaltenbreiten in % (aus den DOCX-Vorlagen, dxa umgerechn
   gala:{num:5.8, gattung:27.5, art:29,   deutscher_name:26.1, pts:11.6},
   prod:{num:5.8, gattung:21.4, art:22.1, familie:21.7, deutscher_name:21.7, pts:7.2}
 };
+// Titel des Bogens: Zusatz »im Gartenbau (GALA)« nur beim unveränderten Standardtitel
+function sheetTitleFor(fam){
+  const base=norm(settings&&settings.sheetTitle)||defaultSettings().sheetTitle;
+  return base!==defaultSettings().sheetTitle ? base
+    : fam==="gala" ? base+" im Gartenbau GALA"
+    : fam==="prod" ? base+" im Gartenbau" : base;
+}
+// Notengrenzen in Punkten (»1 ab 180 · 2 ab 140 · … · 6 unter 20«), wie auf der Musterlösung
+function scaleLin(scale){ return (scale&&Array.isArray(scale.lin)&&scale.lin.length===5)?scale.lin:[90,70,50,30,10]; }
+function gradeKeyText(scale,maxP){
+  const B=linBands(scaleLin(scale));
+  return B.map(b=>b.stufe===6?`6 unter ${thresholdPts(B[4].lo,maxP)}`:`${b.stufe} ab ${thresholdPts(b.lo,maxP)}`).join(" · ");
+}
 function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gespeicherte Prüfung)
   ctx=ctx||{};
   const plants=ctx.plants||selectedPlants();
@@ -2899,11 +2923,7 @@ function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gesp
   const per=cols.reduce((s,c)=>s+(c.pts||0),0), maxP=plants.length*per;
   const dateStr=ctx.date?fmtDate(ctx.date):new Date().toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"});
 
-  // Titel: Zusatz »im Gartenbau (GALA)« nur beim unveränderten Standardtitel
-  const base=norm(settings&&settings.sheetTitle)||defaultSettings().sheetTitle;
-  const title= base!==defaultSettings().sheetTitle ? base
-    : fam==="gala" ? base+" im Gartenbau GALA"
-    : fam==="prod" ? base+" im Gartenbau" : base;
+  const title=sheetTitleFor(fam);
 
   // Spalten: Beschriftung wie auf den offiziellen Bögen, Punkte aus dem Schema
   const lbl=SHEET_COL_LABEL[fam==="fw"?"fw":"std"];
@@ -2930,9 +2950,7 @@ function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gesp
   // Nur auf der Musterlösung: Zuordnung, Vermerk und Bewertungsschlüssel
   let solMeta="", solScale="";
   if(sol){
-    const lin=(scale&&Array.isArray(scale.lin)&&scale.lin.length===5)?scale.lin:[90,70,50,30,10];
-    const B=linBands(lin);
-    const key=B.map(b=>b.stufe===6?`6 unter ${thresholdPts(B[4].lo,maxP)}`:`${b.stufe} ab ${thresholdPts(b.lo,maxP)}`).join(" · ");
+    const key=gradeKeyText(scale,maxP);
     const keyLabel="linear, Baden-Württemberg";
     solMeta=`<div class="sheet-meta">Fachrichtung ${esc(def.fr)} · ${esc(def.niveau)} · Prüfung am ${esc(dateStr)} ·
       ${plants.length} Pflanzen · max. ${fmtPts(maxP)} Punkte
@@ -2969,8 +2987,76 @@ function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gesp
 }
 function printSheet(mode,ex){ // ex optional: soeben gespeicherte/aktualisierte Prüfung (Datum für die Musterlösung)
   if(!selection.length){ toast("Erst Arten auswählen",true); return; }
+  if(mode==="xlsx"){ exportXlsx(ex?{date:ex.date,label:ex.label}:undefined); return; }
   buildSheet(mode, ex?{date:ex.date}:undefined);
   window.print();
+}
+
+/* Excel-Export der Prüfung (dritte Variante im Druck-Dialog). SheetJS steckt ohnehin für den
+   Import in der Seite (ensureXLSX) und kann auch schreiben – kein Netz, keine weitere Bibliothek.
+   Drei Blätter: »Pflanzenliste« (Musterlösung als Tabelle, filterbar), »Bogen« (leerer Bogen in
+   Schema-Reihenfolge mit Punktespalte, Summe, Prozent und Note nach dem linearen BW-Schlüssel als
+   Formeln) und »Info« (Angaben zur Prüfung). ctx wie bei buildSheet (gespeicherte Prüfung) oder
+   leer = aktuelle Auswahl. Dateiname wie die Prüfungs-JSON: pruefung_<profil>_<datum>.xlsx. */
+const XLSX_MIME="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+function exportXlsx(ctx){
+  ctx=ctx||{};
+  const plants=ctx.plants||selectedPlants();
+  if(!plants.length){ toast("Erst Arten auswählen",true); return null; }
+  if(!ensureXLSX()){ toast("Excel-Bibliothek konnte nicht geladen werden",true); return null; }
+  const sch=ctx.schema||schema, def=ctx.def||PROFILE_DEFS[profileId], fam=sheetFamily(def);
+  const cols=(sch.cols||[]).filter(c=>c.pts>0);
+  const per=cols.reduce((s,c)=>s+(c.pts||0),0), maxP=plants.length*per;
+  const date=ctx.date||todayISO();
+  const U=XLSX.utils, wb=U.book_new();
+
+  // Blatt 1: Pflanzenliste (Musterlösung als Tabelle – alle Angaben, Kopfzeile mit Filter)
+  const head=["Nr.","Gattung","Art","Familie","Deutscher Name","Kategorie","ZP","Synonyme"];
+  const nn=v=>norm(v)||null;   // leere Felder als leere Zellen, nicht als Leerstrings
+  const rows=plants.map((p,i)=>[i+1,nn(p.gattung),nn(p.art),nn(p.familie),nn(p.deutscher_name),nn(p.kategorie),p.zp?"ZP":null,nn(p.synonyme)]);
+  const ws1=U.aoa_to_sheet([head,...rows]);
+  ws1["!cols"]=[5,18,28,24,30,20,5,32].map(w=>({wch:w}));
+  ws1["!autofilter"]={ref:U.encode_range({s:{r:0,c:0},e:{r:rows.length,c:head.length-1}})};
+  U.book_append_sheet(wb,ws1,"Pflanzenliste");
+
+  // Blatt 2: Bogen (leer) – Spalten und Punkte wie auf dem Prüfungsbogen, darunter Auswertung als Formeln
+  const lbl=SHEET_COL_LABEL[fam==="fw"?"fw":"std"];
+  const head2=["Nr.",...cols.map(c=>`${lbl[c.key]||FIELD_LABEL[c.key]||c.key} (${fmtPts(c.pts)} P.)`),"Punkte"];
+  const pad=cols.map(()=>null);
+  const rows2=plants.map((p,i)=>[i+1,...pad,null]);
+  const pc=U.encode_col(head2.length-1), last=rows2.length+1, sumRow=last+2;   // Zeile der Gesamtsumme (1-basiert): Kopf, Daten, Leerzeile, Summe
+  const lin=scaleLin(sch.scale||scaleCfg);
+  const sumRef=`${pc}${sumRow}`, pct=`${sumRef}*100/${maxP}`;
+  const noteF=`IF(${pct}>=${lin[0]},1,IF(${pct}>=${lin[1]},2,IF(${pct}>=${lin[2]},3,IF(${pct}>=${lin[3]},4,IF(${pct}>=${lin[4]},5,6)))))`;
+  const ws2=U.aoa_to_sheet([head2,...rows2,
+    [],   // Leerzeile vor der Auswertung
+    // Formelzellen mit Startwert (leerer Bogen: 0 Punkte, 0 %, Note 6) – SheetJS 0.18.5 schreibt
+    // Zellen ohne Wert nicht, und Excel zeigt bis zur Neuberechnung den gespeicherten Wert.
+    ["Gesamtpunkte",...pad,{t:"n",v:0,f:`SUM(${pc}2:${pc}${last})`}],
+    ["davon maximal",...pad,maxP],
+    ["Prozent",...pad,{t:"n",v:0,f:`IF(${maxP}>0,ROUND(${pct},1),0)`}],
+    ["Note (linear, Baden-Württemberg)",...pad,{t:"n",v:6,f:noteF}],
+    ["Notenschlüssel",...pad,gradeKeyText(sch.scale||scaleCfg,maxP)]]);
+  ws2["!cols"]=[{wch:5},...cols.map(()=>({wch:30})),{wch:10}];
+  U.book_append_sheet(wb,ws2,"Bogen");
+
+  // Blatt 3: Info (Angaben zur Prüfung, wie Kopf und Fuß der Musterlösung)
+  const foot=[settings&&settings.stelle1,settings&&settings.stelle2].filter(x=>norm(x)).join(" · ");
+  const info=[["Titel",sheetTitleFor(fam)],["Fachrichtung",def.fr||""],["Ausbildung",def.niveau||""],
+    ["Prüfungsdatum",fmtDate(date)],["Bezeichnung",norm(ctx.label||"")],["Pflanzen",plants.length],
+    ["Bewertung je Pflanze",cols.map(c=>`${FIELD_LABEL[c.key]||c.key} ${fmtPts(c.pts)}`).join(" · ")+` = ${fmtPts(per)} Punkte`],
+    ["Gesamtpunkte (maximal)",maxP],["Notenschlüssel (linear, Baden-Württemberg)",gradeKeyText(sch.scale||scaleCfg,maxP)]];
+  if(fam==="gala") info.push(["Hinweis","Schreibfehler führen zur Halbierung der Punktezahl"]);
+  if(foot) info.push(["Zuständige Stelle",foot]);
+  info.push(["Exportiert am",fmtDate(todayISO())],["Erzeugt mit","Pflanzenkenntnis · Prüfungswerkzeug (pflanze-bw.de/pruefung)"],
+    ["Hinweis","Blatt »Pflanzenliste« enthält die Lösung – nur für Prüfende."]);
+  const ws3=U.aoa_to_sheet(info); ws3["!cols"]=[{wch:40},{wch:70}];
+  U.book_append_sheet(wb,ws3,"Info");
+
+  const name=`pruefung_${ctx.profileId||profileId}_${date}.xlsx`;
+  downloadText(XLSX.write(wb,{bookType:"xlsx",type:"array"}), name, XLSX_MIME);
+  toast(`Excel-Liste gespeichert (${plants.length} Pflanzen · ${name})`);
+  return {name,plants:plants.length,sheets:wb.SheetNames.slice()};
 }
 
 /* ============================================================
@@ -2989,7 +3075,7 @@ function fmtDate(iso){ if(!iso) return ""; const d=new Date(iso+"T00:00:00"); re
 
 function examSnapshot(){
   return selectedPlants().map(p=>({gattung:p.gattung,art:p.art,familie:p.familie,
-    deutscher_name:p.deutscher_name,kategorie:p.kategorie,zp:p.zp?1:0}));
+    deutscher_name:p.deutscher_name,kategorie:p.kategorie,zp:p.zp?1:0,synonyme:p.synonyme||""}));
 }
 function saveExamData(date,label){ // Kern, auch vom Druck-Dialog genutzt
   if(!selection.length) return null;
@@ -3039,10 +3125,10 @@ function syncExamControls(){
   if(ex){ btn.hidden=false; btn.textContent="„"+fmtDate(ex.date)+"“ aktualisieren"; }
   else{ btn.hidden=true; if(loadedExamId&&!ex) loadedExamId=null; }
 }
-function examCtx(ex){ return { plants:ex.plants, schema:ex.schema, def:{fr:ex.fr,niveau:ex.niveau}, date:ex.date }; }
+function examCtx(ex){ return { plants:ex.plants, schema:ex.schema, def:{fr:ex.fr,niveau:ex.niveau}, date:ex.date, label:ex.label, profileId:ex.profileId }; }
 function printExam(id){
   const ex=exams.find(e=>e.id===id); if(!ex) return;
-  askPrintMode(m=>{ buildSheet(m, examCtx(ex)); window.print(); });
+  askPrintMode(m=>{ if(m==="xlsx"){ exportXlsx(examCtx(ex)); return; } buildSheet(m, examCtx(ex)); window.print(); });
 }
 function loadExam(id){
   const ex=exams.find(e=>e.id===id); if(!ex) return;
@@ -3105,7 +3191,7 @@ function renderExams(){
       <div class="exacts">
         <button class="btn small" data-act="load" title="Diese Prüfung in die Auswahl laden (zum Ansehen, Bearbeiten oder erneuten Drucken)">Laden</button>
         <button class="btn small" data-act="copy" title="Als neue Prüfung mit heutigem Datum kopieren – z. B. für den nächsten Prüfungstag, dann frei editierbar">Kopieren</button>
-        <button class="btn small" data-act="print" title="Prüfungsbogen oder Musterlösung dieser Prüfung drucken (Variante im Dialog)">Drucken</button>
+        <button class="btn small" data-act="print" title="Prüfungsbogen oder Musterlösung dieser Prüfung drucken – oder als Excel-Liste (.xlsx) speichern (Variante im Dialog)">Drucken</button>
         <button class="btn small ghost" data-act="dl" title="Diese Prüfung als .json-Datei herunterladen (Sicherung/Weitergabe)">JSON</button>
         <button class="btn small ghost del" data-act="del" title="Diese gespeicherte Prüfung löschen">Löschen</button>
       </div>`;
@@ -4195,6 +4281,7 @@ function wire(){
   // Druck-Dialog (mit »Als Prüfung speichern«)
   $("#printBlank").onclick=()=>{ const ex=maybeSaveFromPrint(); $("#printScrim").classList.remove("open"); if(printChoose) printChoose("blank",ex); };
   $("#printSolution").onclick=()=>{ const ex=maybeSaveFromPrint(); $("#printScrim").classList.remove("open"); if(printChoose) printChoose("solution",ex); };
+  $("#printXlsx").onclick=()=>{ const ex=maybeSaveFromPrint(); $("#printScrim").classList.remove("open"); if(printChoose) printChoose("xlsx",ex); };   // Excel-Liste (.xlsx)
   $("#printCancel").onclick=()=>$("#printScrim").classList.remove("open");
   const pe=$("#prEco"); if(pe){ pe.checked=printEcoOn(); pe.onchange=()=>store.set(LS_PREFIX+"printeco", pe.checked?"1":"0"); }   // sparsam drucken (Musterlösung)
   // Edit-Dialog
@@ -4368,6 +4455,7 @@ window.pickExcel=pickExcel;
 window.resetToDefault=resetToDefault;
 window.importJsonData=importJsonData; // für Datei-Import und Smoke-Test
 window.importJsonText=importJsonText; // Smoke-Test: Lernstand-Datei des Lern-Tools wird abgewiesen
+window.exportXlsx=exportXlsx;           // Excel-Export der Prüfung (Druck-Dialog), Smoke-Test
 function swIdle(){ return selection.length===0 && !document.querySelector(".scrim.open, .infoscrim, .lbscrim") && document.visibilityState!=="hidden"; }
 window.__swUpdate=swUpdate; window.__swReloadHook=fn=>{ swReload = fn || (()=>{ try{ location.reload(); }catch(e){} }); };
 window.__setJsonp=fn=>{ jsonp = fn || ((...a)=>jsonpGet(...a)); };   // Smoke-Test: Wikipedia-Antworten ohne Netz vorgeben

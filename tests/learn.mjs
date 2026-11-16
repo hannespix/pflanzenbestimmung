@@ -36,6 +36,12 @@ function findChromium() {
 }
 const assert = (c, m) => { if (!c) throw new Error("ASSERT: " + m); };
 
+// Neueres Chromium (ab etwa Version 150) meldet unter file:// den Abruf des Web-App-Manifests als
+// CORS-Fehler in der Konsole (Origin »null«) – kein Fehler des Werkzeugs: das Manifest gilt nur online
+// bzw. als installierte App und wird in tests/pwa.mjs über HTTP geprüft. Nur diese Meldungen (CORS-Text
+// und das zugehörige »Failed to load resource« mit der Manifest-Adresse) werden ausgeblendet.
+const manifestNoise = (m) => /manifest\.webmanifest/.test(m.text() + " " + ((m.location() || {}).url || ""));
+
 async function main() {
   if (!fs.existsSync(path.join(ROOT, "dist", "pflanzen-lernen.html")))
     throw new Error("dist/pflanzen-lernen.html fehlt – zuerst 'python3 build.py'.");
@@ -78,7 +84,7 @@ async function main() {
   });
   const errs = [];
   page.on("pageerror", (e) => errs.push(String(e.message || e)));
-  page.on("console", (m) => { if (m.type() === "error") errs.push("console.error: " + m.text()); });
+  page.on("console", (m) => { if (m.type() === "error" && !manifestNoise(m)) errs.push("console.error: " + m.text()); });
 
   await page.goto(FILE, { waitUntil: "load" });
   await page.waitForFunction("window.startSession!=null", { timeout: 30000 });

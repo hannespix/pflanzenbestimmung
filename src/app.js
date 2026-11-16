@@ -689,6 +689,19 @@ const SHEET_COL_W={ // Spaltenbreiten in % (aus den DOCX-Vorlagen, dxa umgerechn
   gala:{num:5.8, gattung:27.5, art:29,   deutscher_name:26.1, pts:11.6},
   prod:{num:5.8, gattung:21.4, art:22.1, familie:21.7, deutscher_name:21.7, pts:7.2}
 };
+// Titel des Bogens: Zusatz »im Gartenbau (GALA)« nur beim unveränderten Standardtitel
+function sheetTitleFor(fam){
+  const base=norm(settings&&settings.sheetTitle)||defaultSettings().sheetTitle;
+  return base!==defaultSettings().sheetTitle ? base
+    : fam==="gala" ? base+" im Gartenbau GALA"
+    : fam==="prod" ? base+" im Gartenbau" : base;
+}
+// Notengrenzen in Punkten (»1 ab 180 · 2 ab 140 · … · 6 unter 20«), wie auf der Musterlösung
+function scaleLin(scale){ return (scale&&Array.isArray(scale.lin)&&scale.lin.length===5)?scale.lin:[90,70,50,30,10]; }
+function gradeKeyText(scale,maxP){
+  const B=linBands(scaleLin(scale));
+  return B.map(b=>b.stufe===6?`6 unter ${thresholdPts(B[4].lo,maxP)}`:`${b.stufe} ab ${thresholdPts(b.lo,maxP)}`).join(" · ");
+}
 function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gespeicherte Prüfung)
   ctx=ctx||{};
   const plants=ctx.plants||selectedPlants();
@@ -701,11 +714,7 @@ function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gesp
   const per=cols.reduce((s,c)=>s+(c.pts||0),0), maxP=plants.length*per;
   const dateStr=ctx.date?fmtDate(ctx.date):new Date().toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"});
 
-  // Titel: Zusatz »im Gartenbau (GALA)« nur beim unveränderten Standardtitel
-  const base=norm(settings&&settings.sheetTitle)||defaultSettings().sheetTitle;
-  const title= base!==defaultSettings().sheetTitle ? base
-    : fam==="gala" ? base+" im Gartenbau GALA"
-    : fam==="prod" ? base+" im Gartenbau" : base;
+  const title=sheetTitleFor(fam);
 
   // Spalten: Beschriftung wie auf den offiziellen Bögen, Punkte aus dem Schema
   const lbl=SHEET_COL_LABEL[fam==="fw"?"fw":"std"];
@@ -732,9 +741,7 @@ function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gesp
   // Nur auf der Musterlösung: Zuordnung, Vermerk und Bewertungsschlüssel
   let solMeta="", solScale="";
   if(sol){
-    const lin=(scale&&Array.isArray(scale.lin)&&scale.lin.length===5)?scale.lin:[90,70,50,30,10];
-    const B=linBands(lin);
-    const key=B.map(b=>b.stufe===6?`6 unter ${thresholdPts(B[4].lo,maxP)}`:`${b.stufe} ab ${thresholdPts(b.lo,maxP)}`).join(" · ");
+    const key=gradeKeyText(scale,maxP);
     const keyLabel="linear, Baden-Württemberg";
     solMeta=`<div class="sheet-meta">Fachrichtung ${esc(def.fr)} · ${esc(def.niveau)} · Prüfung am ${esc(dateStr)} ·
       ${plants.length} Pflanzen · max. ${fmtPts(maxP)} Punkte
@@ -771,8 +778,76 @@ function buildSheet(mode,ctx){ // mode: 'blank' | 'solution'; ctx optional (gesp
 }
 function printSheet(mode,ex){ // ex optional: soeben gespeicherte/aktualisierte Prüfung (Datum für die Musterlösung)
   if(!selection.length){ toast("Erst Arten auswählen",true); return; }
+  if(mode==="xlsx"){ exportXlsx(ex?{date:ex.date,label:ex.label}:undefined); return; }
   buildSheet(mode, ex?{date:ex.date}:undefined);
   window.print();
+}
+
+/* Excel-Export der Prüfung (dritte Variante im Druck-Dialog). SheetJS steckt ohnehin für den
+   Import in der Seite (ensureXLSX) und kann auch schreiben – kein Netz, keine weitere Bibliothek.
+   Drei Blätter: »Pflanzenliste« (Musterlösung als Tabelle, filterbar), »Bogen« (leerer Bogen in
+   Schema-Reihenfolge mit Punktespalte, Summe, Prozent und Note nach dem linearen BW-Schlüssel als
+   Formeln) und »Info« (Angaben zur Prüfung). ctx wie bei buildSheet (gespeicherte Prüfung) oder
+   leer = aktuelle Auswahl. Dateiname wie die Prüfungs-JSON: pruefung_<profil>_<datum>.xlsx. */
+const XLSX_MIME="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+function exportXlsx(ctx){
+  ctx=ctx||{};
+  const plants=ctx.plants||selectedPlants();
+  if(!plants.length){ toast("Erst Arten auswählen",true); return null; }
+  if(!ensureXLSX()){ toast("Excel-Bibliothek konnte nicht geladen werden",true); return null; }
+  const sch=ctx.schema||schema, def=ctx.def||PROFILE_DEFS[profileId], fam=sheetFamily(def);
+  const cols=(sch.cols||[]).filter(c=>c.pts>0);
+  const per=cols.reduce((s,c)=>s+(c.pts||0),0), maxP=plants.length*per;
+  const date=ctx.date||todayISO();
+  const U=XLSX.utils, wb=U.book_new();
+
+  // Blatt 1: Pflanzenliste (Musterlösung als Tabelle – alle Angaben, Kopfzeile mit Filter)
+  const head=["Nr.","Gattung","Art","Familie","Deutscher Name","Kategorie","ZP","Synonyme"];
+  const nn=v=>norm(v)||null;   // leere Felder als leere Zellen, nicht als Leerstrings
+  const rows=plants.map((p,i)=>[i+1,nn(p.gattung),nn(p.art),nn(p.familie),nn(p.deutscher_name),nn(p.kategorie),p.zp?"ZP":null,nn(p.synonyme)]);
+  const ws1=U.aoa_to_sheet([head,...rows]);
+  ws1["!cols"]=[5,18,28,24,30,20,5,32].map(w=>({wch:w}));
+  ws1["!autofilter"]={ref:U.encode_range({s:{r:0,c:0},e:{r:rows.length,c:head.length-1}})};
+  U.book_append_sheet(wb,ws1,"Pflanzenliste");
+
+  // Blatt 2: Bogen (leer) – Spalten und Punkte wie auf dem Prüfungsbogen, darunter Auswertung als Formeln
+  const lbl=SHEET_COL_LABEL[fam==="fw"?"fw":"std"];
+  const head2=["Nr.",...cols.map(c=>`${lbl[c.key]||FIELD_LABEL[c.key]||c.key} (${fmtPts(c.pts)} P.)`),"Punkte"];
+  const pad=cols.map(()=>null);
+  const rows2=plants.map((p,i)=>[i+1,...pad,null]);
+  const pc=U.encode_col(head2.length-1), last=rows2.length+1, sumRow=last+2;   // Zeile der Gesamtsumme (1-basiert): Kopf, Daten, Leerzeile, Summe
+  const lin=scaleLin(sch.scale||scaleCfg);
+  const sumRef=`${pc}${sumRow}`, pct=`${sumRef}*100/${maxP}`;
+  const noteF=`IF(${pct}>=${lin[0]},1,IF(${pct}>=${lin[1]},2,IF(${pct}>=${lin[2]},3,IF(${pct}>=${lin[3]},4,IF(${pct}>=${lin[4]},5,6)))))`;
+  const ws2=U.aoa_to_sheet([head2,...rows2,
+    [],   // Leerzeile vor der Auswertung
+    // Formelzellen mit Startwert (leerer Bogen: 0 Punkte, 0 %, Note 6) – SheetJS 0.18.5 schreibt
+    // Zellen ohne Wert nicht, und Excel zeigt bis zur Neuberechnung den gespeicherten Wert.
+    ["Gesamtpunkte",...pad,{t:"n",v:0,f:`SUM(${pc}2:${pc}${last})`}],
+    ["davon maximal",...pad,maxP],
+    ["Prozent",...pad,{t:"n",v:0,f:`IF(${maxP}>0,ROUND(${pct},1),0)`}],
+    ["Note (linear, Baden-Württemberg)",...pad,{t:"n",v:6,f:noteF}],
+    ["Notenschlüssel",...pad,gradeKeyText(sch.scale||scaleCfg,maxP)]]);
+  ws2["!cols"]=[{wch:5},...cols.map(()=>({wch:30})),{wch:10}];
+  U.book_append_sheet(wb,ws2,"Bogen");
+
+  // Blatt 3: Info (Angaben zur Prüfung, wie Kopf und Fuß der Musterlösung)
+  const foot=[settings&&settings.stelle1,settings&&settings.stelle2].filter(x=>norm(x)).join(" · ");
+  const info=[["Titel",sheetTitleFor(fam)],["Fachrichtung",def.fr||""],["Ausbildung",def.niveau||""],
+    ["Prüfungsdatum",fmtDate(date)],["Bezeichnung",norm(ctx.label||"")],["Pflanzen",plants.length],
+    ["Bewertung je Pflanze",cols.map(c=>`${FIELD_LABEL[c.key]||c.key} ${fmtPts(c.pts)}`).join(" · ")+` = ${fmtPts(per)} Punkte`],
+    ["Gesamtpunkte (maximal)",maxP],["Notenschlüssel (linear, Baden-Württemberg)",gradeKeyText(sch.scale||scaleCfg,maxP)]];
+  if(fam==="gala") info.push(["Hinweis","Schreibfehler führen zur Halbierung der Punktezahl"]);
+  if(foot) info.push(["Zuständige Stelle",foot]);
+  info.push(["Exportiert am",fmtDate(todayISO())],["Erzeugt mit","Pflanzenkenntnis · Prüfungswerkzeug (pflanze-bw.de/pruefung)"],
+    ["Hinweis","Blatt »Pflanzenliste« enthält die Lösung – nur für Prüfende."]);
+  const ws3=U.aoa_to_sheet(info); ws3["!cols"]=[{wch:40},{wch:70}];
+  U.book_append_sheet(wb,ws3,"Info");
+
+  const name=`pruefung_${ctx.profileId||profileId}_${date}.xlsx`;
+  downloadText(XLSX.write(wb,{bookType:"xlsx",type:"array"}), name, XLSX_MIME);
+  toast(`Excel-Liste gespeichert (${plants.length} Pflanzen · ${name})`);
+  return {name,plants:plants.length,sheets:wb.SheetNames.slice()};
 }
 
 /* ============================================================
@@ -791,7 +866,7 @@ function fmtDate(iso){ if(!iso) return ""; const d=new Date(iso+"T00:00:00"); re
 
 function examSnapshot(){
   return selectedPlants().map(p=>({gattung:p.gattung,art:p.art,familie:p.familie,
-    deutscher_name:p.deutscher_name,kategorie:p.kategorie,zp:p.zp?1:0}));
+    deutscher_name:p.deutscher_name,kategorie:p.kategorie,zp:p.zp?1:0,synonyme:p.synonyme||""}));
 }
 function saveExamData(date,label){ // Kern, auch vom Druck-Dialog genutzt
   if(!selection.length) return null;
@@ -841,10 +916,10 @@ function syncExamControls(){
   if(ex){ btn.hidden=false; btn.textContent="„"+fmtDate(ex.date)+"“ aktualisieren"; }
   else{ btn.hidden=true; if(loadedExamId&&!ex) loadedExamId=null; }
 }
-function examCtx(ex){ return { plants:ex.plants, schema:ex.schema, def:{fr:ex.fr,niveau:ex.niveau}, date:ex.date }; }
+function examCtx(ex){ return { plants:ex.plants, schema:ex.schema, def:{fr:ex.fr,niveau:ex.niveau}, date:ex.date, label:ex.label, profileId:ex.profileId }; }
 function printExam(id){
   const ex=exams.find(e=>e.id===id); if(!ex) return;
-  askPrintMode(m=>{ buildSheet(m, examCtx(ex)); window.print(); });
+  askPrintMode(m=>{ if(m==="xlsx"){ exportXlsx(examCtx(ex)); return; } buildSheet(m, examCtx(ex)); window.print(); });
 }
 function loadExam(id){
   const ex=exams.find(e=>e.id===id); if(!ex) return;
@@ -907,7 +982,7 @@ function renderExams(){
       <div class="exacts">
         <button class="btn small" data-act="load" title="Diese Prüfung in die Auswahl laden (zum Ansehen, Bearbeiten oder erneuten Drucken)">Laden</button>
         <button class="btn small" data-act="copy" title="Als neue Prüfung mit heutigem Datum kopieren – z. B. für den nächsten Prüfungstag, dann frei editierbar">Kopieren</button>
-        <button class="btn small" data-act="print" title="Prüfungsbogen oder Musterlösung dieser Prüfung drucken (Variante im Dialog)">Drucken</button>
+        <button class="btn small" data-act="print" title="Prüfungsbogen oder Musterlösung dieser Prüfung drucken – oder als Excel-Liste (.xlsx) speichern (Variante im Dialog)">Drucken</button>
         <button class="btn small ghost" data-act="dl" title="Diese Prüfung als .json-Datei herunterladen (Sicherung/Weitergabe)">JSON</button>
         <button class="btn small ghost del" data-act="del" title="Diese gespeicherte Prüfung löschen">Löschen</button>
       </div>`;
@@ -1997,6 +2072,7 @@ function wire(){
   // Druck-Dialog (mit »Als Prüfung speichern«)
   $("#printBlank").onclick=()=>{ const ex=maybeSaveFromPrint(); $("#printScrim").classList.remove("open"); if(printChoose) printChoose("blank",ex); };
   $("#printSolution").onclick=()=>{ const ex=maybeSaveFromPrint(); $("#printScrim").classList.remove("open"); if(printChoose) printChoose("solution",ex); };
+  $("#printXlsx").onclick=()=>{ const ex=maybeSaveFromPrint(); $("#printScrim").classList.remove("open"); if(printChoose) printChoose("xlsx",ex); };   // Excel-Liste (.xlsx)
   $("#printCancel").onclick=()=>$("#printScrim").classList.remove("open");
   const pe=$("#prEco"); if(pe){ pe.checked=printEcoOn(); pe.onchange=()=>store.set(LS_PREFIX+"printeco", pe.checked?"1":"0"); }   // sparsam drucken (Musterlösung)
   // Edit-Dialog
@@ -2170,6 +2246,7 @@ window.pickExcel=pickExcel;
 window.resetToDefault=resetToDefault;
 window.importJsonData=importJsonData; // für Datei-Import und Smoke-Test
 window.importJsonText=importJsonText; // Smoke-Test: Lernstand-Datei des Lern-Tools wird abgewiesen
+window.exportXlsx=exportXlsx;           // Excel-Export der Prüfung (Druck-Dialog), Smoke-Test
 function swIdle(){ return selection.length===0 && !document.querySelector(".scrim.open, .infoscrim, .lbscrim") && document.visibilityState!=="hidden"; }
 window.__swUpdate=swUpdate; window.__swReloadHook=fn=>{ swReload = fn || (()=>{ try{ location.reload(); }catch(e){} }); };
 window.__setJsonp=fn=>{ jsonp = fn || ((...a)=>jsonpGet(...a)); };   // Smoke-Test: Wikipedia-Antworten ohne Netz vorgeben

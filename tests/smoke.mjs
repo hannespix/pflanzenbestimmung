@@ -47,6 +47,12 @@ function findChromium() {
 
 const assert = (cond, msg) => { if (!cond) throw new Error("ASSERT: " + msg); };
 
+// Neueres Chromium (ab etwa Version 150) meldet unter file:// den Abruf des Web-App-Manifests als
+// CORS-Fehler in der Konsole (Origin »null«) – kein Fehler des Werkzeugs: das Manifest gilt nur online
+// bzw. als installierte App und wird in tests/pwa.mjs über HTTP geprüft. Nur diese Meldungen (CORS-Text
+// und das zugehörige »Failed to load resource« mit der Manifest-Adresse) werden ausgeblendet.
+const manifestNoise = (m) => /manifest\.webmanifest/.test(m.text() + " " + ((m.location() || {}).url || ""));
+
 async function main() {
   if (!fs.existsSync(path.join(ROOT, "dist", "pflanzenkenntnis.html")))
     throw new Error("dist/pflanzenkenntnis.html fehlt – zuerst 'python3 build.py'.");
@@ -63,7 +69,7 @@ async function main() {
   await page.evaluateOnNewDocument(() => { window.__noVT = 1; });
   const errs = [];
   page.on("pageerror", (e) => errs.push(String(e.message || e)));
-  page.on("console", (m) => { if (m.type() === "error") errs.push("console.error: " + m.text()); });
+  page.on("console", (m) => { if (m.type() === "error" && !manifestNoise(m)) errs.push("console.error: " + m.text()); });
 
   await page.goto(FILE, { waitUntil: "load" });
   await page.waitForFunction("window.pickExcel!=null", { timeout: 10000 });
@@ -360,6 +366,84 @@ async function main() {
     "Drucken speichert die Auswahl nicht als Prüfung: " + JSON.stringify(printSave.first));
   assert(/aktualisieren/.test(printSave.relabel), "Zweiter Druck müsste »aktualisieren« anbieten, war: " + printSave.relabel);
   assert(printSave.second === printSave.n0 + 1, "Zweiter Druck darf kein Duplikat anlegen (exams=" + printSave.second + ")");
+
+  // 6a3) Druck-Dialog: dritte Variante »Excel-Liste (.xlsx)« – lädt eine Arbeitsmappe mit den Blättern
+  //      Pflanzenliste (Musterlösung als Tabelle), Bogen (leer, Punktespalte, Formeln) und Info herunter,
+  //      speichert die Auswahl wie beim Drucken als Prüfung und funktioniert auch für gespeicherte Prüfungen.
+  //      Erwartungen werden aus dem Zustand (Profil, Schema, Skala) abgeleitet, nicht aus den App-Helfern.
+  const xl = await page.evaluate(() => {
+    const realDl = window.downloadText, got = [];
+    window.downloadText = (buf, name, mime) => { got.push({ name, mime, bytes: buf.byteLength, wb: XLSX.read(buf, { type: "array", cellStyles: true }) }); };   // cellStyles: sonst bleibt !cols beim Lesen leer
+    try {
+      const n0 = exams.length, sel = selectedPlants(), def = PROFILE_DEFS[profileId];
+      const cols = schema.cols.filter(c => c.pts > 0), per = cols.reduce((a, c) => a + c.pts, 0);
+      askPrintMode();
+      const cards = [...document.querySelectorAll("#printScrim .rcard-btn")].map(b => b.id);
+      const solRed = getComputedStyle(document.querySelector("#printSolution .ic")).color,
+            xlColor = getComputedStyle(document.querySelector("#printXlsx .ic")).color;
+      $("#prDate").value = "2026-09-02"; $("#prLabel").value = "Smoke-Excel";
+      $("#printXlsx").click();
+      const closed = !$("#printScrim").classList.contains("open");
+      const saved = exams.length === n0 + 1 && exams[0].date === "2026-09-02" && exams[0].label === "Smoke-Excel" && loadedExamId === exams[0].id;
+      const toastTxt = document.querySelector("#toast").textContent;
+      const r = got[0], wb = r && r.wb, dump = n => XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: "" });
+      const list = dump("Pflanzenliste"), bogen = dump("Bogen"), info = dump("Info");
+      const bs = wb.Sheets["Bogen"], pc = XLSX.utils.encode_col(bogen[0].length - 1), sumRow = list.length + 2;   // Kopf + 20 Zeilen + Leerzeile → Zeile 23
+      const f = r => (bs[pc + r] || {}).f || "", v = r => (bs[pc + r] || {}).v;
+      // gespeicherte Prüfung → »Drucken« → Excel: Kontext der Prüfung (Datum/Bezeichnung), kein erneutes Speichern
+      printExam(exams[0].id);
+      const rowHidden = $("#prSaveRow").hidden;
+      $("#printXlsx").click();
+      const r2 = got[1], info2 = Object.fromEntries(XLSX.utils.sheet_to_json(r2.wb.Sheets["Info"], { header: 1, raw: true, defval: "" }));
+      const n2 = exams.length;
+      // leere Auswahl: kein Export, Hinweis
+      const keep = selection.slice(); selection = []; const leer = exportXlsx(); const leerToast = document.querySelector("#toast").textContent; selection = keep;
+      // aufräumen, damit spätere Prüfungs-Tests bei 0 starten
+      exams = exams.filter((e) => e.id !== loadedExamId); saveExams(); loadedExamId = null; syncExamControls();
+      return { n0, profileId, fr: def.fr, niveau: def.niveau, colKeys: cols.map(c => c.key), colPts: cols.map(c => c.pts), per, n: sel.length, lin: scaleCfg.lin.slice(),
+        cards, solRed, xlColor, closed, saved, toastTxt, name: r.name, mime: r.mime, bytes: r.bytes, sheets: wb.SheetNames,
+        head: list[0], rows: list.length - 1, row1: list[1], sel1: [1, sel[0].gattung, sel[0].art, sel[0].familie, sel[0].deutscher_name, sel[0].kategorie, sel[0].zp ? "ZP" : "", sel[0].synonyme || ""],
+        af: (wb.Sheets["Pflanzenliste"]["!autofilter"] || {}).ref, ncols: (wb.Sheets["Pflanzenliste"]["!cols"] || []).length,
+        bHead: bogen[0], bRows: bogen.slice(1, list.length).every((r, i) => r[0] === i + 1 && r.slice(1).every(c => c === "")), pc, sumRow,
+        sumF: f(sumRow), sumV: v(sumRow), maxV: v(sumRow + 1), pctF: f(sumRow + 2), noteF: f(sumRow + 3), noteV: v(sumRow + 3), keyTxt: bogen[sumRow + 3] && bogen[sumRow + 3].slice(-1)[0],
+        info: Object.fromEntries(info), r2: { name: r2.name, rowHidden, n2, datum: info2["Prüfungsdatum"], bez: info2["Bezeichnung"] },
+        leer, leerToast, got: got.length };
+    } finally { window.downloadText = realDl; }
+  });
+  {
+    const fmt = n => String(Math.round(n * 100) / 100).replace(".", ","), fw = /fachwerker/i.test(xl.niveau);
+    const LBL = fw ? { gattung: "Gattung (botanisch)", art: "Art (botanisch)", familie: "Familie (botanisch)", deutscher_name: "Deutscher Name" }
+                   : { gattung: "Gattungsname", art: "Artname", familie: "Familienname", deutscher_name: "Deutscher Name" };
+    const FL = { gattung: "Gattung", art: "Art", familie: "Familie", deutscher_name: "Deutscher Name" };
+    const maxP = xl.n * xl.per, thr = xl.lin.map(l => Math.ceil(l * maxP / 100)), pct = `${xl.pc}${xl.sumRow}*100/${maxP}`;   // Prozent/Note rechnen mit der Summenzelle
+    const expHead = ["Nr.", ...xl.colKeys.map((k, i) => `${LBL[k]} (${fmt(xl.colPts[i])} P.)`), "Punkte"];
+    const expNote = `IF(${pct}>=${xl.lin[0]},1,IF(${pct}>=${xl.lin[1]},2,IF(${pct}>=${xl.lin[2]},3,IF(${pct}>=${xl.lin[3]},4,IF(${pct}>=${xl.lin[4]},5,6)))))`;
+    const expKey = `1 ab ${thr[0]} · 2 ab ${thr[1]} · 3 ab ${thr[2]} · 4 ab ${thr[3]} · 5 ab ${thr[4]} · 6 unter ${thr[4]}`;
+    const expBew = xl.colKeys.map((k, i) => `${FL[k]} ${fmt(xl.colPts[i])}`).join(" · ") + ` = ${fmt(xl.per)} Punkte`;
+    assert(JSON.stringify(xl.cards) === JSON.stringify(["printBlank", "printSolution", "printXlsx"]), "Druck-Dialog braucht drei Karten (Bogen, Musterlösung, Excel): " + JSON.stringify(xl.cards));
+    assert(xl.solRed !== xl.xlColor, "Nur die Musterlösung trägt das rote Symbol, die Excel-Karte nicht: " + xl.solRed + " / " + xl.xlColor);
+    assert(xl.closed && xl.saved && xl.got === 2, "Excel-Karte muss den Dialog schließen, die Auswahl als Prüfung speichern und genau eine Datei liefern: " + JSON.stringify({ closed: xl.closed, saved: xl.saved, got: xl.got }));
+    assert(xl.name === `pruefung_${xl.profileId}_2026-09-02.xlsx` && xl.mime === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" && xl.bytes > 5000,
+      "Excel-Datei: Name wie die Prüfungs-JSON, xlsx-MIME, echter Inhalt: " + JSON.stringify([xl.name, xl.mime, xl.bytes]));
+    assert(new RegExp(`Excel-Liste gespeichert \\(${xl.n} Pflanzen`).test(xl.toastTxt), "Toast nach dem Export fehlt: " + xl.toastTxt);
+    assert(JSON.stringify(xl.sheets) === JSON.stringify(["Pflanzenliste", "Bogen", "Info"]), "Blätter Pflanzenliste/Bogen/Info erwartet: " + JSON.stringify(xl.sheets));
+    assert(JSON.stringify(xl.head) === JSON.stringify(["Nr.", "Gattung", "Art", "Familie", "Deutscher Name", "Kategorie", "ZP", "Synonyme"]) && xl.rows === xl.n && xl.n === 20
+      && JSON.stringify(xl.row1) === JSON.stringify(xl.sel1) && xl.af === `A1:H${xl.n + 1}` && xl.ncols === 8,
+      "Blatt Pflanzenliste: Kopf, 20 Zeilen, erste Zeile = erste gewählte Art, Filter, Spaltenbreiten: " + JSON.stringify([xl.head, xl.rows, xl.row1, xl.sel1, xl.af, xl.ncols]));
+    assert(JSON.stringify(xl.bHead) === JSON.stringify(expHead) && xl.bRows && /\(3 P\.\)/.test(xl.bHead[1]),
+      "Blatt Bogen: Spalten wie der Prüfungsbogen (mit Punkten), Zeilen leer bis auf die Nummer: " + JSON.stringify([xl.bHead, expHead, xl.bRows]));
+    assert(xl.sumF === `SUM(${xl.pc}2:${xl.pc}${xl.n + 1})` && xl.sumV === 0 && xl.maxV === maxP && xl.pctF === `IF(${maxP}>0,ROUND(${pct},1),0)`
+      && xl.noteF === expNote && xl.noteV === 6 && xl.keyTxt === expKey,
+      "Blatt Bogen: Summe, Maximum, Prozent und Note als Formeln (linearer BW-Schlüssel) + Schlüsseltext: " + JSON.stringify([xl.sumF, xl.sumV, xl.maxV, xl.pctF, xl.noteF, expNote, xl.noteV, xl.keyTxt, expKey]));
+    assert(/^Abschlussprüfung Pflanzenbestimmung/.test(xl.info["Titel"]) && xl.info["Fachrichtung"] === xl.fr && xl.info["Ausbildung"] === xl.niveau
+      && xl.info["Prüfungsdatum"] === "02.09.2026" && xl.info["Bezeichnung"] === "Smoke-Excel" && xl.info["Pflanzen"] === xl.n
+      && xl.info["Bewertung je Pflanze"] === expBew && xl.info["Gesamtpunkte (maximal)"] === maxP
+      && xl.info["Notenschlüssel (linear, Baden-Württemberg)"] === expKey && xl.info["Zuständige Stelle"] === "Regierungspräsidien Baden-Württemberg" && /nur für Prüfende/.test(xl.info["Hinweis"]),
+      "Blatt Info: Titel, Profil, Datum, Bezeichnung, Bewertung, Schlüssel, Stelle, Hinweis: " + JSON.stringify([xl.info, expBew, expKey]));
+    assert(xl.r2.name === `pruefung_${xl.profileId}_2026-09-02.xlsx` && xl.r2.rowHidden && xl.r2.n2 === xl.n0 + 1 && xl.r2.datum === "02.09.2026" && xl.r2.bez === "Smoke-Excel",
+      "Gespeicherte Prüfung → Drucken → Excel: Kontext der Prüfung, Speichern-Zeile verborgen, kein Duplikat: " + JSON.stringify(xl.r2));
+    assert(xl.leer === null && /Erst Arten auswählen/.test(xl.leerToast), "Leere Auswahl darf keine Excel-Datei erzeugen: " + JSON.stringify([xl.leer, xl.leerToast]));
+  }
 
   // 6b) GaLaBau-Schema-Overrides: Fachwerker Deutscher Name (3) zuerst, Gattung/Art je 0,5
   await page.select("#frSelect", "garten_und_landschaftsbau");
@@ -1246,7 +1330,7 @@ async function main() {
 
   assert(errs.length === 0, "Konsolenfehler im Testverlauf: " + errs.join(" | "));
   await browser.close();
-  console.log("Smoke-Test OK – Boot, Modul-Modals (öffnen/×/Esc, aktive Buttons), Hilfe + Tooltips, Profilwechsel (148/248), Schema-Matrix, Ziehen, Bogen (offizielle Formulare), Druck-Dialog speichert/aktualisiert Prüfung, Prüfungen (speichern/laden/kopieren/aktualisieren), Prüfungs-JSON-Import (Gerätewechsel), Sicherung mit Profilwechsel, Einstellungen, Vorschau, Info-Karte (ℹ in Liste + Aktueller Prüfung: Namensherleitung, Deep-Links, opt-in Wikipedia, ×/Esc), Persistenz, Mobile-Kopf, Touch-Ziele (≥44px, Zeile wählt an/ab, #gMax breit genug), Bild-Lightbox (Galerie: Pfeile, Zähler, Wischen), Verwaltung als Popover (Top-Layer, Light-Dismiss).");
+  console.log("Smoke-Test OK – Boot, Modul-Modals (öffnen/×/Esc, aktive Buttons), Hilfe + Tooltips, Profilwechsel (148/248), Schema-Matrix, Ziehen, Bogen (offizielle Formulare), Druck-Dialog speichert/aktualisiert Prüfung + Excel-Export (Pflanzenliste/Bogen/Info, Formeln, gespeicherte Prüfung), Prüfungen (speichern/laden/kopieren/aktualisieren), Prüfungs-JSON-Import (Gerätewechsel), Sicherung mit Profilwechsel, Einstellungen, Vorschau, Info-Karte (ℹ in Liste + Aktueller Prüfung: Namensherleitung, Deep-Links, opt-in Wikipedia, ×/Esc), Persistenz, Mobile-Kopf, Touch-Ziele (≥44px, Zeile wählt an/ab, #gMax breit genug), Bild-Lightbox (Galerie: Pfeile, Zähler, Wischen), Verwaltung als Popover (Top-Layer, Light-Dismiss).");
 }
 
 main().catch((e) => { console.error("Smoke-Test FEHLGESCHLAGEN:\n  " + e.message); process.exit(1); });

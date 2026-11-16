@@ -54,6 +54,12 @@ Arbeitsanweisungen für die Weiterentwicklung mit Claude Code stehen in
 - **Druck:** Prüfungsbogen (leer) und Musterlösung (gefüllt, mit Punktespalte); die Musterlösung
   auf Wunsch **sparsam** (ohne Farbflächen, kompakt – Schalter im Druck-Dialog, wird gemerkt).
   Spalten und Punkte richten sich nach dem Prüfungsschema des Profils.
+- **Excel-Export** (dritte Variante im Druck-Dialog, auch für gespeicherte Prüfungen): die
+  Pflanzenliste der Prüfung als `.xlsx` mit drei Blättern – **Pflanzenliste** (Gattung, Art,
+  Familie, deutscher Name, Kategorie, ZP, Synonyme; filterbar), **Bogen** (leerer Bogen in
+  Schema-Reihenfolge mit Punktespalte; Gesamtpunkte, Prozent und Note nach dem linearen
+  BW-Schlüssel als Formeln) und **Info** (Titel, Fachrichtung, Datum, Bewertung, Notenschlüssel,
+  zuständige Stelle). Geschrieben mit der ohnehin eingebetteten SheetJS-Bibliothek – ohne Netz.
 - **Prüfungen speichern (nach Prüfungsdatum):** eine gezogene Liste als
   Momentaufnahme (samt Schema) unter einem Prüfungsdatum sichern – im Tool
   wieder **laden**, **kopieren** (z. B. für den nächsten Prüfungstag), nach dem
@@ -416,7 +422,7 @@ Programmcode unverändert; der Lizenzhinweis steht am Anfang jeder Datei, und di
 - die **amtlichen Prüfungslisten und Leerbögen** der Regierungspräsidien
   Baden-Württemberg (`data/`, daraus `seeds/`, `data/leerboegen/`) – Material der
   zuständigen Stelle, hier als Grundlage genutzt;
-- **SheetJS Community Edition 0.18.5** (`lib/xlsx.full.min.js`, Excel-Import) –
+- **SheetJS Community Edition 0.18.5** (`lib/xlsx.full.min.js`, Excel-Import und -Export) –
   Apache License 2.0, mit der GPL vereinbar; Text in `lib/LICENSE.Apache-2.0.txt`;
 - Inhalte, die das Lern-Tool auf Wunsch von **Wikipedia/Wikimedia Commons** (CC BY-SA
   bzw. Lizenz je Datei) und **iNaturalist** (Lizenz je Foto) lädt – sie bleiben unter
